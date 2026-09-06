@@ -32,6 +32,7 @@
 |---|---|---|
 | `tabBg` | 上表の半透明 `rgba(...,0.9)` | **`bg` と同値の不透明単色**（light `#F5F2EB` / dark `#111216`） |
 | `hatch` | `repeating-linear-gradient` の斜線 | **`1.5px dashed {line}` ＋ `chip` の塗り** |
+| font | RN の `fontFamily` は**スタック不可・1ファミリーのみ**。`expo-font` で `'Mona Sans'` を同梱し、和文は OS の字形フォールバックに任せる | 下の §3 のスタックをそのまま CSS に書ける |
 
 他のトークンは全面共通。
 
@@ -59,17 +60,34 @@ PALETTE = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C', '#2
 
 ## 3. Type
 
-`font-family: 'Sora', 'Noto Sans JP', sans-serif`（英数=Sora / 和文=Noto Sans JP）
+```css
+font-family: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+             'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
+```
+
+英数字と数値は **Mona Sans**（GitHub 製のグロテスク、OFL-1.1、Google Fonts 配信）。
+**和文はウェブフォントを載せず OS の標準書体**に落とす — Apple 面は Hiragino Sans、それ以外は Noto Sans JP。
+GitHub 自身と同じ方針（ラテンだけ自前、CJK はシステム）。
+
+見出しと本文は**同一スタック**。階層はウェイトとサイズだけで作り、2書体を混ぜない。
 経過時間の数字は tabular-nums。スケール: 10 / 12 / 14 / 16 / 18 / 20 / 28px。
 
 ## 4. Radius
 
-チップ 14–18 / カード 18–22 / シート 30（上端のみ）/ ピル 9999。
+3段階、比率およそ 1.6 倍。**丸みの差＝階層**なので、1つの大きめの値に揃えないこと（＝AI 生成モックの見た目）。
+
+| 用途 | 値 |
+|---|---|
+| コントロール（ボタン・チップ） | **10** |
+| コンテナ（カード・パネル） | **16** |
+| シート（上端2隅のみ） | **28** |
+| ピル | 9999 ※ステータス表示専用、ボタンには使わない |
 
 ## 5. アクティブ状態の表現（全面共通ルール）
 
-選択中の活動ボタン: `background: activity.color` / `color: #fff` / `border: activity.color`
-`box-shadow: 0 10px 24px -8px {activity.color}`。非選択は `surface` + `line`。
+選択中の活動ボタン: `background: activity.color` / `color: #fff` / `border: activity.color`。
+**それだけ。グローは付けない** — アクセント色で着色した drop shadow は「AI っぽさ」の最大の原因なので復活させないこと。
+塗りだけで状態は十分伝わる。非選択は `surface` + `line`。
 
 ---
 

@@ -41,17 +41,19 @@ Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial, `--c
 
 ## Type
 
-Sora for latin and numerals over Noto Sans JP for Japanese, one stack for both heading and body (`--font-heading` / `--font-body` resolve identically). Scale: 10 / 12 / 14 / 16 / 18 / 20 / 28px.
+**Mona Sans** — GitHub's own grotesque, OFL-1.1 — for latin and numerals; Japanese falls through to the system face (Hiragino Sans on Apple surfaces, Noto Sans JP elsewhere). One stack for both heading and body (`--font-heading` / `--font-body` resolve identically), so hierarchy comes from weight and size only, never from a second typeface. Scale: 10 / 12 / 14 / 16 / 18 / 20 / 28px.
+
+On iOS/Android, React Native's `fontFamily` takes a single family, not a stack: ship `fontFamily: 'Mona Sans'` via `expo-font` and let the OS handle per-glyph Japanese fallback.
 
 **Every clock and elapsed-time readout takes `.tabular`** (`font-variant-numeric: tabular-nums`). Without it the digits jitter every second, which on a screen whose whole purpose is a running clock reads as a bug.
 
 ## Radius
 
-Chips 14–18, cards 18–22, sheets 30 on the top corners only, pills 9999. Use `--radius-chip` / `--radius-card` / `--radius-sheet` / `--radius-pill`.
+Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, containers 16, sheets 28 (top corners only), pills 9999 for status only — never a button. Use `--radius-chip` / `--radius-card` / `--radius-sheet` / `--radius-pill`. Do not flatten them back to one generous value.
 
 ## The active state
 
-Exactly one activity button is pressed at any moment. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, matches its border, and casts `0 10px 24px -8px` of that same color. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
+Exactly one activity button is pressed at any moment. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
 
 ## Web constraints (react-native-web)
 

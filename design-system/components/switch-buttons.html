@@ -50,7 +50,8 @@
 
   <p class="note">
     <strong>常にちょうど1つがアクティブ</strong>です。「未選択」状態はありません。押されたボタンはその活動の<em>保存された色</em>で塗られ、
-    ラベルが <code>#fff</code> に、ボーダーが同色に、影が <code>0 10px 24px -8px</code> で同色に落ちます。色は要素の
+    ラベルが <code>#fff</code> に、ボーダーが同色になります。<strong>それだけ — グロー（色付きの drop shadow）は付けません。</strong>
+    アクセント色で着色した影は「AI っぽさ」の最大の原因で、塗りだけで状態は十分伝わります。色は要素の
     <code>--activity</code> として渡し、残りはスタイルシートが処理します。<br>
     <code>flex-wrap</code> で折り返します — <strong>Web に出す面で <code>display:grid</code> は使えません</strong>（react-native-web が落とします）。
     macOS menubar の 3×2 グリッドはネイティブ専用なので例外です。

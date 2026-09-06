@@ -1,7 +1,9 @@
 /* Switch Time — the only stylesheet. Token sheet + component layer.
    Derived from theme.json. Change tokens here AND in theme.json so they don't drift. */
 
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+/* Mona Sans is GitHub's own grotesque (OFL-1.1). Latin+digits only — Japanese
+   falls through to Hiragino on Apple surfaces, Noto Sans JP everywhere else. */
+@import url('https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
    Dark is the default band. Light is applied with [data-theme="light"].
@@ -59,18 +61,20 @@
 
 /* ── Type ─────────────────────────────────────────────────────────────── */
 :root {
-  --font-heading: 'Sora', 'Noto Sans JP', sans-serif;
-  --font-body:    'Sora', 'Noto Sans JP', sans-serif;
+  --font-heading: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
+  --font-body:    'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
   --text-2xs: 10px; --text-xs: 12px; --text-sm: 14px; --text-md: 16px;
   --text-lg:  18px; --text-xl: 20px; --text-2xl: 28px;
 }
 
-/* ── Radius ───────────────────────────────────────────────────────────── */
+/* ── Radius ───────────────────────────────────────────────────────────────
+   Three tiers, ~1.6x apart, so size reads as hierarchy. Do not flatten them
+   back to one generous value — that is what makes a mockup look generated. */
 :root {
-  --radius-chip: 16px;   /* 14–18 */
-  --radius-card: 20px;   /* 18–22 */
-  --radius-sheet: 30px;  /* top corners only */
-  --radius-pill: 9999px;
+  --radius-chip: 10px;   /* buttons and other small controls */
+  --radius-card: 16px;   /* containers */
+  --radius-sheet: 28px;  /* top corners only — the one big gesture */
+  --radius-pill: 9999px; /* status pills only, never a button */
 }
 
 /* ── Spacing ──────────────────────────────────────────────────────────── */
@@ -113,13 +117,13 @@ body {
   font: 500 var(--text-sm)/1.2 var(--font-body);
   cursor: pointer;
 }
-/* Active state is driven by the activity's own persisted color, passed in
-   as --activity. The shadow reuses it so the card looks lit from within. */
+/* Active state is driven by the activity's own persisted color, passed in as
+   --activity. Fill alone carries it; no colored glow. A shadow tinted with an
+   accent is the single loudest "AI mockup" tell — never add one back. */
 .switch-btn[aria-pressed="true"] {
   background: var(--activity);
   border-color: var(--activity);
   color: #fff;
-  box-shadow: 0 10px 24px -8px var(--activity);
 }
 
 .chip {

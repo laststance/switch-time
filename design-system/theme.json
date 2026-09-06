@@ -12,12 +12,12 @@
     "accent2": "#7FB2FF"
   },
   "fonts": {
-    "heading": { "family": "Sora", "class": "geometric", "weights": [500, 600, 700] },
-    "body": { "family": "Sora", "class": "geometric", "weights": [400, 500, 600] },
-    "cjk": { "family": "Noto Sans JP", "class": "gothic", "weights": [400, 500, 700] }
+    "heading": { "family": "Mona Sans", "class": "grotesque", "weights": [500, 600, 700] },
+    "body": { "family": "Mona Sans", "class": "grotesque", "weights": [400, 500, 600] },
+    "cjk": { "family": "Hiragino Sans", "class": "gothic", "weights": [400, 500, 700], "fallback": "Noto Sans JP" }
   },
   "density": 1,
-  "radius": 18,
+  "radius": 14,
   "layoutStyle": "stack",
   "frame": "soft",
   "imageTreatment": "none",
