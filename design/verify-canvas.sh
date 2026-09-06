@@ -14,8 +14,9 @@ for f in "$@"; do
   n_ds=$(c 'drop-shadow' "$f")
   n_sys=$(grep -oe "-apple-system" "$f" | wc -l | tr -d " ")
   n_sora=$(c 'Sora' "$f")
+  n_dsh=$(c 'dialShadow' "$f")   # the float also hid as box-shadow, not just filter
   for pair in "noto-first:$n_noto:0" "Mona Sans:$n_mona:0" "googleapis:$n_imp:0" \
-              "drop-shadow:$n_ds:0" "Sora:$n_sora:0"; do
+              "drop-shadow:$n_ds:0" "dialShadow:$n_dsh:0" "Sora:$n_sora:0"; do
     IFS=: read -r lbl got want <<< "$pair"
     [ "$got" = "$want" ] && s="OK " || s="FAIL"
     printf "  %s %-14s %s (want %s)\n" "$s" "$lbl" "$got" "$want"

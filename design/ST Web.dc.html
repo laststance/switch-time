@@ -40,7 +40,7 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
                 <div style="font:500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ dateStr }}</div>
               </div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:24px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:24px;">
-                <div style="width:176px; height:176px; border-radius:88px; box-shadow:0 14px 30px {{ dialShadow }}; flex:none;">
+                <div style="width:176px; height:176px; border-radius:88px; flex:none;">
                   <svg viewBox="0 0 200 200" width="176" height="176" style="display:block;">
                     <circle cx="100" cy="100" r="99" fill="none" stroke="{{ curColor }}" stroke-width="1.5"></circle>
                     <circle cx="100" cy="100" r="90" fill="{{ face }}" stroke="{{ line }}" stroke-width="1"></circle>
@@ -255,8 +255,8 @@ const rnd = seed => { let t = seed + 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t |
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 // tabBg is opaque (= bg); no translucent bar, no hatch gradient — RN-web safe
 const THEMES = {
-  dark: { bg: '#111216', face: '#212229', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', tabBg: '#111216', dialShadow: 'rgba(17,18,22,0.6)' },
-  light: { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', sheetBg: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.12)', chip: 'rgba(27,26,23,0.06)', accent: '#2A66C4', tabBg: '#F5F2EB', dialShadow: 'rgba(27,26,23,0.14)' },
+  dark: { bg: '#111216', face: '#212229', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', tabBg: '#111216' },
+  light: { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', sheetBg: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.12)', chip: 'rgba(27,26,23,0.06)', accent: '#2A66C4', tabBg: '#F5F2EB' },
 };
 
 class Component extends DCLogic {
