@@ -8,15 +8,12 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 html,body{margin:0;height:100%;}
 a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:underline}
 </style>
 </helmet>
-<div ref="{{ rootRef }}" data-screen-label="Web" style="height:100vh; display:flex; flex-direction:column; align-items:center; background: {{ bg }}; color: {{ ink }}; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
+<div ref="{{ rootRef }}" data-screen-label="Web" style="height:100vh; display:flex; flex-direction:column; align-items:center; background: {{ bg }}; color: {{ ink }}; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; -webkit-font-smoothing:antialiased;">
   <div style="width: {{ appWidth }}; max-width:100%; flex:1; min-height:0; display:flex; flex-direction: {{ appDir }}; border-left: {{ appBorder }}; border-right: {{ appBorder }};">
 
     <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
@@ -25,7 +22,7 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="{{ ink }}" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v5l3.5 2"></path></svg>
         </div>
         <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
-          <button onClick="{{ n.pick }}" style="width:60px; height:58px; border:none; border-radius:10px; background: {{ n.bg }}; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font:600 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;" style-hover="background: {{ chip }}">
+          <button onClick="{{ n.pick }}" style="width:60px; height:58px; border:none; border-radius:10px; background: {{ n.bg }}; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font:600 10px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;" style-hover="background: {{ chip }}">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ n.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>{{ n.label }}
           </button>
         </sc-for>
@@ -39,14 +36,14 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
           <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
             <div data-screen-label="ホーム" style="display:flex; flex-direction:column; gap:16px;">
               <div style="min-height:36px; display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
-                <div style="font:700 22px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em;">いま</div>
-                <div style="font:500 14px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+                <div style="font:700 22px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em;">いま</div>
+                <div style="font:500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ dateStr }}</div>
               </div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:24px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:24px;">
                 <div style="width:176px; height:176px; border-radius:88px; box-shadow:0 14px 30px {{ dialShadow }}; flex:none;">
                   <svg viewBox="0 0 200 200" width="176" height="176" style="display:block;">
-                    <circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4"></circle>
-                    <circle cx="100" cy="100" r="90" fill="{{ face }}"></circle>
+                    <circle cx="100" cy="100" r="99" fill="none" stroke="{{ curColor }}" stroke-width="1.5"></circle>
+                    <circle cx="100" cy="100" r="90" fill="{{ face }}" stroke="{{ line }}" stroke-width="1"></circle>
                     <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><line x1="100" y1="16" x2="100" y2="{{ t.y2 }}" stroke="{{ t.stroke }}" stroke-width="{{ t.w }}" stroke-linecap="round" transform="rotate({{ t.deg }} 100 100)"></line></sc-for>
                     <line x1="100" y1="106" x2="100" y2="52" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
                     <line x1="100" y1="108" x2="100" y2="32" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
@@ -55,21 +52,21 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
                   </svg>
                 </div>
                 <div style="flex:1; min-width:220px; display:flex; flex-direction:column; align-items: {{ statusAlign }}; text-align: {{ statusText }}; gap:6px;">
-                  <div style="display:flex; align-items:center; gap:10px; font:700 24px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.01em;">
+                  <div style="display:flex; align-items:center; gap:10px; font:700 24px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.01em;">
                     <span style="width:12px; height:12px; border-radius:6px; background: {{ curColor }}; display:block; flex:none;"></span>{{ curName }}
                   </div>
-                  <div style="font:600 46px/1.1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
-                  <div style="font:400 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; white-space:nowrap;">{{ sinceStr }} から · 今日 {{ switchCount }} 回切替</div>
+                  <div style="font:600 46px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+                  <div style="font:400 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; white-space:nowrap;">{{ sinceStr }} から · 今日 {{ switchCount }} 回切替</div>
                 </div>
               </div>
               <div style="display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
-                  <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">切り替え</div>
-                  <div style="font:400 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">押した瞬間から積み上がります</div>
+                  <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">切り替え</div>
+                  <div style="font:400 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">押した瞬間から積み上がります</div>
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:10px;">
                   <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
-                    <button onClick="{{ a.pick }}" style="flex:1 1 150px; height:58px; border-radius:10px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer;" style-hover="opacity:.88">
+                    <button onClick="{{ a.pick }}" style="flex:1 1 150px; height:58px; border-radius:10px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;" style-hover="opacity:.88">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg><span>{{ a.name }}</span>
                     </button>
                   </sc-for>
@@ -77,10 +74,10 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
               </div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px 20px 16px; display:flex; flex-direction:column; gap:12px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                  <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">今日の流れ</div>
+                  <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">今日の流れ</div>
                   <div style="display:flex; flex-wrap:wrap; gap:12px;">
                     <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
-                      <span style="display:flex; align-items:center; gap:6px; font:500 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:2px; background: {{ l.color }}; display:block;"></span>{{ l.name }}</span>
+                      <span style="display:flex; align-items:center; gap:6px; font:500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:2px; background: {{ l.color }}; display:block;"></span>{{ l.name }}</span>
                     </sc-for>
                   </div>
                 </div>
@@ -88,7 +85,7 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
                   <sc-for list="{{ segs }}" as="s" hint-placeholder-count="5"><div style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
                   <div style="flex: {{ remainFlex }} 1 0px;"></div>
                 </div>
-                <div style="display:flex; justify-content:space-between; font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+                <div style="display:flex; justify-content:space-between; font:400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
               </div>
             </div>
           </sc-if>
@@ -96,27 +93,27 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
           <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
             <div data-screen-label="記録" style="display:flex; flex-direction:column; gap:16px;">
               <div style="min-height:36px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                <div style="font:700 22px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em;">記録</div>
+                <div style="font:700 22px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em;">記録</div>
                 <div style="display:flex; gap:4px; padding:4px; border-radius:10px; background: {{ chip }};">
                   <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3">
-                    <button onClick="{{ r.pick }}" style="height:34px; padding:0 16px; border:none; border-radius:10px; background: {{ r.bg }}; color: {{ r.fg }}; font:600 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer;">{{ r.label }}</button>
+                    <button onClick="{{ r.pick }}" style="height:34px; padding:0 16px; border:none; border-radius:10px; background: {{ r.bg }}; color: {{ r.fg }}; font:600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;">{{ r.label }}</button>
                   </sc-for>
                 </div>
               </div>
               <div style="display:flex; gap:12px; flex-wrap:wrap;">
                 <div style="flex:1 1 200px; border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:16px 18px;">
-                  <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">計測できた日</div>
-                  <div style="font:600 26px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ measuredStr }}</div>
+                  <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">計測できた日</div>
+                  <div style="font:600 26px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ measuredStr }}</div>
                 </div>
                 <div style="flex:1 1 200px; border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:16px 18px;">
-                  <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">連続記録</div>
-                  <div style="font:600 26px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ streakStr }}</div>
+                  <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">連続記録</div>
+                  <div style="font:600 26px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ streakStr }}</div>
                 </div>
               </div>
               <sc-if value="{{ hasExcluded }}" hint-placeholder-val="{{ true }}">
                 <div style="border-radius:16px; background: {{ chip }}; padding:13px 16px; display:flex; align-items:center; gap:10px;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; opacity:.55;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg>
-                  <span style="flex:1; font:400 13px/1.5 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">アプリを使わなかった <b style="color:{{ ink }}">{{ excludedCount }}日</b> は平均から除外しています（点線の日）</span>
+                  <span style="flex:1; font:400 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">アプリを使わなかった <b style="color:{{ ink }}">{{ excludedCount }}日</b> は平均から除外しています（点線の日）</span>
                 </div>
               </sc-if>
             </div>
@@ -125,8 +122,8 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
           <sc-if value="{{ showCharts }}" hint-placeholder-val="{{ true }}">
             <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:20px 20px 16px;">
               <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; gap:12px;">
-                <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ chartTitle }}</div>
-                <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">1本 = 24時間</div>
+                <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">{{ chartTitle }}</div>
+                <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">1本 = 24時間</div>
               </div>
               <div style="display:flex; align-items:flex-end; gap: {{ barGap }}px; height:172px;">
                 <sc-for list="{{ chartDays }}" as="d" hint-placeholder-count="7">
@@ -135,23 +132,23 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
                       <sc-if value="{{ d.excluded }}" hint-placeholder-val="{{ false }}"><div style="height:144px; border-radius:6px; border:1.5px dashed {{ line }}; background: {{ chip }};"></div></sc-if>
                       <sc-for list="{{ d.bars }}" as="b" hint-placeholder-count="4"><div style="height: {{ b.h }}px; background: {{ b.color }}; border-radius: {{ b.radius }};"></div></sc-for>
                     </div>
-                    <div style="font:500 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ d.labelColor }}; text-align:center; white-space:nowrap;">{{ d.label }}</div>
+                    <div style="font:500 11px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ d.labelColor }}; text-align:center; white-space:nowrap;">{{ d.label }}</div>
                   </div>
                 </sc-for>
               </div>
             </div>
             <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:20px; display:flex; flex-direction:column; gap:14px;">
               <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
-                <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">状態別</div>
-                <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">合計 ／ 1日あたり</div>
+                <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">状態別</div>
+                <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">合計 ／ 1日あたり</div>
               </div>
               <sc-for list="{{ totals }}" as="t" hint-placeholder-count="6">
                 <div style="display:flex; flex-direction:column; gap:6px;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <span style="width:28px; height:28px; border-radius:9px; background: {{ t.color }}; color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg></span>
-                    <span style="flex:1; font:600 14px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ t.name }}</span>
-                    <span style="font:600 14px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; font-variant-numeric:tabular-nums;">{{ t.totalStr }}</span>
-                    <span style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; width:72px; text-align:right; font-variant-numeric:tabular-nums;">{{ t.avgStr }}</span>
+                    <span style="flex:1; font:600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">{{ t.name }}</span>
+                    <span style="font:600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums;">{{ t.totalStr }}</span>
+                    <span style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; width:72px; text-align:right; font-variant-numeric:tabular-nums;">{{ t.avgStr }}</span>
                   </div>
                   <div style="height:8px; border-radius:4px; background: {{ chip }}; overflow:hidden;">
                     <div style="width: {{ t.pct }}%; height:100%; background: {{ t.color }}; border-radius:4px;"></div>
@@ -163,52 +160,52 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
 
           <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
             <div data-screen-label="設定" style="display:flex; flex-direction:column; gap:16px;">
-              <div style="min-height:36px; display:flex; align-items:center; font:700 22px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em;">設定</div>
+              <div style="min-height:36px; display:flex; align-items:center; font:700 22px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em;">設定</div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; overflow:hidden;">
                 <div style="min-height:64px; display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid {{ line }};">
-                  <span style="flex:1; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">外観</span>
+                  <span style="flex:1; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">外観</span>
                   <div style="display:flex; gap:3px; padding:3px; border-radius:10px; background: {{ chip }};">
                     <sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3">
-                      <button onClick="{{ o.pick }}" style="height:32px; min-width:56px; padding:0 12px; border:none; border-radius:10px; background: {{ o.bg }}; color: {{ o.fg }}; font:600 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer;">{{ o.label }}</button>
+                      <button onClick="{{ o.pick }}" style="height:32px; min-width:56px; padding:0 12px; border:none; border-radius:10px; background: {{ o.bg }}; color: {{ o.fg }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;">{{ o.label }}</button>
                     </sc-for>
                   </div>
                 </div>
                 <div style="min-height:64px; display:flex; align-items:center; gap:12px; padding:10px 18px;">
-                  <span style="flex:1; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">秒針を表示</span>
+                  <span style="flex:1; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">秒針を表示</span>
                   <button onClick="{{ toggleSeconds }}" style="width:52px; height:32px; border-radius:16px; border:none; background: {{ secTrack }}; cursor:pointer; padding:3px; display:flex; justify-content: {{ secJustify }};"><span style="width:26px; height:26px; border-radius:13px; background:#FFFFFF; display:block; box-shadow:0 1px 3px rgba(27,26,23,0.3);"></span></button>
                 </div>
               </div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px 18px 8px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:6px;">
-                  <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">活動項目</div>
-                  <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">{{ actCountStr }}</div>
+                  <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">活動項目</div>
+                  <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ actCountStr }}</div>
                 </div>
                 <sc-for list="{{ actRows }}" as="r" hint-placeholder-count="6">
                   <div style="min-height:52px; display:flex; align-items:center; gap:12px; border-top:1px solid {{ line }};">
                     <span style="width:30px; height:30px; border-radius:10px; background: {{ r.color }}; color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span>
-                    <span style="flex:1; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ r.name }}</span>
-                    <span style="font:400 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums;">{{ r.todayStr }}</span>
+                    <span style="flex:1; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">{{ r.name }}</span>
+                    <span style="font:400 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums;">{{ r.todayStr }}</span>
                   </div>
                 </sc-for>
               </div>
               <div style="border-radius:16px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px; display:flex; flex-direction:column; gap:14px;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <span style="flex:1;">
-                    <span style="display:block; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">未使用日の自動除外</span>
-                    <span style="display:block; font:400 12px/1.5 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; margin-top:2px;">一度も切り替えなかった日は平均・連続記録から外します</span>
+                    <span style="display:block; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">未使用日の自動除外</span>
+                    <span style="display:block; font:400 12px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; margin-top:2px;">一度も切り替えなかった日は平均・連続記録から外します</span>
                   </span>
                   <button onClick="{{ toggleAuto }}" style="width:52px; height:32px; border-radius:16px; border:none; background: {{ autoTrack }}; cursor:pointer; padding:3px; display:flex; justify-content: {{ autoJustify }}; flex:none;"><span style="width:26px; height:26px; border-radius:13px; background:#FFFFFF; display:block; box-shadow:0 1px 3px rgba(27,26,23,0.3);"></span></button>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                  <span style="flex:1 1 160px; font:500 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">無操作とみなす時間</span>
+                  <span style="flex:1 1 160px; font:500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">無操作とみなす時間</span>
                   <div style="display:flex; gap:6px;">
                     <sc-for list="{{ thresholds }}" as="t" hint-placeholder-count="4">
-                      <button onClick="{{ t.pick }}" style="width:56px; height:40px; border-radius:10px; border:1.5px solid {{ t.border }}; background:transparent; color: {{ ink }}; font:600 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer;">{{ t.label }}</button>
+                      <button onClick="{{ t.pick }}" style="width:56px; height:40px; border-radius:10px; border:1.5px solid {{ t.border }}; background:transparent; color: {{ ink }}; font:600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;">{{ t.label }}</button>
                     </sc-for>
                   </div>
                 </div>
               </div>
-              <div style="font:400 12px/1.6 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; text-align:center; padding:4px 0 8px;">Switch Time Web 1.0 · 記録は自動保存</div>
+              <div style="font:400 12px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; text-align:center; padding:4px 0 8px;">Switch Time Web 1.0 · 記録は自動保存</div>
             </div>
           </sc-if>
 
@@ -219,7 +216,7 @@ a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:unde
     <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
       <div data-screen-label="TabBar" style="flex:none; height:60px; display:flex; background: {{ tabBg }}; border-top:1px solid {{ line }};">
         <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
-          <button onClick="{{ n.pick }}" style="flex:1; border:none; background:transparent; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font:600 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">
+          <button onClick="{{ n.pick }}" style="flex:1; border:none; background:transparent; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font:600 10px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ n.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>{{ n.label }}
           </button>
         </sc-for>
@@ -258,7 +255,7 @@ const rnd = seed => { let t = seed + 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t |
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 // tabBg is opaque (= bg); no translucent bar, no hatch gradient — RN-web safe
 const THEMES = {
-  dark: { bg: '#111216', face: '#1B1C22', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', tabBg: '#111216', dialShadow: 'rgba(17,18,22,0.6)' },
+  dark: { bg: '#111216', face: '#212229', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', tabBg: '#111216', dialShadow: 'rgba(17,18,22,0.6)' },
   light: { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', sheetBg: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.12)', chip: 'rgba(27,26,23,0.06)', accent: '#2A66C4', tabBg: '#F5F2EB', dialShadow: 'rgba(27,26,23,0.14)' },
 };
 
@@ -344,7 +341,7 @@ class Component extends DCLogic {
     });
     const m0 = this.midnight(), usedMin = (now - m0) / 60000;
     const segs = S.log.map(s => { const c = acts0.find(a => a.id === s.id); return { color: c ? c.color : C.chip, flex: Math.max(0.5, ((s.end ?? now) - s.start) / 60000) }; });
-    const ticks = Array.from({ length: 60 }, (_, i) => { const major = i % 5 === 0; return { deg: i * 6, y2: major ? 26 : 21, w: major ? 2.5 : 1, stroke: major ? C.ink : C.line }; });
+    const ticks = Array.from({ length: 60 }, (_, i) => { const quarter = i % 15 === 0, hour = i % 5 === 0; return { deg: i * 6, y2: quarter ? 30 : hour ? 26 : 20, w: quarter ? 3 : hour ? 2 : 1, stroke: quarter ? C.ink : hour ? C.sub : C.line }; });
     const todayTotals = {}; S.log.forEach(s => { todayTotals[s.id] = (todayTotals[s.id] || 0) + ((s.end ?? now) - s.start); });
     const legend = acts0.filter(a => todayTotals[a.id]).map(a => ({ name: a.name, color: a.color }));
 
