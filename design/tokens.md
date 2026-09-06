@@ -14,7 +14,7 @@
 | token | light | dark | 用途 |
 |---|---|---|---|
 | `bg` | `#F5F2EB` | `#111216` | 画面背景 |
-| `face` | `#FFFFFF` | `#1B1C22` | 時計盤面 |
+| `face` | `#FBF9F4` | `#212229` | 時計盤面 ※**`surface` と別値**。同値にすると盤面がカードの穴になる |
 | `surface` | `#FFFFFF` | `#1B1C22` | カード・非選択ボタン |
 | `sheetBg` | `#FFFFFF` | `#1C1D22` | モーダル/シート |
 | `ink` | `#1B1A17` | `#F2EFE8` | 本文 |
@@ -32,7 +32,7 @@
 |---|---|---|
 | `tabBg` | 上表の半透明 `rgba(...,0.9)` | **`bg` と同値の不透明単色**（light `#F5F2EB` / dark `#111216`） |
 | `hatch` | `repeating-linear-gradient` の斜線 | **`1.5px dashed {line}` ＋ `chip` の塗り** |
-| font | RN の `fontFamily` は**スタック不可・1ファミリーのみ**。`expo-font` で `'Mona Sans'` を同梱し、和文は OS の字形フォールバックに任せる | 下の §3 のスタックをそのまま CSS に書ける |
+| font | RN では `fontFamily` を**書かない**（＝各 OS の既定 UI 書体）。同梱するフォントは無し | 下の §3 のスタックをそのまま CSS に書ける |
 
 他のトークンは全面共通。
 
@@ -61,13 +61,16 @@ PALETTE = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C', '#2
 ## 3. Type
 
 ```css
-font-family: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-             'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto,
+             'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
 ```
 
-英数字と数値は **Mona Sans**（GitHub 製のグロテスク、OFL-1.1、Google Fonts 配信）。
-**和文はウェブフォントを載せず OS の標準書体**に落とす — Apple 面は Hiragino Sans、それ以外は Noto Sans JP。
-GitHub 自身と同じ方針（ラテンだけ自前、CJK はシステム）。
+**ウェブフォントは使わない。`@import` も `<link>` も置かない。** 各 OS が自分の UI 書体で描く —
+Apple は SF Pro、Windows は Segoe UI（Variable）、Android は Roboto。同系統のニュートラルな
+グロテスクなので、面をまたいでも「同じ感じ」で揃う。ダウンロード 0 バイト。
+
+和文も同じくシステム任せ: Apple → **Hiragino Sans**、Windows → **Yu Gothic UI**、Android → **Noto Sans JP**。
+**ラテンを先、和文を後ろ**に置くこと。逆にすると英数字まで和文書体で描かれる。
 
 見出しと本文は**同一スタック**。階層はウェイトとサイズだけで作り、2書体を混ぜない。
 経過時間の数字は tabular-nums。スケール: 10 / 12 / 14 / 16 / 18 / 20 / 28px。
@@ -86,6 +89,16 @@ GitHub 自身と同じ方針（ラテンだけ自前、CJK はシステム）。
 **余白も同じ役割**。スケール 4/8/12/16/20/24/32 はそのままで良いが、**どこも `16` で埋めない**こと。
 余白は「まとまり」の宣言 — 同じものに属する要素間は `4`/`8`、別のまとまりとの間は `20` 以上。
 全部の箱を同じパディングにするのは、丸みを1つの値に揃えるのと同じで、何が近くて何が遠いのかが消える。
+
+## 4.5 時計盤面の質感
+
+時計は**物体**であってカードではない。3点だけ守る:
+
+1. **`face` は `surface` と別値**（上表）。盤面はカードの上に乗った別の面。
+2. **縁はリム、影ではない。** 盤面の外周は `line` のヘアライン1本。
+   **`filter: drop-shadow(...)` は使わない** — 浮いたシールに見えるうえ、react-native-web が `filter` を落とすので Web では消える。
+3. **目盛りは3段階。** 12/3/6/9 が最も長く太い → 残りの時 → 分はヘアライン（`line`）。
+   2段階の均一な目盛りは「描いた」感じ、3段階だと「作った」感じになる。
 
 ## 5. アクティブ状態の表現（全面共通ルール）
 

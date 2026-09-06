@@ -1,16 +1,12 @@
 /* Switch Time — the only stylesheet. Token sheet + component layer.
    Derived from theme.json. Change tokens here AND in theme.json so they don't drift. */
 
-/* Mona Sans is GitHub's own grotesque (OFL-1.1). Latin+digits only — Japanese
-   falls through to Hiragino on Apple surfaces, Noto Sans JP everywhere else. */
-@import url('https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
-
 /* ── Theme tokens ─────────────────────────────────────────────────────────
    Dark is the default band. Light is applied with [data-theme="light"].
    `auto` in the apps resolves to light between 06:00–18:00.              */
 :root {
   --color-bg:        #111216;
-  --color-face:      #1B1C22;  /* clock dial */
+  --color-face:      #212229;  /* clock dial — one step lighter than surface, on purpose */
   --color-surface:   #1B1C22;  /* cards, unselected buttons */
   --color-sheet-bg:  #1C1D22;  /* modals / sheets */
   --color-ink:       #F2EFE8;
@@ -19,13 +15,12 @@
   --color-chip:      rgba(255,255,255,0.08);
   --color-tab-bg:    rgba(17,18,22,0.90);
   --color-accent:    #7FB2FF;
-  --shadow-dial:     0 18px 40px -18px rgba(17,18,22,0.60);
   --pattern-hatch:   repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 4px, transparent 4px 8px);
 }
 
 [data-theme="light"] {
   --color-bg:        #F5F2EB;
-  --color-face:      #FFFFFF;
+  --color-face:      #FBF9F4;  /* warm paper, not the card's clinical white */
   --color-surface:   #FFFFFF;
   --color-sheet-bg:  #FFFFFF;
   --color-ink:       #1B1A17;
@@ -34,7 +29,6 @@
   --color-chip:      rgba(27,26,23,0.06);
   --color-tab-bg:    rgba(245,242,235,0.90);
   --color-accent:    #2A66C4;
-  --shadow-dial:     0 18px 40px -18px rgba(27,26,23,0.14);
   --pattern-hatch:   repeating-linear-gradient(135deg, rgba(27,26,23,.06) 0 4px, transparent 4px 8px);
 }
 
@@ -59,10 +53,14 @@
   --activity-8: #8A6A4B;  /* spare      */
 }
 
-/* ── Type ─────────────────────────────────────────────────────────────── */
+/* ── Type ───────────────────────────────────────────────────────────────
+   No webfont, by design. Each OS draws its own UI face: SF Pro on Apple,
+   Segoe UI on Windows, Roboto on Android — same genre, zero download, and
+   nothing to identify the mockup as generated. Latin faces first; Japanese
+   falls through to Hiragino / Yu Gothic UI / Noto Sans JP per platform.  */
 :root {
-  --font-heading: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
-  --font-body:    'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
   --text-2xs: 10px; --text-xs: 12px; --text-sm: 14px; --text-md: 16px;
   --text-lg:  18px; --text-xl: 20px; --text-2xl: 28px;
 }

@@ -37,13 +37,13 @@ Never use an activity color as interface chrome. Chrome comes from `--color-acce
 
 ## Color
 
-Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial, `--color-surface` cards and unselected buttons, `--color-sheet-bg` modals. Text is `--color-ink` with `--color-sub` for secondary. `--color-line` draws hairlines, `--color-chip` fills small pills. `--color-accent` (#2A66C4 light / #7FB2FF dark) is links and emphasis — the *only* chrome accent.
+Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial — **deliberately one step off `--color-surface`**, so the dial reads as its own plane rather than a hole in the card, `--color-surface` cards and unselected buttons, `--color-sheet-bg` modals. Text is `--color-ink` with `--color-sub` for secondary. `--color-line` draws hairlines, `--color-chip` fills small pills. `--color-accent` (#2A66C4 light / #7FB2FF dark) is links and emphasis — the *only* chrome accent.
 
 ## Type
 
-**Mona Sans** — GitHub's own grotesque, OFL-1.1 — for latin and numerals; Japanese falls through to the system face (Hiragino Sans on Apple surfaces, Noto Sans JP elsewhere). One stack for both heading and body (`--font-heading` / `--font-body` resolve identically), so hierarchy comes from weight and size only, never from a second typeface. Scale: 10 / 12 / 14 / 16 / 18 / 20 / 28px.
+**No webfont — the platform UI face, everywhere.** SF Pro on Apple, Segoe UI (Variable) on Windows, Roboto on Android; they are the same genre of neutral grotesque, so the surfaces read alike without a single downloaded byte. Japanese resolves the same way: Hiragino Sans → Yu Gothic UI → Noto Sans JP. Latin families come first in the stack and CJK last — reverse them and a Japanese face draws the numerals too. One stack for both heading and body (`--font-heading` / `--font-body` resolve identically), so hierarchy comes from weight and size only, never from a second typeface. Scale: 10 / 12 / 14 / 16 / 18 / 20 / 28px.
 
-On iOS/Android, React Native's `fontFamily` takes a single family, not a stack: ship `fontFamily: 'Mona Sans'` via `expo-font` and let the OS handle per-glyph Japanese fallback.
+On iOS/Android, omit `fontFamily` entirely and take React Native's platform default. There is nothing to bundle and no `expo-font` call to make.
 
 **Every clock and elapsed-time readout takes `.tabular`** (`font-variant-numeric: tabular-nums`). Without it the digits jitter every second, which on a screen whose whole purpose is a running clock reads as a bug.
 
@@ -56,6 +56,14 @@ Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, cont
 ## The active state
 
 Exactly one activity button is pressed at any moment. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
+
+## The dial
+
+The clock is a physical object, not a floating card. Three rules give it that weight:
+
+- **`--color-face` is not `--color-surface`.** The dial sits one step lighter than the card in dark (#212229 vs #1B1C22) and one step warmer in light (#FBF9F4 vs #FFFFFF). Two planes, not one.
+- **A rim, not a blur.** The dial edge is a hairline in `--color-line`. No `filter: drop-shadow` — it reads as a sticker floating over the page, and react-native-web drops `filter` outright, so the web build would lose it anyway.
+- **Three tiers of tick.** Quarters (12/3/6/9) longest and heaviest, the other hours medium, minutes a hairline at `--color-line`. Two uniform tiers is what makes a dial look drawn rather than made.
 
 ## Web constraints (react-native-web)
 
