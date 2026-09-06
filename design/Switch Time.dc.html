@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDEAE3;font-family:'Sora','Noto Sans JP',system-ui,sans-serif;color:#1B1A17}
+a{color:#1B1A17}a:hover{color:#3B7BD9}
+button{font-family:inherit}
+input::placeholder{opacity:.4}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.dv-notes{max-width:760px;font:13px/1.6 'Noto Sans JP',system-ui,sans-serif;color:rgba(0,0,0,.65);margin:0 0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 28px}
+.dv-notes b{display:block;color:#1a1a1a;font-weight:600;margin-bottom:3px}
+@keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">1a を軸にしたアプリ本体 — 記録グラフ・訂正UI・未使用日の除外・共通画面・アセット</span></div>
+<div class="dv-notes">
+  <div><b>構成</b>タブは「今 / 記録 / 設定」の3つ。<a class="dv-oid" href="#1a">1a</a> のダイヤル画面をそのままホームに据え、下部の帯グラフをタップすると訂正シートが開きます。全画面が実際に動きます。</div>
+  <div><b>未使用日の除外</b>一度も切り替えなかった日は自動で「計測なし」に。平均・連続記録から外し、グラフでは破線のゴースト表示。設定→未使用日の自動除外で閾値変更／個別に戻せます。</div>
+  <div><b>訂正の考え方</b>「時刻を直す」より「境界を動かす」。行をタップ → 開始時刻を15分ずつ、活動を差し替え、前の記録に統合、半分で分割。元に戻すも1タップ。</div>
+</div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>ホーム（この端末で全画面を操作できます）</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="home" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>記録 — 直近7日の積み上げ ＋ 状態別（合計/1日あたり）</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="history" initial-range="week" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>記録・月 — 破線が「アプリを使わなかった日」</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="history" initial-range="month" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>訂正シート — 境界を15分ずつ動かす／活動を差し替え</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="home" initial-sheet="correct" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>設定 ＋ 未使用日の除外シート</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="settings" initial-sheet="exclude" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2f"><div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>初回起動 — 説明せず、最初の1タップで記録が始まる</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <dc-import name="ST Phone" initial-screen="onboard" theme="{{ theme }}" demo-hour="{{ demoHour }}" hint-size="100%,100%" style="height:100%"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2g"><div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>ウィジェット（<a class="dv-oid" href="#1e">1e</a> 採用）＋ ロングタップメニュー</div>
+<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:18px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12);">
+  <div style="display:flex; gap:16px; align-items:flex-start;">
+    <div style="width:158px; height:158px; border-radius:36px; background: {{ curColor }}; color:#fff; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 24px rgba(0,0,0,0.18); flex:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+        <span style="width:8px; height:8px; border-radius:4px; background:#fff; animation: st-pulse 2s ease-in-out infinite;"></span>
+      </div>
+      <div>
+        <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
+        <div style="font:600 30px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
+        <div style="font:400 11px 'Noto Sans JP',sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding-top:2px;">
+      <div style="font:500 10px 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロングタップ</div>
+      <div style="border-radius:18px; background: {{ menuBg }}; overflow:hidden; backdrop-filter:blur(20px); box-shadow:0 10px 30px rgba(0,0,0,.22);">
+        <sc-for list="{{ menu }}" as="m" hint-placeholder-count="4">
+          <div style="min-height:42px; display:flex; align-items:center; gap:10px; padding:0 13px; border-bottom:1px solid {{ menuLine }}; color: {{ ink }}; font:500 13px 'Noto Sans JP',sans-serif;">
+            <span style="flex:1;">{{ m.label }}</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;"><path d="{{ m.icon }}"></path></svg>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font:400 10px/1.5 'Noto Sans JP',sans-serif; color: {{ wpText }};">タップは即切替、長押しで訂正・記録・編集へ。</div>
+    </div>
+  </div>
+  <div style="width:100%; height:158px; border-radius:36px; background: {{ widgetBg }}; color: {{ ink }}; padding:16px; box-sizing:border-box; display:flex; gap:14px; box-shadow:0 10px 24px rgba(0,0,0,0.18);">
+    <div style="width:118px; flex:none; border-radius:22px; background: {{ curColor }}; color:#fff; padding:14px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+      <div>
+        <div style="font:700 16px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
+        <div style="font:600 22px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
+      </div>
+    </div>
+    <div style="flex:1; display:grid; grid-template-columns:repeat(3, 1fr); grid-auto-rows:1fr; gap:8px; min-width:0;">
+      <sc-for list="{{ others }}" as="a" hint-placeholder-count="5">
+        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Noto Sans JP',sans-serif; min-width:0;">
+          <span style="color: {{ a.color }};"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
+          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">{{ a.name }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:flex; gap:14px; align-items:center;">
+    <svg viewBox="0 0 72 72" width="64" height="64" style="flex:none;">
+      <circle cx="36" cy="36" r="31" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="5"></circle>
+      <path d="{{ lockArc }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"></path>
+      <svg x="24" y="18" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+      <text x="36" y="54" text-anchor="middle" font-family="Sora, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
+    </svg>
+    <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロック画面は円形＋インライン。iOS の App Intent ／ Android の Glance で同じ構成が組めます。</div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="2h"><div class="dv-olabel"><a class="dv-oid" href="#2h">2h</a>アセット — アプリアイコン・タブ・活動アイコン・色・文字</div>
+<div style="width:520px; box-sizing:border-box; background:#fff; border-radius:28px; border:1px solid rgba(0,0,0,.08); padding:26px; display:flex; flex-direction:column; gap:24px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 20px 50px -20px rgba(0,0,0,.2);">
+  <div style="display:flex; gap:20px; align-items:flex-end;">
+    <svg viewBox="0 0 120 120" width="96" height="96" style="border-radius:26px; background:#F5F2EB; box-shadow:0 8px 20px -6px rgba(0,0,0,.3); flex:none;">
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#E0A431" stroke-width="10" stroke-dasharray="66 198"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#3B7BD9" stroke-width="10" stroke-dasharray="60 204" stroke-dashoffset="-70"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#4FA877" stroke-width="10" stroke-dasharray="44 220" stroke-dashoffset="-134"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#6C63D6" stroke-width="10" stroke-dasharray="80 184" stroke-dashoffset="-182"></circle>
+      <line x1="60" y1="64" x2="60" y2="36" stroke="#1B1A17" stroke-width="6" stroke-linecap="round"></line>
+      <line x1="60" y1="62" x2="82" y2="62" stroke="#1B1A17" stroke-width="5" stroke-linecap="round"></line>
+      <circle cx="60" cy="60" r="4.5" fill="#1B1A17"></circle>
+    </svg>
+    <svg viewBox="0 0 120 120" width="60" height="60" style="border-radius:16px; background:#111216; flex:none;">
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#E0A431" stroke-width="12" stroke-dasharray="66 198"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#3B7BD9" stroke-width="12" stroke-dasharray="60 204" stroke-dashoffset="-70"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#4FA877" stroke-width="12" stroke-dasharray="44 220" stroke-dashoffset="-134"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#6C63D6" stroke-width="12" stroke-dasharray="80 184" stroke-dashoffset="-182"></circle>
+      <line x1="60" y1="64" x2="60" y2="36" stroke="#F2EFE8" stroke-width="7" stroke-linecap="round"></line>
+      <line x1="60" y1="62" x2="82" y2="62" stroke="#F2EFE8" stroke-width="6" stroke-linecap="round"></line>
+    </svg>
+    <svg viewBox="0 0 120 120" width="34" height="34" style="border-radius:9px; background:#F5F2EB; flex:none;">
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#E0A431" stroke-width="20" stroke-dasharray="66 198"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#3B7BD9" stroke-width="20" stroke-dasharray="60 204" stroke-dashoffset="-70"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#4FA877" stroke-width="20" stroke-dasharray="44 220" stroke-dashoffset="-134"></circle>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="#6C63D6" stroke-width="20" stroke-dasharray="80 184" stroke-dashoffset="-182"></circle>
+    </svg>
+    <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">アプリアイコン<br>1日の帯を丸めた形＝時計の文字盤。<br>小サイズでは針を省略。</div>
+  </div>
+  <div style="height:1px; background:rgba(0,0,0,.08);"></div>
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <div style="font:600 12px 'Noto Sans JP',sans-serif;">活動アイコン（設定でタップして循環）</div>
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      <sc-for list="{{ iconLib }}" as="i" hint-placeholder-count="8">
+        <div style="width:56px; display:flex; flex-direction:column; align-items:center; gap:5px;">
+          <span style="width:48px; height:48px; border-radius:15px; background:#F5F2EB; color:#1B1A17; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ i.d }}"></path></svg></span>
+          <span style="font:400 10px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">{{ i.name }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:flex; gap:26px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="font:600 12px 'Noto Sans JP',sans-serif;">タブ・操作アイコン</div>
+      <div style="display:flex; gap:10px;">
+        <sc-for list="{{ uiIcons }}" as="i" hint-placeholder-count="6">
+          <span style="width:40px; height:40px; border-radius:12px; border:1px solid rgba(0,0,0,.1); color:#1B1A17; display:flex; align-items:center; justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ i.d }}"></path></svg></span>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="font:600 12px 'Noto Sans JP',sans-serif;">状態カラー</div>
+      <div style="display:flex; gap:8px;">
+        <sc-for list="{{ paletteList }}" as="p" hint-placeholder-count="8">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="width:34px; height:34px; border-radius:11px; background: {{ p.hex }}; display:block;"></span>
+            <span style="font:400 8.5px 'Sora',monospace; color:rgba(0,0,0,.5);">{{ p.hex }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    <div style="font:600 12px 'Noto Sans JP',sans-serif; margin-bottom:2px;">文字</div>
+    <div style="font:600 34px/1.1 'Sora',sans-serif; letter-spacing:-0.03em;">2:47:11<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Sora 600 · 数字・経過時間</span></div>
+    <div style="font:700 22px 'Noto Sans JP',sans-serif;">仕事<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Noto Sans JP 700 · 状態名</span></div>
+    <div style="font:600 15px 'Noto Sans JP',sans-serif;">記録を訂正する<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">600 · ボタン</span></div>
+    <div style="font:400 12px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">アプリを使わなかった3日は平均から除外しています<span style="margin-left:10px; opacity:.7;">400 · 補助</span></div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "訂正をドラッグで直せるように" · "<a class="dv-oid" href="#2b">2b</a> に週の比較（前週比）を足す" · "通知の文面を詰めたい" · "Android のフレームでも見たい"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Switch Time — メイン画面 3案 ＋ 設定モーダル ＋ ウィジェット</span></div>
+<div class="dv-notes">
+  <div><b>前提</b>常に1つの状態を保持し、ボタンをタップした瞬間に切り替わる。切替はどの案も1タップ・確認なし（誤タップはもう一度押せば戻せる）。</div>
+  <div><b>時計と配色</b>アナログ時計を主役に。配色は端末時刻で自動（6–18時ライト／それ以外ダーク）。各画面は共通の状態を持つので、どれをタップしても連動する。</div>
+  <div><b>試せること</b>ボタンで状態を切替、⚙で設定モーダル（名前・色・アイコン・並び順・追加削除・★デフォルト）。右上のTweaksで配色・秒針・時間帯のプレビューを変更。</div>
+</div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>ダイヤル — 大きな時計 ＋ 2列グリッド</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:18px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .4s;">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="font:500 14px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+      <button onClick="{{ openA }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+    <div style="display:flex; justify-content:center; padding:4px 0 0;">
+      <svg viewBox="0 0 200 200" width="248" height="248" style="filter: drop-shadow(0 14px 30px rgba(0,0,0,0.12));">
+        <circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4" style="transition:stroke .4s"></circle>
+        <circle cx="100" cy="100" r="90" fill="{{ face }}"></circle>
+        <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><line x1="100" y1="16" x2="100" y2="{{ t.y2 }}" stroke="{{ t.stroke }}" stroke-width="{{ t.w }}" stroke-linecap="round" transform="rotate({{ t.deg }} 100 100)"></line></sc-for>
+        <line x1="100" y1="106" x2="100" y2="52" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
+        <line x1="100" y1="108" x2="100" y2="32" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
+        <sc-if value="{{ showSeconds }}" hint-placeholder-val="{{ true }}"><line x1="100" y1="112" x2="100" y2="24" stroke="{{ curColor }}" stroke-width="1.5" stroke-linecap="round" transform="rotate({{ sDeg }} 100 100)"></line></sc-if>
+        <circle cx="100" cy="100" r="4.5" fill="{{ curColor }}"></circle>
+      </svg>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+      <div style="display:flex; align-items:center; gap:8px; font:700 22px 'Noto Sans JP',sans-serif;">
+        <span style="width:10px; height:10px; border-radius:5px; background: {{ curColor }}; display:inline-block; animation: st-pulse 2s ease-in-out infinite;"></span>{{ curName }}
+      </div>
+      <div style="font:600 40px/1.1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+      <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ sinceStr }} から</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:auto;">
+      <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
+        <button onClick="{{ a.pick }}" style="height:60px; border-radius:20px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px 'Noto Sans JP',sans-serif; cursor:pointer; transition:all .25s; box-shadow: {{ a.shadow }};">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg><span>{{ a.name }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background: {{ chip }};">
+        <sc-for list="{{ segs }}" as="s" hint-placeholder-count="4"><div style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
+        <div style="flex: {{ remainFlex }} 1 0px;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font:400 10px 'Sora',sans-serif; color: {{ sub }};"><span>0:00</span><span>12:00</span><span>24:00</span></div>
+    </div>
+  </div>
+  <sc-if value="{{ sheetA }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Settings Modal" acts="{{ acts }}" default-id="{{ defaultId }}" dark="{{ dark }}" on-close="{{ closeSheet }}" on-add="{{ addAct }}" on-move="{{ moveAct }}" on-cycle-icon="{{ cycleIcon }}" on-cycle-color="{{ cycleColor }}" on-rename="{{ renameAct }}" on-set-default="{{ setDefault }}" on-delete="{{ deleteAct }}" hint-size="100%,100%" style="position:absolute; inset:0; z-index:40;"></dc-import>
+  </sc-if>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>カード — 状態色で染まる背景 ＋ リスト（今日の合計付き）</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:16px; background: {{ tintBg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .6s;">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <svg viewBox="0 0 200 200" width="56" height="56">
+          <circle cx="100" cy="100" r="96" fill="{{ face }}" stroke="{{ line }}" stroke-width="3"></circle>
+          <line x1="100" y1="108" x2="100" y2="50" stroke="{{ ink }}" stroke-width="10" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
+          <line x1="100" y1="110" x2="100" y2="28" stroke="{{ ink }}" stroke-width="7" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
+          <circle cx="100" cy="100" r="8" fill="{{ curColor }}"></circle>
+        </svg>
+        <div>
+          <div style="font:600 26px/1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
+          <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }}; margin-top:3px;">{{ dateStr }}</div>
+        </div>
+      </div>
+      <button onClick="{{ openB }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+    <div style="border-radius:28px; padding:22px 22px 20px; background: {{ curColor }}; color:#fff; display:flex; flex-direction:column; gap:4px; box-shadow:0 18px 40px -12px {{ curColor }}; transition:background .4s;">
+      <div style="display:flex; align-items:center; justify-content:space-between; font:500 13px 'Noto Sans JP',sans-serif; opacity:.9;"><span>いま</span><span>{{ sinceStr }} から</span></div>
+      <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+        <div style="font:700 36px/1 'Noto Sans JP',sans-serif; letter-spacing:-0.01em;">{{ curName }}</div>
+      </div>
+      <div style="font:600 52px/1.05 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:8px;">{{ elapsed }}</div>
+    </div>
+    <div style="font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }}; margin:4px 4px -8px;">切り替える</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
+        <button onClick="{{ a.pick }}" style="height:56px; border-radius:18px; border:none; background: {{ a.rowBg }}; color: {{ a.rowFg }}; display:flex; align-items:center; gap:12px; padding:0 16px 0 12px; font:600 16px 'Noto Sans JP',sans-serif; cursor:pointer; transition:all .25s; text-align:left;">
+          <span style="width:32px; height:32px; border-radius:10px; background: {{ a.color }}; color:#fff; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
+          <span style="flex:1;">{{ a.name }}</span>
+          <span style="font:500 13px 'Sora',sans-serif; opacity:.7; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</span>
+          <span style="width:22px; text-align:right; font-size:16px;">{{ a.check }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="margin-top:auto; display:flex; height:8px; border-radius:4px; overflow:hidden; background: {{ chip }};">
+      <sc-for list="{{ segs }}" as="s" hint-placeholder-count="4"><div style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
+      <div style="flex: {{ remainFlex }} 1 0px;"></div>
+    </div>
+  </div>
+  <sc-if value="{{ sheetB }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Settings Modal" acts="{{ acts }}" default-id="{{ defaultId }}" dark="{{ dark }}" on-close="{{ closeSheet }}" on-add="{{ addAct }}" on-move="{{ moveAct }}" on-cycle-icon="{{ cycleIcon }}" on-cycle-color="{{ cycleColor }}" on-rename="{{ renameAct }}" on-set-default="{{ setDefault }}" on-delete="{{ deleteAct }}" hint-size="100%,100%" style="position:absolute; inset:0; z-index:40;"></dc-import>
+  </sc-if>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>リング — 時計の外周に今日24時間の履歴 ＋ 丸ボタン</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:14px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .4s;">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="font:700 18px 'Sora',sans-serif; letter-spacing:-0.01em;">Switch Time</div>
+      <button onClick="{{ openC }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+    <div style="display:flex; justify-content:center; position:relative;">
+      <svg viewBox="0 0 240 240" width="300" height="300">
+        <circle cx="120" cy="120" r="112" fill="none" stroke="{{ chip }}" stroke-width="12"></circle>
+        <sc-for list="{{ ringSegs }}" as="s" hint-placeholder-count="4"><path d="{{ s.d }}" fill="none" stroke="{{ s.color }}" stroke-width="12"></path></sc-for>
+        <circle cx="120" cy="8" r="2" fill="{{ sub }}"></circle>
+        <circle cx="120" cy="232" r="2" fill="{{ sub }}"></circle>
+        <line x1="120" y1="2" x2="120" y2="14" stroke="{{ ink }}" stroke-width="2" stroke-linecap="round" transform="rotate({{ nowDeg }} 120 120)"></line>
+        <g transform="translate(20 20)">
+          <circle cx="100" cy="100" r="86" fill="{{ face }}"></circle>
+          <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><line x1="100" y1="22" x2="100" y2="{{ t.y3 }}" stroke="{{ t.stroke }}" stroke-width="{{ t.w }}" stroke-linecap="round" transform="rotate({{ t.deg }} 100 100)"></line></sc-for>
+          <text x="100" y="140" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="12" font-weight="600" fill="{{ curColor }}">{{ curName }}</text>
+          <text x="100" y="158" text-anchor="middle" font-family="Sora, sans-serif" font-size="13" font-weight="600" fill="{{ sub }}">{{ elapsedShort }}</text>
+          <line x1="100" y1="106" x2="100" y2="54" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
+          <line x1="100" y1="108" x2="100" y2="36" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
+          <sc-if value="{{ showSeconds }}" hint-placeholder-val="{{ true }}"><line x1="100" y1="112" x2="100" y2="30" stroke="{{ curColor }}" stroke-width="1.5" stroke-linecap="round" transform="rotate({{ sDeg }} 100 100)"></line></sc-if>
+          <circle cx="100" cy="100" r="4.5" fill="{{ curColor }}"></circle>
+        </g>
+      </svg>
+    </div>
+    <div style="display:flex; justify-content:space-between; gap:4px; padding:0 2px;">
+      <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
+        <button onClick="{{ a.pick }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; border:none; background:transparent; padding:0; cursor:pointer; color: {{ ink }}; width:54px;">
+          <span style="width:54px; height:54px; border-radius:27px; background: {{ a.bg }}; color: {{ a.fg }}; border:1.5px solid {{ a.border }}; display:flex; align-items:center; justify-content:center; transition:all .25s; box-shadow: {{ a.shadow }};"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
+          <span style="font:500 11px 'Noto Sans JP',sans-serif; white-space:nowrap;">{{ a.name }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="margin-top:auto; border-radius:22px; background: {{ surface }}; padding:14px 16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 8px;">
+      <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <div style="display:flex; align-items:center; gap:6px; font:500 11px 'Noto Sans JP',sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:4px; background: {{ a.color }}; display:inline-block;"></span>{{ a.name }}</div>
+          <div style="font:600 17px 'Sora',sans-serif; letter-spacing:-0.01em; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <sc-if value="{{ sheetC }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="Settings Modal" acts="{{ acts }}" default-id="{{ defaultId }}" dark="{{ dark }}" on-close="{{ closeSheet }}" on-add="{{ addAct }}" on-move="{{ moveAct }}" on-cycle-icon="{{ cycleIcon }}" on-cycle-color="{{ cycleColor }}" on-rename="{{ renameAct }}" on-set-default="{{ setDefault }}" on-delete="{{ deleteAct }}" hint-size="100%,100%" style="position:absolute; inset:0; z-index:40;"></dc-import>
+  </sc-if>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>設定モーダル（常時展開）— 名前・色・アイコン・並び順・追加削除・★デフォルト</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; display:flex; flex-direction:column; align-items:center; gap:10px;">
+    <svg viewBox="0 0 200 200" width="180" height="180" style="margin-top:20px; opacity:.9;">
+      <circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4"></circle>
+      <circle cx="100" cy="100" r="90" fill="{{ face }}"></circle>
+      <line x1="100" y1="106" x2="100" y2="52" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
+      <line x1="100" y1="108" x2="100" y2="32" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
+      <circle cx="100" cy="100" r="4.5" fill="{{ curColor }}"></circle>
+    </svg>
+    <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
+    <div style="font:600 32px 'Sora',sans-serif; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+  </div>
+  <dc-import name="Settings Modal" acts="{{ acts }}" default-id="{{ defaultId }}" dark="{{ dark }}" on-close="{{ noop }}" on-add="{{ addAct }}" on-move="{{ moveAct }}" on-cycle-icon="{{ cycleIcon }}" on-cycle-color="{{ cycleColor }}" on-rename="{{ renameAct }}" on-set-default="{{ setDefault }}" on-delete="{{ deleteAct }}" hint-size="100%,100%" style="position:absolute; inset:0; z-index:40;"></dc-import>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>ウィジェット — iOS / Android のホーム画面（インタラクティブ）＋ ロック画面</div>
+<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:20px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12); transition:background .6s;">
+  <div style="font:500 11px 'Noto Sans JP',sans-serif; color: {{ wpText }}; letter-spacing:.04em;">SMALL 2×2 ／ MEDIUM 4×2 — ボタンは実際に切替できます</div>
+  <div style="display:flex; gap:16px; align-items:flex-start;">
+    <div style="width:158px; height:158px; border-radius:36px; background: {{ curColor }}; color:#fff; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 24px rgba(0,0,0,0.18); transition:background .4s; flex:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+        <span style="width:8px; height:8px; border-radius:4px; background:#fff; animation: st-pulse 2s ease-in-out infinite;"></span>
+      </div>
+      <div>
+        <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
+        <div style="font:600 30px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
+        <div style="font:400 11px 'Noto Sans JP',sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px; align-items:center; padding-top:6px;">
+      <div style="font:500 10px 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロック画面</div>
+      <svg viewBox="0 0 72 72" width="72" height="72">
+        <circle cx="36" cy="36" r="31" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="5"></circle>
+        <path d="{{ lockArc }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"></path>
+        <svg x="24" y="18" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+        <text x="36" y="54" text-anchor="middle" font-family="Sora, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
+      </svg>
+      <div style="height:26px; border-radius:13px; padding:0 12px; background:rgba(255,255,255,0.18); color:#fff; display:flex; align-items:center; gap:6px; font:500 12px 'Noto Sans JP',sans-serif; white-space:nowrap;"><span style="width:7px; height:7px; border-radius:4px; background:#fff;"></span>{{ curName }} · {{ elapsedHuman }}</div>
+    </div>
+  </div>
+  <div style="width:100%; height:158px; border-radius:36px; background: {{ widgetBg }}; color: {{ ink }}; padding:16px; box-sizing:border-box; display:flex; gap:14px; box-shadow:0 10px 24px rgba(0,0,0,0.18); transition:background .4s;">
+    <div style="width:118px; flex:none; border-radius:22px; background: {{ curColor }}; color:#fff; padding:14px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; transition:background .4s;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
+      <div>
+        <div style="font:700 16px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
+        <div style="font:600 22px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
+      </div>
+    </div>
+    <div style="flex:1; display:grid; grid-template-columns:repeat(3, 1fr); grid-auto-rows:1fr; gap:8px; min-width:0;">
+      <sc-for list="{{ others }}" as="a" hint-placeholder-count="5">
+        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Noto Sans JP',sans-serif; min-width:0;">
+          <span style="color: {{ a.color }};"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
+          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">{{ a.name }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color: {{ wpText }};">iOS 17+ の Interactive Widget（App Intent ボタン）／ Android の Glance ウィジェットで同等の構成が可能。Small は表示のみ、Medium は残りの項目をワンタップで切替。ロック画面は円形＋インライン。</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "<a class="dv-oid" href="#1a">1a</a> のグリッドを <a class="dv-oid" href="#1c">1c</a> の丸ボタンに" · "<a class="dv-oid" href="#1b">1b</a> に週の履歴を足す" · "設定モーダルをドラッグ並べ替えに" · "Android版のフレームでも見たい"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'light'|'dark'&quot;,&quot;section&quot;:&quot;配色&quot;},&quot;showSeconds&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;時計&quot;},&quot;demoHour&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:-1,&quot;min&quot;:-1,&quot;max&quot;:23,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot;時&quot;,&quot;section&quot;:&quot;時計&quot;}}">
+const ICONS = {
+  home: 'M3 11 12 3l9 8v10H3z',
+  work: 'M3 8h18v12H3zM9 8V5h6v3M3 13h18',
+  rest: 'M4 9h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM16 11h2a2 2 0 0 1 0 4h-2M7 3v3M11 3v3',
+  sleep: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+  meal: 'M7 3v18M4 3v5a3 3 0 0 0 6 0V3M16 3c-2 2-2 8 0 10v8M16 13c2-2 3-6 2-10',
+  fun: 'M6 8h12a4 4 0 0 1 4 4v3a3 3 0 0 1-5.5 1.5L15 15H9l-1.5 1.5A3 3 0 0 1 2 15v-3a4 4 0 0 1 4-4zM7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01',
+  study: 'M4 4h6a2 2 0 0 1 2 2v14a3 3 0 0 0-3-3H4zM20 4h-6a2 2 0 0 0-2 2v14a3 3 0 0 1 3-3h5z',
+  move: 'M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12',
+};
+const ICON_KEYS = Object.keys(ICONS);
+const PALETTE = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C', '#2BA3B5', '#8A6A4B'];
+const DEFAULT_ACTS = [
+  { id: 'house', name: '家事', color: '#E0A431', iconKey: 'home' },
+  { id: 'work', name: '仕事', color: '#3B7BD9', iconKey: 'work' },
+  { id: 'rest', name: '休息', color: '#4FA877', iconKey: 'rest' },
+  { id: 'sleep', name: '睡眠', color: '#6C63D6', iconKey: 'sleep' },
+  { id: 'meal', name: '食事', color: '#E0684A', iconKey: 'meal' },
+  { id: 'fun', name: '娯楽', color: '#D8579C', iconKey: 'fun' },
+];
+// Demo day: [activity, start hour]
+const SCHEDULE = [['sleep', 0], ['house', 6.5], ['meal', 7.25], ['work', 7.75], ['meal', 12], ['work', 12.75], ['rest', 15.25], ['work', 15.75], ['meal', 19], ['fun', 20], ['house', 21.5], ['sleep', 23]];
+const H = 3600e3;
+const pad = n => String(n).padStart(2, '0');
+const pt = (cx, cy, r, deg) => { const a = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+function arc(cx, cy, r, a1, a2) {
+  if (a2 - a1 < 0.2) return '';
+  if (a2 - a1 >= 359.9) a2 = a1 + 359.9;
+  const [x1, y1] = pt(cx, cy, r, a1), [x2, y2] = pt(cx, cy, r, a2);
+  return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+}
+
+class Component extends DCLogic {
+  state = { acts: DEFAULT_ACTS, defaultId: 'sleep', log: [], current: null, now: Date.now(), sheet: null };
+  midnight() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  now() {
+    const real = Date.now(), dh = Number(this.props.demoHour ?? -1);
+    if (dh >= 0) return this.midnight() + dh * H + ((real - this.midnight()) % 60000);
+    return real;
+  }
+  seed() {
+    const now = this.now(), m0 = this.midnight(), log = [];
+    SCHEDULE.forEach(([id, h], i) => {
+      const start = m0 + h * H;
+      if (start >= now) return;
+      const nextH = SCHEDULE[i + 1]?.[1];
+      const end = nextH === undefined ? null : Math.min(m0 + nextH * H, now);
+      log.push({ id, start, end: end !== null && end < now ? end : null });
+    });
+    if (log.length > 1) log.slice(0, -1).forEach(s => { if (s.end === null) s.end = log[log.indexOf(s) + 1].start; });
+    const last = log[log.length - 1];
+    this.setState({ log, current: { id: last.id, since: last.start }, now });
+  }
+  componentDidMount() { this.seed(); this.t = setInterval(() => this.setState({ now: this.now() }), 1000); }
+  componentDidUpdate(prev) { if (prev.demoHour !== this.props.demoHour) this.seed(); }
+  componentWillUnmount() { clearInterval(this.t); }
+  switchTo(id) {
+    const { current, log } = this.state; if (!current || current.id === id) return;
+    const now = this.now();
+    const nl = log.map((s, i) => i === log.length - 1 ? { ...s, end: now } : s);
+    nl.push({ id, start: now, end: null });
+    this.setState({ log: nl, current: { id, since: now }, now });
+  }
+  updAct(id, fn) { this.setState(s => ({ acts: s.acts.map(a => a.id === id ? fn(a) : a) })); }
+  renderVals() {
+    const S = this.state, P = this.props;
+    const now = S.now, d = new Date(now);
+    const hour = d.getHours(), min = d.getMinutes(), sec = d.getSeconds();
+    const theme = P.theme ?? 'auto';
+    const dark = theme === 'dark' || (theme === 'auto' && (hour < 6 || hour >= 18));
+    const showSeconds = P.showSeconds ?? true;
+    const C = dark
+      ? { bg: '#111216', face: '#1B1C22', surface: '#1B1C22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', tileBg: 'rgba(255,255,255,0.07)', wallpaper: 'linear-gradient(160deg,#1a1c2b,#0e0f14 60%,#1b1418)', wpText: 'rgba(255,255,255,0.7)' }
+      : { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.14)', chip: 'rgba(27,26,23,0.06)', tileBg: 'rgba(27,26,23,0.05)', wallpaper: 'linear-gradient(160deg,#d9e6f2,#efe8dc 55%,#e9d6cf)', wpText: 'rgba(27,26,23,0.6)' };
+    const acts0 = S.acts;
+    const cur = acts0.find(a => a.id === S.current?.id) || acts0[0];
+    const curColor = cur?.color || '#3B7BD9';
+    const elapsedMs = S.current ? Math.max(0, now - S.current.since) : 0;
+    const eh = Math.floor(elapsedMs / H), em = Math.floor((elapsedMs % H) / 60000), es = Math.floor((elapsedMs % 60000) / 1000);
+    const elapsed = eh > 0 ? `${eh}:${pad(em)}:${pad(es)}` : `${em}:${pad(es)}`;
+    const elapsedShort = eh > 0 ? `${eh}:${pad(em)}` : `${em}分`;
+    const elapsedHuman = eh > 0 ? `${eh}時間${em}分` : `${em}分`;
+    const since = S.current ? new Date(S.current.since) : d;
+    const totals = {};
+    S.log.forEach(s => { totals[s.id] = (totals[s.id] || 0) + ((s.end ?? now) - s.start); });
+    const fmtTotal = ms => { if (!ms) return '—'; const h = Math.floor(ms / H), m = Math.floor((ms % H) / 60000); return h > 0 ? `${h}h ${pad(m)}m` : `${m}m`; };
+    const acts = acts0.map(a => {
+      const active = a.id === cur?.id;
+      return {
+        ...a, icon: ICONS[a.iconKey] || ICONS.home, active,
+        pick: () => this.switchTo(a.id),
+        bg: active ? a.color : C.surface, fg: active ? '#fff' : C.ink,
+        border: active ? a.color : C.line,
+        shadow: active ? `0 10px 24px -8px ${a.color}` : 'none',
+        rowBg: active ? a.color : C.surface, rowFg: active ? '#fff' : C.ink,
+        check: active ? '●' : '',
+        tile: C.tileBg,
+        totalStr: fmtTotal(totals[a.id]),
+      };
+    });
+    const m0 = this.midnight(), dayMin = 1440;
+    const segs = S.log.map(s => { const c = acts0.find(a => a.id === s.id); return { color: c?.color || '#999', flex: Math.max(0.5, ((s.end ?? now) - s.start) / 60000) }; });
+    const usedMin = (now - m0) / 60000;
+    const ringSegs = S.log.map(s => { const c = acts0.find(a => a.id === s.id); return { color: c?.color || '#999', d: arc(120, 120, 112, (s.start - m0) / 86400e3 * 360, ((s.end ?? now) - m0) / 86400e3 * 360) }; });
+    const ticks = Array.from({ length: 60 }, (_, i) => { const major = i % 5 === 0; return { deg: i * 6, y2: major ? 26 : 21, y3: major ? 31 : 27, w: major ? 2.5 : 1, stroke: major ? C.ink : C.line }; });
+    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    const others = acts.filter(a => !a.active).slice(0, 6);
+    const elapsedFrac = Math.min(1, elapsedMs / (4 * H));
+    return {
+      ...C, dark, showSeconds, curColor, curName: cur?.name || '', curIcon: ICONS[cur?.iconKey] || ICONS.home,
+      tintBg: `color-mix(in oklab, ${curColor} ${dark ? 22 : 14}%, ${C.bg})`,
+      widgetBg: dark ? 'rgba(28,29,34,0.92)' : 'rgba(255,255,255,0.88)',
+      hDeg: ((hour % 12) + min / 60) * 30, mDeg: (min + sec / 60) * 6, sDeg: sec * 6, nowDeg: usedMin / dayMin * 360,
+      elapsed, elapsedShort, elapsedHuman,
+      sinceStr: `${since.getHours()}:${pad(since.getMinutes())}`,
+      clockStr: `${hour}:${pad(min)}`,
+      dateStr: `${d.getMonth() + 1}月${d.getDate()}日（${wd}）`,
+      acts, others, segs, ringSegs, ticks,
+      remainFlex: Math.max(0, dayMin - usedMin),
+      lockArc: arc(36, 36, 31, 0, elapsedFrac * 360),
+      theme, demoHour: Number(P.demoHour ?? -1),
+      menuBg: dark ? 'rgba(40,41,48,0.86)' : 'rgba(255,255,255,0.86)',
+      menuLine: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+      menu: [
+        { label: '状態を切り替え', icon: 'M4 7h16M4 7l3-3M4 7l3 3M20 17H4M20 17l-3-3M20 17l-3 3' },
+        { label: '記録を訂正', icon: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z' },
+        { label: '今日の記録を見る', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+        { label: 'ウィジェットを編集', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2' },
+      ],
+      iconLib: ICON_KEYS.map(k => ({ d: ICONS[k], name: { home: '家事', work: '仕事', rest: '休息', sleep: '睡眠', meal: '食事', fun: '娯楽', study: '学習', move: '運動' }[k] || k })),
+      uiIcons: [
+        { d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2' },
+        { d: 'M4 20V10M10 20V4M16 20v-7M22 20H2' },
+        { d: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 12l1.5-1-1.2-2.8-1.8.4-1.6-1.2.1-1.9L14.3 4l-1.2 1.4h-2L9.9 4 7.2 5.5l.1 1.9-1.6 1.2-1.8-.4L2.7 11 4.2 12l-1.5 1 1.2 2.8 1.8-.4 1.6 1.2-.1 1.9 2.7 1.5 1.2-1.4h2l1.2 1.4 2.7-1.5-.1-1.9 1.6-1.2 1.8.4L21.5 13z' },
+        { d: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z' },
+        { d: 'M3 12a9 9 0 1 0 3-6.7M3 4v4.5h4.5' },
+        { d: 'M12 8v8M8 12h8M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
+      ],
+      paletteList: PALETTE.map(hex => ({ hex })),
+      defaultId: S.defaultId,
+      sheetA: S.sheet === 'a', sheetB: S.sheet === 'b', sheetC: S.sheet === 'c',
+      openA: () => this.setState({ sheet: 'a' }), openB: () => this.setState({ sheet: 'b' }), openC: () => this.setState({ sheet: 'c' }),
+      closeSheet: () => this.setState({ sheet: null }), noop: () => {},
+      addAct: () => this.setState(s => { const n = s.acts.length; return { acts: [...s.acts, { id: 'a' + Date.now(), name: '新しい項目', color: PALETTE[n % PALETTE.length], iconKey: ICON_KEYS[n % ICON_KEYS.length] }] }; }),
+      moveAct: (id, dir) => this.setState(s => { const i = s.acts.findIndex(a => a.id === id), j = i + dir; if (i < 0 || j < 0 || j >= s.acts.length) return null; const acts = [...s.acts]; [acts[i], acts[j]] = [acts[j], acts[i]]; return { acts }; }),
+      cycleIcon: id => this.updAct(id, a => ({ ...a, iconKey: ICON_KEYS[(ICON_KEYS.indexOf(a.iconKey) + 1) % ICON_KEYS.length] })),
+      cycleColor: id => this.updAct(id, a => ({ ...a, color: PALETTE[(PALETTE.indexOf(a.color) + 1) % PALETTE.length] })),
+      renameAct: (id, name) => this.updAct(id, a => ({ ...a, name })),
+      setDefault: id => this.setState({ defaultId: id }),
+      deleteAct: id => this.setState(s => {
+        if (s.acts.length <= 1) return null;
+        const acts = s.acts.filter(a => a.id !== id);
+        const patch = { acts, defaultId: s.defaultId === id ? acts[0].id : s.defaultId };
+        if (s.current?.id === id) { const nid = patch.defaultId; const now = this.now(); patch.log = [...s.log.map((x, i) => i === s.log.length - 1 ? { ...x, end: now } : x), { id: nid, start: now, end: null }]; patch.current = { id: nid, since: now }; }
+        return patch;
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
+

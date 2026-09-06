@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute; inset:0; z-index:40; display:flex; flex-direction:column; justify-content:flex-end; font-family:'Sora','Noto Sans JP',sans-serif;">
+  <div onClick="{{ close }}" style="position:absolute; inset:0; background:rgba(10,10,12,0.5); backdrop-filter:blur(6px);"></div>
+  <div style="position:relative; background: {{ sheetBg }}; color: {{ ink }}; border-radius:30px 30px 0 0; padding:14px 20px 44px; max-height:82%; overflow:auto; box-shadow:0 -12px 40px rgba(0,0,0,0.25);">
+    <div style="width:40px; height:5px; border-radius:3px; background: {{ line }}; margin:0 auto 14px;"></div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <div>
+        <div style="font-size:20px; font-weight:700; letter-spacing:-0.01em;">活動項目</div>
+        <div style="font-size:12px; color: {{ sub }}; margin-top:2px;">タップで色・アイコンを変更、★は起動時の状態</div>
+      </div>
+      <button onClick="{{ close }}" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 8px 8px 4px; border-radius:18px; background: {{ chip }};">
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button onClick="{{ r.up }}" style="width:28px; height:20px; border:none; background:transparent; color: {{ sub }}; font-size:10px; cursor:pointer; padding:0;">▲</button>
+            <button onClick="{{ r.down }}" style="width:28px; height:20px; border:none; background:transparent; color: {{ sub }}; font-size:10px; cursor:pointer; padding:0;">▼</button>
+          </div>
+          <button onClick="{{ r.cycleIcon }}" title="アイコンを変更" style="width:44px; height:44px; border-radius:14px; border:none; background: {{ r.color }}; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg>
+          </button>
+          <button onClick="{{ r.cycleColor }}" title="色を変更" style="width:28px; height:44px; border:none; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; flex:none;">
+            <span style="width:18px; height:18px; border-radius:9px; background: {{ r.color }}; box-shadow:0 0 0 3px {{ sheetBg }}, 0 0 0 4px {{ r.color }}; display:block;"></span>
+          </button>
+          <input value="{{ r.name }}" onChange="{{ r.rename }}" placeholder="名前" style="flex:1; min-width:0; height:44px; border:none; background:transparent; color: {{ ink }}; font:600 16px 'Noto Sans JP','Sora',sans-serif; outline:none; padding:0 4px;"></input>
+          <button onClick="{{ r.setDefault }}" title="デフォルト状態にする" style="width:36px; height:44px; border:none; background:transparent; color: {{ r.starColor }}; font-size:20px; cursor:pointer; padding:0; flex:none;">{{ r.star }}</button>
+          <button onClick="{{ r.del }}" title="削除" style="width:36px; height:44px; border:none; background:transparent; color: {{ sub }}; font-size:16px; cursor:pointer; padding:0; flex:none;">🗑</button>
+        </div>
+      </sc-for>
+    </div>
+    <button onClick="{{ add }}" style="margin-top:12px; width:100%; height:52px; border-radius:18px; border:2px dashed {{ line }}; background:transparent; color: {{ ink }}; font:600 15px 'Noto Sans JP',sans-serif; cursor:pointer;">＋ 項目を追加</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;acts&quot;:{&quot;editor&quot;:null,&quot;default&quot;:[],&quot;tsType&quot;:&quot;Activity[]&quot;},&quot;defaultId&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;sleep&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onClose&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onAdd&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMove&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id, dir) =&gt; void&quot;},&quot;onCycleIcon&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id) =&gt; void&quot;},&quot;onCycleColor&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id) =&gt; void&quot;},&quot;onRename&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id, name) =&gt; void&quot;},&quot;onSetDefault&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id) =&gt; void&quot;},&quot;onDelete&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(id) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const dark = !!p.dark;
+    const acts = p.acts || [];
+    return {
+      sheetBg: dark ? '#1C1D22' : '#FFFFFF',
+      ink: dark ? '#F2EFE8' : '#1B1A17',
+      sub: dark ? 'rgba(242,239,232,0.6)' : 'rgba(27,26,23,0.55)',
+      line: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.14)',
+      chip: dark ? 'rgba(255,255,255,0.06)' : 'rgba(27,26,23,0.045)',
+      close: p.onClose || (() => {}),
+      add: p.onAdd || (() => {}),
+      rows: acts.map(a => {
+        const isDef = a.id === p.defaultId;
+        return {
+          ...a,
+          star: isDef ? '★' : '☆',
+          starColor: isDef ? a.color : (dark ? 'rgba(242,239,232,0.35)' : 'rgba(27,26,23,0.3)'),
+          up: () => p.onMove && p.onMove(a.id, -1),
+          down: () => p.onMove && p.onMove(a.id, 1),
+          cycleIcon: () => p.onCycleIcon && p.onCycleIcon(a.id),
+          cycleColor: () => p.onCycleColor && p.onCycleColor(a.id),
+          rename: (e) => p.onRename && p.onRename(a.id, e.target.value),
+          setDefault: () => p.onSetDefault && p.onSetDefault(a.id),
+          del: () => p.onDelete && p.onDelete(a.id),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
+

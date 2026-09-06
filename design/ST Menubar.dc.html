@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;}
+a{color:#7FB2FF;text-decoration:none} a:hover{color:#7FB2FF;text-decoration:underline}
+input::placeholder{color:inherit;opacity:.4}
+</style>
+</helmet>
+<div data-screen-label="Menubar" style="position:relative; height:100%; max-width:420px; margin:0 auto; display:flex; flex-direction:column; overflow:hidden; border-radius:12px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; -webkit-font-smoothing:antialiased;">
+
+  <div style="flex:none; height:28px; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:0 14px 0 12px; background: {{ surface }}; border-bottom:1px solid {{ line }};">
+    <div style="display:flex; align-items:center; gap:7px; height:22px; padding:0 9px; border-radius:8px; background: {{ trayBg }}; font:600 13px 'Sora','Noto Sans JP',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">
+      <span style="width:8px; height:8px; border-radius:4px; background: {{ curColor }}; flex:none; display:block;"></span>
+      <span>{{ trayLabel }}</span>
+    </div>
+    <div style="font:600 13px 'Sora',sans-serif; font-variant-numeric:tabular-nums;">{{ menuClock }}</div>
+  </div>
+
+  <div style="flex:1; min-height:0; overflow:auto; padding:20px 20px 16px; background: {{ glow }};">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+      <div style="display:flex; flex-direction:column; gap:6px; min-width:0;">
+        <div style="font:600 12px 'Noto Sans JP',sans-serif; color: {{ sub }}; letter-spacing:.08em;">いま</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="width:16px; height:16px; border-radius:8px; background: {{ curColor }}; box-shadow:0 0 0 5px {{ curRing }}; flex:none; display:block; margin:0 3px;"></span>
+          <span style="font:700 30px/1.1 'Noto Sans JP',sans-serif; letter-spacing:-0.02em; white-space:nowrap;">{{ curName }}</span>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; text-align:right; flex:none;">
+        <div style="font:600 30px/1.1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
+        <div style="font:500 14px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px; border-radius:18px; background: {{ surface }}; border:1px solid {{ line }}; padding:12px 16px 10px; display:flex; align-items:flex-end; justify-content:space-between; gap:12px;">
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">経過時間</div>
+        <div style="font:600 28px/1.15 'Sora',sans-serif; letter-spacing:-0.01em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <div style="font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">開始</div>
+        <div style="font:600 16px/1.2 'Sora',sans-serif; font-variant-numeric:tabular-nums;">{{ startStr }}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:26px; display:flex; align-items:baseline; justify-content:space-between;">
+      <div style="font:600 14px 'Noto Sans JP',sans-serif;">切り替える</div>
+      <div style="font:500 12px 'Sora','Noto Sans JP',sans-serif; color: {{ sub }};">{{ cmdHint }}</div>
+    </div>
+    <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;">
+      <sc-for list="{{ cards }}" as="a" hint-placeholder-count="6">
+        <button onClick="{{ a.pick }}" style="min-height:88px; border-radius:18px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ ink }}; padding:12px 14px; display:flex; flex-direction:column; align-items:stretch; justify-content:space-between; gap:6px; text-align:left; cursor:pointer; font-family:inherit; transition:border-color .2s, background .2s;" style-hover="border-color: {{ a.hoverBorder }}">
+          <span style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="width:9px; height:9px; border-radius:5px; background: {{ a.color }}; display:block;"></span>
+            <span style="font:600 12px 'Sora',sans-serif; color: {{ sub }};">{{ a.cmd }}</span>
+          </span>
+          <span style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font:700 16px/1.2 'Noto Sans JP',sans-serif;">{{ a.name }}</span>
+            <span style="font:500 12px 'Sora','Noto Sans JP',sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums; white-space:nowrap;">{{ a.todayStr }}</span>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:24px; display:flex; align-items:baseline; justify-content:space-between;">
+      <div style="font:600 14px 'Noto Sans JP',sans-serif;">今日の流れ</div>
+      <div style="font:500 12px 'Sora',sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums;">{{ flowRange }}</div>
+    </div>
+    <div style="margin-top:8px; display:flex; height:18px; border-radius:9px; overflow:hidden; background: {{ chip }};">
+      <sc-for list="{{ segs }}" as="s" hint-placeholder-count="5"><div title="{{ s.title }}" style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
+    </div>
+    <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px 14px;">
+      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+        <span style="display:flex; align-items:center; gap:6px; font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:2px; background: {{ l.color }}; display:block;"></span>{{ l.name }}</span>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex:none; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-top:1px solid {{ line }}; background: {{ bg }};">
+    <button onClick="{{ openEditor }}" style="height:32px; padding:0; border:none; background:transparent; color: {{ ink }}; font:600 14px 'Noto Sans JP',sans-serif; cursor:pointer;" style-hover="opacity:.7">活動項目を編集…</button>
+    <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">記録は自動保存</div>
+  </div>
+
+  <sc-if value="{{ editor }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="活動項目 編集パネル" style="position:absolute; inset:0; z-index:40; overflow:hidden; border-radius:12px;">
+      <div onClick="{{ closeEditor }}" style="position:absolute; inset:0; background: {{ overlay }}; opacity: {{ overlayOpacity }}; transition:opacity .3s;"></div>
+      <div style="position:absolute; top:0; right:0; bottom:0; width:78%; display:flex; flex-direction:column; background: {{ sheetBg }}; color: {{ ink }}; border-left:1px solid {{ line }}; box-shadow:-20px 0 50px rgba(17,18,22,0.45); transform: {{ panelX }}; transition:transform .32s cubic-bezier(.2,.7,.2,1);">
+        <div style="flex:none; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:16px 14px 12px;">
+          <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+            <div style="font:700 16px 'Noto Sans JP',sans-serif;">活動項目</div>
+            <div style="font:400 11px/1.5 'Noto Sans JP',sans-serif; color: {{ sub }};">ドラッグでメニューの並び順が変わります</div>
+          </div>
+          <button onClick="{{ addAct }}" style="flex:none; height:28px; padding:0 11px; border-radius:9999px; border:1px solid {{ line }}; background: {{ chip }}; color: {{ ink }}; font:600 12px 'Noto Sans JP',sans-serif; cursor:pointer; white-space:nowrap;" style-hover="border-color: {{ ink }}">＋ 項目を追加</button>
+        </div>
+        <div style="flex:1; min-height:0; overflow:auto; padding:0 14px;">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div draggable="true" onDragStart="{{ r.dragStart }}" onDragOver="{{ r.dragOver }}" onDragEnd="{{ dragEnd }}" onDrop="{{ drop }}" style="display:grid; grid-template-columns:8px minmax(0,1fr) auto auto auto 18px; align-items:center; gap:6px; height:44px; border-bottom:1px solid {{ line }}; background: {{ r.bg }}; opacity: {{ r.opacity }};">
+              <span style="color: {{ sub }}; cursor:grab; display:flex;"><svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg></span>
+              <input value="{{ r.name }}" onChange="{{ r.rename }}" placeholder="名前" style="min-width:0; height:28px; border:none; border-radius:8px; background:transparent; color: {{ ink }}; font:600 13px 'Noto Sans JP','Sora',sans-serif; padding:0 6px; outline:none;" style-focus="background: {{ chip }}"></input>
+              <span style="display:flex; align-items:center;">
+                <sc-for list="{{ r.swatches }}" as="c" hint-placeholder-count="8">
+                  <button onClick="{{ c.pick }}" title="{{ c.color }}" style="width:16px; height:16px; padding:0; border:none; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;"><span style="width:10px; height:10px; border-radius:5px; background: {{ c.color }}; box-shadow: {{ c.ring }}; display:block;"></span></button>
+                </sc-for>
+              </span>
+              <span style="height:20px; padding:0 6px; border-radius:9999px; border:1px solid {{ line }}; display:flex; align-items:center; font:600 10px 'Sora',sans-serif; color: {{ sub }}; white-space:nowrap;">{{ r.cmd }}</span>
+              <button onClick="{{ r.cycleTarget }}" title="1日の目安（クリックで変更）" style="min-width:26px; height:28px; border:none; background:transparent; color: {{ ink }}; font:600 12px 'Sora',sans-serif; font-variant-numeric:tabular-nums; padding:0; cursor:pointer; text-align:right; white-space:nowrap;">{{ r.targetStr }}</button>
+              <button onClick="{{ r.del }}" title="削除" style="width:18px; height:18px; border:none; border-radius:9px; background:transparent; color: {{ sub }}; font-size:14px; line-height:1; padding:0; cursor:pointer;" style-hover="background: {{ chip }}; color: {{ ink }}">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex:none; display:flex; align-items:center; justify-content:space-between; padding:10px 14px 14px; border-top:1px solid {{ line }};">
+          <div style="font:400 11px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ rowsHint }}</div>
+          <button onClick="{{ closeEditor }}" style="height:30px; padding:0 14px; border-radius:9999px; border:none; background: {{ ink }}; color: {{ sheetBg }}; font:600 12px 'Noto Sans JP',sans-serif; cursor:pointer;">完了</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:600},&quot;dark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;demoHour&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:-1,&quot;min&quot;:-1,&quot;max&quot;:23,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;デモ&quot;},&quot;showEditor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;デモ&quot;}}">
+const PALETTE = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C', '#2BA3B5', '#8A6A4B'];
+const DEFAULT_ACTS = [
+  { id: 'work', name: '仕事', color: '#3B7BD9', target: 8 },
+  { id: 'rest', name: '休息', color: '#4FA877', target: 2 },
+  { id: 'house', name: '家事', color: '#E0A431', target: 1.5 },
+  { id: 'sleep', name: '睡眠', color: '#6C63D6', target: 7 },
+  { id: 'meal', name: '食事', color: '#E0684A', target: 1.5 },
+  { id: 'fun', name: '娯楽', color: '#D8579C', target: 1.5 },
+];
+// [id, start minute of day] — sample day
+const SCHEDULE = [['sleep', 0], ['house', 402], ['meal', 425], ['work', 455], ['meal', 720], ['work', 768], ['rest', 838], ['work', 930], ['rest', 975], ['meal', 1140], ['fun', 1200], ['house', 1290], ['sleep', 1380]];
+const TARGETS = [0.5, 1, 1.5, 2, 3, 4, 6, 7, 8, 9, 10];
+const H = 3600e3, M = 60000;
+const pad = n => String(n).padStart(2, '0');
+const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
+const THEMES = {
+  dark: { bg: '#111216', face: '#1B1C22', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', overlay: 'rgba(17,18,22,0.6)' },
+  light: { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', sheetBg: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.12)', chip: 'rgba(27,26,23,0.06)', accent: '#2A66C4', overlay: 'rgba(27,26,23,0.35)' },
+};
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const open = !!props.showEditor;
+    this.state = { acts: DEFAULT_ACTS, log: [], current: null, now: Date.now(), editor: open, panelIn: open, dragId: null };
+  }
+  midnight() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  nowTs() {
+    const real = Date.now(), dh = Number(this.props.demoHour ?? -1), m0 = this.midnight();
+    return dh >= 0 ? m0 + dh * H + ((real - m0) % H) : real;
+  }
+  seed() {
+    const now = this.nowTs(), m0 = this.midnight(), log = [];
+    SCHEDULE.forEach(([id, min]) => { const start = m0 + min * M; if (start < now) log.push({ id, start, end: null }); });
+    log.forEach((s, i) => { if (i < log.length - 1) s.end = log[i + 1].start; });
+    const last = log[log.length - 1] || { id: 'sleep', start: m0 };
+    this.setState({ log, current: { id: last.id, since: last.start }, now });
+  }
+  componentDidMount() {
+    this.seed();
+    this.t = setInterval(() => this.setState({ now: this.nowTs() }), 1000);
+    this.onKey = e => {
+      if (e.key === 'Escape' && this.state.editor) { this.closeEditor(); return; }
+      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
+        const a = this.state.acts[Number(e.key) - 1];
+        if (a) { e.preventDefault(); this.switchTo(a.id); }
+      }
+    };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentDidUpdate(prev) {
+    if (prev.demoHour !== this.props.demoHour) this.seed();
+    if (prev.showEditor !== this.props.showEditor) { if (this.props.showEditor) this.openEditor(); else this.closeEditor(); }
+  }
+  componentWillUnmount() { clearInterval(this.t); clearTimeout(this.ct); window.removeEventListener('keydown', this.onKey); }
+  switchTo(id) {
+    const { current, log } = this.state; if (current && current.id === id) return;
+    const now = this.nowTs();
+    const nl = log.map((s, i) => i === log.length - 1 ? { ...s, end: now } : s);
+    nl.push({ id, start: now, end: null });
+    this.setState({ log: nl, current: { id, since: now }, now });
+  }
+  openEditor() {
+    clearTimeout(this.ct);
+    this.setState({ editor: true });
+    requestAnimationFrame(() => requestAnimationFrame(() => this.setState({ panelIn: true })));
+  }
+  closeEditor() {
+    this.setState({ panelIn: false, dragId: null });
+    clearTimeout(this.ct);
+    this.ct = setTimeout(() => this.setState({ editor: false }), 340);
+  }
+  updAct(id, fn) { this.setState(s => ({ acts: s.acts.map(a => a.id === id ? fn(a) : a) })); }
+  moveTo(dragId, overId) {
+    this.setState(s => {
+      const from = s.acts.findIndex(a => a.id === dragId), to = s.acts.findIndex(a => a.id === overId);
+      if (from < 0 || to < 0 || from === to) return null;
+      const acts = [...s.acts]; const [it] = acts.splice(from, 1); acts.splice(to, 0, it);
+      return { acts };
+    });
+  }
+
+  renderVals() {
+    const S = this.state, P = this.props, now = S.now, d = new Date(now);
+    const dark = P.dark ?? true;
+    const C = dark ? THEMES.dark : THEMES.light;
+    const acts = S.acts;
+    const cur = acts.find(a => a.id === (S.current && S.current.id)) || acts[0] || DEFAULT_ACTS[0];
+    const curColor = cur.color;
+    const el = S.current ? Math.max(0, now - S.current.since) : 0;
+    const eh = Math.floor(el / H), em = Math.floor(el % H / M), es = Math.floor(el % M / 1000);
+    const hm = ts => { const x = new Date(ts); return pad(x.getHours()) + ':' + pad(x.getMinutes()); };
+    const dur = ms => { const m = Math.floor(ms / M); return Math.floor(m / 60) + 'h' + pad(m % 60) + 'm'; };
+    const totals = {}; S.log.forEach(s => { totals[s.id] = (totals[s.id] || 0) + ((s.end ?? now) - s.start); });
+    const nCmd = Math.min(acts.length, 9);
+    const cards = acts.map((a, i) => {
+      const sel = a.id === cur.id;
+      return { key: a.id, name: a.name, color: a.color, cmd: i < 9 ? '⌘' + (i + 1) : '', todayStr: '今日 ' + dur(totals[a.id] || 0),
+        border: sel ? a.color : C.line, bg: sel ? alpha(a.color, dark ? 0.18 : 0.12) : C.surface, hoverBorder: sel ? a.color : alpha(a.color, 0.6),
+        pick: () => this.switchTo(a.id) };
+    });
+    const segs = S.log.map(s => {
+      const a = acts.find(x => x.id === s.id);
+      return { color: a ? a.color : C.chip, flex: Math.max(0.3, ((s.end ?? now) - s.start) / M), title: (a ? a.name : '') + ' ' + hm(s.start) + '–' + (s.end ? hm(s.end) : 'いま') };
+    });
+    const legend = acts.filter(a => totals[a.id]).map(a => ({ name: a.name, color: a.color }));
+    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+    const rows = acts.map((a, i) => ({
+      key: a.id, name: a.name, cmd: i < 9 ? '⌘' + (i + 1) : '—', targetStr: a.target + 'h',
+      bg: S.dragId === a.id ? C.chip : 'transparent', opacity: S.dragId === a.id ? 0.55 : 1,
+      swatches: PALETTE.map(c => ({ color: c, ring: c === a.color ? '0 0 0 1.5px ' + C.sheetBg + ', 0 0 0 3px ' + c : 'none', pick: () => this.updAct(a.id, x => ({ ...x, color: c })) })),
+      rename: e => this.updAct(a.id, x => ({ ...x, name: e.target.value })),
+      cycleTarget: () => this.updAct(a.id, x => ({ ...x, target: TARGETS[(TARGETS.indexOf(x.target) + 1) % TARGETS.length] })),
+      del: () => this.setState(s => s.acts.length <= 1 ? null : { acts: s.acts.filter(x => x.id !== a.id) }),
+      dragStart: e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', a.id); this.setState({ dragId: a.id }); },
+      dragOver: e => { e.preventDefault(); if (S.dragId && S.dragId !== a.id) this.moveTo(S.dragId, a.id); },
+    }));
+    const hhmm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    return {
+      ...C, dark, curColor, curName: cur.name, curRing: alpha(curColor, 0.28),
+      trayBg: alpha(curColor, dark ? 0.3 : 0.18), trayLabel: cur.name + ' · ' + dur(el),
+      glow: 'linear-gradient(180deg, ' + alpha(curColor, dark ? 0.2 : 0.14) + ' 0%, ' + alpha(curColor, 0) + ' 42%)',
+      menuClock: hhmm, clockStr: hhmm + ':' + pad(d.getSeconds()),
+      dateStr: (d.getMonth() + 1) + '月' + d.getDate() + '日（' + wd + '）',
+      elapsed: pad(eh) + ':' + pad(em) + ':' + pad(es),
+      startStr: S.current ? hm(S.current.since) : '--:--',
+      cmdHint: '⌘1〜' + nCmd, cards, segs, legend, flowRange: '00:00 → ' + hhmm,
+      editor: S.editor, panelX: S.panelIn ? 'translateX(0)' : 'translateX(100%)', overlayOpacity: S.panelIn ? 1 : 0,
+      rows, rowsHint: acts.length + '項目 · Esc で閉じる',
+      openEditor: () => this.openEditor(), closeEditor: () => this.closeEditor(),
+      addAct: () => this.setState(s => ({ acts: [...s.acts, { id: 'a' + Date.now(), name: '新しい項目', color: PALETTE[s.acts.length % PALETTE.length], target: 1 }] })),
+      dragEnd: () => this.setState({ dragId: null }), drop: e => e.preventDefault(),
+    };
+  }
+}
+</script>
+</body>
+</html>

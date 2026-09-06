@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;}
+a{color:#2A66C4;text-decoration:none} a:hover{color:#2A66C4;text-decoration:underline}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" data-screen-label="Web" style="height:100vh; display:flex; flex-direction:column; align-items:center; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; -webkit-font-smoothing:antialiased;">
+  <div style="width: {{ appWidth }}; max-width:100%; flex:1; min-height:0; display:flex; flex-direction: {{ appDir }}; border-left: {{ appBorder }}; border-right: {{ appBorder }};">
+
+    <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Rail" style="width:76px; flex:none; display:flex; flex-direction:column; align-items:center; padding:16px 0; gap:6px; background: {{ tabBg }}; border-right:1px solid {{ line }};">
+        <div style="width:36px; height:36px; border-radius:18px; background: {{ face }}; border:3px solid {{ curColor }}; margin-bottom:14px; display:flex; align-items:center; justify-content:center;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="{{ ink }}" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v5l3.5 2"></path></svg>
+        </div>
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+          <button onClick="{{ n.pick }}" style="width:60px; height:58px; border:none; border-radius:16px; background: {{ n.bg }}; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font:600 10px 'Noto Sans JP',sans-serif;" style-hover="background: {{ chip }}">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ n.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>{{ n.label }}
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="flex:1; min-width:0; min-height:0; display:flex; justify-content:center;">
+      <div style="flex:1; max-width:640px; min-width:0; min-height:0; display:flex; flex-direction:column; border-left: {{ colBorder }}; border-right: {{ colBorder }};">
+        <div style="flex:1; min-height:0; overflow:auto; padding: {{ colPad }}; display:flex; flex-direction:column; gap:16px;">
+
+          <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+            <div data-screen-label="ホーム" style="display:flex; flex-direction:column; gap:16px;">
+              <div style="min-height:36px; display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                <div style="font:700 22px 'Noto Sans JP',sans-serif; letter-spacing:-0.02em;">いま</div>
+                <div style="font:500 14px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+              </div>
+              <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:24px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:24px;">
+                <div style="width:176px; height:176px; border-radius:88px; box-shadow:0 14px 30px {{ dialShadow }}; flex:none;">
+                  <svg viewBox="0 0 200 200" width="176" height="176" style="display:block;">
+                    <circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4"></circle>
+                    <circle cx="100" cy="100" r="90" fill="{{ face }}"></circle>
+                    <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><line x1="100" y1="16" x2="100" y2="{{ t.y2 }}" stroke="{{ t.stroke }}" stroke-width="{{ t.w }}" stroke-linecap="round" transform="rotate({{ t.deg }} 100 100)"></line></sc-for>
+                    <line x1="100" y1="106" x2="100" y2="52" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
+                    <line x1="100" y1="108" x2="100" y2="32" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
+                    <sc-if value="{{ showSeconds }}" hint-placeholder-val="{{ true }}"><line x1="100" y1="112" x2="100" y2="24" stroke="{{ curColor }}" stroke-width="1.5" stroke-linecap="round" transform="rotate({{ sDeg }} 100 100)"></line></sc-if>
+                    <circle cx="100" cy="100" r="4.5" fill="{{ curColor }}"></circle>
+                  </svg>
+                </div>
+                <div style="flex:1; min-width:220px; display:flex; flex-direction:column; align-items: {{ statusAlign }}; text-align: {{ statusText }}; gap:6px;">
+                  <div style="display:flex; align-items:center; gap:10px; font:700 24px 'Noto Sans JP',sans-serif; letter-spacing:-0.01em;">
+                    <span style="width:12px; height:12px; border-radius:6px; background: {{ curColor }}; display:block; flex:none;"></span>{{ curName }}
+                  </div>
+                  <div style="font:600 46px/1.1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+                  <div style="font:400 13px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ sinceStr }} から · 今日 {{ switchCount }} 回切替</div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                  <div style="font:600 15px 'Noto Sans JP',sans-serif;">切り替え</div>
+                  <div style="font:400 13px 'Noto Sans JP',sans-serif; color: {{ sub }};">押した瞬間から積み上がります</div>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                  <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
+                    <button onClick="{{ a.pick }}" style="flex:1 1 150px; height:58px; border-radius:18px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px 'Noto Sans JP',sans-serif; cursor:pointer; box-shadow: {{ a.shadow }};" style-hover="opacity:.88">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg><span>{{ a.name }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px 20px 16px; display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                  <div style="font:600 15px 'Noto Sans JP',sans-serif;">今日の流れ</div>
+                  <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                    <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+                      <span style="display:flex; align-items:center; gap:6px; font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:2px; background: {{ l.color }}; display:block;"></span>{{ l.name }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex; height:14px; border-radius:7px; overflow:hidden; background: {{ chip }};">
+                  <sc-for list="{{ segs }}" as="s" hint-placeholder-count="5"><div style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
+                  <div style="flex: {{ remainFlex }} 1 0px;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font:400 11px 'Sora',sans-serif; color: {{ sub }};"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="記録" style="display:flex; flex-direction:column; gap:16px;">
+              <div style="min-height:36px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div style="font:700 22px 'Noto Sans JP',sans-serif; letter-spacing:-0.02em;">記録</div>
+                <div style="display:flex; gap:4px; padding:4px; border-radius:14px; background: {{ chip }};">
+                  <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3">
+                    <button onClick="{{ r.pick }}" style="height:34px; padding:0 16px; border:none; border-radius:10px; background: {{ r.bg }}; color: {{ r.fg }}; font:600 13px 'Noto Sans JP',sans-serif; cursor:pointer;">{{ r.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <div style="flex:1 1 200px; border-radius:20px; background: {{ surface }}; border:1px solid {{ line }}; padding:16px 18px;">
+                  <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">計測できた日</div>
+                  <div style="font:600 26px 'Sora',sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ measuredStr }}</div>
+                </div>
+                <div style="flex:1 1 200px; border-radius:20px; background: {{ surface }}; border:1px solid {{ line }}; padding:16px 18px;">
+                  <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">連続記録</div>
+                  <div style="font:600 26px 'Sora',sans-serif; margin-top:4px; font-variant-numeric:tabular-nums;">{{ streakStr }}</div>
+                </div>
+              </div>
+              <sc-if value="{{ hasExcluded }}" hint-placeholder-val="{{ true }}">
+                <div style="border-radius:18px; background: {{ chip }}; padding:13px 16px; display:flex; align-items:center; gap:10px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none; opacity:.55;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg>
+                  <span style="flex:1; font:400 13px/1.5 'Noto Sans JP',sans-serif; color: {{ sub }};">アプリを使わなかった <b style="color:{{ ink }}">{{ excludedCount }}日</b> は平均から除外しています（点線の日）</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showCharts }}" hint-placeholder-val="{{ true }}">
+            <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:20px 20px 16px;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; gap:12px;">
+                <div style="font:600 15px 'Noto Sans JP',sans-serif;">{{ chartTitle }}</div>
+                <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">1本 = 24時間</div>
+              </div>
+              <div style="display:flex; align-items:flex-end; gap: {{ barGap }}px; height:172px;">
+                <sc-for list="{{ chartDays }}" as="d" hint-placeholder-count="7">
+                  <div style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column; justify-content:flex-end; gap:6px;">
+                    <div style="display:flex; flex-direction:column; justify-content:flex-end; gap:1.5px; height:144px;">
+                      <sc-if value="{{ d.excluded }}" hint-placeholder-val="{{ false }}"><div style="height:144px; border-radius:6px; border:1.5px dashed {{ line }}; background: {{ chip }};"></div></sc-if>
+                      <sc-for list="{{ d.bars }}" as="b" hint-placeholder-count="4"><div style="height: {{ b.h }}px; background: {{ b.color }}; border-radius: {{ b.radius }};"></div></sc-for>
+                    </div>
+                    <div style="font:500 11px 'Sora','Noto Sans JP',sans-serif; color: {{ d.labelColor }}; text-align:center; white-space:nowrap;">{{ d.label }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:20px; display:flex; flex-direction:column; gap:14px;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                <div style="font:600 15px 'Noto Sans JP',sans-serif;">状態別</div>
+                <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">合計 ／ 1日あたり</div>
+              </div>
+              <sc-for list="{{ totals }}" as="t" hint-placeholder-count="6">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="width:28px; height:28px; border-radius:9px; background: {{ t.color }}; color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg></span>
+                    <span style="flex:1; font:600 14px 'Noto Sans JP',sans-serif;">{{ t.name }}</span>
+                    <span style="font:600 14px 'Sora',sans-serif; font-variant-numeric:tabular-nums;">{{ t.totalStr }}</span>
+                    <span style="font:400 12px 'Sora',sans-serif; color: {{ sub }}; width:72px; text-align:right; font-variant-numeric:tabular-nums;">{{ t.avgStr }}</span>
+                  </div>
+                  <div style="height:8px; border-radius:4px; background: {{ chip }}; overflow:hidden;">
+                    <div style="width: {{ t.pct }}%; height:100%; background: {{ t.color }}; border-radius:4px;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="設定" style="display:flex; flex-direction:column; gap:16px;">
+              <div style="min-height:36px; display:flex; align-items:center; font:700 22px 'Noto Sans JP',sans-serif; letter-spacing:-0.02em;">設定</div>
+              <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; overflow:hidden;">
+                <div style="min-height:64px; display:flex; align-items:center; gap:12px; padding:10px 18px; border-bottom:1px solid {{ line }};">
+                  <span style="flex:1; font:600 15px 'Noto Sans JP',sans-serif;">外観</span>
+                  <div style="display:flex; gap:3px; padding:3px; border-radius:12px; background: {{ chip }};">
+                    <sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3">
+                      <button onClick="{{ o.pick }}" style="height:32px; min-width:56px; padding:0 12px; border:none; border-radius:9px; background: {{ o.bg }}; color: {{ o.fg }}; font:600 12px 'Noto Sans JP',sans-serif; cursor:pointer;">{{ o.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="min-height:64px; display:flex; align-items:center; gap:12px; padding:10px 18px;">
+                  <span style="flex:1; font:600 15px 'Noto Sans JP',sans-serif;">秒針を表示</span>
+                  <button onClick="{{ toggleSeconds }}" style="width:52px; height:32px; border-radius:16px; border:none; background: {{ secTrack }}; cursor:pointer; padding:3px; display:flex; justify-content: {{ secJustify }};"><span style="width:26px; height:26px; border-radius:13px; background:#FFFFFF; display:block; box-shadow:0 1px 3px rgba(27,26,23,0.3);"></span></button>
+                </div>
+              </div>
+              <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px 18px 8px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:6px;">
+                  <div style="font:600 15px 'Noto Sans JP',sans-serif;">活動項目</div>
+                  <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ actCountStr }}</div>
+                </div>
+                <sc-for list="{{ actRows }}" as="r" hint-placeholder-count="6">
+                  <div style="min-height:52px; display:flex; align-items:center; gap:12px; border-top:1px solid {{ line }};">
+                    <span style="width:30px; height:30px; border-radius:10px; background: {{ r.color }}; color:#FFFFFF; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span>
+                    <span style="flex:1; font:600 15px 'Noto Sans JP',sans-serif;">{{ r.name }}</span>
+                    <span style="font:400 13px 'Sora','Noto Sans JP',sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums;">{{ r.todayStr }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border-radius:22px; background: {{ surface }}; border:1px solid {{ line }}; padding:18px; display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <span style="flex:1;">
+                    <span style="display:block; font:600 15px 'Noto Sans JP',sans-serif;">未使用日の自動除外</span>
+                    <span style="display:block; font:400 12px/1.5 'Noto Sans JP',sans-serif; color: {{ sub }}; margin-top:2px;">一度も切り替えなかった日は平均・連続記録から外します</span>
+                  </span>
+                  <button onClick="{{ toggleAuto }}" style="width:52px; height:32px; border-radius:16px; border:none; background: {{ autoTrack }}; cursor:pointer; padding:3px; display:flex; justify-content: {{ autoJustify }}; flex:none;"><span style="width:26px; height:26px; border-radius:13px; background:#FFFFFF; display:block; box-shadow:0 1px 3px rgba(27,26,23,0.3);"></span></button>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <span style="flex:1 1 160px; font:500 13px 'Noto Sans JP',sans-serif; color: {{ sub }};">無操作とみなす時間</span>
+                  <div style="display:flex; gap:6px;">
+                    <sc-for list="{{ thresholds }}" as="t" hint-placeholder-count="4">
+                      <button onClick="{{ t.pick }}" style="width:56px; height:40px; border-radius:12px; border:1.5px solid {{ t.border }}; background:transparent; color: {{ ink }}; font:600 13px 'Sora',sans-serif; cursor:pointer;">{{ t.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="font:400 12px/1.6 'Noto Sans JP',sans-serif; color: {{ sub }}; text-align:center; padding:4px 0 8px;">Switch Time Web 1.0 · 記録は自動保存</div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="TabBar" style="flex:none; height:60px; display:flex; background: {{ tabBg }}; border-top:1px solid {{ line }};">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="3">
+          <button onClick="{{ n.pick }}" style="flex:1; border:none; background:transparent; color: {{ n.color }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font:600 10px 'Noto Sans JP',sans-serif;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ n.sw }}" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>{{ n.label }}
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1024,&quot;height&quot;:860},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;表示&quot;},&quot;initialScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;history&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;画面&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;fill&quot;,&quot;768&quot;,&quot;390&quot;],&quot;default&quot;:&quot;fill&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;デモ&quot;},&quot;demoHour&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:-1,&quot;min&quot;:-1,&quot;max&quot;:23,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;デモ&quot;}}">
+const ICONS = {
+  home: 'M3 11 12 3l9 8v10H3z',
+  work: 'M3 8h18v12H3zM9 8V5h6v3M3 13h18',
+  rest: 'M4 9h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM16 11h2a2 2 0 0 1 0 4h-2M7 3v3M11 3v3',
+  sleep: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+  meal: 'M7 3v18M4 3v5a3 3 0 0 0 6 0V3M16 3c-2 2-2 8 0 10v8M16 13c2-2 3-6 2-10',
+  fun: 'M6 8h12a4 4 0 0 1 4 4v3a3 3 0 0 1-5.5 1.5L15 15H9l-1.5 1.5A3 3 0 0 1 2 15v-3a4 4 0 0 1 4-4zM7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01',
+};
+const NAV_ICONS = {
+  now: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 12l1.5-1-1.2-2.8-1.8.4-1.6-1.2.1-1.9L14.3 4l-1.2 1.4h-2L9.9 4 7.2 5.5l.1 1.9-1.6 1.2-1.8-.4L2.7 11 4.2 12l-1.5 1 1.2 2.8 1.8-.4 1.6 1.2-.1 1.9 2.7 1.5 1.2-1.4h2l1.2 1.4 2.7-1.5-.1-1.9 1.6-1.2 1.8.4L21.5 13z',
+};
+const PALETTE = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C', '#2BA3B5', '#8A6A4B'];
+const DEFAULT_ACTS = [
+  { id: 'house', name: '家事', color: '#E0A431', iconKey: 'home' },
+  { id: 'work', name: '仕事', color: '#3B7BD9', iconKey: 'work' },
+  { id: 'rest', name: '休息', color: '#4FA877', iconKey: 'rest' },
+  { id: 'sleep', name: '睡眠', color: '#6C63D6', iconKey: 'sleep' },
+  { id: 'meal', name: '食事', color: '#E0684A', iconKey: 'meal' },
+  { id: 'fun', name: '娯楽', color: '#D8579C', iconKey: 'fun' },
+];
+const SCHEDULE = [['sleep', 0], ['house', 6.5], ['meal', 7.25], ['work', 7.75], ['meal', 12], ['work', 12.75], ['rest', 15.25], ['work', 15.75], ['meal', 19], ['fun', 20], ['house', 21.5], ['sleep', 23]];
+const H = 3600e3, DAY = 864e5;
+const pad = n => String(n).padStart(2, '0');
+const rnd = seed => { let t = seed + 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+// tabBg is opaque (= bg); no translucent bar, no hatch gradient — RN-web safe
+const THEMES = {
+  dark: { bg: '#111216', face: '#1B1C22', surface: '#1B1C22', sheetBg: '#1C1D22', ink: '#F2EFE8', sub: 'rgba(242,239,232,0.6)', line: 'rgba(255,255,255,0.14)', chip: 'rgba(255,255,255,0.08)', accent: '#7FB2FF', tabBg: '#111216', dialShadow: 'rgba(17,18,22,0.6)' },
+  light: { bg: '#F5F2EB', face: '#FFFFFF', surface: '#FFFFFF', sheetBg: '#FFFFFF', ink: '#1B1A17', sub: 'rgba(27,26,23,0.55)', line: 'rgba(27,26,23,0.12)', chip: 'rgba(27,26,23,0.06)', accent: '#2A66C4', tabBg: '#F5F2EB', dialShadow: 'rgba(27,26,23,0.14)' },
+};
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.rootRef = React.createRef();
+    this.state = {
+      acts: DEFAULT_ACTS, log: [], current: null, now: Date.now(), history: null,
+      screen: props.initialScreen || 'home', range: 'week', theme: props.theme || 'auto',
+      showSeconds: true, auto: true, threshold: 10, width: 1024,
+    };
+  }
+  midnight() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  nowTs() {
+    const real = Date.now(), dh = Number(this.props.demoHour ?? -1), m0 = this.midnight();
+    return dh >= 0 ? m0 + dh * H + ((real - m0) % H) : real;
+  }
+  buildHistory() {
+    const m0 = this.midnight(), ids = DEFAULT_ACTS.map(a => a.id), out = [];
+    for (let i = 29; i >= 1; i--) {
+      const ts = m0 - i * DAY, dow = new Date(ts).getDay(), weekend = dow === 0 || dow === 6;
+      const idle = i % 11 === 4 || i === 17;
+      const base = { sleep: weekend ? 8.6 : 7.2, work: weekend ? 1.4 : 8.4, house: weekend ? 2.6 : 1.3, meal: 2.1, rest: weekend ? 3.4 : 1.9, fun: weekend ? 5.2 : 2.6 };
+      const totals = {}; let sum = 0;
+      ids.forEach((id, k) => { const v = Math.max(0.2, (base[id] || 1) * (0.78 + rnd(i * 31 + k * 7) * 0.5)); totals[id] = v; sum += v; });
+      ids.forEach(id => { totals[id] = totals[id] / sum * 24 * H; });
+      out.push({ ts, totals: idle ? {} : totals, switches: idle ? 0 : 6 + Math.floor(rnd(i * 13) * 9) });
+    }
+    return out;
+  }
+  seed() {
+    const now = this.nowTs(), m0 = this.midnight(), log = [];
+    SCHEDULE.forEach(([id, h]) => { const start = m0 + h * H; if (start < now) log.push({ id, start, end: null }); });
+    log.forEach((s, i) => { if (i < log.length - 1) s.end = log[i + 1].start; });
+    const last = log[log.length - 1] || { id: 'sleep', start: m0 };
+    this.setState({ log, current: { id: last.id, since: last.start }, now, history: this.buildHistory() });
+  }
+  componentDidMount() {
+    this.seed();
+    this.t = setInterval(() => this.setState({ now: this.nowTs() }), 1000);
+    const el = this.rootRef.current || document.body;
+    if (window.ResizeObserver) {
+      this.ro = new ResizeObserver(en => { const w = en[0].contentRect.width; if (Math.abs(w - this.state.width) > 1) this.setState({ width: w }); });
+      this.ro.observe(el);
+    } else this.setState({ width: el.clientWidth });
+  }
+  componentDidUpdate(prev) {
+    if (prev.demoHour !== this.props.demoHour) this.seed();
+    if (prev.theme !== this.props.theme) this.setState({ theme: this.props.theme || 'auto' });
+    if (prev.initialScreen !== this.props.initialScreen) this.setState({ screen: this.props.initialScreen || 'home' });
+  }
+  componentWillUnmount() { clearInterval(this.t); if (this.ro) this.ro.disconnect(); }
+  switchTo(id) {
+    const { current, log } = this.state; if (current && current.id === id) return;
+    const now = this.nowTs();
+    const nl = log.map((s, i) => i === log.length - 1 ? { ...s, end: now } : s);
+    nl.push({ id, start: now, end: null });
+    this.setState({ log: nl, current: { id, since: now }, now });
+  }
+
+  renderVals() {
+    const S = this.state, P = this.props, now = S.now, d = new Date(now);
+    const hour = d.getHours(), min = d.getMinutes(), sec = d.getSeconds();
+    const dark = S.theme === 'dark' || (S.theme === 'auto' && (hour < 6 || hour >= 18));
+    const C = dark ? THEMES.dark : THEMES.light;
+    // viewport: 'fill' or a fixed px width to preview the narrow (<800) layout
+    const vp = P.viewport && P.viewport !== 'fill' ? Number(P.viewport) : 0;
+    const effW = vp > 0 ? Math.min(vp, S.width) : S.width;
+    const wide = effW >= 800, narrow = !wide;
+    const acts0 = S.acts;
+    const cur = acts0.find(a => a.id === (S.current && S.current.id)) || acts0[0];
+    const curColor = cur.color;
+    const el = S.current ? Math.max(0, now - S.current.since) : 0;
+    const eh = Math.floor(el / H), em = Math.floor((el % H) / 60000), es = Math.floor((el % 60000) / 1000);
+    const fmt = ms => { if (!ms) return '—'; let m = Math.round(ms / 60000); const h = Math.floor(m / 60); m -= h * 60; return h > 0 ? h + 'h ' + pad(m) + 'm' : m + 'm'; };
+    const hm = ts => { const x = new Date(ts); return x.getHours() + ':' + pad(x.getMinutes()); };
+    const acts = acts0.map(a => {
+      const active = a.id === cur.id;
+      return { name: a.name, icon: ICONS[a.iconKey] || ICONS.home, pick: () => this.switchTo(a.id),
+        bg: active ? a.color : C.surface, fg: active ? '#FFFFFF' : C.ink, border: active ? a.color : C.line,
+        shadow: active ? '0 10px 24px -8px ' + a.color : 'none' };
+    });
+    const m0 = this.midnight(), usedMin = (now - m0) / 60000;
+    const segs = S.log.map(s => { const c = acts0.find(a => a.id === s.id); return { color: c ? c.color : C.chip, flex: Math.max(0.5, ((s.end ?? now) - s.start) / 60000) }; });
+    const ticks = Array.from({ length: 60 }, (_, i) => { const major = i % 5 === 0; return { deg: i * 6, y2: major ? 26 : 21, w: major ? 2.5 : 1, stroke: major ? C.ink : C.line }; });
+    const todayTotals = {}; S.log.forEach(s => { todayTotals[s.id] = (todayTotals[s.id] || 0) + ((s.end ?? now) - s.start); });
+    const legend = acts0.filter(a => todayTotals[a.id]).map(a => ({ name: a.name, color: a.color }));
+
+    // history window: home always shows 7 days; 記録 follows the range switcher
+    const hist = S.history || [];
+    const isExcluded = day => S.auto && day.switches === 0;
+    const all = [...hist, { ts: m0, totals: todayTotals, switches: Math.max(0, S.log.length - 1) }];
+    const range = S.screen === 'history' ? S.range : 'week';
+    const nDays = range === 'day' ? 1 : range === 'week' ? 7 : 30;
+    const win = all.slice(-nDays);
+    const measured = win.filter(x => !isExcluded(x));
+    const rangeTotals = {}; measured.forEach(x => Object.keys(x.totals).forEach(k => { rangeTotals[k] = (rangeTotals[k] || 0) + x.totals[k]; }));
+    const maxTotal = Math.max(1, ...Object.values(rangeTotals));
+    const barMax = 144, maxDayMs = 24 * H;
+    const chartDays = win.map(x => {
+      const ex = isExcluded(x);
+      const keys = acts0.map(a => a.id).filter(k => x.totals[k]);
+      const bars = ex ? [] : keys.map((k, j) => {
+        const a = acts0.find(y => y.id === k);
+        return { color: a.color, h: Math.max(2, x.totals[k] / maxDayMs * barMax), radius: j === 0 ? '0 0 6px 6px' : (j === keys.length - 1 ? '6px 6px 0 0' : '0') };
+      }).reverse();
+      const dt = new Date(x.ts), isToday = x.ts === m0;
+      const label = nDays === 30 ? (dt.getDate() % 5 === 0 || isToday ? String(dt.getDate()) : '·') : (isToday ? '今日' : WD[dt.getDay()]);
+      return { label, bars, excluded: ex, labelColor: isToday ? C.ink : C.sub };
+    });
+    let streak = 0;
+    for (let i = all.length - 1; i >= 0; i--) { if (isExcluded(all[i])) break; streak++; }
+    const excludedCount = win.filter(isExcluded).length;
+    const totals = acts0.map(a => ({ name: a.name, color: a.color, icon: ICONS[a.iconKey] || ICONS.home,
+      totalStr: fmt(rangeTotals[a.id]), avgStr: measured.length ? fmt((rangeTotals[a.id] || 0) / measured.length) : '—',
+      pct: Math.round((rangeTotals[a.id] || 0) / maxTotal * 100) }));
+
+    const navDef = [['home', 'ホーム', NAV_ICONS.now], ['history', '記録', NAV_ICONS.chart], ['settings', '設定', NAV_ICONS.gear]];
+    return {
+      ...C, curColor, curName: cur.name, showSeconds: S.showSeconds,
+      wide, narrow, appDir: wide ? 'row' : 'column',
+      appWidth: vp > 0 ? vp + 'px' : '100%', appBorder: vp > 0 ? '1px solid ' + C.line : 'none',
+      colBorder: wide ? '1px solid ' + C.line : 'none', colPad: wide ? '24px 24px 32px' : '16px 16px 24px',
+      statusAlign: narrow ? 'center' : 'flex-start', statusText: narrow ? 'center' : 'left',
+      hDeg: ((hour % 12) + min / 60) * 30, mDeg: (min + sec / 60) * 6, sDeg: sec * 6, ticks,
+      elapsed: eh > 0 ? eh + ':' + pad(em) + ':' + pad(es) : em + ':' + pad(es),
+      sinceStr: S.current ? hm(S.current.since) : '—', switchCount: Math.max(0, S.log.length - 1),
+      dateStr: (d.getMonth() + 1) + '月' + d.getDate() + '日（' + WD[d.getDay()] + '）',
+      acts, segs, remainFlex: Math.max(0, 1440 - usedMin), legend,
+      isHome: S.screen === 'home', isHistory: S.screen === 'history', isSettings: S.screen === 'settings',
+      showCharts: S.screen === 'home' || S.screen === 'history',
+      navItems: navDef.map(([k, label, icon]) => ({ label, icon, sw: S.screen === k ? 2.4 : 1.8, color: S.screen === k ? C.ink : C.sub, bg: S.screen === k ? C.chip : 'transparent', pick: () => this.setState({ screen: k }) })),
+      ranges: [['day', '今日'], ['week', '週'], ['month', '月']].map(([k, label]) => ({ label, bg: S.range === k ? C.surface : 'transparent', fg: S.range === k ? C.ink : C.sub, pick: () => this.setState({ range: k }) })),
+      chartTitle: range === 'day' ? '今日の積み上げ' : range === 'week' ? '直近7日' : '直近30日',
+      barGap: nDays === 30 ? 3 : 10, chartDays, totals,
+      measuredStr: measured.length + ' / ' + win.length + '日', streakStr: streak + '日',
+      hasExcluded: excludedCount > 0, excludedCount,
+      themeOpts: [['auto', '自動'], ['light', '明'], ['dark', '暗']].map(([k, label]) => ({ label, bg: S.theme === k ? C.surface : 'transparent', fg: S.theme === k ? C.ink : C.sub, pick: () => this.setState({ theme: k }) })),
+      secTrack: S.showSeconds ? curColor : C.chip, secJustify: S.showSeconds ? 'flex-end' : 'flex-start',
+      toggleSeconds: () => this.setState(s => ({ showSeconds: !s.showSeconds })),
+      actCountStr: acts0.length + '項目',
+      actRows: acts0.map(a => ({ name: a.name, color: a.color, icon: ICONS[a.iconKey] || ICONS.home, todayStr: '今日 ' + fmt(todayTotals[a.id]) })),
+      autoTrack: S.auto ? curColor : C.chip, autoJustify: S.auto ? 'flex-end' : 'flex-start',
+      toggleAuto: () => this.setState(s => ({ auto: !s.auto })),
+      thresholds: [6, 8, 10, 12].map(v => ({ label: v + 'h', border: S.threshold === v ? curColor : C.line, pick: () => this.setState({ threshold: v }) })),
+    };
+  }
+}
+</script>
+</body>
+</html>
