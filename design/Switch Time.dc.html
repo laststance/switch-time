@@ -10,9 +10,9 @@
 <helmet data-dc-atomics>
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#EDEAE3;font-family:'Sora','Noto Sans JP',system-ui,sans-serif;color:#1B1A17}
+body{margin:0;background:#EDEAE3;font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;color:#1B1A17}
 a{color:#1B1A17}a:hover{color:#3B7BD9}
 button{font-family:inherit}
 input::placeholder{opacity:.4}
@@ -26,7 +26,7 @@ input::placeholder{opacity:.4}
 .dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
 .dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
 .dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
-.dv-notes{max-width:760px;font:13px/1.6 'Noto Sans JP',system-ui,sans-serif;color:rgba(0,0,0,.65);margin:0 0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 28px}
+.dv-notes{max-width:760px;font:13px/1.6 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;color:rgba(0,0,0,.65);margin:0 0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 28px}
 .dv-notes b{display:block;color:#1a1a1a;font-weight:600;margin-bottom:3px}
 @keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 </style>
@@ -77,7 +77,7 @@ input::placeholder{opacity:.4}
 </div>
 
 <div class="dv-opt" id="2g"><div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>ウィジェット（<a class="dv-oid" href="#1e">1e</a> 採用）＋ ロングタップメニュー</div>
-<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:18px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12);">
+<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:18px; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12);">
   <div style="display:flex; gap:16px; align-items:flex-start;">
     <div style="width:158px; height:158px; border-radius:36px; background: {{ curColor }}; color:#fff; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 24px rgba(0,0,0,0.18); flex:none;">
       <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -85,35 +85,35 @@ input::placeholder{opacity:.4}
         <span style="width:8px; height:8px; border-radius:4px; background:#fff; animation: st-pulse 2s ease-in-out infinite;"></span>
       </div>
       <div>
-        <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
-        <div style="font:600 30px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
-        <div style="font:400 11px 'Noto Sans JP',sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
+        <div style="font:700 20px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ curName }}</div>
+        <div style="font:600 30px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
+        <div style="font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
       </div>
     </div>
     <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding-top:2px;">
-      <div style="font:500 10px 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロングタップ</div>
+      <div style="font:500 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }};">ロングタップ</div>
       <div style="border-radius:18px; background: {{ menuBg }}; overflow:hidden; backdrop-filter:blur(20px); box-shadow:0 10px 30px rgba(0,0,0,.22);">
         <sc-for list="{{ menu }}" as="m" hint-placeholder-count="4">
-          <div style="min-height:42px; display:flex; align-items:center; gap:10px; padding:0 13px; border-bottom:1px solid {{ menuLine }}; color: {{ ink }}; font:500 13px 'Noto Sans JP',sans-serif;">
+          <div style="min-height:42px; display:flex; align-items:center; gap:10px; padding:0 13px; border-bottom:1px solid {{ menuLine }}; color: {{ ink }}; font:500 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">
             <span style="flex:1;">{{ m.label }}</span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;"><path d="{{ m.icon }}"></path></svg>
           </div>
         </sc-for>
       </div>
-      <div style="font:400 10px/1.5 'Noto Sans JP',sans-serif; color: {{ wpText }};">タップは即切替、長押しで訂正・記録・編集へ。</div>
+      <div style="font:400 10px/1.5 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }};">タップは即切替、長押しで訂正・記録・編集へ。</div>
     </div>
   </div>
   <div style="width:100%; height:158px; border-radius:36px; background: {{ widgetBg }}; color: {{ ink }}; padding:16px; box-sizing:border-box; display:flex; gap:14px; box-shadow:0 10px 24px rgba(0,0,0,0.18);">
     <div style="width:118px; flex:none; border-radius:22px; background: {{ curColor }}; color:#fff; padding:14px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
       <div>
-        <div style="font:700 16px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
-        <div style="font:600 22px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
+        <div style="font:700 16px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ curName }}</div>
+        <div style="font:600 22px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
       </div>
     </div>
     <div style="flex:1; display:grid; grid-template-columns:repeat(3, 1fr); grid-auto-rows:1fr; gap:8px; min-width:0;">
       <sc-for list="{{ others }}" as="a" hint-placeholder-count="5">
-        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Noto Sans JP',sans-serif; min-width:0;">
+        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; min-width:0;">
           <span style="color: {{ a.color }};"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
           <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">{{ a.name }}</span>
         </button>
@@ -125,15 +125,15 @@ input::placeholder{opacity:.4}
       <circle cx="36" cy="36" r="31" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="5"></circle>
       <path d="{{ lockArc }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"></path>
       <svg x="24" y="18" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
-      <text x="36" y="54" text-anchor="middle" font-family="Sora, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
+      <text x="36" y="54" text-anchor="middle" font-family="'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
     </svg>
-    <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロック画面は円形＋インライン。iOS の App Intent ／ Android の Glance で同じ構成が組めます。</div>
+    <div style="font:400 11px/1.6 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }};">ロック画面は円形＋インライン。iOS の App Intent ／ Android の Glance で同じ構成が組めます。</div>
   </div>
 </div>
 </div>
 
 <div class="dv-opt" id="2h"><div class="dv-olabel"><a class="dv-oid" href="#2h">2h</a>アセット — アプリアイコン・タブ・活動アイコン・色・文字</div>
-<div style="width:520px; box-sizing:border-box; background:#fff; border-radius:28px; border:1px solid rgba(0,0,0,.08); padding:26px; display:flex; flex-direction:column; gap:24px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 20px 50px -20px rgba(0,0,0,.2);">
+<div style="width:520px; box-sizing:border-box; background:#fff; border-radius:28px; border:1px solid rgba(0,0,0,.08); padding:26px; display:flex; flex-direction:column; gap:24px; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; box-shadow:0 20px 50px -20px rgba(0,0,0,.2);">
   <div style="display:flex; gap:20px; align-items:flex-end;">
     <svg viewBox="0 0 120 120" width="96" height="96" style="border-radius:26px; background:#F5F2EB; box-shadow:0 8px 20px -6px rgba(0,0,0,.3); flex:none;">
       <circle cx="60" cy="60" r="42" fill="none" stroke="#E0A431" stroke-width="10" stroke-dasharray="66 198"></circle>
@@ -158,23 +158,23 @@ input::placeholder{opacity:.4}
       <circle cx="60" cy="60" r="42" fill="none" stroke="#4FA877" stroke-width="20" stroke-dasharray="44 220" stroke-dashoffset="-134"></circle>
       <circle cx="60" cy="60" r="42" fill="none" stroke="#6C63D6" stroke-width="20" stroke-dasharray="80 184" stroke-dashoffset="-182"></circle>
     </svg>
-    <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">アプリアイコン<br>1日の帯を丸めた形＝時計の文字盤。<br>小サイズでは針を省略。</div>
+    <div style="font:400 11px/1.6 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.55);">アプリアイコン<br>1日の帯を丸めた形＝時計の文字盤。<br>小サイズでは針を省略。</div>
   </div>
   <div style="height:1px; background:rgba(0,0,0,.08);"></div>
   <div style="display:flex; flex-direction:column; gap:10px;">
-    <div style="font:600 12px 'Noto Sans JP',sans-serif;">活動アイコン（設定でタップして循環）</div>
+    <div style="font:600 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">活動アイコン（設定でタップして循環）</div>
     <div style="display:flex; flex-wrap:wrap; gap:10px;">
       <sc-for list="{{ iconLib }}" as="i" hint-placeholder-count="8">
         <div style="width:56px; display:flex; flex-direction:column; align-items:center; gap:5px;">
           <span style="width:48px; height:48px; border-radius:15px; background:#F5F2EB; color:#1B1A17; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ i.d }}"></path></svg></span>
-          <span style="font:400 10px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">{{ i.name }}</span>
+          <span style="font:400 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.55);">{{ i.name }}</span>
         </div>
       </sc-for>
     </div>
   </div>
   <div style="display:flex; gap:26px; flex-wrap:wrap;">
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <div style="font:600 12px 'Noto Sans JP',sans-serif;">タブ・操作アイコン</div>
+      <div style="font:600 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">タブ・操作アイコン</div>
       <div style="display:flex; gap:10px;">
         <sc-for list="{{ uiIcons }}" as="i" hint-placeholder-count="6">
           <span style="width:40px; height:40px; border-radius:12px; border:1px solid rgba(0,0,0,.1); color:#1B1A17; display:flex; align-items:center; justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ i.d }}"></path></svg></span>
@@ -182,23 +182,23 @@ input::placeholder{opacity:.4}
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <div style="font:600 12px 'Noto Sans JP',sans-serif;">状態カラー</div>
+      <div style="font:600 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">状態カラー</div>
       <div style="display:flex; gap:8px;">
         <sc-for list="{{ paletteList }}" as="p" hint-placeholder-count="8">
           <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
             <span style="width:34px; height:34px; border-radius:11px; background: {{ p.hex }}; display:block;"></span>
-            <span style="font:400 8.5px 'Sora',monospace; color:rgba(0,0,0,.5);">{{ p.hex }}</span>
+            <span style="font:400 8.5px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.5);">{{ p.hex }}</span>
           </div>
         </sc-for>
       </div>
     </div>
   </div>
   <div style="display:flex; flex-direction:column; gap:6px;">
-    <div style="font:600 12px 'Noto Sans JP',sans-serif; margin-bottom:2px;">文字</div>
-    <div style="font:600 34px/1.1 'Sora',sans-serif; letter-spacing:-0.03em;">2:47:11<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Sora 600 · 数字・経過時間</span></div>
-    <div style="font:700 22px 'Noto Sans JP',sans-serif;">仕事<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Noto Sans JP 700 · 状態名</span></div>
-    <div style="font:600 15px 'Noto Sans JP',sans-serif;">記録を訂正する<span style="font:400 11px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">600 · ボタン</span></div>
-    <div style="font:400 12px 'Noto Sans JP',sans-serif; color:rgba(0,0,0,.55);">アプリを使わなかった3日は平均から除外しています<span style="margin-left:10px; opacity:.7;">400 · 補助</span></div>
+    <div style="font:600 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; margin-bottom:2px;">文字</div>
+    <div style="font:600 34px/1.1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em;">2:47:11<span style="font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Mona Sans 600 · 数字・経過時間</span></div>
+    <div style="font:700 22px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">仕事<span style="font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">Noto Sans JP 700 · 状態名</span></div>
+    <div style="font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">記録を訂正する<span style="font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.5); margin-left:10px;">600 · ボタン</span></div>
+    <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color:rgba(0,0,0,.55);">アプリを使わなかった3日は平均から除外しています<span style="margin-left:10px; opacity:.7;">400 · 補助</span></div>
   </div>
 </div>
 </div>
@@ -217,9 +217,9 @@ input::placeholder{opacity:.4}
 
 <div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>ダイヤル — 大きな時計 ＋ 2列グリッド</div>
 <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
-  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:18px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .4s;">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:18px; background: {{ bg }}; color: {{ ink }}; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; transition:background .4s;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
-      <div style="font:500 14px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+      <div style="font:500 14px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">{{ dateStr }}</div>
       <button onClick="{{ openA }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
       </button>
@@ -236,15 +236,15 @@ input::placeholder{opacity:.4}
       </svg>
     </div>
     <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-      <div style="display:flex; align-items:center; gap:8px; font:700 22px 'Noto Sans JP',sans-serif;">
+      <div style="display:flex; align-items:center; gap:8px; font:700 22px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">
         <span style="width:10px; height:10px; border-radius:5px; background: {{ curColor }}; display:inline-block; animation: st-pulse 2s ease-in-out infinite;"></span>{{ curName }}
       </div>
-      <div style="font:600 40px/1.1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
-      <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }};">{{ sinceStr }} から</div>
+      <div style="font:600 40px/1.1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+      <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};">{{ sinceStr }} から</div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:auto;">
       <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
-        <button onClick="{{ a.pick }}" style="height:60px; border-radius:20px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px 'Noto Sans JP',sans-serif; cursor:pointer; transition:all .25s; box-shadow: {{ a.shadow }};">
+        <button onClick="{{ a.pick }}" style="height:60px; border-radius:10px; border:1.5px solid {{ a.border }}; background: {{ a.bg }}; color: {{ a.fg }}; display:flex; align-items:center; justify-content:center; gap:9px; font:600 15px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer; transition:all .25s;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg><span>{{ a.name }}</span>
         </button>
       </sc-for>
@@ -254,7 +254,7 @@ input::placeholder{opacity:.4}
         <sc-for list="{{ segs }}" as="s" hint-placeholder-count="4"><div style="flex: {{ s.flex }} 1 0px; background: {{ s.color }};"></div></sc-for>
         <div style="flex: {{ remainFlex }} 1 0px;"></div>
       </div>
-      <div style="display:flex; justify-content:space-between; font:400 10px 'Sora',sans-serif; color: {{ sub }};"><span>0:00</span><span>12:00</span><span>24:00</span></div>
+      <div style="display:flex; justify-content:space-between; font:400 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};"><span>0:00</span><span>12:00</span><span>24:00</span></div>
     </div>
   </div>
   <sc-if value="{{ sheetA }}" hint-placeholder-val="{{ false }}">
@@ -265,7 +265,7 @@ input::placeholder{opacity:.4}
 
 <div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>カード — 状態色で染まる背景 ＋ リスト（今日の合計付き）</div>
 <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
-  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:16px; background: {{ tintBg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .6s;">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:16px; background: {{ tintBg }}; color: {{ ink }}; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; transition:background .6s;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
       <div style="display:flex; align-items:center; gap:12px;">
         <svg viewBox="0 0 200 200" width="56" height="56">
@@ -275,29 +275,29 @@ input::placeholder{opacity:.4}
           <circle cx="100" cy="100" r="8" fill="{{ curColor }}"></circle>
         </svg>
         <div>
-          <div style="font:600 26px/1 'Sora',sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
-          <div style="font:400 12px 'Noto Sans JP',sans-serif; color: {{ sub }}; margin-top:3px;">{{ dateStr }}</div>
+          <div style="font:600 26px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
+          <div style="font:400 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; margin-top:3px;">{{ dateStr }}</div>
         </div>
       </div>
       <button onClick="{{ openB }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
       </button>
     </div>
-    <div style="border-radius:28px; padding:22px 22px 20px; background: {{ curColor }}; color:#fff; display:flex; flex-direction:column; gap:4px; box-shadow:0 18px 40px -12px {{ curColor }}; transition:background .4s;">
-      <div style="display:flex; align-items:center; justify-content:space-between; font:500 13px 'Noto Sans JP',sans-serif; opacity:.9;"><span>いま</span><span>{{ sinceStr }} から</span></div>
+    <div style="border-radius:16px; padding:22px 22px 20px; background: {{ curColor }}; color:#fff; display:flex; flex-direction:column; gap:4px; box-shadow:0 18px 40px -12px {{ curColor }}; transition:background .4s;">
+      <div style="display:flex; align-items:center; justify-content:space-between; font:500 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; opacity:.9;"><span>いま</span><span>{{ sinceStr }} から</span></div>
       <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
-        <div style="font:700 36px/1 'Noto Sans JP',sans-serif; letter-spacing:-0.01em;">{{ curName }}</div>
+        <div style="font:700 36px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.01em;">{{ curName }}</div>
       </div>
-      <div style="font:600 52px/1.05 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:8px;">{{ elapsed }}</div>
+      <div style="font:600 52px/1.05 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:8px;">{{ elapsed }}</div>
     </div>
-    <div style="font:500 12px 'Noto Sans JP',sans-serif; color: {{ sub }}; margin:4px 4px -8px;">切り替える</div>
+    <div style="font:500 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }}; margin:4px 4px -8px;">切り替える</div>
     <div style="display:flex; flex-direction:column; gap:8px;">
       <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
-        <button onClick="{{ a.pick }}" style="height:56px; border-radius:18px; border:none; background: {{ a.rowBg }}; color: {{ a.rowFg }}; display:flex; align-items:center; gap:12px; padding:0 16px 0 12px; font:600 16px 'Noto Sans JP',sans-serif; cursor:pointer; transition:all .25s; text-align:left;">
+        <button onClick="{{ a.pick }}" style="height:56px; border-radius:10px; border:none; background: {{ a.rowBg }}; color: {{ a.rowFg }}; display:flex; align-items:center; gap:12px; padding:0 16px 0 12px; font:600 16px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; cursor:pointer; transition:all .25s; text-align:left;">
           <span style="width:32px; height:32px; border-radius:10px; background: {{ a.color }}; color:#fff; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
           <span style="flex:1;">{{ a.name }}</span>
-          <span style="font:500 13px 'Sora',sans-serif; opacity:.7; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</span>
+          <span style="font:500 13px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; opacity:.7; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</span>
           <span style="width:22px; text-align:right; font-size:16px;">{{ a.check }}</span>
         </button>
       </sc-for>
@@ -315,9 +315,9 @@ input::placeholder{opacity:.4}
 
 <div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>リング — 時計の外周に今日24時間の履歴 ＋ 丸ボタン</div>
 <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
-  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:14px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; transition:background .4s;">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; display:flex; flex-direction:column; gap:14px; background: {{ bg }}; color: {{ ink }}; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; transition:background .4s;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
-      <div style="font:700 18px 'Sora',sans-serif; letter-spacing:-0.01em;">Switch Time</div>
+      <div style="font:700 18px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.01em;">Switch Time</div>
       <button onClick="{{ openC }}" title="設定" style="width:44px; height:44px; border-radius:22px; border:none; background: {{ chip }}; color: {{ ink }}; display:flex; align-items:center; justify-content:center; cursor:pointer;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
       </button>
@@ -332,8 +332,8 @@ input::placeholder{opacity:.4}
         <g transform="translate(20 20)">
           <circle cx="100" cy="100" r="86" fill="{{ face }}"></circle>
           <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><line x1="100" y1="22" x2="100" y2="{{ t.y3 }}" stroke="{{ t.stroke }}" stroke-width="{{ t.w }}" stroke-linecap="round" transform="rotate({{ t.deg }} 100 100)"></line></sc-for>
-          <text x="100" y="140" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="12" font-weight="600" fill="{{ curColor }}">{{ curName }}</text>
-          <text x="100" y="158" text-anchor="middle" font-family="Sora, sans-serif" font-size="13" font-weight="600" fill="{{ sub }}">{{ elapsedShort }}</text>
+          <text x="100" y="140" text-anchor="middle" font-family="'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="{{ curColor }}">{{ curName }}</text>
+          <text x="100" y="158" text-anchor="middle" font-family="'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="{{ sub }}">{{ elapsedShort }}</text>
           <line x1="100" y1="106" x2="100" y2="54" stroke="{{ ink }}" stroke-width="6" stroke-linecap="round" transform="rotate({{ hDeg }} 100 100)"></line>
           <line x1="100" y1="108" x2="100" y2="36" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
           <sc-if value="{{ showSeconds }}" hint-placeholder-val="{{ true }}"><line x1="100" y1="112" x2="100" y2="30" stroke="{{ curColor }}" stroke-width="1.5" stroke-linecap="round" transform="rotate({{ sDeg }} 100 100)"></line></sc-if>
@@ -344,16 +344,16 @@ input::placeholder{opacity:.4}
     <div style="display:flex; justify-content:space-between; gap:4px; padding:0 2px;">
       <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
         <button onClick="{{ a.pick }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; border:none; background:transparent; padding:0; cursor:pointer; color: {{ ink }}; width:54px;">
-          <span style="width:54px; height:54px; border-radius:27px; background: {{ a.bg }}; color: {{ a.fg }}; border:1.5px solid {{ a.border }}; display:flex; align-items:center; justify-content:center; transition:all .25s; box-shadow: {{ a.shadow }};"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
-          <span style="font:500 11px 'Noto Sans JP',sans-serif; white-space:nowrap;">{{ a.name }}</span>
+          <span style="width:54px; height:54px; border-radius:27px; background: {{ a.bg }}; color: {{ a.fg }}; border:1.5px solid {{ a.border }}; display:flex; align-items:center; justify-content:center; transition:all .25s;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
+          <span style="font:500 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; white-space:nowrap;">{{ a.name }}</span>
         </button>
       </sc-for>
     </div>
-    <div style="margin-top:auto; border-radius:22px; background: {{ surface }}; padding:14px 16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 8px;">
+    <div style="margin-top:auto; border-radius:16px; background: {{ surface }}; padding:14px 16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 8px;">
       <sc-for list="{{ acts }}" as="a" hint-placeholder-count="6">
         <div style="display:flex; flex-direction:column; gap:3px;">
-          <div style="display:flex; align-items:center; gap:6px; font:500 11px 'Noto Sans JP',sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:4px; background: {{ a.color }}; display:inline-block;"></span>{{ a.name }}</div>
-          <div style="font:600 17px 'Sora',sans-serif; letter-spacing:-0.01em; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</div>
+          <div style="display:flex; align-items:center; gap:6px; font:500 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ sub }};"><span style="width:8px; height:8px; border-radius:4px; background: {{ a.color }}; display:inline-block;"></span>{{ a.name }}</div>
+          <div style="font:600 17px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.01em; font-variant-numeric:tabular-nums;">{{ a.totalStr }}</div>
         </div>
       </sc-for>
     </div>
@@ -366,7 +366,7 @@ input::placeholder{opacity:.4}
 
 <div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>設定モーダル（常時展開）— 名前・色・アイコン・並び順・追加削除・★デフォルト</div>
 <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ dark }}" hint-size="402px,874px">
-  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; background: {{ bg }}; color: {{ ink }}; font-family:'Sora','Noto Sans JP',sans-serif; display:flex; flex-direction:column; align-items:center; gap:10px;">
+  <div style="min-height:100%; box-sizing:border-box; padding:64px 22px 48px; background: {{ bg }}; color: {{ ink }}; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; display:flex; flex-direction:column; align-items:center; gap:10px;">
     <svg viewBox="0 0 200 200" width="180" height="180" style="margin-top:20px; opacity:.9;">
       <circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4"></circle>
       <circle cx="100" cy="100" r="90" fill="{{ face }}"></circle>
@@ -374,16 +374,16 @@ input::placeholder{opacity:.4}
       <line x1="100" y1="108" x2="100" y2="32" stroke="{{ ink }}" stroke-width="4" stroke-linecap="round" transform="rotate({{ mDeg }} 100 100)"></line>
       <circle cx="100" cy="100" r="4.5" fill="{{ curColor }}"></circle>
     </svg>
-    <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
-    <div style="font:600 32px 'Sora',sans-serif; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
+    <div style="font:700 20px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ curName }}</div>
+    <div style="font:600 32px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; font-variant-numeric:tabular-nums;">{{ elapsed }}</div>
   </div>
   <dc-import name="Settings Modal" acts="{{ acts }}" default-id="{{ defaultId }}" dark="{{ dark }}" on-close="{{ noop }}" on-add="{{ addAct }}" on-move="{{ moveAct }}" on-cycle-icon="{{ cycleIcon }}" on-cycle-color="{{ cycleColor }}" on-rename="{{ renameAct }}" on-set-default="{{ setDefault }}" on-delete="{{ deleteAct }}" hint-size="100%,100%" style="position:absolute; inset:0; z-index:40;"></dc-import>
 </x-import>
 </div>
 
 <div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>ウィジェット — iOS / Android のホーム画面（インタラクティブ）＋ ロック画面</div>
-<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:20px; font-family:'Sora','Noto Sans JP',sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12); transition:background .6s;">
-  <div style="font:500 11px 'Noto Sans JP',sans-serif; color: {{ wpText }}; letter-spacing:.04em;">SMALL 2×2 ／ MEDIUM 4×2 — ボタンは実際に切替できます</div>
+<div style="width:402px; box-sizing:border-box; padding:28px 24px 32px; border-radius:48px; background: {{ wallpaper }}; display:flex; flex-direction:column; gap:20px; font-family:'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; box-shadow:0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12); transition:background .6s;">
+  <div style="font:500 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }}; letter-spacing:.04em;">SMALL 2×2 ／ MEDIUM 4×2 — ボタンは実際に切替できます</div>
   <div style="display:flex; gap:16px; align-items:flex-start;">
     <div style="width:158px; height:158px; border-radius:36px; background: {{ curColor }}; color:#fff; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 10px 24px rgba(0,0,0,0.18); transition:background .4s; flex:none;">
       <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -391,40 +391,40 @@ input::placeholder{opacity:.4}
         <span style="width:8px; height:8px; border-radius:4px; background:#fff; animation: st-pulse 2s ease-in-out infinite;"></span>
       </div>
       <div>
-        <div style="font:700 20px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
-        <div style="font:600 30px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
-        <div style="font:400 11px 'Noto Sans JP',sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
+        <div style="font:700 20px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ curName }}</div>
+        <div style="font:600 30px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:4px;">{{ elapsedShort }}</div>
+        <div style="font:400 11px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; opacity:.85; margin-top:4px;">{{ sinceStr }} から</div>
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px; align-items:center; padding-top:6px;">
-      <div style="font:500 10px 'Noto Sans JP',sans-serif; color: {{ wpText }};">ロック画面</div>
+      <div style="font:500 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }};">ロック画面</div>
       <svg viewBox="0 0 72 72" width="72" height="72">
         <circle cx="36" cy="36" r="31" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="5"></circle>
         <path d="{{ lockArc }}" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"></path>
         <svg x="24" y="18" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
-        <text x="36" y="54" text-anchor="middle" font-family="Sora, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
+        <text x="36" y="54" text-anchor="middle" font-family="'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#fff">{{ elapsedShort }}</text>
       </svg>
-      <div style="height:26px; border-radius:13px; padding:0 12px; background:rgba(255,255,255,0.18); color:#fff; display:flex; align-items:center; gap:6px; font:500 12px 'Noto Sans JP',sans-serif; white-space:nowrap;"><span style="width:7px; height:7px; border-radius:4px; background:#fff;"></span>{{ curName }} · {{ elapsedHuman }}</div>
+      <div style="height:26px; border-radius:13px; padding:0 12px; background:rgba(255,255,255,0.18); color:#fff; display:flex; align-items:center; gap:6px; font:500 12px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; white-space:nowrap;"><span style="width:7px; height:7px; border-radius:4px; background:#fff;"></span>{{ curName }} · {{ elapsedHuman }}</div>
     </div>
   </div>
   <div style="width:100%; height:158px; border-radius:36px; background: {{ widgetBg }}; color: {{ ink }}; padding:16px; box-sizing:border-box; display:flex; gap:14px; box-shadow:0 10px 24px rgba(0,0,0,0.18); transition:background .4s;">
     <div style="width:118px; flex:none; border-radius:22px; background: {{ curColor }}; color:#fff; padding:14px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between; transition:background .4s;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ curIcon }}"></path></svg>
       <div>
-        <div style="font:700 16px 'Noto Sans JP',sans-serif;">{{ curName }}</div>
-        <div style="font:600 22px/1 'Sora',sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
+        <div style="font:700 16px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif;">{{ curName }}</div>
+        <div style="font:600 22px/1 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; margin-top:3px;">{{ elapsedShort }}</div>
       </div>
     </div>
     <div style="flex:1; display:grid; grid-template-columns:repeat(3, 1fr); grid-auto-rows:1fr; gap:8px; min-width:0;">
       <sc-for list="{{ others }}" as="a" hint-placeholder-count="5">
-        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Noto Sans JP',sans-serif; min-width:0;">
+        <button onClick="{{ a.pick }}" style="border-radius:16px; border:none; background: {{ a.tile }}; color: {{ ink }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; cursor:pointer; font:500 10px 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; min-width:0;">
           <span style="color: {{ a.color }};"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span>
           <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">{{ a.name }}</span>
         </button>
       </sc-for>
     </div>
   </div>
-  <div style="font:400 11px/1.6 'Noto Sans JP',sans-serif; color: {{ wpText }};">iOS 17+ の Interactive Widget（App Intent ボタン）／ Android の Glance ウィジェットで同等の構成が可能。Small は表示のみ、Medium は残りの項目をワンタップで切替。ロック画面は円形＋インライン。</div>
+  <div style="font:400 11px/1.6 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif; color: {{ wpText }};">iOS 17+ の Interactive Widget（App Intent ボタン）／ Android の Glance ウィジェットで同等の構成が可能。Small は表示のみ、Medium は残りの項目をワンタップで切替。ロック画面は円形＋インライン。</div>
 </div>
 </div>
 
@@ -526,7 +526,7 @@ class Component extends DCLogic {
         pick: () => this.switchTo(a.id),
         bg: active ? a.color : C.surface, fg: active ? '#fff' : C.ink,
         border: active ? a.color : C.line,
-        shadow: active ? `0 10px 24px -8px ${a.color}` : 'none',
+        shadow: 'none',
         rowBg: active ? a.color : C.surface, rowFg: active ? '#fff' : C.ink,
         check: active ? '●' : '',
         tile: C.tileBg,
