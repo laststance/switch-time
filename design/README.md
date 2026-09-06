@@ -60,3 +60,16 @@ macOS 専用（SwiftUI / AppKit 想定）なので問題なし。ただし **men
 もうありません（キャンバス側プロジェクトにデザインシステムを紐付けた場合）。
 
 **Claude Design が何を変えたかは git diff で読みます。1 pull = 1 commit** を守ってください。
+
+### デザインシステムを API で作った直後にハマる点
+
+`create_project` + `write_files` した直後は、**Claude Design の UI に出てきません**。2つ必要です:
+
+1. **Claude Desktop を完全再起動**（`cmd+r` は効かない。一覧は起動時フェッチのキャッシュ）
+2. デザインシステムを開いて **「Published」にチェック**（未公開だとアタッチ用ピッカーに出ない）
+
+公開されると、アプリ側が `_ds_manifest.json` / `_ds_bundle.js` / `_adherence.oxlintrc.json` を
+自動生成します。`list_files` にこれらが出ていれば取り込み成功です。
+
+キャンバスへの紐付けは、プロジェクトを開いてコンポーザー左上の **「Design System ⌄」→ 対象を選択 → Done**。
+複数選択されるので、不要なものはクリックして外すこと。
