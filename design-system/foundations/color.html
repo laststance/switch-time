@@ -1,0 +1,83 @@
+<!-- @dsCard group="Foundations" name="Color" subtitle="Dark/light bands + the 8-color activity palette" width="960" height="720" -->
+<!doctype html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Color — Switch Time</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  .wrap { padding: 32px; display: flex; flex-direction: column; gap: 32px; }
+  h1 { font: 600 20px/1.3 var(--font-heading); margin: 0; }
+  h2 { font: 600 14px/1.3 var(--font-heading); margin: 0 0 12px; color: var(--color-sub); letter-spacing: .06em; text-transform: uppercase; }
+  .bands { display: flex; gap: 20px; }
+  .band { flex: 1; border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--color-line); }
+  .band-head { padding: 10px 16px; font: 600 12px/1 var(--font-heading); }
+  .rows { display: flex; flex-direction: column; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 8px 16px; font-size: 12px; }
+  .sw { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(128,128,128,.35); flex: none; }
+  .nm { flex: 1; }
+  .hx { font-variant-numeric: tabular-nums; opacity: .65; font-size: 11px; }
+  .acts { display: flex; gap: 12px; flex-wrap: wrap; }
+  .act { width: 104px; }
+  .act .sw { width: 100%; height: 56px; border-radius: var(--radius-chip); }
+  .act .nm { font-size: 13px; margin-top: 6px; }
+  .note { padding: 14px 16px; border-left: 3px solid var(--color-accent); background: var(--color-chip); border-radius: 0 12px 12px 0; font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Color</h1>
+
+  <section>
+    <h2>Theme tokens</h2>
+    <div class="bands">
+      <!-- dark band renders on the page's own theme -->
+      <div class="band" style="background:#111216;color:#F2EFE8">
+        <div class="band-head" style="border-bottom:1px solid rgba(255,255,255,.14)">Dark — default</div>
+        <div class="rows">
+          <div class="row"><span class="sw" style="background:#111216"></span><span class="nm">bg</span><span class="hx">#111216</span></div>
+          <div class="row"><span class="sw" style="background:#1B1C22"></span><span class="nm">face / surface</span><span class="hx">#1B1C22</span></div>
+          <div class="row"><span class="sw" style="background:#1C1D22"></span><span class="nm">sheetBg</span><span class="hx">#1C1D22</span></div>
+          <div class="row"><span class="sw" style="background:#F2EFE8"></span><span class="nm">ink</span><span class="hx">#F2EFE8</span></div>
+          <div class="row"><span class="sw" style="background:rgba(242,239,232,.6)"></span><span class="nm">sub</span><span class="hx">rgba(242,239,232,.60)</span></div>
+          <div class="row"><span class="sw" style="background:rgba(255,255,255,.14)"></span><span class="nm">line</span><span class="hx">rgba(255,255,255,.14)</span></div>
+          <div class="row"><span class="sw" style="background:rgba(255,255,255,.08)"></span><span class="nm">chip</span><span class="hx">rgba(255,255,255,.08)</span></div>
+          <div class="row"><span class="sw" style="background:#7FB2FF"></span><span class="nm">accent</span><span class="hx">#7FB2FF</span></div>
+        </div>
+      </div>
+      <div class="band" style="background:#F5F2EB;color:#1B1A17">
+        <div class="band-head" style="border-bottom:1px solid rgba(27,26,23,.12)">Light — 06:00–18:00 under <code>auto</code></div>
+        <div class="rows">
+          <div class="row"><span class="sw" style="background:#F5F2EB"></span><span class="nm">bg</span><span class="hx">#F5F2EB</span></div>
+          <div class="row"><span class="sw" style="background:#FFFFFF"></span><span class="nm">face / surface / sheetBg</span><span class="hx">#FFFFFF</span></div>
+          <div class="row"><span class="sw" style="background:#1B1A17"></span><span class="nm">ink</span><span class="hx">#1B1A17</span></div>
+          <div class="row"><span class="sw" style="background:rgba(27,26,23,.55)"></span><span class="nm">sub</span><span class="hx">rgba(27,26,23,.55)</span></div>
+          <div class="row"><span class="sw" style="background:rgba(27,26,23,.12)"></span><span class="nm">line</span><span class="hx">rgba(27,26,23,.12)</span></div>
+          <div class="row"><span class="sw" style="background:rgba(27,26,23,.06)"></span><span class="nm">chip</span><span class="hx">rgba(27,26,23,.06)</span></div>
+          <div class="row"><span class="sw" style="background:#2A66C4"></span><span class="nm">accent</span><span class="hx">#2A66C4</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Activity palette — data, not styling</h2>
+    <div class="acts">
+      <div class="act"><div class="sw" style="background:var(--activity-1)"></div><div class="nm">家事 <span class="hx">#E0A431</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-2)"></div><div class="nm">仕事 <span class="hx">#3B7BD9</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-3)"></div><div class="nm">休息 <span class="hx">#4FA877</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-4)"></div><div class="nm">睡眠 <span class="hx">#6C63D6</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-5)"></div><div class="nm">食事 <span class="hx">#E0684A</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-6)"></div><div class="nm">娯楽 <span class="hx">#D8579C</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-7)"></div><div class="nm text-sub">予備 <span class="hx">#2BA3B5</span></div></div>
+      <div class="act"><div class="sw" style="background:var(--activity-8)"></div><div class="nm text-sub">予備 <span class="hx">#8A6A4B</span></div></div>
+    </div>
+    <p class="note">
+      これらはユーザーが各活動に割り当て、<strong>バックエンドに保存される値</strong>です。テーマ色ではなく、面ごとに調整もしません。
+      <strong>全プラットフォームでバイト単位の一致が必須</strong> — Web が別の緑を発明すると、同じ活動がスマホとラップトップで違う色に見えます。
+      インターフェースのクローム（リンク・強調）には決して使わないこと。そちらは <code>--color-accent</code> です。
+    </p>
+  </section>
+</div>
+</body>
+</html>

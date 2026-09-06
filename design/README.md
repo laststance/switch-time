@@ -43,3 +43,20 @@ cd design && for p in 'display: *grid' 'position: *sticky' backdrop-filter repea
 `ST Menubar.dc.html` は **意図的に `display:grid` を使っています**（切替カードの3×2、編集行の6カラム）。
 macOS 専用（SwiftUI / AppKit 想定）なので問題なし。ただし **menubar を Electron や RN で作る方針に変えるなら、
 この2箇所が移植コスト**になります。
+
+---
+
+## Claude Design のプロジェクトは2つある
+
+| 役割 | 型 | projectId | 同期 |
+|---|---|---|---|
+| 試行キャンバス（画面案を出す場所） | `PROJECT_TYPE_PROJECT` | `4b07af84-2468-4f18-bab7-d93e4329e3c0` | **取得のみ**。`design/` へ pull |
+| デザインシステム（トークンの正） | `PROJECT_TYPE_DESIGN_SYSTEM` | `e7060f31-8730-4e9b-ba97-eff4b10b1b80` | **読み書き**。`design-system/` から `/design-sync` |
+
+型は作成時に固定で変更不可。前者を後者に昇格させることはできません。
+
+`design-system/` が push 元、`design/` が pull 先です。新しい面をデザインするときは
+`design-system/theme.json` と `readme.md` が制約として効くので、`tokens.md` を手で貼る必要は
+もうありません（キャンバス側プロジェクトにデザインシステムを紐付けた場合）。
+
+**Claude Design が何を変えたかは git diff で読みます。1 pull = 1 commit** を守ってください。

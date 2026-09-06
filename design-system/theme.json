@@ -1,0 +1,51 @@
+{
+  "name": "Switch Time",
+  "palette": {
+    "hue": 215,
+    "band": "dark",
+    "scheme": "mono",
+    "sat": 0.4,
+    "bg": "#111216",
+    "surface": "#1B1C22",
+    "text": "#F2EFE8",
+    "accent": "#7FB2FF",
+    "accent2": "#7FB2FF"
+  },
+  "fonts": {
+    "heading": { "family": "Sora", "class": "geometric", "weights": [500, 600, 700] },
+    "body": { "family": "Sora", "class": "geometric", "weights": [400, 500, 600] },
+    "cjk": { "family": "Noto Sans JP", "class": "gothic", "weights": [400, 500, 700] }
+  },
+  "density": 1,
+  "radius": 18,
+  "layoutStyle": "stack",
+  "frame": "soft",
+  "imageTreatment": "none",
+  "iconSet": "lucide",
+  "colorSchemes": {
+    "dark": {
+      "bg": "#111216", "face": "#1B1C22", "surface": "#1B1C22", "sheetBg": "#1C1D22",
+      "ink": "#F2EFE8", "sub": "rgba(242,239,232,0.60)", "line": "rgba(255,255,255,0.14)",
+      "chip": "rgba(255,255,255,0.08)", "tabBg": "rgba(17,18,22,0.90)", "accent": "#7FB2FF",
+      "dialShadow": "rgba(17,18,22,0.60)"
+    },
+    "light": {
+      "bg": "#F5F2EB", "face": "#FFFFFF", "surface": "#FFFFFF", "sheetBg": "#FFFFFF",
+      "ink": "#1B1A17", "sub": "rgba(27,26,23,0.55)", "line": "rgba(27,26,23,0.12)",
+      "chip": "rgba(27,26,23,0.06)", "tabBg": "rgba(245,242,235,0.90)", "accent": "#2A66C4",
+      "dialShadow": "rgba(27,26,23,0.14)"
+    }
+  },
+  "activityPalette": [
+    "#E0A431", "#3B7BD9", "#4FA877", "#6C63D6",
+    "#E0684A", "#D8579C", "#2BA3B5", "#8A6A4B"
+  ],
+  "defaultActivities": [
+    { "id": "house", "name": "家事", "color": "#E0A431", "iconKey": "home",  "target": 1.5 },
+    { "id": "work",  "name": "仕事", "color": "#3B7BD9", "iconKey": "work",  "target": 8 },
+    { "id": "rest",  "name": "休息", "color": "#4FA877", "iconKey": "rest",  "target": 2 },
+    { "id": "sleep", "name": "睡眠", "color": "#6C63D6", "iconKey": "sleep", "target": 7 },
+    { "id": "meal",  "name": "食事", "color": "#E0684A", "iconKey": "meal",  "target": 1.5 },
+    { "id": "fun",   "name": "娯楽", "color": "#D8579C", "iconKey": "fun",   "target": 1.5 }
+  ]
+}

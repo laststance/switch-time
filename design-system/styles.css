@@ -1,0 +1,153 @@
+/* Switch Time — the only stylesheet. Token sheet + component layer.
+   Derived from theme.json. Change tokens here AND in theme.json so they don't drift. */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────
+   Dark is the default band. Light is applied with [data-theme="light"].
+   `auto` in the apps resolves to light between 06:00–18:00.              */
+:root {
+  --color-bg:        #111216;
+  --color-face:      #1B1C22;  /* clock dial */
+  --color-surface:   #1B1C22;  /* cards, unselected buttons */
+  --color-sheet-bg:  #1C1D22;  /* modals / sheets */
+  --color-ink:       #F2EFE8;
+  --color-sub:       rgba(242,239,232,0.60);
+  --color-line:      rgba(255,255,255,0.14);
+  --color-chip:      rgba(255,255,255,0.08);
+  --color-tab-bg:    rgba(17,18,22,0.90);
+  --color-accent:    #7FB2FF;
+  --shadow-dial:     0 18px 40px -18px rgba(17,18,22,0.60);
+  --pattern-hatch:   repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 4px, transparent 4px 8px);
+}
+
+[data-theme="light"] {
+  --color-bg:        #F5F2EB;
+  --color-face:      #FFFFFF;
+  --color-surface:   #FFFFFF;
+  --color-sheet-bg:  #FFFFFF;
+  --color-ink:       #1B1A17;
+  --color-sub:       rgba(27,26,23,0.55);
+  --color-line:      rgba(27,26,23,0.12);
+  --color-chip:      rgba(27,26,23,0.06);
+  --color-tab-bg:    rgba(245,242,235,0.90);
+  --color-accent:    #2A66C4;
+  --shadow-dial:     0 18px 40px -18px rgba(27,26,23,0.14);
+  --pattern-hatch:   repeating-linear-gradient(135deg, rgba(27,26,23,.06) 0 4px, transparent 4px 8px);
+}
+
+/* react-native-web cannot render translucent bars or gradient patterns.
+   Web builds opt in here; native surfaces keep the tokens above. */
+[data-surface="web"] {
+  --color-tab-bg: var(--color-bg);   /* opaque, not rgba */
+  --pattern-hatch: none;             /* use .is-excluded instead */
+}
+
+/* ── Activity palette — DATA, NOT STYLING ─────────────────────────────────
+   Persisted per activity in Convex. Must be byte-identical on every
+   platform. Never invent a shade; never use these as UI chrome.          */
+:root {
+  --activity-1: #E0A431;  /* 家事 house */
+  --activity-2: #3B7BD9;  /* 仕事 work  */
+  --activity-3: #4FA877;  /* 休息 rest  */
+  --activity-4: #6C63D6;  /* 睡眠 sleep */
+  --activity-5: #E0684A;  /* 食事 meal  */
+  --activity-6: #D8579C;  /* 娯楽 fun   */
+  --activity-7: #2BA3B5;  /* spare      */
+  --activity-8: #8A6A4B;  /* spare      */
+}
+
+/* ── Type ─────────────────────────────────────────────────────────────── */
+:root {
+  --font-heading: 'Sora', 'Noto Sans JP', sans-serif;
+  --font-body:    'Sora', 'Noto Sans JP', sans-serif;
+  --text-2xs: 10px; --text-xs: 12px; --text-sm: 14px; --text-md: 16px;
+  --text-lg:  18px; --text-xl: 20px; --text-2xl: 28px;
+}
+
+/* ── Radius ───────────────────────────────────────────────────────────── */
+:root {
+  --radius-chip: 16px;   /* 14–18 */
+  --radius-card: 20px;   /* 18–22 */
+  --radius-sheet: 30px;  /* top corners only */
+  --radius-pill: 9999px;
+}
+
+/* ── Spacing ──────────────────────────────────────────────────────────── */
+:root {
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--color-accent); color: var(--color-bg); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Every elapsed-time / clock readout. Digits must not jitter as they tick. */
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* ── Components ───────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+/* The core interaction: one of these is always active, exactly one. */
+.switch-btn {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-chip);
+  color: var(--color-ink);
+  font: 500 var(--text-sm)/1.2 var(--font-body);
+  cursor: pointer;
+}
+/* Active state is driven by the activity's own persisted color, passed in
+   as --activity. The shadow reuses it so the card looks lit from within. */
+.switch-btn[aria-pressed="true"] {
+  background: var(--activity);
+  border-color: var(--activity);
+  color: #fff;
+  box-shadow: 0 10px 24px -8px var(--activity);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-chip);
+  border-radius: var(--radius-pill);
+  color: var(--color-sub);
+  font-size: var(--text-xs);
+}
+
+.sheet {
+  background: var(--color-sheet-bg);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  padding: var(--space-6) var(--space-4);
+}
+
+.tab-bar {
+  background: var(--color-tab-bg);
+  border-top: 1px solid var(--color-line);
+}
+
+/* A day with no measurement. Native surfaces get the hatch; web falls back
+   to a dashed outline because RN-web drops gradient patterns. */
+.is-excluded { background-image: var(--pattern-hatch); background-color: var(--color-chip); }
+[data-surface="web"] .is-excluded {
+  border: 1.5px dashed var(--color-line);
+  background-color: var(--color-chip);
+}
+
+.text-sub { color: var(--color-sub); }
