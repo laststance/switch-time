@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Switch Time</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { display: grid; place-items: center; height: 100vh; }
+  .cover { text-align: center; }
+  .clock { font: 600 56px/1 var(--font-heading); letter-spacing: -.02em; }
+  .now { margin-top: 10px; font-size: 14px; color: var(--color-sub); }
+  .sw { display: flex; gap: 8px; justify-content: center; margin-top: 28px; }
+  .sw span { width: 40px; height: 40px; border-radius: var(--radius-chip); }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="clock tabular">1:18:34</div>
+    <div class="now">いま <strong style="color:var(--activity-2)">仕事</strong></div>
+    <div class="sw">
+      <span style="background:var(--activity-1)"></span>
+      <span style="background:var(--activity-2)"></span>
+      <span style="background:var(--activity-3)"></span>
+      <span style="background:var(--activity-4)"></span>
+      <span style="background:var(--activity-5)"></span>
+      <span style="background:var(--activity-6)"></span>
+    </div>
+  </div>
+</body>
+</html>

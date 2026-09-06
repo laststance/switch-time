@@ -1,7 +1,8 @@
 # Switch Time — Design Tokens
 
 `ST Phone.dc.html` / `Settings Modal.dc.html` の `renderVals()` から抽出（Claude Design のモバイル成果物が唯一の出典）。
-Web / Mac menubar をデザインする際は**このファイルをそのまま制約として渡す**。
+**機械が読む正は `design-system/theme.json` ＋ `styles.css`**（Claude Design のデザインシステム側）。
+このファイルは人間用のドキュメント。デザインシステムを紐付けていないキャンバスに投げるときだけ、そのまま貼る。
 
 > `Switch Time.dc.html` の `.dv-*` CSS（`#1A1A1A` / `#2A78D6` など）はキャンバスの仕様シート自身のスタイル。
 > アプリのトークンではないので混ぜないこと。
