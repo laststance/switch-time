@@ -6,7 +6,7 @@
    `auto` in the apps resolves to light between 06:00–18:00.              */
 :root {
   --color-bg:        #111216;
-  --color-face:      #212229;  /* clock dial — one step lighter than surface, on purpose */
+  --color-face:      #212229;  /* clock dial — lifts off bg #111216, and off surface too */
   --color-surface:   #1B1C22;  /* cards, unselected buttons */
   --color-sheet-bg:  #1C1D22;  /* modals / sheets */
   --color-ink:       #F2EFE8;
@@ -20,7 +20,7 @@
 
 [data-theme="light"] {
   --color-bg:        #F5F2EB;
-  --color-face:      #FBF9F4;  /* warm paper, not the card's clinical white */
+  --color-face:      #FFFFFF;  /* lifts off bg #F5F2EB; the rim does the edge */
   --color-surface:   #FFFFFF;
   --color-sheet-bg:  #FFFFFF;
   --color-ink:       #1B1A17;

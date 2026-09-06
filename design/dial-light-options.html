@@ -1,0 +1,31 @@
+<!doctype html><html lang="ja" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../design-system/styles.css">
+<style>
+ body{padding:28px;width:1320px;background:#F5F2EB}
+ .row{display:flex;gap:18px}
+ .col{flex:1;text-align:center}
+ .cap{font:500 12px var(--font-body);color:rgba(27,26,23,.6);margin-top:8px;line-height:1.5}
+ h2{font:600 12px/1 var(--font-heading);letter-spacing:.1em;text-transform:uppercase;color:rgba(27,26,23,.5);margin:0 0 14px}
+</style></head><body>
+<h2>Light — 盤面は bg #F5F2EB に直接乗る（カードの上ではない）</h2>
+<div class="row" id="r"></div>
+<script>
+const L='rgba(27,26,23,0.12)', INK='#1B1A17', SUB='rgba(27,26,23,0.55)';
+const ticks=Array.from({length:60},(_,i)=>{const q=i%15===0,h=i%5===0;
+ return{deg:i*6,y2:q?30:h?26:20,w:q?3:h?2:1,stroke:q?INK:h?SUB:L};});
+const dial=(face,rim,shadow,cap)=>`<div class="col">
+ <svg viewBox="0 0 200 200" width="200" height="200" ${shadow?'style="filter:drop-shadow(0 14px 30px rgba(0,0,0,0.12))"':''}>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#3B7BD9" stroke-width="4"/>
+  <circle cx="100" cy="100" r="90" fill="${face}" ${rim?`stroke="${L}" stroke-width="1"`:''}/>
+  ${ticks.map(t=>`<line x1="100" y1="16" x2="100" y2="${t.y2}" stroke="${t.stroke}" stroke-width="${t.w}" stroke-linecap="round" transform="rotate(${t.deg} 100 100)"/>`).join('')}
+  <line x1="100" y1="106" x2="100" y2="52" stroke="${INK}" stroke-width="6" stroke-linecap="round" transform="rotate(140 100 100)"/>
+  <line x1="100" y1="108" x2="100" y2="32" stroke="${INK}" stroke-width="4" stroke-linecap="round" transform="rotate(264 100 100)"/>
+  <circle cx="100" cy="100" r="4.5" fill="#3B7BD9"/></svg>
+ <div class="cap">${cap}</div></div>`;
+document.getElementById('r').innerHTML=[
+ dial('#FFFFFF',false,true,'<b>BEFORE</b><br>#FFFFFF + drop-shadow'),
+ dial('#FBF9F4',true,false,'<b>提案していた値</b><br>#FBF9F4 + リム<br>bg とほぼ同色'),
+ dial('#FFFFFF',true,false,'<b>案A: 浮かせる</b><br>#FFFFFF + リム'),
+ dial('#EFEBE2',true,false,'<b>案B: 沈める</b><br>#EFEBE2 + リム'),
+].join('');
+</script></body></html>

@@ -29,7 +29,7 @@
       "chip": "rgba(255,255,255,0.08)", "tabBg": "rgba(17,18,22,0.90)", "accent": "#7FB2FF"
     },
     "light": {
-      "bg": "#F5F2EB", "face": "#FBF9F4", "surface": "#FFFFFF", "sheetBg": "#FFFFFF",
+      "bg": "#F5F2EB", "face": "#FFFFFF", "surface": "#FFFFFF", "sheetBg": "#FFFFFF",
       "ink": "#1B1A17", "sub": "rgba(27,26,23,0.55)", "line": "rgba(27,26,23,0.12)",
       "chip": "rgba(27,26,23,0.06)", "tabBg": "rgba(245,242,235,0.90)", "accent": "#2A66C4"
     }

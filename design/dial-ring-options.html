@@ -1,0 +1,18 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<style>body{margin:0;padding:26px;background:#111216;width:1060px;display:flex;gap:14px;
+ font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif}
+ .c{flex:1;text-align:center}.cap{font:500 12px;color:rgba(242,239,232,.6);margin-top:10px;line-height:1.5}</style>
+</head><body id="b"><script>
+const L='rgba(255,255,255,0.14)',INK='#F2EFE8',SUB='rgba(242,239,232,0.6)';
+const ticks=Array.from({length:60},(_,i)=>{const q=i%15===0,h=i%5===0;
+ return{deg:i*6,y2:q?30:h?26:20,w:q?3:h?2:1,stroke:q?INK:h?SUB:L};});
+const d=(rw,cap)=>`<div class="c"><svg viewBox="0 0 200 200" width="200" height="200">
+ <circle cx="100" cy="100" r="${100-rw/2-0.5}" fill="none" stroke="#3B7BD9" stroke-width="${rw}"/>
+ <circle cx="100" cy="100" r="90" fill="#212229" stroke="${L}" stroke-width="1"/>
+ ${ticks.map(t=>`<line x1="100" y1="16" x2="100" y2="${t.y2}" stroke="${t.stroke}" stroke-width="${t.w}" stroke-linecap="round" transform="rotate(${t.deg} 100 100)"/>`).join('')}
+ <line x1="100" y1="106" x2="100" y2="52" stroke="${INK}" stroke-width="6" stroke-linecap="round" transform="rotate(140 100 100)"/>
+ <line x1="100" y1="108" x2="100" y2="32" stroke="${INK}" stroke-width="4" stroke-linecap="round" transform="rotate(264 100 100)"/>
+ <circle cx="100" cy="100" r="4.5" fill="#3B7BD9"/></svg><div class="cap">${cap}</div></div>`;
+document.getElementById('b').innerHTML=[d(4,'<b>現状</b> リング 4px'),d(2.5,'リング 2.5px'),d(1.5,'リング 1.5px'),
+ d(0,'リング無し（活動色は中心ピンと<br>下の見出しだけが持つ）')].join('');
+</script></body></html>

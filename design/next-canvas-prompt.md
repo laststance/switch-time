@@ -22,7 +22,7 @@
 ## C. 盤面の色を surface と分ける
 `renderVals()` の theme オブジェクト:
 - dark: `face: '#1B1C22'` → **`face: '#212229'`**
-- light: `face: '#FFFFFF'` → **`face: '#FBF9F4'`**
+- light: `face: '#FFFFFF'` → **変更なし**（bg から浮かせる値差が必要なため）
 
 `bg` / `surface` / `sheetBg` は**触らない**。
 
@@ -48,7 +48,12 @@ const ticks = Array.from({ length: 60 }, (_, i) => {
 });
 ```
 
-## F. 文言変更はここ1箇所だけ
+## F. 活動リングを細くする
+時計 SVG 一番外の `<circle cx="100" cy="100" r="98" fill="none" stroke="{{ curColor }}" stroke-width="4">` を
+**`r="99" stroke-width="1.5"`** に。色とアニメーション（`transition:stroke .4s`）はそのまま。
+4px は塗りつぶしのハロー、1.5px はベゼル線になる。活動色は中心ピン・見出し・ボタン塗りが持つので情報は失われない。
+
+## G. 文言変更はここ1箇所だけ
 `Switch Time.dc.html` の書体見本ラベル
 「**Mona Sans 600** · 数字・経過時間」→「**System 600** · 数字・経過時間」（A の 0個条件のため）。
 

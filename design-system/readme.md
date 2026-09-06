@@ -37,7 +37,7 @@ Never use an activity color as interface chrome. Chrome comes from `--color-acce
 
 ## Color
 
-Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial — **deliberately one step off `--color-surface`**, so the dial reads as its own plane rather than a hole in the card, `--color-surface` cards and unselected buttons, `--color-sheet-bg` modals. Text is `--color-ink` with `--color-sub` for secondary. `--color-line` draws hairlines, `--color-chip` fills small pills. `--color-accent` (#2A66C4 light / #7FB2FF dark) is links and emphasis — the *only* chrome accent.
+Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial — **it must always step away from `--color-bg`**, since the dial has no shadow and the value step is its only separation, `--color-surface` cards and unselected buttons, `--color-sheet-bg` modals. Text is `--color-ink` with `--color-sub` for secondary. `--color-line` draws hairlines, `--color-chip` fills small pills. `--color-accent` (#2A66C4 light / #7FB2FF dark) is links and emphasis — the *only* chrome accent.
 
 ## Type
 
@@ -61,8 +61,9 @@ Exactly one activity button is pressed at any moment. The pressed button fills w
 
 The clock is a physical object, not a floating card. Three rules give it that weight:
 
-- **`--color-face` is not `--color-surface`.** The dial sits one step lighter than the card in dark (#212229 vs #1B1C22) and one step warmer in light (#FBF9F4 vs #FFFFFF). Two planes, not one.
+- **The dial lifts off the page in both bands.** Dark #212229 on bg #111216; light #FFFFFF on bg #F5F2EB. With the drop shadow gone the value step *is* the separation, so never let `--color-face` drift toward `--color-bg` — a near-match reads as mud. In light it coincides with `--color-surface`, which is fine: the dial sits on the page, never on a card.
 - **A rim, not a blur.** The dial edge is a hairline in `--color-line`. No `filter: drop-shadow` — it reads as a sticker floating over the page, and react-native-web drops `filter` outright, so the web build would lose it anyway.
+- **The activity ring is a bezel line, not a halo.** 1.5px at the dial's outer edge, in the current activity's colour. At 4px it becomes the loudest object on the screen and the dial stops reading as an instrument. The colour is already carried by the centre pin, the heading, and the pressed button — the ring only has to mark the edge.
 - **Three tiers of tick.** Quarters (12/3/6/9) longest and heaviest, the other hours medium, minutes a hairline at `--color-line`. Two uniform tiers is what makes a dial look drawn rather than made.
 
 ## Web constraints (react-native-web)
