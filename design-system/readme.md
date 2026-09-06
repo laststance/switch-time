@@ -47,9 +47,11 @@ On iOS/Android, React Native's `fontFamily` takes a single family, not a stack: 
 
 **Every clock and elapsed-time readout takes `.tabular`** (`font-variant-numeric: tabular-nums`). Without it the digits jitter every second, which on a screen whose whole purpose is a running clock reads as a bug.
 
-## Radius
+## Radius and spacing
 
 Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, containers 16, sheets 28 (top corners only), pills 9999 for status only — never a button. Use `--radius-chip` / `--radius-card` / `--radius-sheet` / `--radius-pill`. Do not flatten them back to one generous value.
+
+**Spacing carries the same job.** The ramp (4/8/12/16/20/24/32) is fine; reaching for `--space-4` everywhere is not. Space is how grouping is stated: elements that belong to one thing sit at `--space-1`/`--space-2`, the gap that separates two groups is `--space-5` or wider. Equal padding on every box is the layout equivalent of one uniform radius — nothing reads as more or less related than anything else.
 
 ## The active state
 
