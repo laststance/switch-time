@@ -150,3 +150,51 @@ pen は Google Fonts を描画するので **システムフォントスタッ�
 「ウェブフォントを使わない」という決定とは表示上ズレる。
 
 **正は `design-system/styles.css` のまま。pen 側は描画上の近似**、という扱いを推奨。
+
+## 変数の結線（後追いで実施）
+
+取り込み直後のレイヤーは**リテラル hex を持っていて変数を参照していなかった**ので、
+値の完全一致でトークンに差し替えた（`fill` / `stroke` を小文字化して照合）。
+
+```js
+Get(n=>{const u={};for(const k of ["fill","stroke"]){const v=n[k];
+  if(typeof v==="string"&&v[0]==="#"){const t=M[v.slice(1).toLowerCase()];if(t){u[k]="$"+t}}}
+  return Object.keys(u).length?Update(n.id,u):undefined})
+```
+
+**1285 箇所**が `$bg` / `$ink` / `$sub` / `$line` / `$surface` / `$face` / `$chip` /
+`$sheet-bg` / `$tab-bg` / `$accent` / `$activity-1..8` に接続。
+
+→ **light / dark がキャンバス上で本当に切り替わるようになった**。`.dc.html` 時代は
+`theme` プロップを変えて再生成が必要だった部分。
+
+マッチしなかったリテラルは残置（`#000000` の影、白テキストの `#FFF`、`#0a0a0c80` の
+スクリム等）。これらは styles.css にも対応トークンが無いので正しい。
+
+検査:
+```sh
+jq '[.. | strings | select(startswith("$"))] | length' switch-time.pen   # 1285
+```
+
+## ルートフレームの配置
+
+pen は「ルート同士を重ねるな」という制約がある。高さが 874 に収まらない（前述）ため
+最初の配置は **ST Web が電話3画面と重なっていた**。`ctx.problems` は親子のクリップしか
+見ないので検出できない。**`jq` で ymax を突き合わせるのが確実**：
+
+```sh
+jq -r '.children[] | "\(.name)  x=\(.x)..\(.x+.width)  y=\(.y)..\(.y+.height)"' switch-time.pen
+```
+
+現在: 電話7枚が `y=0`（x を 462 刻み）、Menubar と Web が `y=1558`。
+
+## 未決 — `.dc.html` 資産の扱い
+
+`design/*.dc.html` / `support.js` / `verify-canvas.sh` / `baseline/` は移行後も
+リポジトリに残っている。**削除していない**。3択:
+
+1. 残す（移行元の記録として。再取り込みが必要になったとき効く）
+2. 消して `.pen` に一本化（`verify-canvas.sh` は上記 jq に置換）
+3. 当面は併走
+
+ユーザー判断待ち。
