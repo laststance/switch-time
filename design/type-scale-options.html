@@ -1,0 +1,33 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<style>
+ body{margin:0;padding:24px;background:#111216;color:#F2EFE8;width:1150px;
+  font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif}
+ h2{font:600 11px/1 inherit;letter-spacing:.12em;text-transform:uppercase;color:rgba(242,239,232,.6);margin:0 0 12px}
+ .row{display:flex;gap:16px}
+ .col{flex:1;background:#1B1C22;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:18px}
+ .hd{font:600 13px/1.4 inherit;margin:0 0 4px}
+ .sub{font:400 11px/1.5 inherit;color:rgba(242,239,232,.6);margin:0 0 16px;font-variant-numeric:tabular-nums}
+ .l{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:9px}
+ .tok{font:600 9px/1 ui-monospace,monospace;color:#7FB2FF;width:34px;flex:none}
+ .px{font:400 9px/1 ui-monospace,monospace;color:rgba(242,239,232,.45);width:26px;flex:none;text-align:right}
+ .tabular{font-variant-numeric:tabular-nums}
+</style></head><body>
+<h2>Type scale — 現状 / 保守的 / モジュラー1.25 / 底上げ</h2>
+<div class="row" id="r"></div>
+<script>
+const SCALES={
+ now :{name:'現状',      note:'10/12/14/16/18/20/28 ＋ 実際は 11,13,15,17,22,24,26,30,36,40,46,52 も混在（計19サイズ）', v:[10,12,14,16,18,20,28]},
+ cons:{name:'保守的',    note:'小さい端はそのまま、中盤に段差。既存の 28 を残す', v:[10,12,15,18,22,28,40]},
+ mod :{name:'モジュラー1.25', note:'比 1.25 の等比。段差が数学的に均等', v:[10,13,16,20,25,31,39]},
+ lift:{name:'底上げ',    note:'最小を 11 に。10px ×105箇所 が全部上がるので密度が最も変わる', v:[11,13,16,20,25,32,44]},
+};
+const TOK=['2xs','xs','sm','md','lg','xl','2xl'];
+const SAMPLE=['日','12:30','記録を訂正','いま何をしている？','家事','2:47:11','8h'];
+r.innerHTML=Object.values(SCALES).map(s=>`
+ <div class="col">
+  <p class="hd">${s.name}</p><p class="sub">${s.v.join(' / ')}</p>
+  ${s.v.map((px,i)=>`<div class="l"><span class="tok">${TOK[i]}</span><span class="px">${px}</span>
+     <span style="font-size:${px}px;line-height:1.35" class="${i>=4?'tabular':''}">${SAMPLE[i]}</span></div>`).join('')}
+  <p class="sub" style="margin:12px 0 0">${s.note}</p>
+ </div>`).join('');
+</script></body></html>

@@ -1,30 +1,44 @@
 #!/bin/bash
 # Acceptance check for a regenerated canvas page.
-# Asserts absence first — that is the half that was missing last pass.
+# Asserts absence first — that is the half that was missing two passes ago.
+# Then diffs against baseline/ so a remap cannot silently move a radius or
+# reword a Japanese label while every font-size assertion still passes.
 cd /Users/ryotamurakami/laststance/switch-time/design || exit 1
-c() { grep -o "$1" "$2" 2>/dev/null | wc -l | tr -d ' '; }
-ck() { # want expr, got, label
-  if [ "$2" = "$1" ] || { [ "$1" = ">0" ] && [ "$3" -gt 0 ] 2>/dev/null; }; then :; fi
-}
+c() { grep -o -e "$1" "$2" 2>/dev/null | wc -l | tr -d ' '; }
+
+rc=0
 for f in "$@"; do
+  b="baseline/${f%.dc.html}"
   echo "── $f"
-  n_noto=$(c "'Noto Sans JP',sans-serif" "$f")
-  n_mona=$(c 'Mona Sans' "$f")
-  n_imp=$(c 'fonts.googleapis' "$f")
-  n_ds=$(c 'drop-shadow' "$f")
-  n_sys=$(grep -oe "-apple-system" "$f" | wc -l | tr -d " ")
-  n_sora=$(c 'Sora' "$f")
-  n_dsh=$(c 'dialShadow' "$f")   # the float also hid as box-shadow, not just filter
-  for pair in "noto-first:$n_noto:0" "Mona Sans:$n_mona:0" "googleapis:$n_imp:0" \
-              "drop-shadow:$n_ds:0" "dialShadow:$n_dsh:0" "Sora:$n_sora:0"; do
-    IFS=: read -r lbl got want <<< "$pair"
-    [ "$got" = "$want" ] && s="OK " || s="FAIL"
-    printf "  %s %-14s %s (want %s)\n" "$s" "$lbl" "$got" "$want"
+  fail=0
+  # webfont era must stay gone
+  for t in "Mona Sans" "Sora" "fonts.googleapis" "drop-shadow" "dialShadow" "'Noto Sans JP',sans-serif"; do
+    got=$(c "$t" "$f")
+    [ "$got" = 0 ] && s="OK " || { s="FAIL"; fail=1; }
+    printf "  %s %-26s %s (want 0)\n" "$s" "$t" "$got"
   done
-  [ "$n_sys" -gt 0 ] && s="OK " || s="FAIL"
-  printf "  %s %-14s %s (want >0)\n" "$s" "-apple-system" "$n_sys"
-  # device chrome must not move
-  printf "  chrome radii 48/36/26/12: %s/%s/%s/%s\n" \
-    "$(c 'border-radius:48px' "$f")" "$(c 'border-radius:36px' "$f")" \
-    "$(c 'border-radius:26px' "$f")" "$(c 'border-radius:12px' "$f")"
+  got=$(c "-apple-system" "$f")
+  [ "$got" -gt 0 ] && s="OK " || { s="FAIL"; fail=1; }
+  printf "  %s %-26s %s (want >0)\n" "$s" "-apple-system" "$got"
+
+  # 端末クロームは動いてはいけない — baseline と完全一致
+  grep -oE 'border-radius:[0-9]+px' "$f" | grep -oE '[0-9]+' | sort -n | uniq -c \
+    | awk '{print $2" "$1}' > /tmp/.radii.$$
+  if diff -q "$b.radii" /tmp/.radii.$$ >/dev/null 2>&1; then
+    printf "  OK  %-26s baseline と一致\n" "角丸カウント"
+  else
+    printf "  FAIL %-25s baseline と差分:\n" "角丸カウント"; diff "$b.radii" /tmp/.radii.$$ | sed 's/^/       /'; fail=1
+  fi
+
+  # 日本語文言は1文字も変わってはいけない
+  grep -oE '[ぁ-んァ-ヶ一-龠々ー]+' "$f" | sort -u > /tmp/.jp.$$
+  if diff -q "$b.jp" /tmp/.jp.$$ >/dev/null 2>&1; then
+    printf "  OK  %-26s baseline と一致 (%s 種)\n" "日本語文言" "$(wc -l < /tmp/.jp.$$ | tr -d ' ')"
+  else
+    printf "  FAIL %-25s baseline と差分:\n" "日本語文言"; diff "$b.jp" /tmp/.jp.$$ | sed 's/^/       /'; fail=1
+  fi
+  rm -f /tmp/.radii.$$ /tmp/.jp.$$
+
+  [ "$fail" = 0 ] && echo "  → PASS" || { echo "  → FAIL"; rc=1; }
 done
+exit $rc
