@@ -17,11 +17,11 @@ input::placeholder{color:inherit;opacity:.4}
 <div data-screen-label="Menubar" style="position:relative; height:100%; max-width:420px; margin:0 auto; max-height:600px; display:flex; flex-direction:column; overflow:hidden; border-radius:12px; background: {{ bg }}; color: {{ ink }}; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; -webkit-font-smoothing:antialiased;">
 
   <div style="flex:none; height:28px; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:0 14px 0 12px; background: {{ surface }}; border-bottom:1px solid {{ line }};">
-    <div style="display:flex; align-items:center; gap:7px; height:22px; padding:0 9px; border-radius:8px; background: {{ trayBg }}; font:600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">
+    <div style="display:flex; align-items:center; gap:7px; height:22px; padding:0 9px; border-radius:8px; background: {{ trayBg }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">
       <span style="width:8px; height:8px; border-radius:4px; background: {{ curColor }}; flex:none; display:block;"></span>
       <span>{{ trayLabel }}</span>
     </div>
-    <div style="font:600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums;">{{ menuClock }}</div>
+    <div style="font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums;">{{ menuClock }}</div>
   </div>
 
   <div style="flex:1; min-height:0; overflow:auto; padding:20px 20px 16px; background: {{ glow }};">
@@ -30,12 +30,12 @@ input::placeholder{color:inherit;opacity:.4}
         <div style="font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; letter-spacing:.08em;">いま</div>
         <div style="display:flex; align-items:center; gap:12px;">
           <span style="width:16px; height:16px; border-radius:8px; background: {{ curColor }}; box-shadow:0 0 0 5px {{ curRing }}; flex:none; display:block; margin:0 3px;"></span>
-          <span style="font:700 30px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em; white-space:nowrap;">{{ curName }}</span>
+          <span style="font:700 28px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em; white-space:nowrap;">{{ curName }}</span>
         </div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; text-align:right; flex:none;">
-        <div style="font:600 30px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
-        <div style="font:500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ dateStr }}</div>
+        <div style="font:600 28px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;">{{ clockStr }}</div>
+        <div style="font:500 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ dateStr }}</div>
       </div>
     </div>
 
@@ -46,12 +46,12 @@ input::placeholder{color:inherit;opacity:.4}
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
         <div style="font:500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">開始</div>
-        <div style="font:600 16px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums;">{{ startStr }}</div>
+        <div style="font:600 18px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums;">{{ startStr }}</div>
       </div>
     </div>
 
     <div style="margin-top:20px; display:flex; align-items:baseline; justify-content:space-between;">
-      <div style="font:600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">切り替える</div>
+      <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">切り替える</div>
       <div style="font:500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ cmdHint }}</div>
     </div>
     <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;">
@@ -62,7 +62,7 @@ input::placeholder{color:inherit;opacity:.4}
             <span style="font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ a.cmd }}</span>
           </span>
           <span style="display:flex; flex-direction:column; gap:4px;">
-            <span style="font:700 16px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">{{ a.name }}</span>
+            <span style="font:700 18px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">{{ a.name }}</span>
             <span style="font:500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums; white-space:nowrap;">{{ a.todayStr }}</span>
           </span>
         </button>
@@ -70,7 +70,7 @@ input::placeholder{color:inherit;opacity:.4}
     </div>
 
     <div style="margin-top:20px; display:flex; align-items:baseline; justify-content:space-between;">
-      <div style="font:600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">今日の流れ</div>
+      <div style="font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">今日の流れ</div>
       <div style="font:500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; font-variant-numeric:tabular-nums;">{{ flowRange }}</div>
     </div>
     <div style="margin-top:8px; display:flex; height:18px; border-radius:9px; overflow:hidden; background: {{ chip }};">
@@ -84,7 +84,7 @@ input::placeholder{color:inherit;opacity:.4}
   </div>
 
   <div style="flex:none; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-top:1px solid {{ line }}; background: {{ bg }};">
-    <button onClick="{{ openEditor }}" style="height:32px; padding:0; border:none; background:transparent; color: {{ ink }}; font:600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;" style-hover="opacity:.7">活動項目を編集…</button>
+    <button onClick="{{ openEditor }}" style="height:32px; padding:0; border:none; background:transparent; color: {{ ink }}; font:600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;" style-hover="opacity:.7">活動項目を編集…</button>
     <div style="font:400 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">記録は自動保存</div>
   </div>
 
@@ -94,8 +94,8 @@ input::placeholder{color:inherit;opacity:.4}
       <div style="position:absolute; top:0; right:0; bottom:0; width:78%; display:flex; flex-direction:column; background: {{ sheetBg }}; color: {{ ink }}; border-left:1px solid {{ line }}; box-shadow:-20px 0 50px rgba(17,18,22,0.45); transform: {{ panelX }}; transition:transform .32s cubic-bezier(.2,.7,.2,1);">
         <div style="flex:none; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:16px 14px 12px;">
           <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-            <div style="font:700 16px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">活動項目</div>
-            <div style="font:400 11px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; text-wrap:pretty;">ドラッグで並び順を変更</div>
+            <div style="font:700 18px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;">活動項目</div>
+            <div style="font:400 10px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; text-wrap:pretty;">ドラッグで並び順を変更</div>
           </div>
           <button onClick="{{ addAct }}" style="flex:none; height:28px; padding:0 11px; border-radius:9999px; border:1px solid {{ line }}; background: {{ chip }}; color: {{ ink }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer; white-space:nowrap;" style-hover="border-color: {{ ink }}">＋ 項目を追加</button>
         </div>
@@ -103,7 +103,7 @@ input::placeholder{color:inherit;opacity:.4}
           <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
             <div draggable="true" onDragStart="{{ r.dragStart }}" onDragOver="{{ r.dragOver }}" onDragEnd="{{ dragEnd }}" onDrop="{{ drop }}" style="display:grid; grid-template-columns:8px minmax(0,1fr) auto auto auto 18px; align-items:center; gap:6px; height:44px; border-bottom:1px solid {{ line }}; background: {{ r.bg }}; opacity: {{ r.opacity }};">
               <span style="color: {{ sub }}; cursor:grab; display:flex;"><svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg></span>
-              <input value="{{ r.name }}" onChange="{{ r.rename }}" placeholder="名前" style="min-width:0; height:28px; border:none; border-radius:10px; background:transparent; color: {{ ink }}; font:600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; padding:0 6px; outline:none;" style-focus="background: {{ chip }}"></input>
+              <input value="{{ r.name }}" onChange="{{ r.rename }}" placeholder="名前" style="min-width:0; height:28px; border:none; border-radius:10px; background:transparent; color: {{ ink }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; padding:0 6px; outline:none;" style-focus="background: {{ chip }}"></input>
               <span style="display:flex; align-items:center;">
                 <sc-for list="{{ r.swatches }}" as="c" hint-placeholder-count="8">
                   <button onClick="{{ c.pick }}" title="{{ c.color }}" style="width:16px; height:16px; padding:0; border:none; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;"><span style="width:10px; height:10px; border-radius:5px; background: {{ c.color }}; box-shadow: {{ c.ring }}; display:block;"></span></button>
@@ -111,12 +111,12 @@ input::placeholder{color:inherit;opacity:.4}
               </span>
               <span style="height:20px; padding:0 6px; border-radius:9999px; border:1px solid {{ line }}; display:flex; align-items:center; font:600 10px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }}; white-space:nowrap;">{{ r.cmd }}</span>
               <button onClick="{{ r.cycleTarget }}" title="1日の目安（クリックで変更）" style="min-width:26px; height:28px; border:none; background:transparent; color: {{ ink }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; font-variant-numeric:tabular-nums; padding:0; cursor:pointer; text-align:right; white-space:nowrap;">{{ r.targetStr }}</button>
-              <button onClick="{{ r.del }}" title="削除" style="width:18px; height:18px; border:none; border-radius:9px; background:transparent; color: {{ sub }}; font-size:14px; line-height:1; padding:0; cursor:pointer;" style-hover="background: {{ chip }}; color: {{ ink }}">×</button>
+              <button onClick="{{ r.del }}" title="削除" style="width:18px; height:18px; border:none; border-radius:9px; background:transparent; color: {{ sub }}; font-size:15px; line-height:1; padding:0; cursor:pointer;" style-hover="background: {{ chip }}; color: {{ ink }}">×</button>
             </div>
           </sc-for>
         </div>
         <div style="flex:none; display:flex; align-items:center; justify-content:space-between; padding:10px 14px 14px; border-top:1px solid {{ line }};">
-          <div style="font:400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ rowsHint }}</div>
+          <div style="font:400 10px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; color: {{ sub }};">{{ rowsHint }}</div>
           <button onClick="{{ closeEditor }}" style="height:30px; padding:0 14px; border-radius:9999px; border:none; background: {{ ink }}; color: {{ sheetBg }}; font:600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif; cursor:pointer;">完了</button>
         </div>
       </div>
