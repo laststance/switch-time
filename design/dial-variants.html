@@ -1,0 +1,25 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<style>body{margin:0;padding:24px;background:#111216;color:#F2EFE8;display:flex;gap:20px;
+ font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif}
+ .c{background:#1B1C22;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px;text-align:center}
+ .cap{font:500 12px/1.5 inherit;color:rgba(242,239,232,.6);margin-top:10px}</style></head><body>
+<script>
+const C={face:'#212229',ink:'#F2EFE8',sub:'rgba(242,239,232,0.60)',line:'rgba(255,255,255,0.14)',cur:'#3B7BD9'};
+const HD=140,MD=264,SD=42;
+const ticks=Array.from({length:60},(_,i)=>{const q=i%15===0,h=i%5===0;
+ return`<line x1="100" y1="16" x2="100" y2="${q?30:h?26:20}" stroke="${q?C.ink:h?C.sub:C.line}" stroke-width="${q?3:h?2:1}" stroke-linecap="round" transform="rotate(${i*6} 100 100)"/>`}).join('');
+const cap=r=>`<circle cx="100" cy="100" r="${r}" fill="${C.face}" stroke="${C.ink}" stroke-width="${r>7?1.8:1.4}"/>
+  <circle cx="100" cy="100" r="${(r*0.46).toFixed(2)}" fill="${C.cur}"/><circle cx="100" cy="100" r="${(r*0.16).toFixed(2)}" fill="${C.face}"/>`;
+const sec=(y1,y2)=>`<g transform="rotate(${SD} 100 100)"><line x1="100" y1="${y1}" x2="100" y2="${y2}" stroke="${C.cur}" stroke-width="1.2" stroke-linecap="round"/><circle cx="100" cy="${y1-4}" r="3.4" fill="${C.cur}"/></g>`;
+const V=[
+ ['V1 標準 — ST Phone / ST Web / Switch Time ①④','M100 51 L103.2 72 L101.6 104 L98.4 104 L96.8 72 Z','M100 29 L102.4 56 L101.3 104 L98.7 104 L97.6 56 Z',sec(120,24),5.6],
+ ['V2 大型 — Switch Time ②（秒針なし）','M100 49 L105.33 71 L102.67 104 L97.33 104 L94.67 71 Z','M100 27 L104.2 55 L102.28 104 L97.72 104 L95.8 55 Z','',8.2],
+ ['V3 やや短 — Switch Time ③','M100 53 L103.2 73 L101.6 104 L98.4 104 L96.8 73 Z','M100 33 L102.4 59 L101.3 104 L98.7 104 L97.6 59 Z',sec(120,30),5.6],
+];
+document.write(V.map(([lab,h,m,s,cr])=>`<div class="c"><svg viewBox="0 0 200 200" width="230" height="230">
+ <circle cx="100" cy="100" r="99" fill="none" stroke="${C.cur}" stroke-width="1.5"/>
+ <circle cx="100" cy="100" r="90" fill="${C.face}" stroke="${C.line}" stroke-width="1"/>${ticks}
+ <path d="${h}" fill="${C.ink}" stroke="${C.ink}" stroke-width="1.2" stroke-linejoin="round" transform="rotate(${HD} 100 100)"/>
+ <path d="${m}" fill="${C.ink}" stroke="${C.ink}" stroke-width="1" stroke-linejoin="round" transform="rotate(${MD} 100 100)"/>
+ ${s}${cap(cr)}</svg><div class="cap">${lab}</div></div>`).join(''));
+</script></body></html>

@@ -41,7 +41,7 @@ Two bands, paired. `--color-bg` is the page, `--color-face` the clock dial — *
 
 ## Type
 
-**No webfont — the platform UI face, everywhere.** SF Pro on Apple, Segoe UI (Variable) on Windows, Roboto on Android; they are the same genre of neutral grotesque, so the surfaces read alike without a single downloaded byte. Japanese resolves the same way: Hiragino Sans → Yu Gothic UI → Noto Sans JP. Latin families come first in the stack and CJK last — reverse them and a Japanese face draws the numerals too. One stack for both heading and body (`--font-heading` / `--font-body` resolve identically), so hierarchy comes from weight and size only, never from a second typeface. Scale: 10 / 12 / 14 / 16 / 18 / 20 / 28px.
+**No webfont — the platform UI face, everywhere.** SF Pro on Apple, Segoe UI (Variable) on Windows, Roboto on Android; they are the same genre of neutral grotesque, so the surfaces read alike without a single downloaded byte. Japanese resolves the same way: Hiragino Sans → Yu Gothic UI → Noto Sans JP. Latin families come first in the stack and CJK last — reverse them and a Japanese face draws the numerals too. One stack for both heading and body (`--font-heading` / `--font-body` resolve identically), so hierarchy comes from weight and size only, never from a second typeface. Scale: 10 / 12 / 15 / 18 / 22 / 28 / 40px, plus `--text-display: 52px` for the elapsed-time hero. Steps widen as they climb (2/3/3/4/6/12) — the old 14/16/18/20 ramp was a flat +2px, so four sizes read as one. `--text-display` sits outside the ratio on purpose: it is the single number the app exists to show.
 
 On iOS/Android, omit `fontFamily` entirely and take React Native's platform default. There is nothing to bundle and no `expo-font` call to make.
 

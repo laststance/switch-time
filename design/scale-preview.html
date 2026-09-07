@@ -1,0 +1,42 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<style>
+ body{margin:0;padding:22px;background:#111216;color:#F2EFE8;display:flex;gap:22px;
+  font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif}
+ .phone{width:330px;background:#111216;border:1px solid rgba(255,255,255,.14);border-radius:28px;padding:18px 16px;overflow:hidden}
+ .hd{font:600 11px/1 inherit;letter-spacing:.1em;color:rgba(242,239,232,.6);margin:0 0 12px;text-transform:uppercase}
+ .card{background:#1B1C22;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px;margin-bottom:10px}
+ .rowi{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+ .sw{width:30px;height:30px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+ .tab{display:flex;gap:6px;margin-top:14px;border-top:1px solid rgba(255,255,255,.14);padding-top:10px}
+ .tab div{flex:1;text-align:center;color:rgba(242,239,232,.6)}
+ .tabular{font-variant-numeric:tabular-nums}
+</style></head><body>
+<div id="host"></div>
+<script>
+// 現状 → 保守的スケール のマッピング
+const S={now:{n2xs:10,nxs:12,body:16,sub:14,cap:12,title:20,clock:26,hero:52,name:16},
+         new:{n2xs:10,nxs:12,body:18,sub:15,cap:12,title:22,clock:28,hero:40,name:18}};
+const ACT=[['家事','#E0A431','1.5h'],['仕事','#3B7BD9','8h'],['休息','#4FA877','2h'],['睡眠','#6C63D6','7h']];
+const card=(k,lab)=>{const s=S[k];return `
+ <div class="phone">
+  <p class="hd">${lab}</p>
+  <div style="text-align:center;padding:6px 0 14px">
+    <div style="font-size:${s.cap}px;color:rgba(242,239,232,.6)">2026年9月7日（月）</div>
+    <div class="tabular" style="font-size:${s.hero}px;font-weight:600;letter-spacing:-.02em;line-height:1.05;margin:6px 0">2:47:11</div>
+    <div style="font-size:${s.name}px;font-weight:600;color:#3B7BD9">仕事</div>
+  </div>
+  <div class="card">
+    <div style="font-size:${s.title}px;font-weight:600;margin-bottom:6px">いま何をしている？</div>
+    ${ACT.map(([n,c,t])=>`<div class="rowi">
+       <span class="sw" style="background:${c};font-size:${s.nxs}px">${n[0]}</span>
+       <span style="font-size:${s.body}px;flex:1">${n}</span>
+       <span class="tabular" style="font-size:${s.sub}px;color:rgba(242,239,232,.6)">${t}</span></div>`).join('')}
+  </div>
+  <div class="card"><div style="font-size:${s.sub}px">記録を訂正する</div>
+    <div style="font-size:${s.cap}px;color:rgba(242,239,232,.6);margin-top:4px">活動アイコンは設定でタップして循環</div></div>
+  <div class="tab">${['今日','記録','設定'].map(t=>`<div style="font-size:${s.n2xs}px">${t}</div>`).join('')}</div>
+ </div>`};
+host.innerHTML = card('now','現状 — body16 / sub14 / title20 / hero52')
+               + card('new','保守的 — body18 / sub15 / title22 / hero40');
+host.style.display='flex'; host.style.gap='22px';
+</script></body></html>
