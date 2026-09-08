@@ -1,0 +1,11 @@
+{
+  // Root config only exists so typed ESLint can see loose root files (eslint.config.mjs).
+  // Packages own their own tsconfig.json; nothing here is emitted.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["*.mjs"]
+}

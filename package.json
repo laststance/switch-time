@@ -1,0 +1,42 @@
+{
+  "name": "switch-time",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@12.3.4+sha512.961aa41fb077da3a04a441d9f8e15ebc0c96da8ef710b2eb67bf9ee7cb0610eabd48f1fd85f51cffe73846785fa0f87c56a3a872a1d893f8446741b5cce45457",
+  "engines": {
+    "node": ">=24.20.0"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . --concurrency=auto --max-warnings=0",
+    "lint:fix": "eslint . --fix --concurrency=auto --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r test",
+    "sherif": "sherif",
+    "health": "fallow health --fail-on-issues",
+    "dupes": "fallow dupes --fail-on-issues",
+    "dead-code": "fallow dead-code --fail-on-issues",
+    "check": "pnpm sherif && pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm dupes && pnpm dead-code && pnpm health"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write"
+  },
+  "devDependencies": {
+    "@laststance/react-next-eslint-plugin": "2.3.0",
+    "@types/node": "24.13.3",
+    "eslint": "10.10.0",
+    "eslint-config-ts-prefixer": "5.0.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "fallow": "3.23.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.5.0",
+    "prettier": "3.9.6",
+    "sherif": "1.13.0",
+    "typescript": "~6.0.3"
+  }
+}

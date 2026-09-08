@@ -1,0 +1,16 @@
+{
+  "name": "@switch-time/app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@switch-time/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}

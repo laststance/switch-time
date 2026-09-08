@@ -1,4 +1,28 @@
-logs/
-.DS_Store
+# Node
 node_modules/
+logs/
 *.log
+.DS_Store
+
+# Build output
+dist/
+coverage/
+.artifacts/
+.fallow/
+
+# Expo (apps/app) — native projects are generated with prebuild (CNG), never committed
+.expo/
+apps/app/ios/
+apps/app/android/
+web-build/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Environment
+.env
+.env.*
+!.env.example

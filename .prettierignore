@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+.serena
+**/dist
+**/.expo
+coverage
+.artifacts
+.fallow
+
+# Design assets are pulled/generated (pen.dev, Claude Design exports); never reformat them.
+design
+design-system

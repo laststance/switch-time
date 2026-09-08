@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "ignorePatterns": [
+    "design/**",
+    "design-system/**",
+    ".artifacts/**",
+    "**/dist/**",
+    "**/.expo/**"
+  ],
+  "health": {
+    "ignore": ["**/*.test.ts", "**/*.test.tsx"]
+  },
+  "duplicates": {
+    "ignore": ["**/*.test.ts", "**/*.test.tsx"]
+  }
+}
