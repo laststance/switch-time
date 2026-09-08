@@ -15,7 +15,7 @@ Roadmap and decisions live in the epic [#1](https://github.com/laststance/switch
 ## Prerequisites
 
 - Node.js `24.20.0` (`.node-version`; use fnm/nodenv/Volta)
-- pnpm `12.3.4` — pinned in `packageManager`; any pnpm ≥ 10 (or Corepack) switches to it automatically
+- pnpm `12.3.4` — pinned in `packageManager`. pnpm 10+ downloads and runs the pinned version by default ([`pmOnFail: download`](https://pnpm.io/settings/cli#pmonfail)); if yours does not, install it explicitly with `npm install -g pnpm@12.3.4` or run `corepack enable`. CI installs it through `pnpm/setup` in `.github/actions/prepare`.
 
 ```sh
 pnpm install --frozen-lockfile
