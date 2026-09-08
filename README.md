@@ -6,11 +6,11 @@ Roadmap and decisions live in the epic [#1](https://github.com/laststance/switch
 
 ## Workspace
 
-| Path              | Package               | Purpose                                                                                                                      |
-| ----------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `apps/app`        | `@switch-time/app`    | Expo SDK 57 universal app (placeholder until MVP-06, [#7](https://github.com/laststance/switch-time/issues/7))               |
-| `apps/api`        | `@switch-time/api`    | Hono + oRPC + Better Auth + Drizzle API (placeholder until MVP-02, [#3](https://github.com/laststance/switch-time/issues/3)) |
-| `packages/shared` | `@switch-time/shared` | Activity palette, default activities and Zod schemas shared by app and API; pinned to `design-system/theme.json` by tests    |
+| Path              | Package               | Purpose                                                                                                                   |
+| ----------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `apps/app`        | `@switch-time/app`    | Expo SDK 57 universal app (placeholder until MVP-06, [#7](https://github.com/laststance/switch-time/issues/7))            |
+| `apps/api`        | `@switch-time/api`    | Hono 4 + oRPC 1.15 API: `GET /api/healthz`, RPC at `/api/rpc/*`; Better Auth + Drizzle land in MVP-04/05                  |
+| `packages/shared` | `@switch-time/shared` | Activity palette, default activities and Zod schemas shared by app and API; pinned to `design-system/theme.json` by tests |
 
 ## Prerequisites
 
@@ -36,6 +36,18 @@ pnpm check
 | `pnpm check`                                    | Everything above, in the order CI runs it                                             |
 
 `git commit` runs `lint-staged` (Prettier on staged files) through Husky.
+
+## API (`apps/api`)
+
+```sh
+pnpm --filter api dev        # tsx watch, http://localhost:8080 (PORT / APP_ORIGIN / NODE_ENV are Zod-validated in src/env.ts)
+curl localhost:8080/api/healthz
+pnpm --filter api build      # tsdown → dist/server.js (workspace packages inlined, npm deps external)
+docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = repo root
+docker run --rm -p 8080:8080 switch-time-api
+```
+
+The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
 ## Conventions
 

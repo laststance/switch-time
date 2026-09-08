@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/dist
+**/.expo
+apps/app
+design
+design-system
+.artifacts
+.fallow
+coverage
+*.log
+.env
+.env.*

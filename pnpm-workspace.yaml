@@ -7,4 +7,5 @@ minimumReleaseAge: 1440
 
 # pnpm 12 blocks install scripts by default; allow only what we have vetted.
 allowBuilds:
+  esbuild: true
   unrs-resolver: true
