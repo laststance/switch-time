@@ -1,0 +1,47 @@
+# Local backend: `docker compose up` (or `pnpm dev:backend`) → Postgres + the API with hot reload.
+services:
+  db:
+    # Newest major DigitalOcean Managed Databases offers (MVP-09 attaches a PG 18 cluster).
+    image: postgres:18
+    environment:
+      POSTGRES_USER: switchtime
+      POSTGRES_PASSWORD: switchtime
+      POSTGRES_DB: switchtime
+    ports:
+      # Loopback only: the credentials are public, so never expose the database to the LAN.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      # PG 18 images keep PGDATA under /var/lib/postgresql/<major>; mount the parent, not .../data.
+      - db-data:/var/lib/postgresql
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Over TCP: the image's socket-only bootstrap server (which runs init.sql) would satisfy a socket check too early.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U switchtime -d switchtime']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    ports:
+      - '8080:8080'
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Inside Compose the database host is `db`; .env keeps `localhost` for running the API on the host.
+      DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime
+      TEST_DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime_test
+      PORT: 8080
+    volumes:
+      # Bind-mount the sources so `tsx watch` inside the container restarts on every edit.
+      - ./apps/api/src:/repo/apps/api/src
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

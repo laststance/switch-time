@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/server.ts",
     "build": "tsdown",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json",

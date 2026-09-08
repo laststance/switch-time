@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repository root: `docker build -f apps/api/Dockerfile .`
 
-FROM node:24-slim AS build
+FROM node:24-slim AS deps
 # HUSKY=0 skips the root `prepare` hook; CI=true makes pnpm non-interactive.
 ENV CI=true HUSKY=0
 RUN corepack enable
@@ -10,6 +10,14 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 RUN pnpm install --frozen-lockfile --filter @switch-time/api...
+
+# Local backend (compose.yaml): tsx watch over the bind-mounted apps/api/src.
+FROM deps AS dev
+WORKDIR /repo/apps/api
+EXPOSE 8080
+CMD ["pnpm", "dev"]
+
+FROM deps AS build
 RUN pnpm --filter @switch-time/api build
 # Self-contained copy with production node_modules only.
 # `--legacy` keeps the workspace on symlinks in dev instead of requiring injectWorkspacePackages.
