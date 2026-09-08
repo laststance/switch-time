@@ -8,13 +8,15 @@ services:
       POSTGRES_PASSWORD: switchtime
       POSTGRES_DB: switchtime
     ports:
-      - '5432:5432'
+      # Loopback only: the credentials are public, so never expose the database to the LAN.
+      - '127.0.0.1:5432:5432'
     volumes:
       # PG 18 images keep PGDATA under /var/lib/postgresql/<major>; mount the parent, not .../data.
       - db-data:/var/lib/postgresql
       - ./docker/postgres:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U switchtime -d switchtime']
+      # Over TCP: the image's socket-only bootstrap server (which runs init.sql) would satisfy a socket check too early.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U switchtime -d switchtime']
       interval: 5s
       timeout: 3s
       retries: 10

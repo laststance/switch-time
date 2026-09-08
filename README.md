@@ -16,6 +16,7 @@ Roadmap and decisions live in the epic [#1](https://github.com/laststance/switch
 
 - Node.js `24.20.0` (`.node-version`; use fnm/nodenv/Volta)
 - pnpm `12.3.4` — pinned in `packageManager`. pnpm 10+ downloads and runs the pinned version by default ([`pmOnFail: download`](https://pnpm.io/settings/cli#pmonfail)); if yours does not, install it explicitly with `npm install -g pnpm@12.3.4` or run `corepack enable`. CI installs it through `pnpm/setup` in `.github/actions/prepare`.
+- Docker with Compose v2.24+ (`compose.yaml` uses `env_file: required: false`) — only for the local backend below
 
 ```sh
 pnpm install --frozen-lockfile
