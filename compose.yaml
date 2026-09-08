@@ -27,6 +27,7 @@ services:
       dockerfile: apps/api/Dockerfile
       target: dev
     ports:
+      # All interfaces on purpose: a phone running Expo Go reaches the API over the LAN (unlike the database, nothing here is a public credential).
       - '8080:8080'
     env_file:
       - path: .env
@@ -39,6 +40,8 @@ services:
     volumes:
       # Bind-mount the sources so `tsx watch` inside the container restarts on every edit.
       - ./apps/api/src:/repo/apps/api/src
+      # ...and the migrations, which the container applies on start (no rebuild after `db:generate`).
+      - ./apps/api/drizzle:/repo/apps/api/drizzle
     depends_on:
       db:
         condition: service_healthy

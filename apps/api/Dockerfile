@@ -11,11 +11,11 @@ COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 RUN pnpm install --frozen-lockfile --filter @switch-time/api...
 
-# Local backend (compose.yaml): tsx watch over the bind-mounted apps/api/src.
+# Local backend (compose.yaml): migrate, then tsx watch over the bind-mounted apps/api/src.
 FROM deps AS dev
 WORKDIR /repo/apps/api
 EXPOSE 8080
-CMD ["pnpm", "dev"]
+CMD ["sh", "-c", "pnpm db:migrate && exec pnpm dev"]
 
 FROM deps AS build
 RUN pnpm --filter @switch-time/api build
