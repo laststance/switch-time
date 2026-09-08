@@ -1,0 +1,28 @@
+name: Fallow
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: fallow-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fallow:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [health, dupes, dead-code]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+      - run: pnpm "$FALLOW_CHECK"
+        env:
+          FALLOW_CHECK: ${{ matrix.check }}
