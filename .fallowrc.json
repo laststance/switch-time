@@ -12,5 +12,6 @@
   },
   "duplicates": {
     "ignore": ["**/*.test.ts", "**/*.test.tsx"]
-  }
+  },
+  "ignoreDependencies": ["react-native-web"]
 }
