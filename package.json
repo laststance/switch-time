@@ -11,6 +11,9 @@
   "scripts": {
     "prepare": "husky",
     "build": "pnpm -r --if-present run build",
+    "dev:backend": "docker compose up --build",
+    "db:psql": "docker compose exec db psql -U switchtime switchtime",
+    "db:reset": "docker compose down -v",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --concurrency=auto --max-warnings=0",
     "lint:fix": "eslint . --fix --concurrency=auto --max-warnings=0",
