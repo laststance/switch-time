@@ -1,4 +1,6 @@
 # Local backend: `docker compose up` (or `pnpm dev:backend`) → Postgres + the API with hot reload.
+# Fixed project name: the network is `switch-time_default` whatever the checkout directory is called (README relies on it).
+name: switch-time
 services:
   db:
     # Newest major DigitalOcean Managed Databases offers (MVP-09 attaches a PG 18 cluster).

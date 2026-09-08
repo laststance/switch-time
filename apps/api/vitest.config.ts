@@ -13,6 +13,8 @@ if (!new URL(process.env.TEST_DATABASE_URL).pathname.endsWith('_test')) {
   throw new Error('TEST_DATABASE_URL must name a database ending in _test')
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL
+// Sessions minted in tests never leave the process: always this string, never the real secret from .env.
+process.env.BETTER_AUTH_SECRET = 'vitest-only-secret-not-for-production-use'
 
 export default defineConfig({
   test: {

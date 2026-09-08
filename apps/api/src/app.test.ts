@@ -31,3 +31,22 @@ test('ping procedure returns ok and an ISO timestamp', async () => {
   expect(result.ok).toBe(true)
   expect(new Date(result.now).toISOString()).toBe(result.now)
 })
+
+test('a request body over 100 KB is rejected with 413 before any handler sees it', async () => {
+  // Arrange
+  const body = JSON.stringify({
+    name: 'x'.repeat(101 * 1024),
+    email: 'big@example.com',
+    password: 'correct horse battery staple',
+  })
+
+  // Act
+  const response = await app.request('/api/auth/sign-up/email', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+  })
+
+  // Assert
+  expect(response.status).toBe(413)
+})

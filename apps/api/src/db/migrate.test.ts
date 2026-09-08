@@ -4,11 +4,12 @@ import { expect, test } from 'vitest'
 
 import { pool } from './client'
 
-test('migration runner creates the migrations log and re-runs cleanly on a migrated database', async () => {
+test('migration runner is idempotent against an already-migrated database', async () => {
   // Arrange — the global setup already ran src/db/migrate.ts once against this database.
-  const before = await pool.query(
+  const before = await pool.query<{ count: number }>(
     'select count(*)::int as count from drizzle.__drizzle_migrations',
   )
+  expect(before.rows[0]?.count).toBeGreaterThan(0)
 
   // Act — re-run the real script the PRE_DEPLOY job executes, as its own process.
   execFileSync(process.execPath, ['--import=tsx', 'src/db/migrate.ts'], {
