@@ -15,6 +15,7 @@
   --color-chip:      rgba(255,255,255,0.08);
   --color-tab-bg:    rgba(17,18,22,0.90);
   --color-accent:    #7FB2FF;
+  --color-scrim:     rgba(10,10,12,0.50);  /* modal backdrop (web dialog) */
   --pattern-hatch:   repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 4px, transparent 4px 8px);
 }
 
@@ -29,6 +30,7 @@
   --color-chip:      rgba(27,26,23,0.06);
   --color-tab-bg:    rgba(245,242,235,0.90);
   --color-accent:    #2A66C4;
+  --color-scrim:     rgba(10,10,12,0.50);
   --pattern-hatch:   repeating-linear-gradient(135deg, rgba(27,26,23,.06) 0 4px, transparent 4px 8px);
 }
 

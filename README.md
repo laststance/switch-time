@@ -98,6 +98,10 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 - Route groups: `(auth)/sign-in`, `(auth)/sign-up` (Zod schemas `signInSchema` / `signUpSchema` from `@switch-time/shared`, first issue per field inline, Better Auth's message above the form) and `(app)/…` guarded in `(app)/_layout.tsx`: anonymous visitors are redirected to `/sign-in?next=<path>` and return there after signing in. `useSignOut` ends the session, clears the TanStack cache, dispatches `resetApp` and shows sign-in.
 - Playwright (web): `pnpm --filter app test:e2e` exports the site with `EXPO_PUBLIC_API_ORIGIN=http://localhost:8080`, then serves it on :8081 next to the API bundle (`node ../api/dist/server.js`, reused when the Compose API already listens on :8080). CI runs the same in the `e2e` job with a Postgres service.
 
+### Shell (expo-router)
+
+`(app)/(tabs)/_layout.tsx` is a headless `expo-router/ui` `Tabs`: from 800 px up (`useWide`) the `TabList` is the design's 76 px rail on the left, below that the 60 px bottom bar; both render `NavItem` (`react-native-svg` stroke icons with the design's own paths, `role="tab"`). Screens sit inside `Screen` (the centred 640 px column, side rules when wide) under a `ScreenHeader`. Sheets are routes on the `(app)` Stack (`correction`, `activity-editor`, `excluded-days`): native gets `presentation: 'modal'`, web a `transparentModal` without animation where `Sheet` draws the scrim and the dialog itself (✕, the scrim or Escape close it: `router.back()` when there is history, else `/`). `+not-found.tsx` covers unknown URLs. `e2e/shell.spec.ts` checks rail vs bar geometry, keyboard navigation, the sheet route and not-found.
+
 ## API (`apps/api`)
 
 ```sh

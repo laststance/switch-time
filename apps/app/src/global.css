@@ -36,6 +36,7 @@
       --color-chip: rgba(255, 255, 255, 0.08);
       --color-tab-bg: rgba(17, 18, 22, 0.9);
       --color-accent: #7fb2ff;
+      --color-scrim: rgba(10, 10, 12, 0.5);
       /* react-native-web cannot draw a translucent bar: the web tab bar is opaque, same value as bg. */
       @variant web {
         --color-tab-bg: #111216;
@@ -52,6 +53,7 @@
       --color-chip: rgba(27, 26, 23, 0.06);
       --color-tab-bg: rgba(245, 242, 235, 0.9);
       --color-accent: #2a66c4;
+      --color-scrim: rgba(10, 10, 12, 0.5);
       @variant web {
         --color-tab-bg: #f5f2eb;
       }

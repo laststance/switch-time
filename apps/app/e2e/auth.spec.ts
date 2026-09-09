@@ -30,6 +30,7 @@ test('signing out returns to sign-in and hides the app', async ({ page }) => {
   await expect(page.getByText('いま')).toBeVisible()
 
   // Act
+  await page.getByRole('tab', { name: '設定' }).click()
   await page.getByRole('button', { name: 'サインアウト' }).click()
 
   // Assert
