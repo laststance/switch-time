@@ -69,5 +69,7 @@ jobs:
       - uses: ./.github/actions/prepare
       # The Playwright webServer boots node apps/api/dist/server.js against the migrated database.
       - run: pnpm --filter api build && node apps/api/dist/db/migrate.js
+      # The runner image ships Google's apt source; when its index goes stale, playwright's --with-deps apt-get update dies on a hash mismatch.
+      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
       - run: pnpm --filter app exec playwright install --with-deps chromium
       - run: pnpm --filter app test:e2e
