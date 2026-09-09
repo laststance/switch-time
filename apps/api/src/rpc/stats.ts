@@ -7,7 +7,7 @@ import {
   monthSchema,
   summarizeDays,
 } from '@switch-time/shared'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '../db/client'
@@ -26,11 +26,11 @@ async function rangeStats(userId: string, first: string, count: number) {
   const { end } = dayBounds(addDays(first, count - 1), timeZone)
   const [timeline, tapped, manual] = await Promise.all([
     switchesBetween(userId, start, end),
-    // Distinct local days with a tap, for the streak and 計測なし; Postgres shifts zones so DST agrees with dayBounds.
+    // Every tap's instant, folded into local days below with the same ICU zone math as dayBounds: Postgres names some
+    // zones differently (ICU's `Asia/Calcutta` is unknown there) and reads `+09:00` POSIX-style, so it must not take part.
+    // ponytail: loads one timestamp per tap ever made; keep a per-day table when an account passes ~100k taps.
     db
-      .selectDistinct({
-        day: sql<string>`to_char(${switches.startedAt} at time zone ${timeZone}, 'YYYY-MM-DD')`,
-      })
+      .select({ startedAt: switches.startedAt })
       .from(switches)
       .where(eq(switches.userId, userId)),
     db
@@ -38,7 +38,9 @@ async function rangeStats(userId: string, first: string, count: number) {
       .from(excludedDays)
       .where(eq(excludedDays.userId, userId)),
   ])
-  const switchDays = new Set(tapped.map((row) => row.day))
+  const switchDays = new Set(
+    tapped.map((row) => localDay(row.startedAt, timeZone)),
+  )
   const rows = [timeline.carriedIn, ...timeline.rows, timeline.carriedOut]
   return summarizeDays({
     days: Array.from({ length: count }, (_, index) => addDays(first, index)),

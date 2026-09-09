@@ -1,8 +1,9 @@
 import { addDays, dayBounds, localDay } from '@switch-time/shared'
+import { eq } from 'drizzle-orm'
 import { expect, test } from 'vitest'
 
 import { db } from '../db/client'
-import { activities } from '../db/schema/app'
+import { activities, switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
 const TZ = 'Asia/Tokyo'
@@ -188,4 +189,105 @@ test('a color outside the palette is rejected', async () => {
       position: 9,
     }),
   ).rejects.toMatchObject({ cause: { constraint: 'activities_color_palette' } })
+})
+
+test('a corrected segment cannot be moved onto an archived activity', async () => {
+  // Arrange
+  const api = await signedIn('change-archived@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const row = await api.switches.switchTo({ activityId: work })
+  await api.activities.archive({ id: rest })
+
+  // Act + Assert
+  await expect(
+    api.switches.changeActivity({ id: row.id, activityId: rest }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('splitting keeps both halves at least a minute long', async () => {
+  // Arrange
+  const api = await signedIn('split@example.com')
+  const { id: userId } = await api.me()
+  const work = idOf(await api.activities.list(), '仕事')
+  const yesterday = addDays(today, -1)
+  const [long, , short] = await db
+    .insert(switches)
+    .values([
+      { userId, activityId: work, startedAt: at(yesterday, 10) },
+      { userId, activityId: work, startedAt: at(yesterday, 12) },
+      { userId, activityId: work, startedAt: at(yesterday, 14) },
+      {
+        userId,
+        activityId: work,
+        startedAt: new Date(at(yesterday, 14).getTime() + 90_000),
+      },
+    ])
+    .returning()
+  if (!long || !short) throw new Error('seed failed')
+
+  // Act
+  const half = await api.switches.splitInHalf({ id: long.id })
+
+  // Assert
+  expect(half.startedAt).toEqual(at(yesterday, 11))
+  expect(half.source).toBe('split')
+  await expect(
+    api.switches.splitInHalf({ id: short.id }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' })
+})
+
+test('an empty settings update is rejected as input, not as a database error', async () => {
+  // Arrange
+  const api = await signedIn('empty-settings@example.com')
+
+  // Act + Assert
+  await expect(api.settings.update({})).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+  })
+})
+
+test('stats work in a zone Postgres only knows under another name', async () => {
+  // Arrange: ICU canonicalises Asia/Kolkata to Asia/Calcutta, which Postgres without tzdata-legacy rejects
+  const api = await signedIn('calcutta@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  await api.settings.update({ timeZone: 'Asia/Calcutta' })
+  const yesterday = addDays(localDay(new Date(), 'Asia/Calcutta'), -1)
+  const { start } = dayBounds(yesterday, 'Asia/Calcutta')
+  await db.insert(switches).values([
+    { userId, activityId: work, startedAt: new Date(start + 9 * H) },
+    { userId, activityId: rest, startedAt: new Date(start + 10 * H) },
+  ])
+
+  // Act
+  const day = await api.stats.day({ day: yesterday })
+
+  // Assert: 仕事 ran 9:00–10:00 Calcutta time; before the fix the query itself raised "time zone not recognized"
+  expect(day.totals[work]).toBe(3_600_000)
+})
+
+test('an account whose seed rows are missing gets them on the first settings read', async () => {
+  // Arrange: what a failed user.create.after hook (or an account older than the domain tables) leaves behind
+  const api = await signedIn('unseeded@example.com')
+  const { id: userId } = await api.me()
+  await db.delete(activities).where(eq(activities.userId, userId))
+  await db.delete(userSettings).where(eq(userSettings.userId, userId))
+
+  // Act
+  const settings = await api.settings.get()
+
+  // Assert
+  expect(settings).toMatchObject({ timeZone: 'Asia/Tokyo', theme: 'auto' })
+  expect((await api.activities.list()).map((row) => row.name)).toEqual([
+    '家事',
+    '仕事',
+    '休息',
+    '睡眠',
+    '食事',
+    '娯楽',
+  ])
 })

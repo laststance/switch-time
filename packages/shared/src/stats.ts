@@ -61,7 +61,8 @@ export function sumSegments(segments: readonly Segment[]): {
 }
 
 // A corrected segment keeps at least this much room from its neighbours and from now.
-const MIN_SEGMENT_MS = 60_000
+/** Shortest segment a correction may leave behind; {@link clampStart} and the API's split guard both use it. */
+export const MIN_SEGMENT_MS = 60_000
 
 /**
  * Clamps a moved start into (prev, next) and the past, ≥1 min from each; `null` arg = no neighbour, `null` result = no legal slot.
