@@ -94,10 +94,11 @@ export default function SettingsScreen() {
         </View>
       </View>
       <SignOutButton />
+      {/* The ST Phone design says 記録はこの端末に保存されます; records live on the account, so both platforms say 自動保存. */}
       <Text className="mt-auto py-2 text-center text-xs leading-5 text-sub">
         {Platform.OS === 'web'
           ? 'Switch Time Web 1.0 · 記録は自動保存'
-          : 'Switch Time 1.0 · 記録はこの端末に保存されます'}
+          : 'Switch Time 1.0 · 記録は自動保存'}
       </Text>
     </Screen>
   )
