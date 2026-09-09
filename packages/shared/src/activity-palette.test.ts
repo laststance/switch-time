@@ -3,7 +3,12 @@ import { describe, expect, test } from 'vitest'
 import theme from '../../../design-system/theme.json'
 
 import { ACTIVITY_PALETTE, DEFAULT_ACTIVITIES } from './activity-palette'
-import { activityColorSchema, activityInputSchema } from './schemas'
+import {
+  activityColorSchema,
+  activityInputSchema,
+  firstIssuePerField,
+  signUpSchema,
+} from './schemas'
 
 describe('design-system/theme.json stays the single source of truth', () => {
   test('activity palette is the 8 design colours in cycle order', () => {
@@ -123,5 +128,20 @@ describe('activity editor validation', () => {
       iconKey: 'book',
       targetHours: null,
     })
+  })
+})
+
+test('sign-up validation reports the first message per field', () => {
+  // Arrange
+  const result = signUpSchema.safeParse({ name: '', email: 'x', password: '1' })
+
+  // Act
+  const messages = result.success ? {} : firstIssuePerField(result.error)
+
+  // Assert
+  expect(messages).toEqual({
+    name: '名前を入力してください',
+    email: 'メールアドレスの形式が正しくありません',
+    password: 'パスワードは8文字以上にしてください',
   })
 })

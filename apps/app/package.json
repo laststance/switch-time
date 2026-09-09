@@ -10,19 +10,25 @@
     "build:web": "expo export -p web",
     "typecheck": "tsc -p tsconfig.json",
     "audit:web": "node scripts/audit-web-export.mts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "EXPO_PUBLIC_API_ORIGIN=http://localhost:8080 expo export -p web && playwright test"
   },
   "dependencies": {
+    "@better-auth/expo": "1.7.3",
     "@orpc/client": "1.15.0",
     "@orpc/tanstack-query": "1.15.0",
     "@reduxjs/toolkit": "2.12.0",
     "@switch-time/shared": "workspace:*",
     "@tanstack/react-query": "5.102.8",
+    "better-auth": "1.7.3",
     "clsx": "2.1.1",
     "expo": "57.0.20",
     "expo-constants": "57.0.17",
     "expo-linking": "57.0.9",
+    "expo-network": "57.0.1",
     "expo-router": "57.0.19",
+    "expo-secure-store": "57.0.3",
+    "expo-web-browser": "57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -32,9 +38,11 @@
     "react-redux": "9.3.0",
     "tailwind-merge": "3.6.0",
     "tailwindcss": "4.3.3",
-    "uniwind": "1.12.0"
+    "uniwind": "1.12.0",
+    "zod": "4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@switch-time/api": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",

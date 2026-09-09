@@ -28,3 +28,40 @@ export const activityInputSchema = z.object({
   targetHours: targetHoursSchema,
 })
 export type ActivityInput = z.infer<typeof activityInputSchema>
+
+/** Better Auth's password bounds (8–128), checked client-side first so the error is inline and instant. */
+export const passwordSchema = z
+  .string()
+  .min(8, { error: 'パスワードは8文字以上にしてください' })
+  .max(128, { error: 'パスワードは128文字以内にしてください' })
+
+/**
+ * Sign-in form payload; {@link signUpSchema} extends it with the display name.
+ * @example signInSchema.safeParse({ email: 'a@b.co', password: 'hunter22' }).success // true
+ */
+export const signInSchema = z.object({
+  email: z.email({ error: 'メールアドレスの形式が正しくありません' }),
+  password: passwordSchema,
+})
+export type SignInInput = z.infer<typeof signInSchema>
+
+/** Sign-up form payload: {@link signInSchema} plus the name Better Auth requires. */
+export const signUpSchema = signInSchema.extend({
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: '名前を入力してください' })
+    .max(50, { error: '名前は50文字以内にしてください' }),
+})
+export type SignUpInput = z.infer<typeof signUpSchema>
+
+/**
+ * First Zod message per top-level field, the shape inline form errors want ({@link useAuthForm}).
+ * @example firstIssuePerField(signInSchema.safeParse({ email: 'x', password: '' }).error) // { email: '…', password: '…' }
+ */
+export function firstIssuePerField(error: z.ZodError): Record<string, string> {
+  const messages: Record<string, string> = {}
+  for (const issue of error.issues)
+    messages[String(issue.path[0])] ??= issue.message
+  return messages
+}

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native'
 import { useUniwind } from 'uniwind'
 
 import { Readout } from '@/components/readout'
+import { SignOutButton } from '@/components/sign-out-button'
 import { SwitchButton } from '@/components/switch-button'
 import { useAppDispatch } from '@/store'
 import { preferencesSlice } from '@/store/preferences'
@@ -44,6 +45,7 @@ export default function HomeScreen() {
           {theme === 'dark' ? 'ライト' : 'ダーク'}
         </Text>
       </Pressable>
+      <SignOutButton />
     </View>
   )
 }
