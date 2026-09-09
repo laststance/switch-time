@@ -449,9 +449,10 @@ test('a replaced day rejects two segments that start at the same moment', async 
 })
 
 test('an account whose settings row is missing can still change a setting', async () => {
-  // Arrange: only the settings row is gone, so the repair must not touch the activities
+  // Arrange: only the settings row is gone, so the repair must leave the activities exactly as they were
   const api = await signedIn('unseeded-update@example.com')
   const { id: userId } = await api.me()
+  const before = await api.activities.list()
   await db.delete(userSettings).where(eq(userSettings.userId, userId))
 
   // Act
@@ -459,7 +460,7 @@ test('an account whose settings row is missing can still change a setting', asyn
 
   // Assert
   expect(settings.showSecondHand).toBe(false)
-  expect((await api.activities.list()).length).toBe(6)
+  expect(await api.activities.list()).toEqual(before)
 })
 
 test('stats work in a zone Postgres only knows under another name', async () => {
