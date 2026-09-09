@@ -1,6 +1,7 @@
 import { ORPCError } from '@orpc/server'
 import {
   clampStart,
+  MIN_SEGMENT_MS,
   dayBounds,
   daySchema,
   moveStartInputSchema,
@@ -114,6 +115,7 @@ export const switchesRouter = {
       if (activity.archivedAt)
         throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
       const current = await latestSwitch(userId)
+      // ponytail: read-then-insert without a per-user lock; two simultaneous taps from one account can both land.
       // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
       if (current?.activityId === input.activityId) return current
       return one(
@@ -157,10 +159,13 @@ export const switchesRouter = {
   changeActivity: authed
     .input(z.object({ id: z.uuid(), activityId: z.uuid() }))
     .handler(async ({ context, input }) => {
-      const [row] = await Promise.all([
+      const [row, activity] = await Promise.all([
         ownSwitch(context.user.id, input.id),
         ownActivity(context.user.id, input.activityId),
       ])
+      // Same rule as switchTo: an archived activity is hidden from the grid, so no segment may be moved onto it.
+      if (activity.archivedAt)
+        throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
       return correct(row.id, { activityId: input.activityId })
     }),
 
@@ -183,6 +188,9 @@ export const switchesRouter = {
   splitInHalf: authed.input(byId).handler(async ({ context, input }) => {
     const { row, next } = await withNeighbours(context.user.id, input.id)
     const end = next?.startedAt.getTime() ?? Date.now()
+    // Both halves must keep the 1-minute floor that moveStart enforces through clampStart.
+    if (end - row.startedAt.getTime() < 2 * MIN_SEGMENT_MS)
+      throw new ORPCError('CONFLICT', { message: 'segment too short to split' })
     const midpoint = new Date(Math.floor((row.startedAt.getTime() + end) / 2))
     return one(
       await db

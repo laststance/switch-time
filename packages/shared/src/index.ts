@@ -30,6 +30,7 @@ export {
 } from './schemas'
 export {
   clampStart,
+  MIN_SEGMENT_MS,
   summarizeDays,
   type DayFacts,
   type DayStats,
