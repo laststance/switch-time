@@ -1,23 +1,21 @@
 import { signUpSchema } from '@switch-time/shared'
-import { Link, useLocalSearchParams, useRouter } from 'expo-router'
+import { Link, useLocalSearchParams } from 'expo-router'
 import { Pressable, Text } from 'react-native'
 
 import { AuthCard, Field } from '@/components/auth-card'
 import { CredentialFields } from '@/components/credential-fields'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { nextHref, useAuthForm } from '@/hooks/use-auth-form'
+import { useAuthForm } from '@/hooks/use-auth-form'
 import { authClient } from '@/lib/auth-client'
 
 export default function SignUpScreen() {
-  const router = useRouter()
   const { next } = useLocalSearchParams<{ next?: string }>()
-  // Better Auth signs the new user in right away (autoSignIn), so success lands in the app.
+  // Better Auth signs the new user in right away (autoSignIn); the (auth) layout then follows `next` into the app.
   const form = useAuthForm(
     signUpSchema,
     { name: '', email: '', password: '' },
     async (values) => authClient.signUp.email(values),
-    () => router.replace(nextHref(next)),
   )
 
   return (
