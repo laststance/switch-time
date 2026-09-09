@@ -28,11 +28,16 @@ export function useCorrection(dayParam: string | undefined) {
     orpc.switches.listByDay.queryOptions({ input: { day }, enabled: ready }),
   )
   const activities = useQuery(orpc.activities.list.queryOptions())
-  const [previous, setPrevious] = useState<DaySnapshot | null>(null)
+  const [previous, setPrevious] = useState<{
+    day: string
+    rows: DaySnapshot
+  } | null>(null)
   const edit = {
-    // The buttons wait for fetches, so the rows on screen are settled data when an edit snapshots them for undo.
-    onMutate: () => {
-      if (list.data) setPrevious(daySnapshot(list.data))
+    // Snapshot for undo only once the edit succeeded: a failed one (stale row, offline) must not arm 元に戻す with rows that
+    // would overwrite someone else's change. `list.data` is the pre-edit answer: the buttons wait for fetches, and the
+    // options are captured when mutate() runs. The day travels with it so a snapshot never replays into the next day.
+    onSuccess: () => {
+      if (list.data) setPrevious({ day, rows: daySnapshot(list.data) })
     },
     onSettled: async () =>
       invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()]),
@@ -74,7 +79,7 @@ export function useCorrection(dayParam: string | undefined) {
     rows: correctionRows(list.data, activities.data, bounds),
     pending:
       list.isFetching || mutations.some((mutation) => mutation.isPending),
-    canUndo: previous !== null,
+    canUndo: previous?.day === day,
     move: (id: string, deltaMinutes: 15 | -15) =>
       moveStart.mutate({ id, deltaMinutes }),
     pick: (id: string, activityId: string) =>
@@ -82,7 +87,7 @@ export function useCorrection(dayParam: string | undefined) {
     merge: (id: string) => mergeIntoPrevious.mutate({ id }),
     split: (id: string) => splitInHalf.mutate({ id }),
     undo: () => {
-      if (previous) replaceDay.mutate({ day, rows: previous })
+      if (previous) replaceDay.mutate(previous)
     },
   }
 }

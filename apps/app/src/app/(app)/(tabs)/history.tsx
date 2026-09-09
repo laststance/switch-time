@@ -33,17 +33,18 @@ function RangePicker({
 }) {
   return (
     <View
-      role="radiogroup"
+      role="group"
       aria-label="期間"
       className="flex-row gap-1 rounded-chip bg-chip p-1"
     >
       {RANGES.map((key) => {
         const checked = key === range
+        // Toggle buttons rather than radios: RN-web only fires Space (and Enter) for the button role, and there is no arrow-key handling.
         return (
           <Pressable
             key={key}
-            role="radio"
-            aria-checked={checked}
+            role="button"
+            aria-pressed={checked}
             onPress={() => onChange(key)}
             className={cn(
               'h-9 flex-1 items-center justify-center rounded-[8px]',

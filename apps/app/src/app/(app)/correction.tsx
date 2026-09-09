@@ -22,6 +22,8 @@ type BarProps = {
 function DayBar({ rows, bounds, selectedId }: BarProps) {
   const percent = (ms: number): `${number}%` =>
     `${(ms / (bounds.end - bounds.start)) * 100}%`
+  // A merged or undone row's id lingers in the selection; with no row to highlight, nothing dims.
+  const active = rows.some((row) => row.id === selectedId) ? selectedId : null
   return (
     <View className="h-3 w-full overflow-hidden rounded-[6px] bg-chip">
       {rows.map((row) => (
@@ -32,7 +34,7 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
             left: percent(row.start - bounds.start),
             width: percent(row.end - row.start),
             backgroundColor: row.color,
-            opacity: selectedId === null || selectedId === row.id ? 1 : DIMMED,
+            opacity: active === null || active === row.id ? 1 : DIMMED,
           }}
         />
       ))}
@@ -40,13 +42,18 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
   )
 }
 
-type RowHeaderProps = { row: CorrectionRow; onPress: () => void }
+type RowHeaderProps = {
+  row: CorrectionRow
+  selected: boolean
+  onPress: () => void
+}
 
 // The tappable part of a row: chip, name, span and length. The carried-in state is plain text (nothing to correct).
-function RowHeader({ row, onPress }: RowHeaderProps) {
+function RowHeader({ row, selected, onPress }: RowHeaderProps) {
   return (
     <Pressable
       role="button"
+      aria-expanded={selected}
       disabled={!row.editable}
       onPress={onPress}
       className="h-[58px] flex-row items-center gap-3 px-3.5"
@@ -170,7 +177,10 @@ function Actions({
               iconKey={activity.iconKey}
               selected={activity.id === row.activityId}
               disabled={pending}
-              onPress={() => onPick(activity.id)}
+              // Re-picking the current activity would be a pointless write (source → correction) that also arms undo.
+              onPress={() => {
+                if (activity.id !== row.activityId) onPick(activity.id)
+              }}
             />
           ))}
         </View>
@@ -247,6 +257,7 @@ export default function CorrectionSheet() {
             >
               <RowHeader
                 row={row}
+                selected={selected}
                 onPress={() => setSelectedId(selected ? null : row.id)}
               />
               {selected && (
