@@ -3,6 +3,8 @@ import type { Href } from 'expo-router'
 import { useState } from 'react'
 import type { ZodType } from 'zod'
 
+import { queryClient } from '@/lib/query'
+
 type AuthResult = { error: { message?: string } | null }
 
 /**
@@ -32,7 +34,14 @@ export function useAuthForm<T extends Record<string, string>>(
     try {
       const { error } = await submit(parsed.data)
       if (error) setServerError(error.message ?? 'もう一度お試しください')
-      else onSuccess()
+      else {
+        // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes).
+        queryClient.clear()
+        onSuccess()
+      }
+    } catch {
+      // Transport failure (offline, server down): surfaced inline like a server error instead of an unhandled rejection.
+      setServerError('もう一度お試しください')
     } finally {
       setPending(false)
     }
@@ -45,7 +54,9 @@ export function useAuthForm<T extends Record<string, string>>(
 type AppPath = Extract<Href, string>
 
 // A predicate rather than `as Href`: with typed routes the cast is needed, without them lint flags it as unnecessary.
-const isAppPath = (value: string): value is AppPath => value.startsWith('/')
+// One leading slash only: `//host` is a protocol-relative URL (expo-router treats it as external) and browsers read `/\host` the same way.
+const isAppPath = (value: string): value is AppPath =>
+  /^\/(?![/\\])/.test(value)
 
 /**
  * Where to go after auth: the `next` query param when it is a same-app path, else Home (no open redirects).
