@@ -4,6 +4,7 @@ import { betterAuth } from 'better-auth'
 
 import { db } from './db/client'
 import * as schema from './db/schema/auth'
+import { seedUser } from './db/seed-user'
 import { env } from './env'
 
 export const auth = betterAuth({
@@ -24,6 +25,10 @@ export const auth = betterAuth({
     ...(env.NODE_ENV === 'development' ? ['exp://**'] : []),
   ],
   emailAndPassword: { enabled: true },
+  // Every account starts with the default activities and settings ({@link seedUser}).
+  databaseHooks: {
+    user: { create: { after: async (created) => seedUser(created.id) } },
+  },
   plugins: [expo()],
   // Rate limiting stays at its default (on in production only). Behind App Platform it needs
   // `advanced.ipAddress.trustedProxies` / `ipAddressHeaders` to key by client IP instead of one shared bucket: MVP-09.

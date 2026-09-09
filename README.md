@@ -112,6 +112,16 @@ docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NO
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
+## Domain (activities / switches / stats)
+
+The clock always holds exactly one state: no end times are stored, the latest `switches` row is the current state and a segment ends when the next one starts. Tables live in `apps/api/src/db/schema/app.ts` (`activities`, `switches`, `excluded_days`, `user_settings`); sign-up seeds the 6 default activities and a settings row (`apps/api/src/db/seed-user.ts`, Better Auth `user.create.after`).
+
+- Migrations: `pnpm --filter api db:generate --name <name>` after editing the schema, `pnpm --filter api db:migrate` to apply locally (CI and App Platform run `dist/db/migrate.js`).
+- Every day boundary is computed in `user_settings.time_zone` (`dayBounds` / `localDay` in `packages/shared/src/time.ts`); the client is expected to keep it in sync through `settings.update`.
+- Idle rule (無操作とみなす時間): a segment longer than `idle_threshold_minutes` (default 720 = 12 h, above the 8 h work / 7 h sleep targets) is shown but left out of totals (`idleMs` per day in `stats.*`).
+- 計測なし / 除外: a past day without a tap is `auto_unused` while `auto_exclude_unused_days` is on (today is only "in progress"); manual exclusions (`excludedDays.exclude`) are stored, auto ones are computed per request. The streak counts measured days back from today (from yesterday until today has a tap) and skips manual exclusions (`packages/shared/src/stats.ts`).
+- Corrections: `switches.moveStart` moves ±15 min, clamped ≥1 min from its neighbours and from now; `replaceDay` rewrites one day in a transaction and backs 「元に戻す」 (the client keeps the previous rows). `activities.reorder` must receive a permutation of the active ids; the current state's activity and the last active one cannot be archived.
+
 ## Deploy (DigitalOcean App Platform)
 
 One app, region `sgp` (no Tokyo region; ≈ 75–80 ms from Tokyo), described by `.do/app.yaml`:
