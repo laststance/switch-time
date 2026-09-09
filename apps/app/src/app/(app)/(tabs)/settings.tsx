@@ -4,13 +4,12 @@ import { Platform, Pressable, Text, View } from 'react-native'
 
 import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
+import { SignOutButton } from '@/components/sign-out-button'
 import { Segmented } from '@/components/segmented'
 import { StrokeIcon } from '@/components/stroke-icon'
-import { Button } from '@/components/ui/button'
 import { Toggle } from '@/components/ui/toggle'
 import { useActivities } from '@/hooks/use-activities'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
-import { useSignOut } from '@/hooks/use-sign-out'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { INFO } from '@/lib/icons'
 import { exclusionSummary } from '@/lib/settings'
@@ -29,7 +28,6 @@ export default function SettingsScreen() {
   const { settings } = useSettings()
   const update = useUpdateSettings()
   const activities = useActivities().data ?? []
-  const signOut = useSignOut()
   const sub = useTokenColor('sub')
   return (
     <Screen>
@@ -94,11 +92,7 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
-      <Button
-        title="サインアウト"
-        variant="ghost"
-        onPress={() => void signOut()}
-      />
+      <SignOutButton />
       <Text className="mt-auto py-2 text-center text-xs leading-5 text-sub">
         {Platform.OS === 'web'
           ? 'Switch Time Web 1.0 · 記録は自動保存'

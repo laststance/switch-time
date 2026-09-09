@@ -7,8 +7,9 @@ import { Platform } from 'react-native'
 export const API_ORIGIN =
   process.env.EXPO_PUBLIC_API_ORIGIN ?? (__DEV__ ? 'http://localhost:8080' : '')
 
-// A native release build has no same-origin fallback: fail at boot naming the variable, not on the first fetch with a relative URL.
-if (!__DEV__ && Platform.OS !== 'web' && API_ORIGIN === '')
+// A native release build replays the SecureStore session as a Cookie header on every request: the origin must be set (no
+// same-origin fallback exists there) and must be https, or the session travels in cleartext. Dev keeps http for a LAN device.
+if (!__DEV__ && Platform.OS !== 'web' && !API_ORIGIN.startsWith('https://'))
   throw new Error(
-    'EXPO_PUBLIC_API_ORIGIN is required for native release builds',
+    'EXPO_PUBLIC_API_ORIGIN must be an https:// origin in native release builds',
   )
