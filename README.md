@@ -85,6 +85,13 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 
 `src/global.css` is the only place the app spells a colour: the design-system tokens (`design-system/styles.css`, `theme.json`) are re-declared there as Tailwind theme variables, both bands under `@layer theme` with `@variant dark` / `@variant light`, and the web-only overrides under `@variant web`. Uniwind compiles that file inside Metro (`metro.config.js`, no native code, so Expo Go works) and gives every React Native component a `className`; `uniwind.d.ts` supplies the prop types because `tsc` runs without Metro (Metro regenerates the same file as the gitignored `uniwind-types.d.ts`). Activity colours are data (`activities.color`, always a palette entry), so components receive them as `style` values, never as classes. Ticking digits take the `tabular` utility. `components.json` + `src/lib/utils.ts` (`cn`) are the React Native Reusables set-up; its CLI only scaffolds new projects, so components are vendored by hand into `src/components/ui` when first used. `pnpm --filter app audit:web` (also in the Build workflow) fails the web export on CSS react-native-web cannot draw (`grid`, `sticky`, `backdrop-filter`, `filter`, gradients, pseudo-elements) and on any hex colour outside `theme.json`.
 
+### Data layer (oRPC + TanStack Query + Redux Toolkit)
+
+- `src/lib/orpc.ts` builds the typed oRPC client from `AppRouterClient` (a type-only import from `@switch-time/api`, so Metro never bundles server code) and exposes `orpc.<procedure>.queryOptions()` for TanStack Query. Server data lives in TanStack Query only; it is never copied into Redux.
+- `EXPO_PUBLIC_API_ORIGIN` selects the API origin: unset means `http://localhost:8080` in dev and same-origin (`''`) in the production web build. For a physical device point it at the machine's LAN IP, e.g. `EXPO_PUBLIC_API_ORIGIN=http://192.168.1.10:8080 pnpm --filter app dev`.
+- `src/store` holds client-only state: `clock` (ticks every second while the app is active, pauses in background), `ui` (open sheet, selected day) and `preferences` (theme `auto|light|dark` resolved by `resolveTheme`, `showSecondHand`). Components use `useAppSelector` / `useAppDispatch` from `@/store`; the root layout runs `useClock` and `useThemeSync`.
+- `/debug` (dev only) renders the `ping` query and the clock. `pnpm --filter app test` runs the Vitest unit tests in `src/**/*.test.ts`.
+
 ## API (`apps/api`)
 
 ```sh
