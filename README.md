@@ -64,7 +64,7 @@ pnpm --filter api db:studio     # Drizzle Studio against DATABASE_URL
 
 ### Auth (Better Auth 1.7)
 
-Email + password only, served by the same Hono process at `/api/auth/*` (`apps/api/src/auth.ts`): `@better-auth/drizzle-adapter/relations-v2` on the Drizzle instance, the `@better-auth/expo` server plugin, adapter writes in one transaction, `baseURL` = the API's own origin (`APP_ORIGIN` in production, `http://localhost:$PORT` otherwise), `trustedOrigins` = `APP_ORIGIN` plus `switchtime://` (and `exp://**` in development). Rate limiting keeps Better Auth's default (production only) and needs `advanced.ipAddress.trustedProxies` once deployed behind App Platform (MVP-09). `BETTER_AUTH_SECRET` is required (`openssl rand -base64 32`), and in production `APP_ORIGIN` must be `https://` (the cookie `Secure` flag derives from it). Every `/api/*` request body is capped at 100 KB.
+Email + password only, served by the same Hono process at `/api/auth/*` (`apps/api/src/auth.ts`): `@better-auth/drizzle-adapter/relations-v2` on the Drizzle instance, the `@better-auth/expo` server plugin, adapter writes in one transaction, `baseURL` = the API's own origin (`APP_ORIGIN` in production, `http://localhost:$PORT` otherwise), `trustedOrigins` = `APP_ORIGIN` plus `switchtime://` (and `exp://**` in development). Rate limiting keeps Better Auth's default (production only) and keys by the App Platform ingress's `do-connecting-ip` header (`advanced.ipAddress.ipAddressHeaders`; the ingress writes its own hop into `x-forwarded-for`, and without the header Better Auth warns and uses one shared bucket). `BETTER_AUTH_SECRET` is required (`openssl rand -base64 32`), and in production `APP_ORIGIN` must be `https://` (the cookie `Secure` flag derives from it). Every `/api/*` request body is capped at 100 KB.
 
 - Auth tables come from the CLI, never by hand: `npx auth@1.7.3 generate --config src/auth.ts --output src/db/schema/auth.ts -y` (CLI pinned to the runtime version) (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
 - oRPC procedures read the session from the request headers (`src/rpc/router.ts`): `authed` procedures throw `UNAUTHORIZED` without one; `me` returns the current user.
@@ -105,6 +105,28 @@ docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NO
 ```
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
+
+## Deploy (DigitalOcean App Platform)
+
+One app, region `sgp` (no Tokyo region; ≈ 75–80 ms from Tokyo), described by `.do/app.yaml`:
+
+| Component        | Kind               | Source                                          | Route                        |
+| ---------------- | ------------------ | ----------------------------------------------- | ---------------------------- |
+| `api`            | Docker service     | `apps/api/Dockerfile`, context `/`              | `/api` (prefix preserved)    |
+| `db-migrate`     | `PRE_DEPLOY` job   | same image, `node dist/db/migrate.js`           | —                            |
+| `web`            | static site        | `pnpm --filter app build:web` → `apps/app/dist` | `/` (catch-all `index.html`) |
+| `switch-time-pg` | Managed PostgreSQL | attached by `cluster_name`                      | —                            |
+
+`/` and `/api` share one origin, so the Better Auth cookie is first-party and CORS stays off. The web export is a single-page bundle (`web.output: "single"`) so deep links such as `/history` resolve through the catch-all on any static host. `doctl apps spec validate --schema-only .do/app.yaml` checks the spec without a token.
+
+First deploy (needs the team's DigitalOcean token):
+
+1. `brew install doctl && doctl auth init && doctl account get`
+2. Database: `doctl databases options versions --engine pg`, then `doctl databases create switch-time-pg --engine pg --version <newest> --region sgp1 --size db-s-1vcpu-2gb --num-nodes 1`, `doctl databases db create <cluster-id> switchtime`, `doctl databases user create <cluster-id> switchtime_app`. Pin `compose.yaml` to the same major.
+3. App: `doctl apps create --spec .do/app.yaml`, authorise the GitHub repository in the DigitalOcean console on first use, then set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) under the app's environment variables. Run `doctl apps spec get <app-id> > .do/app.yaml` afterwards so the committed spec carries the encrypted secret; never put the plaintext in the file.
+4. Verify: the deployment log shows `db-migrate` running the Drizzle migrations, `curl https://<app>.ondigitalocean.app/api/healthz` returns `{"status":"ok"}`, `/api/auth/ok` answers through the ingress, and `/` renders the web build.
+
+After that every push to `main` builds `api` and `web`, runs the migration job and deploys (`deploy_on_push: true`). Alerts fire on `DEPLOYMENT_FAILED` and `DOMAIN_FAILED`.
 
 ## Conventions
 

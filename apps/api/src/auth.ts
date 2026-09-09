@@ -25,6 +25,8 @@ export const auth = betterAuth({
   ],
   emailAndPassword: { enabled: true },
   plugins: [expo()],
-  // Rate limiting stays at its default (on in production only). Behind App Platform it needs
-  // `advanced.ipAddress.trustedProxies` / `ipAddressHeaders` to key by client IP instead of one shared bucket: MVP-09.
+  // Rate limiting stays at its default (on in production only) and keys by client IP. App Platform's ingress puts the
+  // client address in `do-connecting-ip` and its own hop in `x-forwarded-for` (Better Auth's default header), which
+  // would otherwise fold every user into one shared bucket; without the header Better Auth logs a warning and falls back to that bucket.
+  advanced: { ipAddress: { ipAddressHeaders: ['do-connecting-ip'] } },
 })
