@@ -1,0 +1,109 @@
+# DigitalOcean App Platform spec (MVP-09): one app serving the API under /api and the Expo web export at /,
+# so the Better Auth cookie is first-party and CORS stays off. Region sgp: App Platform has no Tokyo region.
+# Check: `doctl apps spec validate --schema-only .do/app.yaml`. First deploy: see README "Deploy".
+name: switch-time
+region: sgp
+
+services:
+  - name: api
+    github:
+      repo: laststance/switch-time
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: apps/api/Dockerfile
+    source_dir: /
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    health_check:
+      http_path: /api/healthz
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${switch-time-pg.DATABASE_URL}
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        value: ${switch-time-pg.CA_CERT}
+      - key: APP_ORIGIN
+        scope: RUN_TIME
+        value: ${APP_URL}
+      # Set in the console after `doctl apps create`, then `doctl apps spec get` so the committed spec carries the encrypted value
+      # (a plaintext placeholder here would overwrite the real secret on every `doctl apps update --spec`).
+      - key: BETTER_AUTH_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+jobs:
+  # Same image as `api`; runs the Drizzle migrations before every deploy of the new build.
+  - name: db-migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: laststance/switch-time
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: apps/api/Dockerfile
+    source_dir: /
+    run_command: node dist/db/migrate.js
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${switch-time-pg.DATABASE_URL}
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        value: ${switch-time-pg.CA_CERT}
+
+static_sites:
+  - name: web
+    github:
+      repo: laststance/switch-time
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    environment_slug: node-js
+    build_command: corepack enable && pnpm install --frozen-lockfile && pnpm --filter app build:web
+    output_dir: apps/app/dist
+    # Client-side routes fall back to the app shell; `apps/app/scripts/audit-web-export.mts` guards the export in CI.
+    catchall_document: index.html
+    envs:
+      # Empty = same origin: the web build calls /api on its own host.
+      - key: EXPO_PUBLIC_API_ORIGIN
+        scope: BUILD_TIME
+        value: ''
+      - key: HUSKY
+        scope: BUILD_TIME
+        value: '0'
+
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /api
+      component:
+        name: api
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /
+      component:
+        name: web
+
+databases:
+  # Managed PostgreSQL created out of band (README "Deploy"); attaching it adds the app to the cluster's trusted sources.
+  - name: switch-time-pg
+    cluster_name: switch-time-pg
+    engine: PG
+    production: true
+    db_name: switchtime
+    db_user: switchtime_app
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED

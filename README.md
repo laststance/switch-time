@@ -106,6 +106,28 @@ docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NO
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
+## Deploy (DigitalOcean App Platform)
+
+One app, region `sgp` (no Tokyo region; ≈ 75–80 ms from Tokyo), described by `.do/app.yaml`:
+
+| Component        | Kind               | Source                                          | Route                        |
+| ---------------- | ------------------ | ----------------------------------------------- | ---------------------------- |
+| `api`            | Docker service     | `apps/api/Dockerfile`, context `/`              | `/api` (prefix preserved)    |
+| `db-migrate`     | `PRE_DEPLOY` job   | same image, `node dist/db/migrate.js`           | —                            |
+| `web`            | static site        | `pnpm --filter app build:web` → `apps/app/dist` | `/` (catch-all `index.html`) |
+| `switch-time-pg` | Managed PostgreSQL | attached by `cluster_name`                      | —                            |
+
+`/` and `/api` share one origin, so the Better Auth cookie is first-party and CORS stays off. The web export is a single-page bundle (`web.output: "single"`) so deep links such as `/history` resolve through the catch-all on any static host. `doctl apps spec validate --schema-only .do/app.yaml` checks the spec without a token.
+
+First deploy (needs the team's DigitalOcean token):
+
+1. `brew install doctl && doctl auth init && doctl account get`
+2. Database: `doctl databases options versions --engine pg`, then `doctl databases create switch-time-pg --engine pg --version <newest> --region sgp1 --size db-s-1vcpu-2gb --num-nodes 1`, `doctl databases db create <cluster-id> switchtime`, `doctl databases user create <cluster-id> switchtime_app`. Pin `compose.yaml` to the same major.
+3. App: `doctl apps create --spec .do/app.yaml`, authorise the GitHub repository in the DigitalOcean console on first use, then set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) under the app's environment variables. Run `doctl apps spec get <app-id> > .do/app.yaml` afterwards so the committed spec carries the encrypted secret; never put the plaintext in the file.
+4. Verify: the deployment log shows `db-migrate` running the Drizzle migrations, `curl https://<app>.ondigitalocean.app/api/healthz` returns `{"status":"ok"}`, `/api/auth/ok` answers through the ingress, and `/` renders the web build.
+
+After that every push to `main` builds `api` and `web`, runs the migration job and deploys (`deploy_on_push: true`). Alerts fire on `DEPLOYMENT_FAILED` and `DOMAIN_FAILED`.
+
 ## Conventions
 
 - **React Compiler is on.** `apps/app` sets `experiments.reactCompiler: true` explicitly (the SDK 57 template ships it; the SDK itself defaults to off). Lint uses `eslint-plugin-react-hooks@7` (compiler rules included) and the "React Compiler Setup" of `@laststance/react-next-eslint-plugin`, so do not hand-write `useMemo`/`useCallback`/`React.memo`.
