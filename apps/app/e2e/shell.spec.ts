@@ -56,7 +56,8 @@ test('the tabs work from the keyboard', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '設定' })).toBeVisible()
 })
 
-test('a sheet route opens as a dialog over the tabs and closes back home', async ({
+// ponytail: reached by URL (cold load, nothing beneath) until MVP-14 adds the in-app entry point; over-the-tabs was checked by hand.
+test('a sheet route opens as a dialog and its ✕ returns home', async ({
   page,
 }) => {
   // Arrange
