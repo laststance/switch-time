@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Switch Time",
+    "slug": "switch-time",
+    "version": "0.0.0",
+    "scheme": "switchtime",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
+    "ios": {
+      "bundleIdentifier": "io.laststance.switchtime",
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "package": "io.laststance.switchtime",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [["expo-router", { "sitemap": false }]],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

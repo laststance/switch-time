@@ -15,6 +15,10 @@ coverage/
 apps/app/ios/
 apps/app/android/
 web-build/
+expo-env.d.ts
+.kotlin/
+.metro-health-check*
+*.pem
 *.orig.*
 *.jks
 *.p8

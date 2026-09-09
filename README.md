@@ -6,11 +6,11 @@ Roadmap and decisions live in the epic [#1](https://github.com/laststance/switch
 
 ## Workspace
 
-| Path              | Package               | Purpose                                                                                                                   |
-| ----------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `apps/app`        | `@switch-time/app`    | Expo SDK 57 universal app (placeholder until MVP-06, [#7](https://github.com/laststance/switch-time/issues/7))            |
-| `apps/api`        | `@switch-time/api`    | Hono 4 + oRPC 1.15 API: `GET /api/healthz`, RPC at `/api/rpc/*`, Better Auth at `/api/auth/*`, Drizzle ORM 1.0 RC + `pg`  |
-| `packages/shared` | `@switch-time/shared` | Activity palette, default activities and Zod schemas shared by app and API; pinned to `design-system/theme.json` by tests |
+| Path              | Package               | Purpose                                                                                                                                              |
+| ----------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/app`        | `@switch-time/app`    | Expo SDK 57 universal app (Expo Router, `src/app/`), `expo export -p web` → `dist/` for the DigitalOcean static site                                 |
+| `apps/api`        | `@switch-time/api`    | Hono 4 + oRPC 1.15 API: `GET /api/healthz`, RPC at `/api/rpc/*`, Better Auth at `/api/auth/*`, Drizzle ORM 1.0 RC + `pg`                             |
+| `packages/shared` | `@switch-time/shared` | Activity palette, default activities and Zod schemas for app and API (consumed from MVP-08/MVP-13 on); pinned to `design-system/theme.json` by tests |
 
 ## Prerequisites
 
@@ -66,9 +66,20 @@ pnpm --filter api db:studio     # Drizzle Studio against DATABASE_URL
 
 Email + password only, served by the same Hono process at `/api/auth/*` (`apps/api/src/auth.ts`): `@better-auth/drizzle-adapter/relations-v2` on the Drizzle instance, the `@better-auth/expo` server plugin, adapter writes in one transaction, `baseURL` = the API's own origin (`APP_ORIGIN` in production, `http://localhost:$PORT` otherwise), `trustedOrigins` = `APP_ORIGIN` plus `switchtime://` (and `exp://**` in development). Rate limiting keeps Better Auth's default (production only) and needs `advanced.ipAddress.trustedProxies` once deployed behind App Platform (MVP-09). `BETTER_AUTH_SECRET` is required (`openssl rand -base64 32`), and in production `APP_ORIGIN` must be `https://` (the cookie `Secure` flag derives from it). Every `/api/*` request body is capped at 100 KB.
 
-- Auth tables come from the CLI, never by hand: `npx auth@latest generate --config src/auth.ts --output src/db/schema/auth.ts -y` (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
+- Auth tables come from the CLI, never by hand: `npx auth@1.7.3 generate --config src/auth.ts --output src/db/schema/auth.ts -y` (CLI pinned to the runtime version) (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
 - oRPC procedures read the session from the request headers (`src/rpc/router.ts`): `authed` procedures throw `UNAUTHORIZED` without one; `me` returns the current user.
 - Dev cookies: `localhost:8081` → `localhost:8080` is same-site, so the defaults (`sameSite: lax`) work; the client sends `credentials: 'include'`. Production is same-origin (MVP-09).
+
+## App (`apps/app`)
+
+```sh
+pnpm --filter app dev         # expo start (press i / a / w, or scan the QR code)
+pnpm --filter app web         # expo start --web → http://localhost:8081
+pnpm --filter app build:web   # expo export -p web → apps/app/dist (`build` aliases it, so `pnpm build` / CI run it too)
+cd apps/app && npx expo-doctor
+```
+
+Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes, React Compiler); `create-expo-app` is broken on npm 12, so unpack the template tarball instead. Routes stay platform-UI only: no `expo-font`, no `fontFamily`. Expo packages are pinned like everything else, so `minimumReleaseAge` may hold them one patch behind what `expo-doctor` expects for a day — bump when the release is 24h old. `pnpm` isolated `node_modules` works with Metro here without `node-linker=hoisted`; `react-native-web` is reached through Metro's platform aliasing and is therefore listed in `.fallowrc.json#ignoreDependencies`. The app imports only `type { AppRouter }` from `@switch-time/api` (from MVP-08 on), which Metro erases.
 
 ## API (`apps/api`)
 
@@ -79,14 +90,14 @@ pnpm --filter api build      # tsdown → dist/server.js (workspace packages inl
 docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = repo root
 # Joins the Compose network to reach its Postgres as `db` (the host port is loopback-only, unreachable from a container on Docker Engine).
 # --env-file supplies BETTER_AUTH_SECRET; NODE_ENV=development because the image defaults to production, which refuses a database without DATABASE_CA_CERT.
-docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NODE_ENV=development -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
+docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NODE_ENV=development -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
 ```
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
 ## Conventions
 
-- **React Compiler is on.** `apps/app` keeps `experiments.reactCompiler: true` (Expo SDK 57 default). Lint uses `eslint-plugin-react-hooks@7` (compiler rules included) and the "React Compiler Setup" of `@laststance/react-next-eslint-plugin`, so do not hand-write `useMemo`/`useCallback`/`React.memo`.
+- **React Compiler is on.** `apps/app` sets `experiments.reactCompiler: true` explicitly (the SDK 57 template ships it; the SDK itself defaults to off). Lint uses `eslint-plugin-react-hooks@7` (compiler rules included) and the "React Compiler Setup" of `@laststance/react-next-eslint-plugin`, so do not hand-write `useMemo`/`useCallback`/`React.memo`.
 - **Design tokens come from `design-system/theme.json`.** Change the JSON first, then `packages/shared`; `packages/shared/src/activity-palette.test.ts` fails when they drift.
 - **Dependencies are pinned** and `minimumReleaseAge: 1440` refuses releases younger than 24h. New install scripts must be allow-listed in `pnpm-workspace.yaml#allowBuilds`.
 - Tests: `test` over `it`, AAA comments, hard-coded expected values, names describe observable behaviour.

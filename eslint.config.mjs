@@ -31,6 +31,8 @@ export default defineConfig([
       'react-hooks': reactHooks,
       '@laststance/react-next': lastStanceReactNext,
     },
+    // react-native ships Flow-typed sources; import-x must not try to parse them for export maps.
+    settings: { 'import-x/ignore': ['react-native'] },
     rules: {
       // v7 recommended includes the React Compiler-powered rules.
       ...reactHooks.configs.flat.recommended.rules,

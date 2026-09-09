@@ -9,3 +9,11 @@ minimumReleaseAge: 1440
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+
+# `pnpm audit --prod --audit-level high` gates CI (security.yml). Ignored: no fixed release exists (advisories cover every
+# image-size <= 2.0.2, the latest) and the code never runs in production — image-size reaches us only through
+# react-native → metro, the bundler `react-native` lists as a runtime dependency. Drop once image-size ships a fix.
+audit:
+  ignore:
+    - GHSA-w3rx-r6r6-pgpr # image-size: ICNS parser infinite loop
+    - GHSA-5p2g-fcmc-qvqq # image-size: JXL/HEIF parser infinite loops
