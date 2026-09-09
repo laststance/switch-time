@@ -78,7 +78,11 @@ export function TodayFlow({
           </View>
         </>
       )}
-      <View className={cn('w-full overflow-hidden bg-chip', band.bar)}>
+      <View
+        role="img"
+        aria-label="今日の流れ"
+        className={cn('w-full overflow-hidden bg-chip', band.bar)}
+      >
         {segments.map((segment) => (
           <View
             key={segment.switchId}
