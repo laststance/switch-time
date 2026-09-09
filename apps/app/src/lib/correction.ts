@@ -103,10 +103,8 @@ export function correctionRows(
     (row) => row !== null,
   )
   const byId = new Map(activities.map((activity) => [activity.id, activity]))
-  // The carried-out state only closes the last segment; it is the next day's row.
   return (
     timeline
-      .filter((row) => row !== list.carriedOut)
       .map((row, index) =>
         describeRow(
           row,
@@ -116,7 +114,9 @@ export function correctionRows(
           bounds,
         ),
       )
-      // A day whose first row starts at 0:00 leaves the carried-in state no span to show.
+      // The carried-out state only closes the last segment (it is the next day's row), and a day whose
+      // first row starts at 0:00 leaves the carried-in state no span to show.
+      .filter((row) => row.id !== list.carriedOut?.id)
       .filter((row) => row.editable || row.end > row.start)
       .reverse()
   )
