@@ -66,3 +66,17 @@ test('impossible dates and unknown zones are rejected', () => {
   expect(isTimeZone('Asia/Tokyo')).toBe(true)
   expect(isTimeZone('Mars/Olympus')).toBe(false)
 })
+
+test('a day whose local midnight is skipped by DST starts at the transition instant', () => {
+  // Arrange: Chile springs forward at 2026-09-06 00:00 → 01:00, so that midnight never happens
+  const zone = 'America/Santiago'
+
+  // Act
+  const { start } = dayBounds('2026-09-06', zone)
+
+  // Assert
+  expect(new Date(start).toISOString()).toBe('2026-09-06T04:00:00.000Z')
+  expect(localDay(new Date(start), zone)).toBe('2026-09-06')
+  expect(localDay(new Date(start - 1), zone)).toBe('2026-09-05')
+  expect(dayBounds('2026-09-05', zone).end).toBe(start)
+})

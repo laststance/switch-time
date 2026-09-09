@@ -111,6 +111,7 @@ export const activitiesRouter = {
         db.$count(activities, active(userId)),
       ])
       // The clock always holds exactly one state: its activity, and the last remaining one, stay.
+      // ponytail: check-then-act without a per-user lock; add pg_advisory_xact_lock(hashtext(user_id)) if concurrent archives ever show up.
       if (current?.activityId === input.id || activeCount <= 1)
         throw new ORPCError('CONFLICT', { message: 'activity is in use' })
       return one(
