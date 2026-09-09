@@ -56,7 +56,8 @@ export default function SettingsScreen() {
             aria-label="未使用日の自動除外"
             className={cn(ROW, 'border-t border-line')}
           >
-            <View className="h-[30px] w-[30px] items-center justify-center rounded-chip bg-chip">
+            {/* text-sub: on web the icon inherits the colour, and no ancestor here sets one. */}
+            <View className="h-[30px] w-[30px] items-center justify-center rounded-chip bg-chip text-sub">
               <StrokeIcon d={INFO} size={16} strokeWidth={1.8} color={sub} />
             </View>
             <View className="flex-1 gap-0.5">

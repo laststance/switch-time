@@ -29,13 +29,21 @@ const NEW_ACTIVITY = { name: '新しい項目', iconKey: 'home', targetHours: nu
 export function useActivityEditor() {
   const queryClient = useQueryClient()
   const activities = useQuery(orpc.activities.list.queryOptions())
-  const { current } = useCurrentActivity()
+  const { current, isPending: currentPending } = useCurrentActivity()
   const write = {
     onSettled: async () => invalidateKeys(queryClient, [orpc.activities.key()]),
   }
   const update = useMutation({
     ...orpc.activities.update.mutationOptions(),
     ...write,
+    // Written into the list first, so an edit committed while this one is in flight builds on it, not on the stale row.
+    onMutate: async ({ id, ...values }) => {
+      const queryKey = orpc.activities.list.queryKey()
+      await queryClient.cancelQueries({ queryKey })
+      queryClient.setQueryData(queryKey, (rows) =>
+        rows?.map((row) => (row.id === id ? { ...row, ...values } : row)),
+      )
+    },
   })
   const create = useMutation({
     ...orpc.activities.create.mutationOptions(),
@@ -52,14 +60,24 @@ export function useActivityEditor() {
   const rows = editorRows(activities.data, current?.activityId ?? null)
   // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
-    const input = activityInputSchema.safeParse({ ...row, ...change })
+    // The cached row rather than the rendered one: it already carries an edit that has not settled yet.
+    const latest =
+      queryClient
+        .getQueryData(orpc.activities.list.queryKey())
+        ?.find((each) => each.id === row.id) ?? row
+    const input = activityInputSchema.safeParse({ ...latest, ...change })
     if (input.success) update.mutate({ id: row.id, ...input.data })
   }
   return {
     rows,
-    pending:
-      activities.isFetching ||
-      [update, create, reorder, archive].some((mutation) => mutation.isPending),
+    // Also while switches.current is unknown: until then no row can be told apart from the current activity (the one 🗑 refuses).
+    pending: [
+      activities.isFetching,
+      currentPending,
+      ...[update, create, reorder, archive].map(
+        (mutation) => mutation.isPending,
+      ),
+    ].some(Boolean),
     rename: (row: EditorRow, name: string) => {
       if (name !== row.name) patch(row, { name })
     },

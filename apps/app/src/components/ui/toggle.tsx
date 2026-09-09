@@ -20,6 +20,12 @@ export function Toggle({ label, value, onChange }: ToggleProps) {
       aria-checked={value}
       aria-label={label}
       onPress={() => onChange(!value)}
+      // RN-web only presses on Space for the button role; a switch must answer it itself (and keep the page from scrolling).
+      onKeyDown={(event) => {
+        if (event.nativeEvent.key !== ' ') return
+        event.preventDefault()
+        onChange(!value)
+      }}
       className={cn(
         'h-[30px] w-[52px] justify-center rounded-pill px-0.5',
         value ? 'items-end bg-accent' : 'items-start bg-chip',

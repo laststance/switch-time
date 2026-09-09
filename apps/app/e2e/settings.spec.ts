@@ -48,26 +48,27 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
   // Arrange: 明 first, so the assertion does not depend on the hour the run happens in.
   await signUp(page)
   await page.getByRole('tab', { name: '設定' }).click()
-  await page.getByRole('radio', { name: '明' }).click()
+  await page.getByRole('button', { name: '明' }).click()
   const bar = page.getByRole('tablist')
   await expect(bar).toHaveCSS('background-color', 'rgb(245, 242, 235)')
 
   // Act
-  await page.getByRole('radio', { name: '暗' }).click()
+  await page.getByRole('button', { name: '暗' }).click()
 
   // Assert: the chrome flips at once, and the choice is the server's after a reload.
-  await expect(page.getByRole('radio', { name: '暗' })).toHaveAttribute(
-    'aria-checked',
+  await expect(page.getByRole('button', { name: '暗' })).toHaveAttribute(
+    'aria-pressed',
     'true',
   )
   await expect(bar).toHaveCSS('background-color', 'rgb(17, 18, 22)')
+  // The chrome flipped on the optimistic value; wait for the server before reloading on top of it.
+  const api = await apiAs(page)
+  await expect.poll(async () => (await api.settings.get()).theme).toBe('dark')
   await page.reload()
   await expect(page.getByRole('tablist')).toHaveCSS(
     'background-color',
     'rgb(17, 18, 22)',
   )
-  const api = await apiAs(page)
-  expect((await api.settings.get()).theme).toBe('dark')
 })
 
 test('a manually excluded day returns from the 未使用日の扱い sheet and the idle threshold persists', async ({
@@ -90,7 +91,7 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   await expect(row).toHaveCount(1)
 
   // Act
-  await page.getByRole('radio', { name: '8h' }).click()
+  await page.getByRole('button', { name: '8h' }).click()
   await row.click()
 
   // Assert
@@ -99,5 +100,7 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   expect(
     await api.excludedDays.list({ from: yesterday, to: yesterday }),
   ).toEqual([])
-  expect((await api.settings.get()).idleThresholdMinutes).toBe(480)
+  await expect
+    .poll(async () => (await api.settings.get()).idleThresholdMinutes)
+    .toBe(480)
 })

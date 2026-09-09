@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 type Option<T> = { value: T; label: string }
 type SegmentedProps<T extends string | number> = {
-  /** The group's accessible name (screen readers and Playwright find the radios under it). */
+  /** The group's accessible name (screen readers and Playwright find the buttons under it). */
   label: string
   options: readonly Option<T>[]
   value: T
@@ -26,19 +26,23 @@ export function Segmented<T extends string | number>({
 }: SegmentedProps<T>) {
   return (
     <View
-      role="radiogroup"
+      role="group"
       aria-label={label}
       className="flex-row gap-[3px] rounded-chip bg-chip p-[3px]"
     >
       {options.map((option) => {
         const selected = option.value === value
+        // Toggle buttons rather than radios: RN-web only presses on Space for the button role, and radios would owe arrow keys.
         return (
           <Pressable
             key={option.value}
-            role="radio"
-            aria-checked={selected}
+            role="button"
+            aria-pressed={selected}
             aria-label={option.label}
-            onPress={() => onChange(option.value)}
+            // Re-picking the chosen option is a no-op (it would otherwise write and refetch every total for nothing).
+            onPress={() => {
+              if (!selected) onChange(option.value)
+            }}
             className={cn(
               'h-8 min-w-14 items-center justify-center rounded-chip px-3',
               grow && 'flex-1',

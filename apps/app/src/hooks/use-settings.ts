@@ -45,8 +45,17 @@ export function useUpdateSettings() {
             context.previous,
           )
       },
-      onSettled: async () =>
-        invalidateKeys(queryClient, [orpc.settings.key(), orpc.stats.key()]),
+      // Only the last in-flight update refetches: an earlier settle would replay stale server values over a newer optimistic one.
+      onSettled: async () => {
+        const inFlight = queryClient.isMutating({
+          mutationKey: orpc.settings.update.mutationKey(),
+        })
+        if (inFlight === 1)
+          await invalidateKeys(queryClient, [
+            orpc.settings.key(),
+            orpc.stats.key(),
+          ])
+      },
     }),
   )
 }
