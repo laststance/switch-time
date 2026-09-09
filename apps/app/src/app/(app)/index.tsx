@@ -4,9 +4,8 @@ import { Pressable, Text, View } from 'react-native'
 import { useUniwind } from 'uniwind'
 
 import { Readout } from '@/components/readout'
+import { SignOutButton } from '@/components/sign-out-button'
 import { SwitchButton } from '@/components/switch-button'
-import { Button } from '@/components/ui/button'
-import { useSignOut } from '@/hooks/use-sign-out'
 import { useAppDispatch } from '@/store'
 import { preferencesSlice } from '@/store/preferences'
 
@@ -15,7 +14,6 @@ export default function HomeScreen() {
   const [active, setActive] = useState(0)
   const { theme } = useUniwind()
   const dispatch = useAppDispatch()
-  const signOut = useSignOut()
 
   return (
     <View className="flex-1 items-center justify-center gap-6 bg-bg p-5">
@@ -47,11 +45,7 @@ export default function HomeScreen() {
           {theme === 'dark' ? 'ライト' : 'ダーク'}
         </Text>
       </Pressable>
-      <Button
-        title="サインアウト"
-        variant="ghost"
-        onPress={() => void signOut()}
-      />
+      <SignOutButton />
     </View>
   )
 }
