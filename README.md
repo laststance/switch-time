@@ -137,4 +137,4 @@ After that every push to `main` builds `api` and `web`, runs the migration job a
 
 ## CI
 
-Separate GitHub Actions workflows (Lint, TypeCheck, Format, Test, Build, Fallow, Security, Scorecard) mirror `pnpm check`; all actions are pinned to commit SHAs and run with read-only tokens. Security = CodeQL + Dependency Review + `pnpm audit --prod`.
+Separate GitHub Actions workflows (Lint, TypeCheck, Format, Test, Build, Fallow, Security, Scorecard) mirror `pnpm check`; all actions are pinned to commit SHAs and run with read-only tokens. Security = CodeQL + Dependency Review + `pnpm audit --prod`. Build also runs `docker build -f apps/api/Dockerfile .` (the App Platform image, never pushed). Dependabot opens one grouped npm PR and one grouped Actions PR weekly (Monday 09:00 JST, two-day cooldown to clear `minimumReleaseAge`). A ruleset on `main` requires a pull request, the `build`, `docker`, `lint`, `typecheck`, `format`, `test`, `dupes`, `dead-code` and `health` checks, and blocks force-pushes and deletion.

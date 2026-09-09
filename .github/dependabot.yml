@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    # pnpm-workspace.yaml refuses releases younger than 24h (minimumReleaseAge); two days keeps the PR installable on day one.
+    cooldown:
+      default-days: 2
+    groups:
+      npm:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/prepare
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    groups:
+      actions:
+        patterns: ['*']
