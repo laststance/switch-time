@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import type { PropsWithChildren } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
+import { useInitialFocus } from '@/hooks/use-initial-focus'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { useWide } from '@/hooks/use-wide'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,8 @@ export function Sheet({
   children = <Text className="text-sm text-sub">準備中</Text>,
 }: SheetProps) {
   const wide = useWide()
+  // Keyboard focus starts inside the dialog rather than on the tabs still in the DOM underneath.
+  const dialogRef = useInitialFocus()
   // Wide web centres the sheet as a dialog over a scrim; phones and narrow web fill the screen (native adds the modal presentation).
   const dialog = Platform.OS === 'web' && wide
   const look = dialog
@@ -45,6 +48,8 @@ export function Sheet({
         />
       )}
       <View
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal
         aria-label={title}
