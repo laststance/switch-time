@@ -1,4 +1,4 @@
-import { ORPCError, os } from '@orpc/server'
+import { ORPCError, os, type RouterClient } from '@orpc/server'
 import { z } from 'zod'
 
 import { auth } from '../auth'
@@ -39,3 +39,5 @@ export const router = {
 
 /** Type-only contract for apps/app; importing the value would pull server code into Metro. */
 export type AppRouter = typeof router
+/** Client-side shape of {@link AppRouter}; exported here so apps/app never depends on @orpc/server itself. */
+export type AppRouterClient = RouterClient<AppRouter>

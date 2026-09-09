@@ -1,15 +1,18 @@
 import { DEFAULT_ACTIVITIES } from '@switch-time/shared'
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { Uniwind, useUniwind } from 'uniwind'
+import { useUniwind } from 'uniwind'
 
 import { Readout } from '@/components/readout'
 import { SwitchButton } from '@/components/switch-button'
+import { useAppDispatch } from '@/store'
+import { preferencesSlice } from '@/store/preferences'
 
 // Placeholder until MVP-13/14 bring the real shell: proves the tokens, the switch row and both bands on web and native.
 export default function HomeScreen() {
   const [active, setActive] = useState(0)
   const { theme } = useUniwind()
+  const dispatch = useAppDispatch()
 
   return (
     <View className="flex-1 items-center justify-center gap-6 bg-bg p-5">
@@ -29,7 +32,13 @@ export default function HomeScreen() {
       <Pressable
         role="button"
         className="rounded-pill border border-line bg-chip px-4 py-2"
-        onPress={() => Uniwind.setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onPress={() =>
+          dispatch(
+            preferencesSlice.actions.setTheme(
+              theme === 'dark' ? 'light' : 'dark',
+            ),
+          )
+        }
       >
         <Text className="text-xs text-sub">
           {theme === 'dark' ? 'ライト' : 'ダーク'}
