@@ -64,7 +64,7 @@ export function sumSegments(segments: readonly Segment[]): {
 const MIN_SEGMENT_MS = 60_000
 
 /**
- * Clamps a moved start into (prev, next) and the past, ≥1 min from each; `null` = no neighbour on that side.
+ * Clamps a moved start into (prev, next) and the past, ≥1 min from each; `null` arg = no neighbour, `null` result = no legal slot.
  * @example clampStart(start + 15 * 60_000, prev, next, Date.now())
  */
 export function clampStart(
@@ -72,10 +72,12 @@ export function clampStart(
   prev: number | null,
   next: number | null,
   now: number,
-): number {
+): number | null {
   const lower = prev === null ? -Infinity : prev + MIN_SEGMENT_MS
   const upper = Math.min(next ?? Infinity, now) - MIN_SEGMENT_MS
-  return Math.min(Math.max(proposed, lower), Math.max(lower, upper))
+  // Neighbours (or prev and now) closer than 2 min leave no legal slot: caller must refuse the move.
+  if (lower > upper) return null
+  return Math.min(Math.max(proposed, lower), upper)
 }
 
 export type ExcludedReason = 'auto_unused' | 'manual'

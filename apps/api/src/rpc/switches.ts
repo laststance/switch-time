@@ -149,6 +149,8 @@ export const switchesRouter = {
         next?.startedAt.getTime() ?? null,
         Date.now(),
       )
+      if (startedAt === null)
+        throw new ORPCError('CONFLICT', { message: 'no room to move' })
       return correct(row.id, { startedAt: new Date(startedAt) })
     }),
 

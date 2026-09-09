@@ -76,6 +76,10 @@ test('a moved start never crosses its neighbours or the present', () => {
   expect(clampStart(200 * H + 300_000, null, null, 200 * H)).toBe(
     200 * H - 60_000,
   )
+  // 90-second gap between neighbours: no slot keeps both segments >= 1 min
+  expect(
+    clampStart(90 * H + 45_000, 90 * H, 90 * H + 90_000, 200 * H),
+  ).toBeNull()
 })
 
 const facts: DayFacts = {
