@@ -46,10 +46,12 @@ test('the week view shows the excluded day dashed and out of the average', async
   // Act
   await page.getByRole('tab', { name: '記録' }).click()
 
-  // Assert: 19 h over the three measured days (today counts) is 6h 20m; over four calendar days it would read 4h 45m.
+  // Assert: 仕事's row reads 19 h over the three measured days (today counts) = 6h 20m; over four calendar days it would read 4h 45m.
+  // Scoped to that row: 睡眠 runs from yesterday 18:00 to now, so around 00:20 JST its total reads 6h 20m as well.
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
-  await expect(page.getByText('19h 00m')).toBeVisible()
-  await expect(page.getByText('6h 20m')).toBeVisible()
+  const work = page.getByText('仕事', { exact: true }).locator('..')
+  await expect(work.getByText('19h 00m')).toBeVisible()
+  await expect(work.getByText('6h 20m')).toBeVisible()
   await expect(page.getByText('3 / 7日')).toBeVisible()
   await expect(page.getByText('2日', { exact: true })).toBeVisible()
   await expect(
