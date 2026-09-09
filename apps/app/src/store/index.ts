@@ -1,20 +1,37 @@
-import { configureStore } from '@reduxjs/toolkit'
+import {
+  combineReducers,
+  configureStore,
+  createAction,
+  type UnknownAction,
+} from '@reduxjs/toolkit'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { clockSlice } from './clock'
 import { preferencesSlice } from './preferences'
 import { uiSlice } from './ui'
 
+const appReducer = combineReducers({
+  clock: clockSlice.reducer,
+  ui: uiSlice.reducer,
+  preferences: preferencesSlice.reducer,
+})
+
+/**
+ * Wipes every slice back to its initial state; dispatched by {@link useSignOut} so the next user never inherits client state.
+ * @example store.dispatch(resetApp())
+ */
+export const resetApp = createAction('app/reset')
+
 /**
  * Client-only state (clock, ui, preferences). Server data lives in TanStack Query via {@link orpc}, never here.
  * @example <ReduxProvider store={store}>
  */
 export const store = configureStore({
-  reducer: {
-    clock: clockSlice.reducer,
-    ui: uiSlice.reducer,
-    preferences: preferencesSlice.reducer,
-  },
+  // `undefined` state makes every slice reducer return its initial state; the clock re-syncs on its next tick.
+  reducer: (
+    state: ReturnType<typeof appReducer> | undefined,
+    action: UnknownAction,
+  ) => appReducer(resetApp.match(action) ? undefined : state, action),
 })
 
 type RootState = ReturnType<typeof store.getState>

@@ -13,5 +13,10 @@
   "duplicates": {
     "ignore": ["**/*.test.ts", "**/*.test.tsx"]
   },
-  "ignoreDependencies": ["react-native-web", "tailwindcss"]
+  "ignoreDependencies": [
+    "react-native-web",
+    "tailwindcss",
+    "expo-web-browser",
+    "expo-network"
+  ]
 }

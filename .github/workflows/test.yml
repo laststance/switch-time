@@ -40,3 +40,34 @@ jobs:
       - run: pnpm --filter api build && node apps/api/dist/db/migrate.js
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: switchtime
+          POSTGRES_PASSWORD: switchtime
+          POSTGRES_DB: switchtime_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U switchtime -d switchtime_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://switchtime:switchtime@localhost:5432/switchtime_test
+      APP_ORIGIN: http://localhost:8081
+      # Any 32+ bytes: sessions created here never leave the job.
+      BETTER_AUTH_SECRET: e2e-only-secret-0123456789abcdefghijklmnopqrstuvwxyz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+      # The Playwright webServer boots node apps/api/dist/server.js against the migrated database.
+      - run: pnpm --filter api build && node apps/api/dist/db/migrate.js
+      - run: pnpm --filter app exec playwright install --with-deps chromium
+      - run: pnpm --filter app test:e2e

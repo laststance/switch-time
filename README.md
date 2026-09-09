@@ -92,6 +92,12 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 - `src/store` holds client-only state: `clock` (ticks every second while the app is active, pauses in background), `ui` (open sheet, selected day) and `preferences` (theme `auto|light|dark` resolved by `resolveTheme`, `showSecondHand`). Components use `useAppSelector` / `useAppDispatch` from `@/store`; the root layout runs `useClock` and `useThemeSync`.
 - `/debug` (dev only) renders the `ping` query and the clock. `pnpm --filter app test` runs the Vitest unit tests in `src/**/*.test.ts`.
 
+### Auth (Better Auth client)
+
+- `src/lib/auth-client.ts`: `createAuthClient` from `better-auth/react`; on native the Expo plugin keeps the session in `expo-secure-store` and `src/lib/orpc.ts` replays it as a `Cookie` header, on web the first-party cookie does the work.
+- Route groups: `(auth)/sign-in`, `(auth)/sign-up` (Zod schemas `signInSchema` / `signUpSchema` from `@switch-time/shared`, first issue per field inline, Better Auth's message above the form) and `(app)/…` guarded in `(app)/_layout.tsx`: anonymous visitors are redirected to `/sign-in?next=<path>` and return there after signing in. `useSignOut` ends the session, clears the TanStack cache, dispatches `resetApp` and shows sign-in.
+- Playwright (web): `pnpm --filter app test:e2e` exports the site with `EXPO_PUBLIC_API_ORIGIN=http://localhost:8080`, then serves it on :8081 next to the API bundle (`node ../api/dist/server.js`, reused when the Compose API already listens on :8080). CI runs the same in the `e2e` job with a Postgres service.
+
 ## API (`apps/api`)
 
 ```sh

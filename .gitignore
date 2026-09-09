@@ -33,3 +33,7 @@ expo-env.d.ts
 
 # Uniwind regenerates this on every Metro run; uniwind.d.ts is the committed copy.
 apps/app/uniwind-types.d.ts
+
+# Playwright output (apps/app/e2e)
+apps/app/test-results/
+apps/app/playwright-report/
