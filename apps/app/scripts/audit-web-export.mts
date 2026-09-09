@@ -43,10 +43,10 @@ const allowed = new Set(
 )
 
 const banned: [label: string, pattern: RegExp][] = [
-  ['display: grid', /display:\s*grid/],
-  ['position: sticky', /position:\s*sticky/],
+  ['display: grid', /(?:^|[;{])\s*display\s*:\s*grid\b/],
+  ['position: sticky', /(?:^|[;{])\s*position\s*:\s*sticky\b/],
   ['backdrop-filter', /backdrop-filter/],
-  ['filter', /[;{]filter:/],
+  ['filter', /(?:^|[;{])\s*filter\s*:/],
   ['linear-gradient', /linear-gradient\(/],
   ['::before / ::after', /::?(before|after)\b/],
 ]
