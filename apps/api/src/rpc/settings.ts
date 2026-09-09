@@ -28,13 +28,19 @@ export const settingsRouter = {
   get: authed.handler(async ({ context }) => getSettings(context.user.id)),
   update: authed
     .input(settingsUpdateSchema)
-    .handler(async ({ context, input }) =>
-      one(
+    .handler(async ({ context, input }) => {
+      // A half-seeded account has no row to update, and .returning() would come back empty (NOT_FOUND).
+      // Settings only: seedUser would also insert the default activities, which this route has no business creating.
+      await db
+        .insert(userSettings)
+        .values({ userId: context.user.id })
+        .onConflictDoNothing()
+      return one(
         await db
           .update(userSettings)
           .set(input)
           .where(eq(userSettings.userId, context.user.id))
           .returning(),
-      ),
-    ),
+      )
+    }),
 }
