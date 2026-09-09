@@ -1,0 +1,46 @@
+import { settingsUpdateSchema } from '@switch-time/shared'
+import { eq } from 'drizzle-orm'
+
+import { db } from '../db/client'
+import { userSettings } from '../db/schema/app'
+import { seedUser } from '../db/seed-user'
+
+import { authed, one } from './base'
+
+/**
+ * The user's settings row (time zone, idle threshold…); seeded at sign-up, so a miss is a bug rather than a first-launch case.
+ * @example const { timeZone } = await getSettings(context.user.id)
+ */
+export async function getSettings(userId: string) {
+  const rows = await db
+    .select()
+    .from(userSettings)
+    .where(eq(userSettings.userId, userId))
+  // No row means the sign-up hook never ran to completion (or the account predates the domain tables): seed now, once.
+  if (rows.length === 0) {
+    await seedUser(userId)
+    return getSettings(userId)
+  }
+  return one(rows)
+}
+
+export const settingsRouter = {
+  get: authed.handler(async ({ context }) => getSettings(context.user.id)),
+  update: authed
+    .input(settingsUpdateSchema)
+    .handler(async ({ context, input }) => {
+      // A half-seeded account has no row to update, and .returning() would come back empty (NOT_FOUND).
+      // Settings only: seedUser would also insert the default activities, which this route has no business creating.
+      await db
+        .insert(userSettings)
+        .values({ userId: context.user.id })
+        .onConflictDoNothing()
+      return one(
+        await db
+          .update(userSettings)
+          .set(input)
+          .where(eq(userSettings.userId, context.user.id))
+          .returning(),
+      )
+    }),
+}

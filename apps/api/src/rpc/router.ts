@@ -1,25 +1,12 @@
-import { ORPCError, os, type RouterClient } from '@orpc/server'
+import type { RouterClient } from '@orpc/server'
 import { z } from 'zod'
 
-import { auth } from '../auth'
-
-// Per-request context handed to every procedure; the session is read from these headers.
-const base = os.$context<{ headers: Headers }>()
-
-// Resolves the Better Auth session (cookie, or the bearer token the Expo client sends) once per call.
-const withSession = base.use(async ({ context, next }) =>
-  next({
-    context: {
-      session: await auth.api.getSession({ headers: context.headers }),
-    },
-  }),
-)
-
-// Builder for procedures that need a signed-in user; anonymous calls stop here.
-const authed = withSession.use(({ context, next }) => {
-  if (!context.session) throw new ORPCError('UNAUTHORIZED')
-  return next({ context: { user: context.session.user } })
-})
+import { activitiesRouter } from './activities'
+import { authed, base } from './base'
+import { excludedDaysRouter } from './excluded-days'
+import { settingsRouter } from './settings'
+import { statsRouter } from './stats'
+import { switchesRouter } from './switches'
 
 export const router = {
   ping: base.handler(() => ({ ok: true, now: new Date().toISOString() })),
@@ -35,6 +22,11 @@ export const router = {
       }),
     )
     .handler(({ context }) => context.user),
+  activities: activitiesRouter,
+  switches: switchesRouter,
+  stats: statsRouter,
+  excludedDays: excludedDaysRouter,
+  settings: settingsRouter,
 }
 
 /** Type-only contract for apps/app; importing the value would pull server code into Metro. */
