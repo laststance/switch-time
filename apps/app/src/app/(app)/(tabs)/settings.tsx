@@ -3,8 +3,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 
 import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
-import { Button } from '@/components/ui/button'
-import { useSignOut } from '@/hooks/use-sign-out'
+import { SignOutButton } from '@/components/sign-out-button'
 import { cn } from '@/lib/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { preferencesSlice } from '@/store/preferences'
@@ -19,7 +18,6 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 export default function SettingsScreen() {
   const theme = useAppSelector((s) => s.preferences.theme)
   const dispatch = useAppDispatch()
-  const signOut = useSignOut()
   return (
     <Screen>
       <ScreenHeader title="設定" />
@@ -54,11 +52,7 @@ export default function SettingsScreen() {
           ))}
         </View>
       </View>
-      <Button
-        title="サインアウト"
-        variant="ghost"
-        onPress={() => void signOut()}
-      />
+      <SignOutButton />
       <Text className="mt-auto py-2 text-center text-xs leading-5 text-sub">
         {Platform.OS === 'web'
           ? 'Switch Time Web 1.0 · 記録は自動保存'

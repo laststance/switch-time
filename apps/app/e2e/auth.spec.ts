@@ -43,3 +43,29 @@ test('signing out returns to sign-in and hides the app', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
   await expect(page.getByText('いま')).toHaveCount(0)
 })
+
+test('an existing account can sign back in after signing out', async ({
+  page,
+}) => {
+  // Arrange
+  const email = `e2e-${Date.now()}@example.com`
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(email)
+  await page.getByLabel('パスワード').fill(password)
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  await expect(page).toHaveURL('/')
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('button', { name: 'サインアウト' }).click()
+  await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
+
+  // Act
+  await page.getByLabel('メールアドレス').fill(email)
+  await page.getByLabel('パスワード').fill(password)
+  await page.getByRole('button', { name: 'サインイン' }).click()
+
+  // Assert
+  await expect(page).toHaveURL('/')
+  await expect(page.getByText('いま').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'サインイン' })).toHaveCount(0)
+})
