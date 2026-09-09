@@ -7,7 +7,7 @@ import { authClient } from '@/lib/auth-client'
 // it fires once the session has landed, so the (app) guard never sees the gap between the auth response and get-session.
 export default function AuthLayout() {
   const { data: session, isPending } = authClient.useSession()
-  const { next } = useGlobalSearchParams<{ next?: string }>()
+  const { next } = useGlobalSearchParams<{ next?: string | string[] }>()
   if (isPending) return null
   if (session) return <Redirect href={nextHref(next)} />
   return <Stack screenOptions={{ headerShown: false }} />
