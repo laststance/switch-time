@@ -22,3 +22,12 @@ jobs:
       - run: pnpm build
       # Web export guard: no CSS react-native-web cannot draw, no colour outside design-system/theme.json.
       - run: pnpm --filter app audit:web
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The image App Platform builds for `api` and `db-migrate` (.do/app.yaml); build only, nothing is pushed.
+      - run: docker build -f apps/api/Dockerfile .
