@@ -32,20 +32,21 @@ test('segments are clipped to the day and the open one ends now', () => {
     12 * H,
   )
 
-  // Assert
+  // Assert: literal epochs, so a regression in localMidnight cannot shift inputs and expectations together.
+  // 2026-09-09 in Asia/Tokyo: 00:00 = 1788879600000, 09:00 = 1788912000000, 10:00 = 1788915600000.
   expect(segments).toEqual([
     {
       switchId: 'a',
       activityId: 'work',
-      start: day.start,
-      end: at('2026-09-09', 9),
+      start: 1788879600000,
+      end: 1788912000000,
       idle: false,
     },
     {
       switchId: 'b',
       activityId: 'rest',
-      start: at('2026-09-09', 9),
-      end: at('2026-09-09', 10),
+      start: 1788912000000,
+      end: 1788915600000,
       idle: false,
     },
   ])

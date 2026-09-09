@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { db } from '../db/client'
 import { activities } from '../db/schema/app'
+import { seedUser } from '../db/seed-user'
 
 import { authed, one } from './base'
 import { latestSwitch } from './switches'
@@ -12,12 +13,19 @@ import { latestSwitch } from './switches'
 const active = (userId: string) =>
   and(eq(activities.userId, userId), isNull(activities.archivedAt))
 
-const listActivities = async (userId: string) =>
-  db
+const listActivities = async (userId: string) => {
+  const rows = await db
     .select()
     .from(activities)
     .where(eq(activities.userId, userId))
     .orderBy(activities.position, activities.createdAt)
+  // Not even an archived row means the sign-up hook never finished: seed now, the same repair {@link getSettings} does.
+  if (rows.length === 0) {
+    await seedUser(userId)
+    return listActivities(userId)
+  }
+  return rows
+}
 
 // Same ids, each exactly once: a reorder must not drop, add or duplicate an activity.
 const isPermutation = (ids: readonly string[], expected: readonly string[]) =>

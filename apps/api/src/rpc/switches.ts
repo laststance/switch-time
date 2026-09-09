@@ -223,11 +223,25 @@ export const switchesRouter = {
         throw new ORPCError('BAD_REQUEST', {
           message: 'rows must fall inside the day and not in the future',
         })
-      await Promise.all(
+      // Ties would make the day's order (and therefore its totals) depend on Postgres' unspecified tie-break.
+      const startedAt = input.rows.map((row) => row.startedAt.getTime())
+      if (
+        startedAt.some(
+          (time, index) => time <= (startedAt[index - 1] ?? -Infinity),
+        )
+      )
+        throw new ORPCError('BAD_REQUEST', {
+          message:
+            'rows must be ordered by startedAt, each one later than the last',
+        })
+      const rowActivities = await Promise.all(
         [...new Set(input.rows.map((row) => row.activityId))].map(async (id) =>
           ownActivity(userId, id),
         ),
       )
+      // Same rule as switchTo and changeActivity: an archived activity is hidden from the grid, so no segment may use it.
+      if (rowActivities.some((activity) => activity.archivedAt))
+        throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
       return db.transaction(async (tx) => {
         await tx
           .delete(switches)

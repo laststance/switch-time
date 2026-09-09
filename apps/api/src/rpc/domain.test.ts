@@ -248,6 +248,61 @@ test('an empty settings update is rejected as input, not as a database error', a
   })
 })
 
+test('a replaced day cannot be written onto an archived activity', async () => {
+  // Arrange
+  const api = await signedIn('replace-archived@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  await api.activities.archive({ id: rest })
+  const yesterday = addDays(today, -1)
+
+  // Act + Assert
+  await expect(
+    api.switches.replaceDay({
+      day: yesterday,
+      rows: [
+        { activityId: work, startedAt: at(yesterday, 9) },
+        { activityId: rest, startedAt: at(yesterday, 12) },
+      ],
+    }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('a replaced day rejects two segments that start at the same moment', async () => {
+  // Arrange: equal timestamps would leave the day's order (and its totals) to Postgres
+  const api = await signedIn('replace-duplicate@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const yesterday = addDays(today, -1)
+
+  // Act + Assert
+  await expect(
+    api.switches.replaceDay({
+      day: yesterday,
+      rows: [
+        { activityId: work, startedAt: at(yesterday, 9) },
+        { activityId: rest, startedAt: at(yesterday, 9) },
+      ],
+    }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('an account whose settings row is missing can still change a setting', async () => {
+  // Arrange: only the settings row is gone, so the repair must not touch the activities
+  const api = await signedIn('unseeded-update@example.com')
+  const { id: userId } = await api.me()
+  await db.delete(userSettings).where(eq(userSettings.userId, userId))
+
+  // Act
+  const settings = await api.settings.update({ showSecondHand: false })
+
+  // Assert
+  expect(settings.showSecondHand).toBe(false)
+  expect((await api.activities.list()).length).toBe(6)
+})
+
 test('stats work in a zone Postgres only knows under another name', async () => {
   // Arrange: ICU canonicalises Asia/Kolkata to Asia/Calcutta, which Postgres without tzdata-legacy rejects
   const api = await signedIn('calcutta@example.com')
@@ -277,17 +332,11 @@ test('an account whose seed rows are missing gets them on the first settings rea
   await db.delete(activities).where(eq(activities.userId, userId))
   await db.delete(userSettings).where(eq(userSettings.userId, userId))
 
-  // Act
+  // Act: the activity list repairs the account on its own, without a settings read first
+  const names = (await api.activities.list()).map((row) => row.name)
   const settings = await api.settings.get()
 
   // Assert
   expect(settings).toMatchObject({ timeZone: 'Asia/Tokyo', theme: 'auto' })
-  expect((await api.activities.list()).map((row) => row.name)).toEqual([
-    '家事',
-    '仕事',
-    '休息',
-    '睡眠',
-    '食事',
-    '娯楽',
-  ])
+  expect(names).toEqual(['家事', '仕事', '休息', '睡眠', '食事', '娯楽'])
 })
