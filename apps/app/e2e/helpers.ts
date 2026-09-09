@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
 /**
- * Creates a fresh account through the UI and waits for the home screen; every shell test starts signed in.
+ * Creates a fresh account through the UI and taps 家事 on the first-launch screen, so every shell test starts signed in on Home.
  * @example await signUp(page)
  */
 export async function signUp(page: Page) {
@@ -14,5 +14,8 @@ export async function signUp(page: Page) {
     )
   await page.getByLabel('パスワード').fill('correct-horse-battery')
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
-  await expect(page.getByRole('heading', { name: 'いま' })).toBeVisible()
+  await page.getByRole('button', { name: '家事' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
 }

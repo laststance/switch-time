@@ -102,6 +102,10 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 
 `(app)/(tabs)/_layout.tsx` is a headless `expo-router/ui` `Tabs`: from 800 px up (`useWide`) the `TabList` is the design's 76 px rail on the left, below that the 60 px bottom bar; both render `NavItem` (`react-native-svg` stroke icons with the design's own paths, `role="tab"`). Screens sit inside `Screen` (the centred 640 px column, side rules when wide) under a `ScreenHeader`. Sheets are routes on the `(app)` Stack (`correction`, `activity-editor`, `excluded-days`): native gets `presentation: 'modal'`, web a `transparentModal` without animation where `Sheet` draws the scrim and the dialog itself (✕, the scrim or Escape close it: `router.back()` when there is history, else `/`). `+not-found.tsx` covers unknown URLs. `e2e/shell.spec.ts` checks rail vs bar geometry, keyboard navigation, the sheet route and not-found.
 
+### Home (ホーム)
+
+`(app)/(tabs)/index.tsx` gates on `switches.current`: the bare frame while it loads, `FirstLaunch` while it is null, otherwise the hero (`NowPanel` with the `react-native-svg` `Dial`, elapsed from the clock slice via `formatElapsed`), the `SwitchButton` row and the 24-h `TodayFlow` bar. Server state comes through hooks: `useActivities` (live rows only), `useCurrentActivity` (also colours the rail badge), `useSwitchTo` (optimistic `switches.current` in `onMutate`, rollback on error, invalidates `switches.current` / `switches.listByDay` / `stats.*` on settle) and `useToday` (day, bounds and segments in the stored `settings.timeZone`, so the bar and 「今日 n 回切替」 agree with the API; the pure parts live in `src/lib/today.ts`). On web the digit keys pick activities by position (`useWebKeydown` + `hotkeyIndex`) and 「訂正」 opens the correction sheet over Home. `e2e/home.spec.ts` covers the first-launch hand-off and the restart of the counter.
+
 ## API (`apps/api`)
 
 ```sh
