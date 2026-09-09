@@ -41,7 +41,7 @@ export default function TabsLayout() {
             {variant === 'rail' && (
               <View
                 className="mb-3.5 h-9 w-9 items-center justify-center rounded-pill border-[3px] border-line bg-face text-ink"
-                style={{ borderColor: activity?.color }}
+                style={activity && { borderColor: activity.color }}
               >
                 <StrokeIcon
                   d="M12 7v5l3.5 2"

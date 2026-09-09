@@ -21,12 +21,13 @@ export function useSwitchTo() {
         const previous = queryClient.getQueryData(queryKey)
         // Pressing the active state keeps its start (the server returns the same row); anything else restarts the counter right now.
         if (previous?.activityId !== activityId) {
+          // `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
           const next: SwitchRow = {
-            id: 'optimistic',
             userId: '',
             source: 'tap',
             createdAt: new Date(),
             ...previous,
+            id: 'optimistic',
             activityId,
             startedAt: new Date(),
           }
