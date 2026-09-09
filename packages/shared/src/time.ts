@@ -47,11 +47,15 @@ export function localDay(date: Date, timeZone: string): string {
   return `${c.year}-${pad(c.month)}-${pad(c.day)}`
 }
 
+const HOUR_MS = 3_600_000
+
 // Instant of local midnight; the second pass fixes the guess when a DST change sits between UTC and local midnight.
 function localMidnight(day: string, timeZone: string): number {
   const wall = Date.parse(`${day}T00:00:00Z`)
   const guess = wall - tzOffsetMs(new Date(wall), timeZone)
-  return wall - tzOffsetMs(new Date(guess), timeZone)
+  const start = wall - tzOffsetMs(new Date(guess), timeZone)
+  // Where DST skips local midnight itself (Santiago, Havana) the second pass lands an hour before the day: use the transition.
+  return localDay(new Date(start), timeZone) === day ? start : start + HOUR_MS
 }
 
 /**

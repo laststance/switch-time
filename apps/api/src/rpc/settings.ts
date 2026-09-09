@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '../db/client'
 import { userSettings } from '../db/schema/app'
+import { seedUser } from '../db/seed-user'
 
 import { authed, one } from './base'
 
@@ -11,9 +12,16 @@ import { authed, one } from './base'
  * @example const { timeZone } = await getSettings(context.user.id)
  */
 export async function getSettings(userId: string) {
-  return one(
-    await db.select().from(userSettings).where(eq(userSettings.userId, userId)),
-  )
+  const rows = await db
+    .select()
+    .from(userSettings)
+    .where(eq(userSettings.userId, userId))
+  // No row means the sign-up hook never ran to completion (or the account predates the domain tables): seed now, once.
+  if (rows.length === 0) {
+    await seedUser(userId)
+    return getSettings(userId)
+  }
+  return one(rows)
 }
 
 export const settingsRouter = {

@@ -94,6 +94,9 @@ export const settingsUpdateSchema = z
     timeZone: timeZoneSchema,
   })
   .partial()
+  .refine((update) => Object.keys(update).length > 0, {
+    error: '変更がありません',
+  })
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>
 
 /** Active activity ids in their new order; the router checks it is a permutation of the user's active set. */
