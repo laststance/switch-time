@@ -20,7 +20,7 @@ import { orpc } from '@/lib/orpc'
 import { cn } from '@/lib/utils'
 
 const UNIT: Record<Range, string> = { week: '週', month: '月' }
-const RANGES = Object.keys(UNIT) as Range[]
+const RANGES: Range[] = ['week', 'month']
 
 // The 週／月 segmented control from the pen; 今日 is the ホーム tab, so it is not repeated here.
 function RangePicker({
