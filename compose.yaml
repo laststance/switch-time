@@ -37,6 +37,8 @@ services:
       DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime
       TEST_DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime_test
       PORT: 8080
+      # The db service speaks plain TCP: a DATABASE_CA_CERT kept in .env for reaching DigitalOcean from the host must not turn TLS on here.
+      DATABASE_CA_CERT: ''
     volumes:
       # Bind-mount the sources so `tsx watch` inside the container restarts on every edit.
       - ./apps/api/src:/repo/apps/api/src

@@ -36,3 +36,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/prepare
       - run: pnpm test
+      # PRE_DEPLOY runs the bundle, not the tsx source (MVP-09): prove dist/db/migrate.js loads and re-runs cleanly against the same database.
+      - run: pnpm --filter api build && node apps/api/dist/db/migrate.js
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}

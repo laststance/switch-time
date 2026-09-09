@@ -51,7 +51,7 @@ pnpm db:reset                 # docker compose down -v: drop the volume, next `u
 
 ### Database (Drizzle ORM 1.0 RC)
 
-`drizzle-orm` and `drizzle-kit` are pinned to the same `1.0.0-rc.N` (no caret; re-pin deliberately). Driver is `pg`; `DATABASE_CA_CERT` (PEM) switches the pool to TLS for DigitalOcean Managed Postgres, local Compose stays plain TCP.
+`drizzle-orm` and `drizzle-kit` are pinned to the same `1.0.0-rc.N` (no caret; re-pin deliberately). Driver is `pg`; `DATABASE_CA_CERT` (PEM) switches the pool to TLS for DigitalOcean Managed Postgres and is required when `NODE_ENV=production` (no silent fallback to plain TCP). Local Compose stays plain TCP: `compose.yaml` blanks the variable so a value kept in `.env` for the host never reaches the container.
 
 ```sh
 pnpm --filter api db:generate   # schema (src/db/schema/*.ts) → SQL under apps/api/drizzle — review it, commit it
@@ -60,7 +60,7 @@ pnpm --filter api db:check      # drizzle-kit check: migration folder consistenc
 pnpm --filter api db:studio     # Drizzle Studio against DATABASE_URL
 ```
 
-`drizzle-kit push` is never run against production. Tests (`pnpm --filter api test`) need `TEST_DATABASE_URL`: the Vitest global setup migrates that database, each test file starts by truncating every `public` table, and files run serially because they share it. CI provides the database as a `postgres:18` service in `.github/workflows/test.yml`.
+`drizzle-kit push` is never run against production. Tests (`pnpm --filter api test`) need `TEST_DATABASE_URL`: the Vitest global setup migrates that database, every test starts by truncating every `public` table, and files run serially because they share the database. CI provides the database as a `postgres:18` service in `.github/workflows/test.yml`.
 
 ## API (`apps/api`)
 
@@ -69,7 +69,8 @@ pnpm --filter api dev        # tsx watch, http://localhost:8080 (PORT / APP_ORIG
 curl localhost:8080/api/healthz
 pnpm --filter api build      # tsdown → dist/server.js (workspace packages inlined, npm deps external)
 docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = repo root
-docker run --rm -p 8080:8080 -e DATABASE_URL=postgres://switchtime:switchtime@host.docker.internal:5432/switchtime switch-time-api
+# The image defaults to NODE_ENV=production, which refuses a database without DATABASE_CA_CERT; --add-host is needed on Docker Engine (Linux), harmless on Docker Desktop.
+docker run --rm -p 8080:8080 --add-host=host.docker.internal:host-gateway -e NODE_ENV=development -e DATABASE_URL=postgres://switchtime:switchtime@host.docker.internal:5432/switchtime switch-time-api
 ```
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.

@@ -1,9 +1,9 @@
-import { afterAll, beforeAll } from 'vitest'
+import { afterAll, beforeEach } from 'vitest'
 
 import { pool } from '../db/client'
 
-// Every test file starts from empty tables. Files share one database, so vitest.config.ts runs them serially.
-beforeAll(async () => {
+// Every test starts from empty tables. Files share one database, so vitest.config.ts runs them serially.
+beforeEach(async () => {
   const { rows } = await pool.query<{ tablename: string }>(
     "select quote_ident(tablename) as tablename from pg_tables where schemaname = 'public'",
   )
