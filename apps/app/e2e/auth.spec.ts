@@ -30,6 +30,7 @@ test('signing out returns to sign-in and hides the app', async ({ page }) => {
   await expect(page.getByText('いま')).toBeVisible()
 
   // Act
+  await page.getByRole('tab', { name: '設定' }).click()
   await page.getByRole('button', { name: 'サインアウト' }).click()
 
   // Assert
@@ -50,6 +51,7 @@ test('an existing account can sign back in after signing out', async ({
   await page.getByLabel('パスワード').fill(password)
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
   await expect(page).toHaveURL('/')
+  await page.getByRole('tab', { name: '設定' }).click()
   await page.getByRole('button', { name: 'サインアウト' }).click()
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
 
