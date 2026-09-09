@@ -70,6 +70,10 @@ test('a sheet route opens as a dialog and its ✕ returns home', async ({
   await expect(
     page.getByRole('dialog', { name: '今日の記録を訂正' }),
   ).toBeVisible()
+  // Focus lands inside the dialog, so Tab and Escape start there instead of on the rail underneath.
+  await expect(
+    page.getByRole('dialog', { name: '今日の記録を訂正' }),
+  ).toBeFocused()
   await page.getByRole('button', { name: '閉じる' }).click()
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('heading', { name: 'いま' })).toBeVisible()
