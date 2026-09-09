@@ -60,8 +60,8 @@ export function sumSegments(segments: readonly Segment[]): {
   return { totals, idleMs }
 }
 
-// A corrected segment keeps at least this much room from its neighbours and from now.
-const MIN_SEGMENT_MS = 60_000
+/** A corrected segment keeps at least this much room from its neighbours and from now ({@link clampStart}); a split needs twice it. */
+export const MIN_SEGMENT_MS = 60_000
 
 /**
  * Clamps a moved start into (prev, next) and the past, ≥1 min from each; `null` arg = no neighbour, `null` result = no legal slot.

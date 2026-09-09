@@ -6,8 +6,11 @@ import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { useWide } from '@/hooks/use-wide'
 import { cn } from '@/lib/utils'
 
-// Leaves a sheet route: back when it was pushed, home when it was opened by URL or reload.
-function dismiss() {
+/**
+ * Leaves a sheet route: back when it was pushed, home when it was opened by URL or reload (✕, the scrim, Escape, 「完了」).
+ * @example <Button title="完了" onPress={dismissSheet} />
+ */
+export function dismissSheet() {
   if (router.canGoBack()) router.back()
   else router.replace('/')
 }
@@ -29,11 +32,11 @@ export function Sheet({
   const look = dialog
     ? {
         root: 'items-center justify-center bg-scrim p-6',
-        card: 'w-full max-w-[560px] rounded-sheet border border-line bg-sheet-bg p-5',
+        card: 'max-h-full w-full max-w-[560px] rounded-sheet border border-line bg-sheet-bg p-5',
       }
     : { root: 'bg-sheet-bg', card: 'flex-1 px-5 pb-10 pt-3.5' }
   useWebKeydown((event) => {
-    if (event.key === 'Escape') dismiss()
+    if (event.key === 'Escape') dismissSheet()
   })
   return (
     <View className={cn('flex-1', look.root)}>
@@ -41,7 +44,7 @@ export function Sheet({
         <Pressable
           tabIndex={-1}
           className="absolute inset-0"
-          onPress={dismiss}
+          onPress={dismissSheet}
         />
       )}
       <View
@@ -59,7 +62,7 @@ export function Sheet({
             role="button"
             aria-label="閉じる"
             className="h-11 w-11 items-center justify-center rounded-pill bg-chip"
-            onPress={dismiss}
+            onPress={dismissSheet}
           >
             <Text className="text-md text-ink">✕</Text>
           </Pressable>
