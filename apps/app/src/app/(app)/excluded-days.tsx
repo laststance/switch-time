@@ -1,6 +1,6 @@
 import { Sheet } from '@/components/sheet'
 
-// Content lands with MVP-16.
+// Content lands with MVP-17.
 export default function ExcludedDaysSheet() {
   return (
     <Sheet
