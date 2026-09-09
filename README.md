@@ -96,7 +96,7 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 
 - `src/lib/auth-client.ts`: `createAuthClient` from `better-auth/react`; on native the Expo plugin keeps the session in `expo-secure-store` and `src/lib/orpc.ts` replays it as a `Cookie` header, on web the first-party cookie does the work.
 - Route groups: `(auth)/sign-in`, `(auth)/sign-up` (Zod schemas `signInSchema` / `signUpSchema` from `@switch-time/shared`, first issue per field inline, Better Auth's message above the form) and `(app)/…` guarded in `(app)/_layout.tsx`: anonymous visitors are redirected to `/sign-in?next=<path>` and return there after signing in. `useSignOut` ends the session, clears the TanStack cache, dispatches `resetApp` and shows sign-in.
-- Playwright (web): `pnpm --filter app test:e2e` exports the site with `EXPO_PUBLIC_API_ORIGIN=http://localhost:8080`, then serves it on :8081 next to the API bundle (`node ../api/dist/server.js`, reused when the Compose API already listens on :8080). CI runs the same in the `e2e` job with a Postgres service.
+- Playwright (web): `pnpm --filter app test:e2e` exports the site with `EXPO_PUBLIC_API_ORIGIN=http://localhost:8080` (`--clear`, like `build:web`: Metro's transform cache is not keyed on `EXPO_PUBLIC_*` values, so an export after one with a different origin would ship the stale origin), then serves it on :8081 next to the API bundle (`node ../api/dist/server.js`, reused when the Compose API already listens on :8080). CI runs the same in the `e2e` job with a Postgres service.
 
 ### Shell (expo-router)
 
@@ -105,6 +105,10 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 ### Home (ホーム)
 
 `(app)/(tabs)/index.tsx` gates on `switches.current`: the bare frame while it loads, `FirstLaunch` while it is null, otherwise the hero (`NowPanel` with the `react-native-svg` `Dial`, elapsed from the clock slice via `formatElapsed`), the `SwitchButton` row and the 24-h `TodayFlow` bar. Server state comes through hooks: `useActivities` (live rows only), `useCurrentActivity` (also colours the rail badge), `useSwitchTo` (optimistic `switches.current` in `onMutate`, rollback on error, invalidates `switches.current` / `switches.listByDay` / `stats.*` on settle) and `useToday` (day, bounds and segments in the stored `settings.timeZone`, so the bar and 「今日 n 回切替」 agree with the API; the pure parts live in `src/lib/today.ts`). On web the digit keys pick activities by position (`useWebKeydown` + `hotkeyIndex`) and 「訂正」 opens the correction sheet over Home. `e2e/home.spec.ts` covers the first-launch hand-off and the restart of the counter.
+
+### History (記録)
+
+`(app)/(tabs)/history.tsx` shows `stats.week` (the trailing seven days ending today; ‹ › step by a week) or `stats.month` (a calendar month, Sunday-first rows) in the stored `settings.timeZone` via `useLocalToday` (the day string from the clock slice, so the screen re-renders at midnight rather than every tick; `useToday` builds on it). Every number on the screen comes from that one answer: `src/lib/history.ts` only turns it into the render model (stacked 24-h bars in `position` order, the 「計測できた日」 / 「連続記録」 cards, the 状態別 rows with 1日あたり = total ÷ measured days and the bar as 1日あたり ÷ `targetHours`). 計測なし days draw dashed over `chip` and the footnote links to `/excluded-days`; past days link to `/correction?day=…` for MVP-16. `e2e/history.spec.ts` seeds a week through the API (`apiAs` reuses the page's session cookie) and checks the unused day stays out of the average.
 
 ## API (`apps/api`)
 

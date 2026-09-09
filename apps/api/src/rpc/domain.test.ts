@@ -105,6 +105,50 @@ test('a day without switches counts as unmeasured and breaks the streak', async 
   ])
 })
 
+test('the week view gets totals over measured days only, with the unused day listed as excluded', async () => {
+  // Arrange: 仕事 9 h three days ago, then 休息 through the untouched day (idle), 仕事 10 h + 娯楽 6 h yesterday, 睡眠 since midnight.
+  const api = await signedIn('history@example.com')
+  const list = await api.activities.list()
+  const threeDaysAgo = addDays(today, -3)
+  const yesterday = addDays(today, -1)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(threeDaysAgo, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(threeDaysAgo, 18) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 8) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: today,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(today, 0) }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(today, -7) })
+
+  // Assert
+  expect(week.totals).toEqual({
+    [idOf(list, '仕事')]: 19 * H,
+    [idOf(list, '娯楽')]: 6 * H,
+  })
+  expect(week.measuredDays).toBe(2)
+  expect(week.streak).toBe(2)
+  expect(week.excludedDays).toEqual([
+    { day: addDays(today, -2), reason: 'auto_unused' },
+  ])
+  // 1日あたり on the screen is total ÷ measured days: 9h 30m of 仕事, not the 6h 20m a three-day calendar span would give.
+  expect((week.totals[idOf(list, '仕事')] ?? 0) / week.measuredDays).toBe(
+    9.5 * H,
+  )
+})
+
 test('a segment longer than the idle threshold is excluded from the day total', async () => {
   // Arrange: two days ago 00:00 仕事 (13h → idle), 13:00 休息 (2h), 15:00 食事 (9h, closed by yesterday's 00:00 睡眠)
   const api = await signedIn('idle@example.com')
