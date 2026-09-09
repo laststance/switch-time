@@ -47,7 +47,8 @@ export function SwitchButton({
   return (
     <Pressable
       role="button"
-      aria-selected={active}
+      // aria-selected is only valid on option / tab / row-like roles; a toggle button reports its state with aria-pressed.
+      aria-pressed={active}
       onPress={onPress}
       className={cn(
         'h-[60px] shrink grow basis-[150px] flex-row items-center justify-center gap-2 rounded-chip border',

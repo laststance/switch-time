@@ -30,7 +30,7 @@ test('the first launch screen disappears after the first switch', async ({
     page.getByRole('heading', { name: 'いま', exact: true }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '睡眠' })).toHaveAttribute(
-    'aria-selected',
+    'aria-pressed',
     'true',
   )
   await expect(page.getByText(readout)).toBeVisible()
@@ -43,7 +43,7 @@ test('tapping 仕事 lights only 仕事 and restarts the elapsed counter', async
   // Arrange
   await signUp(page)
   await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
-    'aria-selected',
+    'aria-pressed',
     'true',
   )
   // Let 家事 run for a couple of seconds so a restart is observable.
@@ -55,15 +55,15 @@ test('tapping 仕事 lights only 仕事 and restarts the elapsed counter', async
   // Assert
   await expect(page.getByText(readout)).toHaveText(/^0:00:0[01]$/)
   await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
-    'aria-selected',
+    'aria-pressed',
     'true',
   )
   await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
-    'aria-selected',
+    'aria-pressed',
     'false',
   )
   await expect(
-    page.locator('[role="button"][aria-selected="true"]'),
+    page.locator('[role="button"][aria-pressed="true"]'),
   ).toHaveCount(1)
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
