@@ -56,7 +56,8 @@ const isAppPath = (value: string): value is AppPath =>
   /^\/(?![/\\])/.test(value)
 
 /**
- * Where to go after auth: the `next` query param when it is a same-app path, else Home (no open redirects).
+ * Where to go after auth: the `next` query param when it is a same-app path, else Home (no open redirects; a repeated `?next=` arrives as an array and goes Home too).
  * @example router.replace(nextHref(params.next))
  */
-export const nextHref = (next = ''): Href => (isAppPath(next) ? next : '/')
+export const nextHref = (next?: string | string[]): Href =>
+  typeof next === 'string' && isAppPath(next) ? next : '/'
