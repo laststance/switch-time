@@ -34,4 +34,15 @@ describe('nextHref', () => {
     expect(hrefs).toEqual(['/', '/', '/', '/', '/'])
     expect(nextHref()).toBe('/')
   })
+
+  test('a repeated ?next= (parsed as an array) goes home instead of crashing the redirect', () => {
+    // Arrange
+    const next = ['/history', '/settings']
+
+    // Act
+    const href = nextHref(next)
+
+    // Assert
+    expect(href).toBe('/')
+  })
 })
