@@ -9,13 +9,13 @@ type AuthResult = { error: { message?: string } | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, server message, button gated while the request runs.
- * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v), () => router.replace('/'))
+ * Success only clears the cache: the (auth) layout redirects once the session has landed, so the (app) guard never sees the gap in between.
+ * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v))
  */
 export function useAuthForm<T extends Record<string, string>>(
   schema: ZodType<T>,
   initial: T,
   submit: (values: T) => Promise<AuthResult>,
-  onSuccess: () => void,
 ) {
   const [values, setValues] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -34,11 +34,8 @@ export function useAuthForm<T extends Record<string, string>>(
     try {
       const { error } = await submit(parsed.data)
       if (error) setServerError(error.message ?? 'もう一度お試しください')
-      else {
-        // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes).
-        queryClient.clear()
-        onSuccess()
-      }
+      // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes).
+      else queryClient.clear()
     } catch {
       // Transport failure (offline, server down): surfaced inline like a server error instead of an unhandled rejection.
       setServerError('もう一度お試しください')
