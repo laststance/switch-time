@@ -1,0 +1,65 @@
+/* Switch Time tokens for the app, ported from design-system/styles.css.
+   Change the design system first, then this file; the values must stay identical. */
+@import 'tailwindcss';
+@import 'uniwind';
+
+@theme {
+  /* Radius: three tiers so size reads as hierarchy. Pills are status only, never a button. */
+  --radius-chip: 10px;
+  --radius-card: 16px;
+  --radius-sheet: 28px;
+  --radius-pill: 9999px;
+
+  /* Type scale 10/12/15/18/22/28/40 plus the elapsed-time hero. No font family: each OS draws its own UI face. */
+  --text-2xs: 10px;
+  --text-xs: 12px;
+  --text-sm: 15px;
+  --text-md: 18px;
+  --text-lg: 22px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+  --text-display: 52px;
+}
+
+/* Theme bands. Dark is the design default; the app resolves `auto` to light between 06:00 and 18:00 (MVP-13).
+   The activity palette is data (activities.color), never a token: components receive it as a style value. */
+@layer theme {
+  :root {
+    @variant dark {
+      --color-bg: #111216;
+      --color-face: #212229;
+      --color-surface: #1b1c22;
+      --color-sheet-bg: #1c1d22;
+      --color-ink: #f2efe8;
+      --color-sub: rgba(242, 239, 232, 0.6);
+      --color-line: rgba(255, 255, 255, 0.14);
+      --color-chip: rgba(255, 255, 255, 0.08);
+      --color-tab-bg: rgba(17, 18, 22, 0.9);
+      --color-accent: #7fb2ff;
+      /* react-native-web cannot draw a translucent bar: the web tab bar is opaque, same value as bg. */
+      @variant web {
+        --color-tab-bg: #111216;
+      }
+    }
+    @variant light {
+      --color-bg: #f5f2eb;
+      --color-face: #ffffff;
+      --color-surface: #ffffff;
+      --color-sheet-bg: #ffffff;
+      --color-ink: #1b1a17;
+      --color-sub: rgba(27, 26, 23, 0.55);
+      --color-line: rgba(27, 26, 23, 0.12);
+      --color-chip: rgba(27, 26, 23, 0.06);
+      --color-tab-bg: rgba(245, 242, 235, 0.9);
+      --color-accent: #2a66c4;
+      @variant web {
+        --color-tab-bg: #f5f2eb;
+      }
+    }
+  }
+}
+
+/* Every clock and elapsed-time readout: tabular figures, so the digits do not jitter as they tick. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}

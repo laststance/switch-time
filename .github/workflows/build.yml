@@ -20,3 +20,5 @@ jobs:
       - uses: ./.github/actions/prepare
       # Runs every workspace `build` script (API bundle, `expo export -p web`) as they land.
       - run: pnpm build
+      # Web export guard: no CSS react-native-web cannot draw, no colour outside design-system/theme.json.
+      - run: pnpm --filter app audit:web

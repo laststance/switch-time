@@ -14,12 +14,29 @@ export default defineConfig([
       'coverage/**',
       '.artifacts/**',
       '.fallow/**',
+      // Bundler config: CommonJS, outside apps/app/tsconfig.json's include (typed linting would reject it).
+      'apps/app/metro.config.js',
     ],
   },
   ...tsPrefixer,
   {
     languageOptions: {
       parserOptions: { tsconfigRootDir: import.meta.dirname },
+    },
+  },
+  // The app's `@/*` alias lives in apps/app/tsconfig.json; the resolver's default project (root tsconfig) has no paths.
+  {
+    files: ['apps/app/**'],
+    settings: {
+      'import-x/resolver': {
+        node: {
+          extensions: ['.mjs', '.js', '.cjs', '.mts', '.ts', '.jsx', '.tsx'],
+        },
+        typescript: {
+          alwaysTryTypes: true,
+          project: 'apps/app/tsconfig.json',
+        },
+      },
     },
   },
   // React surfaces (apps/app + any .tsx). React Compiler is enabled

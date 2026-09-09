@@ -1,15 +1,40 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { DEFAULT_ACTIVITIES } from '@switch-time/shared'
+import { useState } from 'react'
+import { Pressable, Text, View } from 'react-native'
+import { Uniwind, useUniwind } from 'uniwind'
 
-// Placeholder until MVP-13 brings the real shell; proves the universal build on web and native.
+import { Readout } from '@/components/readout'
+import { SwitchButton } from '@/components/switch-button'
+
+// Placeholder until MVP-13/14 bring the real shell: proves the tokens, the switch row and both bands on web and native.
 export default function HomeScreen() {
+  const [active, setActive] = useState(0)
+  const { theme } = useUniwind()
+
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Switch Time</Text>
+    <View className="flex-1 items-center justify-center gap-6 bg-bg p-5">
+      <Text className="text-xs text-sub">いま</Text>
+      <Readout>0:00:00</Readout>
+      <View className="w-full max-w-sm flex-row flex-wrap justify-center gap-2">
+        {DEFAULT_ACTIVITIES.map((activity, index) => (
+          <SwitchButton
+            key={activity.name}
+            name={activity.name}
+            color={activity.color}
+            active={index === active}
+            onPress={() => setActive(index)}
+          />
+        ))}
+      </View>
+      <Pressable
+        role="button"
+        className="rounded-pill border border-line bg-chip px-4 py-2"
+        onPress={() => Uniwind.setTheme(theme === 'dark' ? 'light' : 'dark')}
+      >
+        <Text className="text-xs text-sub">
+          {theme === 'dark' ? 'ライト' : 'ダーク'}
+        </Text>
+      </Pressable>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 28, fontWeight: '600' },
-})

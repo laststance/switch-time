@@ -81,6 +81,10 @@ cd apps/app && npx expo-doctor
 
 Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes, React Compiler); `create-expo-app` is broken on npm 12, so unpack the template tarball instead. Routes stay platform-UI only: no `expo-font`, no `fontFamily`. Expo packages are pinned like everything else, so `minimumReleaseAge` may hold them one patch behind what `expo-doctor` expects for a day — bump when the release is 24h old. `pnpm` isolated `node_modules` works with Metro here without `node-linker=hoisted`; `react-native-web` is reached through Metro's platform aliasing and is therefore listed in `.fallowrc.json#ignoreDependencies`. The app imports only `type { AppRouter }` from `@switch-time/api` (from MVP-08 on), which Metro erases.
 
+### Styling (Uniwind + Tailwind v4)
+
+`src/global.css` is the only place the app spells a colour: the design-system tokens (`design-system/styles.css`, `theme.json`) are re-declared there as Tailwind theme variables, both bands under `@layer theme` with `@variant dark` / `@variant light`, and the web-only overrides under `@variant web`. Uniwind compiles that file inside Metro (`metro.config.js`, no native code, so Expo Go works) and gives every React Native component a `className`; `uniwind.d.ts` supplies the prop types because `tsc` runs without Metro (Metro regenerates the same file as the gitignored `uniwind-types.d.ts`). Activity colours are data (`activities.color`, always a palette entry), so components receive them as `style` values, never as classes. Ticking digits take the `tabular` utility. `components.json` + `src/lib/utils.ts` (`cn`) are the React Native Reusables set-up; its CLI only scaffolds new projects, so components are vendored by hand into `src/components/ui` when first used. `pnpm --filter app audit:web` (also in the Build workflow) fails the web export on CSS react-native-web cannot draw (`grid`, `sticky`, `backdrop-filter`, `filter`, gradients, pseudo-elements) and on any hex colour outside `theme.json`.
+
 ## API (`apps/api`)
 
 ```sh
