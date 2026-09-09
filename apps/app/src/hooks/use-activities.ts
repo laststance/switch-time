@@ -9,6 +9,14 @@ const selectLive = (rows: ActivityRow[]) =>
   rows.filter((row) => row.archivedAt === null)
 
 /**
+ * Every activity, archived ones included: the 24-h bar still colours and names a state that was archived later today.
+ * @example const allActivities = useAllActivities().data ?? []
+ */
+export function useAllActivities() {
+  return useQuery(orpc.activities.list.queryOptions())
+}
+
+/**
  * The user's live activities in `position` order (the switch row, the first-launch row, the digit hotkeys, the rail badge).
  * @example const activities = useActivities().data ?? []
  */

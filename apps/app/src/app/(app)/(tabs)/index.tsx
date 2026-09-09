@@ -8,7 +8,7 @@ import { ScreenHeader } from '@/components/screen-header'
 import { StrokeIcon } from '@/components/stroke-icon'
 import { SwitchButton } from '@/components/switch-button'
 import { TodayFlow } from '@/components/today-flow'
-import { useActivities } from '@/hooks/use-activities'
+import { useActivities, useAllActivities } from '@/hooks/use-activities'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useToday } from '@/hooks/use-today'
@@ -28,6 +28,7 @@ type HomeBodyProps = {
 // ホーム proper: header with the date and the 訂正 entry, the hero, the switch row and the 24-h bar.
 function HomeBody({ current, activity }: HomeBodyProps) {
   const activities = useActivities().data ?? []
+  const allActivities = useAllActivities().data ?? []
   const switchTo = useSwitchTo()
   const { today, timeZone, start, end, segments, switchCount } = useToday()
   const ink = useTokenColor('ink')
@@ -76,7 +77,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       </View>
       <TodayFlow
         segments={segments}
-        activities={activities}
+        activities={allActivities}
         start={start}
         end={end}
       />

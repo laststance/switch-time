@@ -16,6 +16,9 @@ export function useCurrentActivity() {
   return {
     current: current.data ?? null,
     activity,
-    isPending: current.isPending || activities.isPending,
+    // No trustworthy answer yet: still loading, or the last fetch failed (the focus/reconnect refetch recovers). Never the first-launch case.
+    isPending: [current, activities].some(
+      (query) => query.isPending || query.isError,
+    ),
   }
 }
