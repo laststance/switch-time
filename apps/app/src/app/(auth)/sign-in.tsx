@@ -1,21 +1,20 @@
 import { signInSchema } from '@switch-time/shared'
-import { Link, useLocalSearchParams, useRouter } from 'expo-router'
+import { Link, useLocalSearchParams } from 'expo-router'
 import { Pressable, Text } from 'react-native'
 
 import { AuthCard } from '@/components/auth-card'
 import { CredentialFields } from '@/components/credential-fields'
 import { Button } from '@/components/ui/button'
-import { nextHref, useAuthForm } from '@/hooks/use-auth-form'
+import { useAuthForm } from '@/hooks/use-auth-form'
 import { authClient } from '@/lib/auth-client'
 
 export default function SignInScreen() {
-  const router = useRouter()
+  // `next` only travels on to sign-up here; the (auth) layout follows it once the session lands.
   const { next } = useLocalSearchParams<{ next?: string }>()
   const form = useAuthForm(
     signInSchema,
     { email: '', password: '' },
     async (values) => authClient.signIn.email(values),
-    () => router.replace(nextHref(next)),
   )
 
   return (
