@@ -1,32 +1,26 @@
-import { existsSync } from 'node:fs'
-
 import { z } from 'zod'
 
-// Local convenience: pnpm scripts run from apps/api, so `../../.env` is the repo-root .env (see .env.example).
-// Production injects real environment variables and has no such file. Existing variables are never overwritten.
-if (existsSync('../../.env')) process.loadEnvFile('../../.env')
+import { dbEnv } from './db/env'
 
-// Fail at boot on a bad environment: a misconfigured deploy must not become runtime 500s.
-const envSchema = z
+// The server's variables on top of {@link dbEnv}, which already loaded `.env` and validated the database ones.
+const serverEnv = z
   .object({
-    NODE_ENV: z
-      .enum(['development', 'test', 'production'])
-      .default('development'),
     PORT: z.coerce.number().int().positive().default(8080),
     // Origin of the web app: the Expo dev server locally, the same origin as the API in production.
     APP_ORIGIN: z.url().default('http://localhost:8081'),
-    DATABASE_URL: z.url(),
-    // PEM of the DigitalOcean Managed Databases CA; absent locally, where Compose Postgres speaks plain TCP.
-    DATABASE_CA_CERT: z.string().optional(),
+    // `openssl rand -base64 32`; signs session cookies, so it must never change between deploys.
+    BETTER_AUTH_SECRET: z.string().min(32),
   })
-  // Fail closed: a production process must never fall back to plain TCP because the CA went missing.
+  // Better Auth derives the cookie `Secure` flag and the trusted origins from it: the localhost default must not leak into production.
   .refine(
-    (values) => values.NODE_ENV !== 'production' || values.DATABASE_CA_CERT,
+    (values) =>
+      dbEnv.NODE_ENV !== 'production' ||
+      values.APP_ORIGIN.startsWith('https://'),
     {
-      path: ['DATABASE_CA_CERT'],
-      message:
-        'required when NODE_ENV=production (the database pool never falls back to plain TCP there)',
+      path: ['APP_ORIGIN'],
+      message: 'must be an https:// origin when NODE_ENV=production',
     },
   )
+  .parse(process.env)
 
-export const env = envSchema.parse(process.env)
+export const env = { ...dbEnv, ...serverEnv }
