@@ -1,5 +1,6 @@
 import Svg, { Circle, G, Line, Path } from 'react-native-svg'
 
+import { useSettings } from '@/hooks/use-settings'
 import { useTokenColors } from '@/hooks/use-token-color'
 import { handAngles } from '@/lib/dial'
 import { useAppSelector } from '@/store'
@@ -24,13 +25,13 @@ type DialProps = {
 
 /**
  * The clock from the design as one `react-native-svg` drawing on the 200-box: `face` steps off its ground with a `line` rim, a 1.5 px activity bezel, three tick tiers,
- * dauphine hour/minute hands, the second hand with tail and counterweight (per the `showSecondHand` preference) and the 3-layer cap. No filter, no shadow.
+ * dauphine hour/minute hands, the second hand with tail and counterweight (per the stored `showSecondHand` setting) and the 3-layer cap. No filter, no shadow.
  * @example <Dial size={236} color={activity.color} />
  */
 export function Dial({ size, color }: DialProps) {
   const tone = useTokenColors(['ink', 'sub', 'line', 'face'])
   const now = useAppSelector((s) => s.clock.now)
-  const showSecondHand = useAppSelector((s) => s.preferences.showSecondHand)
+  const { showSecondHand } = useSettings().settings
   const angles = handAngles(new Date(now))
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200">

@@ -1,0 +1,87 @@
+import {
+  activityInputSchema,
+  cycleColor,
+  type ActivityInput,
+} from '@switch-time/shared'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { useCurrentActivity } from '@/hooks/use-current-activity'
+import { cycleIcon } from '@/lib/icons'
+import { orpc } from '@/lib/orpc'
+import { invalidateKeys } from '@/lib/query'
+import {
+  editorRows,
+  reorderIds,
+  spareColor,
+  targetHoursFromText,
+  type EditorRow,
+} from '@/lib/settings'
+
+// What 「＋ 項目を追加」 creates; the user renames it in place. The colour is the first palette entry not in use.
+const NEW_ACTIVITY = { name: '新しい項目', iconKey: 'home', targetHours: null }
+
+/**
+ * Everything the 活動項目 sheet does with `activities.*`: the row model ({@link editorRows}), rename / colour / icon / target through
+ * `update` (which takes the whole input, so each edit resends the row's other fields), ▲▼ through `reorder`, 「＋ 項目を追加」 and 🗑.
+ * Every write invalidates `activities.*`, so Home, History and the rail badge follow at once.
+ * @example const editor = useActivityEditor(); editor.recolor(row)
+ */
+export function useActivityEditor() {
+  const queryClient = useQueryClient()
+  const activities = useQuery(orpc.activities.list.queryOptions())
+  const { current } = useCurrentActivity()
+  const write = {
+    onSettled: async () => invalidateKeys(queryClient, [orpc.activities.key()]),
+  }
+  const update = useMutation({
+    ...orpc.activities.update.mutationOptions(),
+    ...write,
+  })
+  const create = useMutation({
+    ...orpc.activities.create.mutationOptions(),
+    ...write,
+  })
+  const reorder = useMutation({
+    ...orpc.activities.reorder.mutationOptions(),
+    ...write,
+  })
+  const archive = useMutation({
+    ...orpc.activities.archive.mutationOptions(),
+    ...write,
+  })
+  const rows = editorRows(activities.data, current?.activityId ?? null)
+  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent.
+  const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
+    const input = activityInputSchema.safeParse({ ...row, ...change })
+    if (input.success) update.mutate({ id: row.id, ...input.data })
+  }
+  return {
+    rows,
+    pending:
+      activities.isFetching ||
+      [update, create, reorder, archive].some((mutation) => mutation.isPending),
+    rename: (row: EditorRow, name: string) => {
+      if (name !== row.name) patch(row, { name })
+    },
+    retarget: (row: EditorRow, text: string) => {
+      const targetHours = targetHoursFromText(text)
+      if (targetHours !== row.targetHours) patch(row, { targetHours })
+    },
+    recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
+    reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),
+    move: (row: EditorRow, delta: 1 | -1) =>
+      reorder.mutate({
+        ids: reorderIds(
+          rows.map((each) => each.id),
+          row.id,
+          delta,
+        ),
+      }),
+    remove: (row: EditorRow) => archive.mutate({ id: row.id }),
+    add: () =>
+      create.mutate({
+        ...NEW_ACTIVITY,
+        color: spareColor(rows.map((each) => each.color)),
+      }),
+  }
+}

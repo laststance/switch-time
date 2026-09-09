@@ -10,6 +10,7 @@ import {
   type DaySnapshot,
 } from '@/lib/correction'
 import { orpc } from '@/lib/orpc'
+import { invalidateKeys } from '@/lib/query'
 import { useAppSelector } from '@/store'
 
 /**
@@ -33,13 +34,8 @@ export function useCorrection(dayParam: string | undefined) {
     onMutate: () => {
       if (list.data) setPrevious(daySnapshot(list.data))
     },
-    onSettled: async () => {
-      await Promise.all(
-        [orpc.switches.key(), orpc.stats.key()].map(async (queryKey) =>
-          queryClient.invalidateQueries({ queryKey }),
-        ),
-      )
-    },
+    onSettled: async () =>
+      invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()]),
   }
   const moveStart = useMutation({
     ...orpc.switches.moveStart.mutationOptions(),

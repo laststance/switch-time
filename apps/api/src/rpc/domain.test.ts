@@ -348,3 +348,39 @@ test('a color outside the palette is rejected', async () => {
     }),
   ).rejects.toMatchObject({ cause: { constraint: 'activities_color_palette' } })
 })
+
+test('an archived activity disappears from Home but keeps its history', async () => {
+  // Arrange: two days ago 休息 9:00 and 仕事 15:00, 睡眠 since yesterday 0:00 (the current state), so 休息 can be archived.
+  const api = await signedIn('archive@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const work = idOf(list, '仕事')
+  const day = addDays(today, -2)
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      { activityId: rest, startedAt: at(day, 9) },
+      { activityId: work, startedAt: at(day, 15) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
+  })
+
+  // Act
+  const archived = await api.activities.archive({ id: rest })
+
+  // Assert: the live list (Home) drops it; the day's rows and totals (History) still carry it.
+  const [after, listed, stats] = await Promise.all([
+    api.activities.list(),
+    api.switches.listByDay({ day }),
+    api.stats.day({ day }),
+  ])
+  expect(archived.archivedAt).toBeInstanceOf(Date)
+  expect(
+    after.filter((row) => row.archivedAt === null).map((row) => row.name),
+  ).toEqual(['家事', '仕事', '睡眠', '食事', '娯楽'])
+  expect(listed.rows.map((row) => row.activityId)).toEqual([rest, work])
+  expect(stats.totals).toEqual({ [rest]: 21_600_000, [work]: 32_400_000 })
+})

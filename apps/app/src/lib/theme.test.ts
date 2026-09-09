@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { resolveTheme } from './preferences'
+import { resolveTheme } from './theme'
 
 test('theme auto resolves to light between 06:00 and 18:00', () => {
   // Arrange

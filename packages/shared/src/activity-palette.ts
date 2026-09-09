@@ -43,3 +43,15 @@ export const DEFAULT_ACTIVITIES = [
   { id: 'meal', name: '食事', color: '#E0684A', iconKey: 'meal', target: 1.5 },
   { id: 'fun', name: '娯楽', color: '#D8579C', iconKey: 'fun', target: 1.5 },
 ] as const satisfies readonly DefaultActivity[]
+
+/**
+ * The next palette colour after `color` (the editor's 「色を変える」 tap), wrapping from the last back to the first; a colour outside the palette restarts at the first.
+ * @example cycleColor('#E0A431') // '#3B7BD9'
+ */
+export function cycleColor(color: string): ActivityColor {
+  const index = ACTIVITY_PALETTE.findIndex((entry) => entry === color)
+  return (
+    ACTIVITY_PALETTE[(index + 1) % ACTIVITY_PALETTE.length] ??
+    ACTIVITY_PALETTE[0]
+  )
+}

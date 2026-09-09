@@ -7,12 +7,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 
 import { clockSlice } from './clock'
-import { preferencesSlice } from './preferences'
 
-const appReducer = combineReducers({
-  clock: clockSlice.reducer,
-  preferences: preferencesSlice.reducer,
-})
+const appReducer = combineReducers({ clock: clockSlice.reducer })
 
 /**
  * Wipes every slice back to its initial state; dispatched by {@link useSignOut} so the next user never inherits client state.
@@ -21,7 +17,7 @@ const appReducer = combineReducers({
 export const resetApp = createAction('app/reset')
 
 /**
- * Client-only state (clock, preferences). Server data lives in TanStack Query via {@link orpc}, never here.
+ * Client-only state (the clock). Server data, the user's settings included, lives in TanStack Query via {@link orpc}, never here.
  * @example <ReduxProvider store={store}>
  */
 export const store = configureStore({

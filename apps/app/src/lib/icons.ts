@@ -10,6 +10,15 @@ const ICONS: Record<string, string> = {
   fun: 'M6 8h12a4 4 0 0 1 4 4v3a3 3 0 0 1-5.5 1.5L15 15H9l-1.5 1.5A3 3 0 0 1 2 15v-3a4 4 0 0 1 4-4zM7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01',
 }
 
+const ICON_KEYS = Object.keys(ICONS)
+
+/**
+ * The glyph after `iconKey` in the design's order (the editor's icon tap), wrapping; an unknown key restarts at the house.
+ * @example cycleIcon('home') // 'work'
+ */
+export const cycleIcon = (iconKey: string): string =>
+  ICON_KEYS[(ICON_KEYS.indexOf(iconKey) + 1) % ICON_KEYS.length] ?? 'home'
+
 /** The 訂正 pencil: the header pill on ホーム and the 「記録を訂正する」 button on 記録. */
 export const PENCIL = 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
 
