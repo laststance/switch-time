@@ -22,11 +22,7 @@ type SheetProps = PropsWithChildren<{ title: string; hint: string }>
  * Body of a sheet route: the design's header (title, hint, ✕) over the content; wide web adds the scrim and centres it as a dialog, native relies on the Stack's modal presentation.
  * @example <Sheet title="今日の記録を訂正" hint="行をタップ → 開始時刻を15分ずつ動かす／活動を変える" />
  */
-export function Sheet({
-  title,
-  hint,
-  children = <Text className="text-sm text-sub">準備中</Text>,
-}: SheetProps) {
+export function Sheet({ title, hint, children }: SheetProps) {
   const wide = useWide()
   // Keyboard focus starts inside the dialog rather than on the tabs still in the DOM underneath.
   const dialogRef = useInitialFocus()

@@ -3,8 +3,9 @@ import {
   cycleColor,
   type ActivityInput,
 } from '@switch-time/shared'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { useAllActivities } from '@/hooks/use-activities'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
 import { cycleIcon } from '@/lib/icons'
 import { orpc } from '@/lib/orpc'
@@ -28,7 +29,7 @@ const NEW_ACTIVITY = { name: '新しい項目', iconKey: 'home', targetHours: nu
  */
 export function useActivityEditor() {
   const queryClient = useQueryClient()
-  const activities = useQuery(orpc.activities.list.queryOptions())
+  const activities = useAllActivities()
   const {
     current,
     isPending: currentPending,

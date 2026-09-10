@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
 import { ActivityPill } from '@/components/activity-pill'
+import { Control } from '@/components/control'
 import { dismissSheet, Sheet } from '@/components/sheet'
 import { useActivities } from '@/hooks/use-activities'
 import { useCorrection } from '@/hooks/use-correction'
@@ -84,18 +85,14 @@ type StepProps = {
 
 function StepButton({ glyph, label, disabled, onPress }: StepProps) {
   return (
-    <Pressable
-      role="button"
-      aria-label={label}
+    <Control
+      label={label}
       disabled={disabled}
       onPress={onPress}
-      className={cn(
-        'h-11 w-11 items-center justify-center rounded-chip border border-line bg-sheet-bg',
-        disabled && 'opacity-30',
-      )}
+      className="h-11 w-11 rounded-chip border border-line bg-sheet-bg"
     >
       <Text className="text-md text-ink">{glyph}</Text>
-    </Pressable>
+    </Control>
   )
 }
 
@@ -107,17 +104,13 @@ type ActionButtonProps = {
 
 function ActionButton({ title, disabled, onPress }: ActionButtonProps) {
   return (
-    <Pressable
-      role="button"
+    <Control
       disabled={disabled}
       onPress={onPress}
-      className={cn(
-        'h-11 flex-1 items-center justify-center rounded-chip border border-line',
-        disabled && 'opacity-30',
-      )}
+      className="h-11 flex-1 rounded-chip border border-line"
     >
       <Text className="text-xs font-semibold text-ink">{title}</Text>
-    </Pressable>
+    </Control>
   )
 }
 
@@ -206,17 +199,13 @@ type FooterProps = { canUndo: boolean; onUndo: () => void }
 function Footer({ canUndo, onUndo }: FooterProps) {
   return (
     <View className="flex-row gap-2">
-      <Pressable
-        role="button"
+      <Control
         disabled={!canUndo}
         onPress={onUndo}
-        className={cn(
-          'h-[52px] flex-1 items-center justify-center rounded-chip border border-line',
-          !canUndo && 'opacity-30',
-        )}
+        className="h-[52px] flex-1 rounded-chip border border-line"
       >
         <Text className="text-sm font-semibold text-ink">元に戻す</Text>
-      </Pressable>
+      </Control>
       <Pressable
         role="button"
         onPress={dismissSheet}

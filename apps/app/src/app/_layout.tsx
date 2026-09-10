@@ -6,6 +6,7 @@ import { Provider as ReduxProvider } from 'react-redux'
 
 import { useClock } from '@/hooks/use-clock'
 import { useThemeSync } from '@/hooks/use-theme-sync'
+import { useTimeZoneSync } from '@/hooks/use-time-zone-sync'
 import { queryClient } from '@/lib/query'
 import { store } from '@/store'
 
@@ -13,6 +14,7 @@ import { store } from '@/store'
 function AppShell() {
   useClock()
   useThemeSync()
+  useTimeZoneSync()
   return <Stack screenOptions={{ headerShown: false }} />
 }
 

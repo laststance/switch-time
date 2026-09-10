@@ -23,6 +23,17 @@ test('GET /api/healthz responds 200 with status ok', async () => {
   expect(await response.json()).toEqual({ status: 'ok' })
 })
 
+test('API responses opt out of CDN caching, Better Auth routes included', async () => {
+  // Act
+  const healthz = await app.request('/api/healthz')
+  const authOk = await app.request('/api/auth/ok')
+
+  // Assert
+  expect(healthz.headers.get('cache-control')).toBe('no-store')
+  expect(authOk.status).toBe(200)
+  expect(authOk.headers.get('cache-control')).toBe('no-store')
+})
+
 test('ping procedure returns ok and an ISO timestamp', async () => {
   // Act
   const result = await client.ping()

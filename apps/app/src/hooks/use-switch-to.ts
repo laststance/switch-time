@@ -1,11 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { orpc } from '@/lib/orpc'
+import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
-
-type SwitchRow = NonNullable<
-  Awaited<ReturnType<typeof orpc.switches.current.call>>
->
 
 /**
  * `switches.switchTo` with the optimistic write the issue asks for: `switches.current` flips the moment the button is pressed,

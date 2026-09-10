@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { orpc } from '@/lib/orpc'
-
-type ActivityRow = Awaited<ReturnType<typeof orpc.activities.list.call>>[number]
+import { orpc, type ActivityRow } from '@/lib/orpc'
 
 // Archived rows stay in the list so History can name them; the switch row and the hotkeys only see live ones.
 const selectLive = (rows: ActivityRow[]) =>

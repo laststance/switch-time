@@ -28,6 +28,10 @@ export function ActivityPill({
   onPress,
 }: ActivityPillProps) {
   const ink = useTokenColor('ink')
+  // The chosen pill fills with the activity's colour and inverts its ink: one decision for the border, the glyph and the label.
+  const look = selected
+    ? { pill: { backgroundColor: color, borderColor: color }, ink: '#fff' }
+    : { pill: null, ink }
   return (
     <Pressable
       role="radio"
@@ -35,21 +39,19 @@ export function ActivityPill({
       aria-label={name}
       disabled={disabled}
       onPress={onPress}
-      className="h-[38px] flex-row items-center gap-1.5 rounded-pill border border-line px-3.5"
-      style={selected ? { backgroundColor: color, borderColor: color } : null}
+      className={cn(
+        'h-[38px] flex-row items-center gap-1.5 rounded-pill border border-line px-3.5',
+        disabled && 'opacity-40',
+      )}
+      style={look.pill}
     >
       <StrokeIcon
         d={activityIcon(iconKey)}
         size={15}
         strokeWidth={2}
-        color={selected ? '#fff' : ink}
+        color={look.ink}
       />
-      <Text
-        className={cn(
-          'text-xs font-semibold',
-          selected ? 'text-white' : 'text-ink',
-        )}
-      >
+      <Text className="text-xs font-semibold" style={{ color: look.ink }}>
         {name}
       </Text>
     </Pressable>

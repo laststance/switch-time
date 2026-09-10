@@ -1,52 +1,13 @@
-import { type ReactNode, useState } from 'react'
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  type TextInputProps,
-  View,
-} from 'react-native'
+import { useState } from 'react'
+import { ScrollView, Text, type TextInputProps, View } from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
+import { Control } from '@/components/control'
 import { RetryNotice } from '@/components/retry-notice'
 import { Sheet } from '@/components/sheet'
 import { Input } from '@/components/ui/input'
 import { useActivityEditor } from '@/hooks/use-activity-editor'
 import type { EditorRow } from '@/lib/settings'
-import { cn } from '@/lib/utils'
-
-type ControlProps = {
-  label: string
-  disabled: boolean
-  onPress: () => void
-  className: string
-  children: ReactNode
-}
-
-// One tap target of a row (▲ ▼, the icon, the colour dot, 🗑); dims while the edit is impossible or one is in flight.
-function Control({
-  label,
-  disabled,
-  onPress,
-  className,
-  children,
-}: ControlProps) {
-  return (
-    <Pressable
-      role="button"
-      aria-label={label}
-      disabled={disabled}
-      onPress={onPress}
-      className={cn(
-        'items-center justify-center',
-        disabled && 'opacity-30',
-        className,
-      )}
-    >
-      {children}
-    </Pressable>
-  )
-}
 
 type DraftInputProps = Omit<
   TextInputProps,
@@ -175,17 +136,13 @@ export default function ActivityEditorSheet() {
           ))}
         </ScrollView>
       )}
-      <Pressable
-        role="button"
+      <Control
         disabled={blocked}
         onPress={editor.add}
-        className={cn(
-          'h-[52px] items-center justify-center rounded-chip border border-line',
-          blocked && 'opacity-30',
-        )}
+        className="h-[52px] rounded-chip border border-line"
       >
         <Text className="text-sm font-semibold text-ink">＋ 項目を追加</Text>
-      </Pressable>
+      </Control>
     </Sheet>
   )
 }

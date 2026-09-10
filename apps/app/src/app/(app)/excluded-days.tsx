@@ -1,5 +1,6 @@
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 
+import { Control } from '@/components/control'
 import { RetryNotice } from '@/components/retry-notice'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
@@ -71,20 +72,19 @@ export default function ExcludedDaysSheet() {
       ) : (
         <ScrollView className="shrink" contentContainerClassName="gap-2">
           {excluded.rows.map((row) => (
-            <Pressable
+            <Control
               key={row.day}
-              role="button"
-              aria-label={`${formatDay(row.day)}を戻す`}
+              label={`${formatDay(row.day)}を戻す`}
               disabled={excluded.pending}
               onPress={() => excluded.include(row.day)}
-              className="h-[52px] flex-row items-center gap-3 rounded-card border border-line px-4"
+              className="h-[52px] flex-row gap-3 rounded-card border border-line px-4"
             >
               <Text className="flex-1 text-sm font-semibold text-ink">
                 {formatDay(row.day)}
               </Text>
               <Text className="text-xs text-sub">{REASONS[row.reason]}</Text>
               <Text className="text-xs font-semibold text-accent">戻す</Text>
-            </Pressable>
+            </Control>
           ))}
           {excluded.empty && (
             <Text className="py-3 text-center text-xs text-sub">

@@ -2,12 +2,23 @@ import { Pressable, Text, View } from 'react-native'
 
 import { cn } from '@/lib/utils'
 
+// `sm` is 外観 and 無操作とみなす時間; `md` is the pen's 週／月 picker on 記録 (38 px segments, 15 px text).
+const SIZES = {
+  sm: {
+    trough: 'gap-[3px] p-[3px]',
+    segment: 'h-8 min-w-14 px-3',
+    text: 'text-xs',
+  },
+  md: { trough: 'gap-1 p-1', segment: 'h-[38px]', text: 'text-sm' },
+}
+
 type Option<T> = { value: T; label: string }
 type SegmentedProps<T extends string | number> = {
   /** The group's accessible name (screen readers and Playwright find the buttons under it). */
   label: string
   options: readonly Option<T>[]
   value: T
+  size?: keyof typeof SIZES
   /** Stretch the segments across the row (the idle picker); off, each takes its label's width (外観). */
   grow?: boolean
   /** While the stored value is still unknown the control shows a default, and a press would write that default back. */
@@ -23,16 +34,19 @@ export function Segmented<T extends string | number>({
   label,
   options,
   value,
+  size = 'sm',
   grow = false,
   disabled = false,
   onChange,
 }: SegmentedProps<T>) {
+  const look = SIZES[size]
   return (
     <View
       role="group"
       aria-label={label}
       className={cn(
-        'flex-row gap-[3px] rounded-chip bg-chip p-[3px]',
+        'flex-row rounded-chip bg-chip',
+        look.trough,
         disabled && 'opacity-40',
       )}
     >
@@ -51,14 +65,16 @@ export function Segmented<T extends string | number>({
               if (!selected) onChange(option.value)
             }}
             className={cn(
-              'h-8 min-w-14 items-center justify-center rounded-chip px-3',
+              'items-center justify-center rounded-chip',
+              look.segment,
               grow && 'flex-1',
               selected && 'bg-surface',
             )}
           >
             <Text
               className={cn(
-                'text-xs font-semibold',
+                'font-semibold',
+                look.text,
                 selected ? 'text-ink' : 'text-sub',
               )}
             >
