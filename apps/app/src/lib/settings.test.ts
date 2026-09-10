@@ -105,14 +105,28 @@ test('the exclusion row and the idle picker read the stored threshold in hours',
   // Act
   const whole = idleLabel(720)
   const partial = idleLabel(90)
-  const onSummary = exclusionSummary(on)
-  const offSummary = exclusionSummary(off)
+  const onSummary = exclusionSummary(on, true)
+  const offSummary = exclusionSummary(off, true)
 
   // Assert
   expect(whole).toBe('12時間')
   expect(partial).toBe('90分')
   expect(onSummary).toBe('オン · 無操作 12時間以上')
   expect(offSummary).toBe('オフ')
+})
+
+test('the exclusion row summarises nothing until the settings row has been read', () => {
+  // Arrange
+  const unreadSettings = {
+    autoExcludeUnusedDays: true,
+    idleThresholdMinutes: 720,
+  }
+
+  // Act
+  const summary = exclusionSummary(unreadSettings, false)
+
+  // Assert
+  expect(summary).toBe('—')
 })
 
 test('a blank target field means no target and the excluded-days window is the last year', () => {

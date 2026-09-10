@@ -61,14 +61,14 @@ export function useActivityEditor() {
     ...write,
   })
   const rows = editorRows(activities.data, current?.activityId ?? null)
-  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; false tells the field to put itself back.
+  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; the field puts the stored text back.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
     const queryKey = orpc.activities.list.queryKey()
     const before = queryClient.getQueryData(queryKey)
     // The cached row rather than the rendered one: it already carries an edit that has not settled yet.
     const latest = before?.find((each) => each.id === row.id) ?? row
     const input = activityInputSchema.safeParse({ ...latest, ...change })
-    if (!input.success) return false
+    if (!input.success) return
     // Staged here and not in onMutate: that one awaits cancelQueries first, and an edit committed in the gap would read the row
     // without this change and resend the old value. Rolled back to the list as it stood before this edit if the write fails.
     queryClient.setQueryData(queryKey, (rows) =>
@@ -83,7 +83,6 @@ export function useActivityEditor() {
       { id: row.id, ...input.data },
       { onError: () => queryClient.setQueryData(queryKey, before) },
     )
-    return true
   }
   return {
     rows,
@@ -101,13 +100,12 @@ export function useActivityEditor() {
       void activities.refetch()
       retryCurrent()
     },
-    rename: (row: EditorRow, name: string) =>
-      name === row.name ? true : patch(row, { name }),
+    rename: (row: EditorRow, name: string) => {
+      if (name !== row.name) patch(row, { name })
+    },
     retarget: (row: EditorRow, text: string) => {
       const targetHours = targetHoursFromText(text)
-      return targetHours === row.targetHours
-        ? true
-        : patch(row, { targetHours })
+      if (targetHours !== row.targetHours) patch(row, { targetHours })
     },
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),

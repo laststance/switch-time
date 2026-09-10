@@ -47,12 +47,14 @@ export function idleLabel(minutes: number): string {
 }
 
 /**
- * The 未使用日の自動除外 row's sub line on 設定.
- * @example exclusionSummary({ autoExcludeUnusedDays: true, idleThresholdMinutes: 720 }) // 'オン · 無操作 12時間以上'
+ * The 未使用日の自動除外 row's sub line on 設定; a dash until the row has been read, since {@link SETTINGS_DEFAULTS} would otherwise be summarised as the account's own answer.
+ * @example exclusionSummary({ autoExcludeUnusedDays: true, idleThresholdMinutes: 720 }, true) // 'オン · 無操作 12時間以上'
  */
 export function exclusionSummary(
   settings: Pick<Settings, 'autoExcludeUnusedDays' | 'idleThresholdMinutes'>,
+  ready: boolean,
 ): string {
+  if (!ready) return '—'
   return settings.autoExcludeUnusedDays
     ? `オン · 無操作 ${idleLabel(settings.idleThresholdMinutes)}以上`
     : 'オフ'

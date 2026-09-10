@@ -66,7 +66,7 @@ export default function SettingsScreen() {
                 未使用日の自動除外
               </Text>
               <Text className="text-2xs text-sub">
-                {exclusionSummary(settings)}
+                {exclusionSummary(settings, ready)}
               </Text>
             </View>
             <Text className="text-sm text-sub">›</Text>

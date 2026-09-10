@@ -86,8 +86,11 @@ describe('design-system/theme.json stays the single source of truth', () => {
   })
 
   test('cycling a colour walks the palette in design order and wraps', () => {
+    // Arrange: the palette's first entry, one mid-list, the last one (which has to wrap) and a colour the palette never had.
+    const colors = ['#E0A431', '#D8579C', '#8A6A4B', '#000000']
+
     // Act
-    const walk = ['#E0A431', '#D8579C', '#8A6A4B', '#000000'].map(cycleColor)
+    const walk = colors.map(cycleColor)
 
     // Assert
     expect(walk).toEqual(['#3B7BD9', '#2BA3B5', '#E0A431', '#E0A431'])
