@@ -10,6 +10,8 @@ type SegmentedProps<T extends string | number> = {
   value: T
   /** Stretch the segments across the row (the idle picker); off, each takes its label's width (外観). */
   grow?: boolean
+  /** While the stored value is still unknown the control shows a default, and a press would write that default back. */
+  disabled?: boolean
   onChange: (value: T) => void
 }
 
@@ -22,13 +24,17 @@ export function Segmented<T extends string | number>({
   options,
   value,
   grow = false,
+  disabled = false,
   onChange,
 }: SegmentedProps<T>) {
   return (
     <View
       role="group"
       aria-label={label}
-      className="flex-row gap-[3px] rounded-chip bg-chip p-[3px]"
+      className={cn(
+        'flex-row gap-[3px] rounded-chip bg-chip p-[3px]',
+        disabled && 'opacity-40',
+      )}
     >
       {options.map((option) => {
         const selected = option.value === value
@@ -38,6 +44,7 @@ export function Segmented<T extends string | number>({
             key={option.value}
             role="button"
             aria-pressed={selected}
+            disabled={disabled}
             aria-label={option.label}
             // Re-picking the chosen option is a no-op (it would otherwise write and refetch every total for nothing).
             onPress={() => {

@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
+import { RetryNotice } from '@/components/retry-notice'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { Toggle } from '@/components/ui/toggle'
@@ -13,7 +14,7 @@ const REASONS = { manual: '手動で除外', auto_unused: '切替なし' } as co
 
 /** The 未使用日の扱い sheet from `ST Phone / 設定＋除外シート`: the rule, the idle threshold and the days to bring back. */
 export default function ExcludedDaysSheet() {
-  const { settings } = useSettings()
+  const { settings, ready } = useSettings()
   const update = useUpdateSettings()
   const excluded = useExcludedDays()
   return (
@@ -28,6 +29,7 @@ export default function ExcludedDaysSheet() {
         <Toggle
           label="自動で除外する"
           value={settings.autoExcludeUnusedDays}
+          disabled={!ready}
           onChange={(autoExcludeUnusedDays) =>
             update.mutate({ autoExcludeUnusedDays })
           }
@@ -47,6 +49,7 @@ export default function ExcludedDaysSheet() {
           label="無操作とみなす時間"
           options={IDLE_OPTIONS}
           value={settings.idleThresholdMinutes}
+          disabled={!ready}
           onChange={(idleThresholdMinutes) =>
             update.mutate({ idleThresholdMinutes })
           }
@@ -56,29 +59,33 @@ export default function ExcludedDaysSheet() {
         </Text>
       </View>
       <Text className="text-xs text-sub">除外中の日（タップで戻す）</Text>
-      <ScrollView className="shrink" contentContainerClassName="gap-2">
-        {excluded.rows.map((row) => (
-          <Pressable
-            key={row.day}
-            role="button"
-            aria-label={`${formatDay(row.day)}を戻す`}
-            disabled={excluded.pending}
-            onPress={() => excluded.include(row.day)}
-            className="h-[52px] flex-row items-center gap-3 rounded-card border border-line px-4"
-          >
-            <Text className="flex-1 text-sm font-semibold text-ink">
-              {formatDay(row.day)}
+      {excluded.isError ? (
+        <RetryNotice onRetry={excluded.retry} />
+      ) : (
+        <ScrollView className="shrink" contentContainerClassName="gap-2">
+          {excluded.rows.map((row) => (
+            <Pressable
+              key={row.day}
+              role="button"
+              aria-label={`${formatDay(row.day)}を戻す`}
+              disabled={excluded.pending}
+              onPress={() => excluded.include(row.day)}
+              className="h-[52px] flex-row items-center gap-3 rounded-card border border-line px-4"
+            >
+              <Text className="flex-1 text-sm font-semibold text-ink">
+                {formatDay(row.day)}
+              </Text>
+              <Text className="text-xs text-sub">{REASONS[row.reason]}</Text>
+              <Text className="text-xs font-semibold text-accent">戻す</Text>
+            </Pressable>
+          ))}
+          {excluded.empty && (
+            <Text className="py-3 text-center text-xs text-sub">
+              除外中の日はありません
             </Text>
-            <Text className="text-xs text-sub">{REASONS[row.reason]}</Text>
-            <Text className="text-xs font-semibold text-accent">戻す</Text>
-          </Pressable>
-        ))}
-        {excluded.empty && (
-          <Text className="py-3 text-center text-xs text-sub">
-            除外中の日はありません
-          </Text>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      )}
     </Sheet>
   )
 }

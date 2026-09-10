@@ -25,7 +25,7 @@ const ROW = 'min-h-16 flex-row items-center gap-3 px-[18px] py-2.5'
 
 // 設定 from `ST Phone / 設定＋除外シート`: the two sheet entries, 外観 and 秒針, sign-out and the footer. Every value is the server's settings row.
 export default function SettingsScreen() {
-  const { settings } = useSettings()
+  const { settings, ready } = useSettings()
   const update = useUpdateSettings()
   const activities = useActivities().data ?? []
   const sub = useTokenColor('sub')
@@ -79,6 +79,7 @@ export default function SettingsScreen() {
             label="外観"
             options={THEME_OPTIONS}
             value={settings.theme}
+            disabled={!ready}
             onChange={(theme) => update.mutate({ theme })}
           />
         </View>
@@ -89,6 +90,7 @@ export default function SettingsScreen() {
           <Toggle
             label="秒針を表示"
             value={settings.showSecondHand}
+            disabled={!ready}
             onChange={(showSecondHand) => update.mutate({ showSecondHand })}
           />
         </View>

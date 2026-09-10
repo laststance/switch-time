@@ -116,10 +116,13 @@ test('the exclusion row and the idle picker read the stored threshold in hours',
 })
 
 test('a blank target field means no target and the excluded-days window is the last year', () => {
+  // Arrange
+  const day = '2026-09-09'
+
   // Act
   const blank = targetHoursFromText('  ')
   const parsed = targetHoursFromText('1.5')
-  const range = excludedRange('2026-09-09')
+  const range = excludedRange(day)
 
   // Assert
   expect(blank).toBeNull()

@@ -27,7 +27,10 @@ export function useExcludedDays() {
   return {
     rows: list.data ?? [],
     empty: list.data?.length === 0,
-    pending: list.isFetching || include.isPending,
+    pending: [list.isFetching, include.isPending].some(Boolean),
+    // A failed list would otherwise read as 除外中の日はありません, which is a different answer.
+    isError: list.isError,
+    retry: () => void list.refetch(),
     include: (day: string) => include.mutate({ day }),
   }
 }
