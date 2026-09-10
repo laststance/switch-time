@@ -342,7 +342,7 @@ export default function HistoryScreen() {
       <HistoryBody
         range={range}
         offset={offset}
-        onStep={(delta) => setOffset(offset + delta)}
+        onStep={(delta) => setOffset((current) => current + delta)}
       />
     </Screen>
   )
