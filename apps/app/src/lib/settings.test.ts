@@ -67,48 +67,62 @@ test('a new activity takes the first unused palette colour and wraps when all ei
   const six = ['#E0A431', '#3B7BD9', '#4FA877', '#6C63D6', '#E0684A', '#D8579C']
   const eight = [...six, '#2BA3B5', '#8A6A4B']
 
-  // Act & Assert
-  expect(spareColor(six)).toBe('#2BA3B5')
-  expect(spareColor(eight)).toBe('#E0A431')
-  expect(spareColor(['#3B7BD9'])).toBe('#E0A431')
+  // Act
+  const seventh = spareColor(six)
+  const wrapped = spareColor(eight)
+  const firstFree = spareColor(['#3B7BD9'])
+
+  // Assert
+  expect(seventh).toBe('#2BA3B5')
+  expect(wrapped).toBe('#E0A431')
+  expect(firstFree).toBe('#E0A431')
 })
 
 test('moving an id one step swaps it with its neighbour and stays put at the ends', () => {
   // Arrange
   const ids = ['a', 'b', 'c']
 
-  // Act & Assert
-  expect(reorderIds(ids, 'c', -1)).toEqual(['a', 'c', 'b'])
-  expect(reorderIds(ids, 'a', 1)).toEqual(['b', 'a', 'c'])
-  expect(reorderIds(ids, 'a', -1)).toBe(ids)
-  expect(reorderIds(ids, 'c', 1)).toBe(ids)
-  expect(reorderIds(ids, 'zzz', 1)).toBe(ids)
+  // Act
+  const movedUp = reorderIds(ids, 'c', -1)
+  const movedDown = reorderIds(ids, 'a', 1)
+  const aboveFirst = reorderIds(ids, 'a', -1)
+  const belowLast = reorderIds(ids, 'c', 1)
+  const unknownId = reorderIds(ids, 'zzz', 1)
+
+  // Assert
+  expect(movedUp).toEqual(['a', 'c', 'b'])
+  expect(movedDown).toEqual(['b', 'a', 'c'])
+  expect(aboveFirst).toBe(ids)
+  expect(belowLast).toBe(ids)
+  expect(unknownId).toBe(ids)
 })
 
 test('the exclusion row and the idle picker read the stored threshold in hours', () => {
-  // Act & Assert
-  expect(idleLabel(720)).toBe('12時間')
-  expect(idleLabel(90)).toBe('90分')
-  expect(
-    exclusionSummary({
-      autoExcludeUnusedDays: true,
-      idleThresholdMinutes: 720,
-    }),
-  ).toBe('オン · 無操作 12時間以上')
-  expect(
-    exclusionSummary({
-      autoExcludeUnusedDays: false,
-      idleThresholdMinutes: 480,
-    }),
-  ).toBe('オフ')
+  // Arrange
+  const on = { autoExcludeUnusedDays: true, idleThresholdMinutes: 720 }
+  const off = { autoExcludeUnusedDays: false, idleThresholdMinutes: 480 }
+
+  // Act
+  const whole = idleLabel(720)
+  const partial = idleLabel(90)
+  const onSummary = exclusionSummary(on)
+  const offSummary = exclusionSummary(off)
+
+  // Assert
+  expect(whole).toBe('12時間')
+  expect(partial).toBe('90分')
+  expect(onSummary).toBe('オン · 無操作 12時間以上')
+  expect(offSummary).toBe('オフ')
 })
 
 test('a blank target field means no target and the excluded-days window is the last year', () => {
-  // Act & Assert
-  expect(targetHoursFromText('  ')).toBeNull()
-  expect(targetHoursFromText('1.5')).toBe(1.5)
-  expect(excludedRange('2026-09-09')).toEqual({
-    from: '2025-09-09',
-    to: '2026-09-09',
-  })
+  // Act
+  const blank = targetHoursFromText('  ')
+  const parsed = targetHoursFromText('1.5')
+  const range = excludedRange('2026-09-09')
+
+  // Assert
+  expect(blank).toBeNull()
+  expect(parsed).toBe(1.5)
+  expect(range).toEqual({ from: '2025-09-09', to: '2026-09-09' })
 })

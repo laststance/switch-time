@@ -29,7 +29,12 @@ const NEW_ACTIVITY = { name: '新しい項目', iconKey: 'home', targetHours: nu
 export function useActivityEditor() {
   const queryClient = useQueryClient()
   const activities = useQuery(orpc.activities.list.queryOptions())
-  const { current, isPending: currentPending } = useCurrentActivity()
+  const {
+    current,
+    isPending: currentPending,
+    isError: currentError,
+    retry: retryCurrent,
+  } = useCurrentActivity()
   const write = {
     onSettled: async () => invalidateKeys(queryClient, [orpc.activities.key()]),
   }
@@ -43,9 +48,19 @@ export function useActivityEditor() {
     onMutate: async ({ id, ...values }) => {
       const queryKey = orpc.activities.list.queryKey()
       await queryClient.cancelQueries({ queryKey })
+      const previous = queryClient.getQueryData(queryKey)
       queryClient.setQueryData(queryKey, (rows) =>
         rows?.map((row) => (row.id === id ? { ...row, ...values } : row)),
       )
+      return { previous }
+    },
+    // Put the row back at once rather than leaving the refused edit on screen until the refetch below answers.
+    onError: (_error, _input, context) => {
+      if (context)
+        queryClient.setQueryData(
+          orpc.activities.list.queryKey(),
+          context.previous,
+        )
     },
   })
   const create = useMutation({
@@ -61,7 +76,7 @@ export function useActivityEditor() {
     ...write,
   })
   const rows = editorRows(activities.data, current?.activityId ?? null)
-  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent.
+  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; false tells the field to put itself back.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
     // The cached row rather than the rendered one: it already carries an edit that has not settled yet.
     const latest =
@@ -69,7 +84,9 @@ export function useActivityEditor() {
         .getQueryData(orpc.activities.list.queryKey())
         ?.find((each) => each.id === row.id) ?? row
     const input = activityInputSchema.safeParse({ ...latest, ...change })
-    if (input.success) update.mutate({ id: row.id, ...input.data })
+    if (!input.success) return false
+    update.mutate({ id: row.id, ...input.data })
+    return true
   }
   return {
     rows,
@@ -81,12 +98,19 @@ export function useActivityEditor() {
         (mutation) => mutation.isPending,
       ),
     ].some(Boolean),
-    rename: (row: EditorRow, name: string) => {
-      if (name !== row.name) patch(row, { name })
+    // Either query failing leaves the sheet with an empty list and no reason; it swaps in a 再読み込み notice instead.
+    isError: [activities.isError, currentError].some(Boolean),
+    retry: () => {
+      void activities.refetch()
+      retryCurrent()
     },
+    rename: (row: EditorRow, name: string) =>
+      name === row.name ? true : patch(row, { name }),
     retarget: (row: EditorRow, text: string) => {
       const targetHours = targetHoursFromText(text)
-      if (targetHours !== row.targetHours) patch(row, { targetHours })
+      return targetHours === row.targetHours
+        ? true
+        : patch(row, { targetHours })
     },
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),

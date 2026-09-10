@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
+import { RetryNotice } from '@/components/retry-notice'
 import { Sheet } from '@/components/sheet'
 import { Input } from '@/components/ui/input'
 import { useActivityEditor } from '@/hooks/use-activity-editor'
@@ -52,7 +53,8 @@ type DraftInputProps = Omit<
   'value' | 'defaultValue' | 'onChangeText' | 'onBlur'
 > & {
   value: string
-  onCommit: (text: string) => void
+  /** False means the schema refused the text, so the field drops the draft and shows the stored value again. */
+  onCommit: (text: string) => boolean
 }
 
 // A field that keeps its own draft and hands it over when focus leaves (Enter blurs a single-line field on both platforms);
@@ -64,7 +66,9 @@ function DraftInput({ value, onCommit, ...props }: DraftInputProps) {
       {...props}
       value={draft}
       onChangeText={setDraft}
-      onBlur={() => onCommit(draft)}
+      onBlur={() => {
+        if (!onCommit(draft)) setDraft(value)
+      }}
     />
   )
 }
@@ -155,23 +159,29 @@ function ActivityRow({ row, editor }: RowProps) {
 /** The 活動項目 sheet from `ST Phone / 活動項目シート`: rows in `position` order in a scrolling list, 「＋ 項目を追加」 pinned below. */
 export default function ActivityEditorSheet() {
   const editor = useActivityEditor()
+  // Adding onto a list that never loaded would write a row the user cannot see, so the button waits with the list.
+  const blocked = [editor.pending, editor.isError].some(Boolean)
   return (
     <Sheet
       title="活動項目"
       hint="タップで色・アイコンを変更、▲▼で並べ替え、🗑でアーカイブ"
     >
-      <ScrollView className="shrink" contentContainerClassName="gap-2">
-        {editor.rows.map((row) => (
-          <ActivityRow key={row.id} row={row} editor={editor} />
-        ))}
-      </ScrollView>
+      {editor.isError ? (
+        <RetryNotice onRetry={editor.retry} />
+      ) : (
+        <ScrollView className="shrink" contentContainerClassName="gap-2">
+          {editor.rows.map((row) => (
+            <ActivityRow key={row.id} row={row} editor={editor} />
+          ))}
+        </ScrollView>
+      )}
       <Pressable
         role="button"
-        disabled={editor.pending}
+        disabled={blocked}
         onPress={editor.add}
         className={cn(
           'h-[52px] items-center justify-center rounded-chip border border-line',
-          editor.pending && 'opacity-30',
+          blocked && 'opacity-30',
         )}
       >
         <Text className="text-sm font-semibold text-ink">＋ 項目を追加</Text>
