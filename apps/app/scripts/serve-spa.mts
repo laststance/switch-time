@@ -47,15 +47,20 @@ function proxy(req: IncomingMessage, res: ServerResponse) {
   req.pipe(upstream)
 }
 
+// The file under dist for a URL; unknown or directory paths are client-side routes and get the app shell.
+// normalize() folds `..`, so nothing above dist is reachable.
+function fileFor(url: string) {
+  const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname)
+  const file = join(root, normalize(pathname))
+  return existsSync(file) && !statSync(file).isDirectory()
+    ? file
+    : join(root, 'index.html')
+}
+
 createServer((req, res) => {
   const url = String(req.url)
   if (url.startsWith('/api/')) return proxy(req, res)
-  // normalize() folds `..`, so nothing above dist is reachable.
-  const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname)
-  let file = join(root, normalize(pathname))
-  // Unknown or directory paths are client-side routes: hand them the app shell.
-  if (!existsSync(file) || statSync(file).isDirectory())
-    file = join(root, 'index.html')
+  const file = fileFor(url)
   res.writeHead(200, {
     'content-type': types[extname(file)] ?? 'application/octet-stream',
   })
