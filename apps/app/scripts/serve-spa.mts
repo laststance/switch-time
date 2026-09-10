@@ -48,10 +48,10 @@ function proxy(req: IncomingMessage, res: ServerResponse) {
 }
 
 // The file under dist for a URL; unknown or directory paths are client-side routes and get the app shell.
-// normalize() folds `..`, so nothing above dist is reachable.
+// normalize() folds `..`, so nothing above dist is reachable. The pathname is not percent-decoded: every exported name is
+// plain ASCII, and decodeURIComponent would throw on a malformed `%` and take the server down.
 function fileFor(url: string) {
-  const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname)
-  const file = join(root, normalize(pathname))
+  const file = join(root, normalize(new URL(url, 'http://localhost').pathname))
   return existsSync(file) && !statSync(file).isDirectory()
     ? file
     : join(root, 'index.html')
