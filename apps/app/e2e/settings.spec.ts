@@ -31,17 +31,15 @@ test('cycling a color on 家事 persists after reload and shows on the Home butt
   // Act: one step along the palette (#E0A431 → #3B7BD9), then a full reload.
   const dot = page.getByRole('button', { name: '家事の色を変える' })
   await dot.click()
-  await expect(dot.locator('div')).toHaveCSS(
-    'background-color',
-    'rgb(59, 123, 217)',
-  )
+  const swatch = dot.locator('div')
+  await expect(swatch).toBeVisible()
+  await expect(swatch).toHaveCSS('background-color', 'rgb(59, 123, 217)')
   await page.goto('/')
 
   // Assert
-  await expect(page.getByRole('button', { name: '家事' })).toHaveCSS(
-    'background-color',
-    'rgb(59, 123, 217)',
-  )
+  const chore = page.getByRole('button', { name: '家事' })
+  await expect(chore).toBeVisible()
+  await expect(chore).toHaveCSS('background-color', 'rgb(59, 123, 217)')
 })
 
 test('switching appearance to dark applies immediately', async ({ page }) => {
@@ -50,6 +48,7 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
   await page.getByRole('tab', { name: '設定' }).click()
   await page.getByRole('button', { name: '明' }).click()
   const bar = page.getByRole('tablist')
+  await expect(bar).toBeVisible()
   await expect(bar).toHaveCSS('background-color', 'rgb(245, 242, 235)')
 
   // Act
@@ -88,6 +87,7 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
     page.getByRole('dialog', { name: '未使用日の扱い' }),
   ).toBeVisible()
   const row = page.getByRole('button', { name: /を戻す$/ })
+  await expect(row).toBeVisible()
   await expect(row).toHaveCount(1)
 
   // Act
