@@ -90,7 +90,8 @@ ingress:
         name: web
 
 databases:
-  # Managed PostgreSQL created out of band (README "Deploy"); attaching it adds the app to the cluster's trusted sources.
+  # Managed PostgreSQL created out of band (README "Deploy"). Attaching adds no trusted source: the cluster stays open to all
+  # IPs (TLS + password) until `doctl databases firewalls append <cluster-id> --rule app:<app-id>`.
   - name: switch-time-pg
     cluster_name: switch-time-pg
     engine: PG
