@@ -60,6 +60,11 @@ test('undo restores the row that was merged away', async ({ page }) => {
 test('splitting the current state shows on Home without a reload', async ({
   page,
 }) => {
+  // Between 0:00 and 0:02 in Tokyo the whole day is shorter than the API's 2 * MIN_SEGMENT_MS split guard, so no seed can pass.
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 2 * 60_000,
+    'the Tokyo day is under two minutes old, so no current state is long enough to split',
+  )
   // Arrange: 仕事 since midnight (the reload makes Home read the seeded day; the split must be at least two minutes in).
   await signUp(page)
   const api = await apiAs(page)
