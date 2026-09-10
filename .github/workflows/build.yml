@@ -29,5 +29,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The image App Platform builds for `api` and `db-migrate` (.do/app.yaml); build only, nothing is pushed.
+      # The images App Platform builds (.do/app.yaml): `api` + `db-migrate`, and the `web` static site; build only, nothing is pushed.
       - run: docker build -f apps/api/Dockerfile .
+      - run: docker build -f apps/app/Dockerfile .
