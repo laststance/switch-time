@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 
 import { FirstLaunch } from '@/components/first-launch'
 import { NowPanel } from '@/components/now-panel'
+import { RetryNotice } from '@/components/retry-notice'
 import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
 import { StrokeIcon } from '@/components/stroke-icon'
@@ -15,6 +16,7 @@ import { useToday } from '@/hooks/use-today'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatTime } from '@/lib/format'
+import { homeFallback } from '@/lib/home'
 import { hotkeyIndex } from '@/lib/hotkeys'
 
 const PENCIL = 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
@@ -86,19 +88,21 @@ function HomeBody({ current, activity }: HomeBodyProps) {
 }
 
 export default function HomeScreen() {
-  const { current, activity, isPending } = useCurrentActivity()
-  // The bare frame while the first answer is in flight, so returning users never see the first-launch screen flash.
-  if (isPending)
-    return (
-      <Screen>
-        <ScreenHeader title="いま" />
-      </Screen>
-    )
-  if (!current || !activity)
-    return (
-      <Screen>
-        <FirstLaunch />
-      </Screen>
-    )
-  return <HomeBody current={current} activity={activity} />
+  const { current, activity, isPending, isError, retry } = useCurrentActivity()
+  if (current && activity)
+    return <HomeBody current={current} activity={activity} />
+  const fallback = {
+    error: <RetryNotice onRetry={retry} />,
+    'first-launch': <FirstLaunch />,
+    loading: <ScreenHeader title="いま" />,
+  }
+  return (
+    <Screen>
+      {
+        fallback[
+          homeFallback({ isPending, isError, hasCurrent: current !== null })
+        ]
+      }
+    </Screen>
+  )
 }
