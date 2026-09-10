@@ -2,7 +2,11 @@ import { describe, expect, test } from 'vitest'
 
 import theme from '../../../design-system/theme.json'
 
-import { ACTIVITY_PALETTE, DEFAULT_ACTIVITIES } from './activity-palette'
+import {
+  ACTIVITY_PALETTE,
+  cycleColor,
+  DEFAULT_ACTIVITIES,
+} from './activity-palette'
 import {
   activityColorSchema,
   activityInputSchema,
@@ -79,6 +83,17 @@ describe('design-system/theme.json stays the single source of truth', () => {
     // Assert
     expect([...DEFAULT_ACTIVITIES]).toEqual(expected)
     expect(theme.defaultActivities).toEqual(expected)
+  })
+
+  test('cycling a colour walks the palette in design order and wraps', () => {
+    // Arrange: the palette's first entry, one mid-list, the last one (which has to wrap) and a colour the palette never had.
+    const colors = ['#E0A431', '#D8579C', '#8A6A4B', '#000000']
+
+    // Act
+    const walk = colors.map(cycleColor)
+
+    // Assert
+    expect(walk).toEqual(['#3B7BD9', '#2BA3B5', '#E0A431', '#E0A431'])
   })
 
   test('every default activity uses a colour from the palette', () => {

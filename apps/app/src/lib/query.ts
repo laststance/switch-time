@@ -1,5 +1,5 @@
 import { ORPCError } from '@orpc/client'
-import { focusManager, QueryClient } from '@tanstack/react-query'
+import { focusManager, QueryClient, type QueryKey } from '@tanstack/react-query'
 import { AppState, Platform } from 'react-native'
 
 /**
@@ -27,4 +27,17 @@ if (Platform.OS !== 'web') {
     )
     return () => subscription.remove()
   })
+}
+
+/**
+ * Refetches every query under the given router or procedure keys: the `onSettled` of each mutation hook ({@link useSwitchTo}, {@link useCorrection}, {@link useUpdateSettings}, {@link useActivityEditor}, {@link useExcludedDays}).
+ * @example onSettled: () => invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()])
+ */
+export async function invalidateKeys(
+  client: QueryClient,
+  queryKeys: QueryKey[],
+) {
+  await Promise.all(
+    queryKeys.map(async (queryKey) => client.invalidateQueries({ queryKey })),
+  )
 }

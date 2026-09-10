@@ -1,5 +1,6 @@
 export {
   ACTIVITY_PALETTE,
+  cycleColor,
   DEFAULT_ACTIVITIES,
   type ActivityColor,
   type DefaultActivity,

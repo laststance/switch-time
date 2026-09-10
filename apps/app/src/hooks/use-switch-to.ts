@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { orpc } from '@/lib/orpc'
+import { invalidateKeys } from '@/lib/query'
 
 type SwitchRow = NonNullable<
   Awaited<ReturnType<typeof orpc.switches.current.call>>
@@ -42,17 +43,12 @@ export function useSwitchTo() {
             context.previous,
           )
       },
-      onSettled: async () => {
-        await Promise.all(
-          [
-            orpc.switches.current.key(),
-            orpc.switches.listByDay.key(),
-            orpc.stats.key(),
-          ].map(async (queryKey) =>
-            queryClient.invalidateQueries({ queryKey }),
-          ),
-        )
-      },
+      onSettled: async () =>
+        invalidateKeys(queryClient, [
+          orpc.switches.current.key(),
+          orpc.switches.listByDay.key(),
+          orpc.stats.key(),
+        ]),
     }),
   )
 }
