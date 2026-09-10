@@ -58,6 +58,7 @@ test('the week view shows the excluded day dashed and out of the average', async
     page.getByRole('link', { name: /アプリを使わなかった 1日/ }),
   ).toBeVisible()
   const excluded = page.getByRole('link', { name: /計測なし/ })
+  await expect(excluded).toBeVisible()
   await expect(excluded).toHaveCount(1)
   await expect(excluded.locator('div').first()).toHaveCSS(
     'border-top-style',
