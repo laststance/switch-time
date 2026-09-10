@@ -7,14 +7,12 @@ import {
   formatMonthDay,
   formatWeekday,
 } from './format'
+import type { ActivityRow } from './orpc'
 
 export type Range = 'week' | 'month'
 /** One `stats.week` / `stats.month` answer; the screen never recomputes what it holds. */
 export type HistoryStats = Awaited<ReturnType<AppRouterClient['stats']['week']>>
 type DayStat = HistoryStats['days'][number]
-type ActivityRow = Awaited<
-  ReturnType<AppRouterClient['activities']['list']>
->[number]
 export type HistoryActivity = Pick<
   ActivityRow,
   'id' | 'name' | 'color' | 'iconKey' | 'targetHours' | 'archivedAt'

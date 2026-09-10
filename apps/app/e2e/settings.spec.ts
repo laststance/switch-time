@@ -103,3 +103,23 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
     .poll(async () => (await api.settings.get()).idleThresholdMinutes)
     .toBe(480)
 })
+
+// The browser's zone, not the seeded one, must own the day boundaries; only this block leaves the config's Asia/Tokyo.
+test.describe('device time zone', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' })
+
+  test('a new account follows the device time zone without any tap', async ({
+    page,
+  }) => {
+    // Arrange: the account is created on the API's default zone (Asia/Tokyo).
+    await signUp(page)
+    const api = await apiAs(page)
+
+    // Act: nothing; the root layout writes the zone once the settings row has loaded.
+
+    // Assert
+    await expect
+      .poll(async () => (await api.settings.get()).timeZone)
+      .toBe('America/Los_Angeles')
+  })
+})

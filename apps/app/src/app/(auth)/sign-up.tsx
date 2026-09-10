@@ -37,7 +37,7 @@ export default function SignUpScreen() {
       <Button
         title="アカウントを作成"
         disabled={form.pending}
-        onPress={() => void form.onSubmit()}
+        onPress={form.onSubmit}
       />
       <Link
         href={{ pathname: '/sign-in', params: next ? { next } : {} }}

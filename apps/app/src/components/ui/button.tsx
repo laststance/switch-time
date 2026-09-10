@@ -26,7 +26,7 @@ export function Button({
       className={cn(
         'h-12 items-center justify-center rounded-chip px-4',
         variant === 'primary' ? 'bg-accent' : 'border border-line bg-chip',
-        disabled && 'opacity-50',
+        disabled && 'opacity-40',
         className,
       )}
     >

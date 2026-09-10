@@ -6,15 +6,12 @@ import {
 } from '@switch-time/shared'
 
 import { formatDay, formatDuration, formatTime } from './format'
+import type { ActivityRow, SwitchRow } from './orpc'
 
 /** One `switches.listByDay` answer: the day's rows plus the states carried in from before and out to after. */
 export type ListedDay = Awaited<
   ReturnType<AppRouterClient['switches']['listByDay']>
 >
-type SwitchRow = ListedDay['rows'][number]
-type ActivityRow = Awaited<
-  ReturnType<AppRouterClient['activities']['list']>
->[number]
 export type CorrectionActivity = Pick<
   ActivityRow,
   'id' | 'name' | 'color' | 'iconKey'

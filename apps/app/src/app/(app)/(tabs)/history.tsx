@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
+import { Control } from '@/components/control'
 import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
+import { Segmented } from '@/components/segmented'
 import { StrokeIcon } from '@/components/stroke-icon'
+import { useAllActivities } from '@/hooks/use-activities'
 import { useRangeStats } from '@/hooks/use-range-stats'
 import { useTokenColor } from '@/hooks/use-token-color'
 import {
@@ -17,54 +19,13 @@ import {
   type Range,
 } from '@/lib/history'
 import { INFO, PENCIL } from '@/lib/icons'
-import { orpc } from '@/lib/orpc'
 import { cn } from '@/lib/utils'
 
 const UNIT: Record<Range, string> = { week: '週', month: '月' }
 const RANGES: Range[] = ['week', 'month']
 
-// The 週／月 segmented control from the pen; 今日 is the ホーム tab, so it is not repeated here.
-function RangePicker({
-  range,
-  onChange,
-}: {
-  range: Range
-  onChange: (next: Range) => void
-}) {
-  return (
-    <View
-      role="group"
-      aria-label="期間"
-      className="flex-row gap-1 rounded-chip bg-chip p-1"
-    >
-      {RANGES.map((key) => {
-        const checked = key === range
-        // Toggle buttons rather than radios: RN-web only fires Space (and Enter) for the button role, and there is no arrow-key handling.
-        return (
-          <Pressable
-            key={key}
-            role="button"
-            aria-pressed={checked}
-            onPress={() => onChange(key)}
-            className={cn(
-              'h-9 flex-1 items-center justify-center rounded-[8px]',
-              checked && 'bg-surface',
-            )}
-          >
-            <Text
-              className={cn(
-                'text-sm',
-                checked ? 'font-semibold text-ink' : 'text-sub',
-              )}
-            >
-              {UNIT[key]}
-            </Text>
-          </Pressable>
-        )
-      })}
-    </View>
-  )
-}
+// The 週／月 picker from the pen; 今日 is the ホーム tab, so it is not repeated here.
+const RANGE_OPTIONS = RANGES.map((value) => ({ value, label: UNIT[value] }))
 
 function StepButton({
   label,
@@ -78,18 +39,14 @@ function StepButton({
   onPress: () => void
 }) {
   return (
-    <Pressable
-      role="button"
-      aria-label={label}
+    <Control
+      label={label}
       disabled={disabled}
       onPress={onPress}
-      className={cn(
-        'h-9 w-9 items-center justify-center rounded-chip',
-        disabled && 'opacity-30',
-      )}
+      className="h-9 w-9 rounded-chip"
     >
       <Text className="text-md text-ink">{glyph}</Text>
-    </Pressable>
+    </Control>
   )
 }
 
@@ -302,7 +259,7 @@ function HistoryBody({
   onStep: (delta: number) => void
 }) {
   const { today, stats } = useRangeStats(range, offset)
-  const activities = useQuery(orpc.activities.list.queryOptions())
+  const activities = useAllActivities()
   if (!stats || !activities.data) return null
   const view = historyView({
     range,
@@ -338,7 +295,14 @@ export default function HistoryScreen() {
   return (
     <Screen>
       <ScreenHeader title="記録" />
-      <RangePicker range={range} onChange={pickRange} />
+      <Segmented
+        size="md"
+        grow
+        label="期間"
+        options={RANGE_OPTIONS}
+        value={range}
+        onChange={pickRange}
+      />
       <HistoryBody
         range={range}
         offset={offset}

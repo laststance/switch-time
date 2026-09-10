@@ -5,11 +5,10 @@ import {
   type ActivityColor,
 } from '@switch-time/shared'
 
+import type { ActivityRow } from './orpc'
+
 /** One `settings.get` answer: the user's row. */
 export type Settings = Awaited<ReturnType<AppRouterClient['settings']['get']>>
-type ActivityRow = Awaited<
-  ReturnType<AppRouterClient['activities']['list']>
->[number]
 
 /** The row's own column defaults: what every screen shows until `settings.get` has answered (and while signed out). */
 export const SETTINGS_DEFAULTS: Pick<

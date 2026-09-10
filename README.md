@@ -79,7 +79,7 @@ pnpm --filter app build:web   # expo export -p web → apps/app/dist (`build` al
 cd apps/app && npx expo-doctor
 ```
 
-Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes, React Compiler); `create-expo-app` is broken on npm 12, so unpack the template tarball instead. Routes stay platform-UI only: no `expo-font`, no `fontFamily`. Expo packages are pinned like everything else, so `minimumReleaseAge` may hold them one patch behind what `expo-doctor` expects for a day — bump when the release is 24h old. `pnpm` isolated `node_modules` works with Metro here without `node-linker=hoisted`; `react-native-web` is reached through Metro's platform aliasing and is therefore listed in `.fallowrc.json#ignoreDependencies`. The app imports only `type { AppRouter }` from `@switch-time/api` (from MVP-08 on), which Metro erases.
+Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes, React Compiler); `create-expo-app` is broken on npm 12, so unpack the template tarball instead. Routes stay platform-UI only: no `expo-font`, no `fontFamily`. Expo packages are pinned like everything else, so `minimumReleaseAge` may hold them one patch behind what `expo-doctor` expects for a day — bump when the release is 24h old. `pnpm` isolated `node_modules` works with Metro here without `node-linker=hoisted`; `react-native-web` is reached through Metro's platform aliasing and is therefore listed in `.fallowrc.json#ignoreDependencies`. The app imports only `type { AppRouterClient }` from `@switch-time/api` (from MVP-08 on), which Metro erases.
 
 ### Styling (Uniwind + Tailwind v4)
 
@@ -89,8 +89,8 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 
 - `src/lib/orpc.ts` builds the typed oRPC client from `AppRouterClient` (a type-only import from `@switch-time/api`, so Metro never bundles server code) and exposes `orpc.<procedure>.queryOptions()` for TanStack Query. Server data lives in TanStack Query only; it is never copied into Redux.
 - `EXPO_PUBLIC_API_ORIGIN` selects the API origin: unset means `http://localhost:8080` in dev and same-origin (`''`) in the production web build. For a physical device point it at the machine's LAN IP, e.g. `EXPO_PUBLIC_API_ORIGIN=http://192.168.1.10:8080 pnpm --filter app dev`. That `http://` origin is for development only: a native release build refuses to start unless the origin is `https://`, because the SecureStore session rides on every request as a `Cookie` header.
-- `src/store` holds client-only state: `clock` (ticks every second while the app is active, pauses in background). Components use `useAppSelector` / `useAppDispatch` from `@/store`; the root layout runs `useClock` and `useThemeSync` (the stored theme from `useSettings`, resolved by `resolveTheme` in `src/lib/theme.ts` against the clock). Sheets are routes and the correction day rides on `?day=`, so there is no UI slice, and the user's preferences are the server's `settings` row, never mirrored.
-- `/debug` (dev only) renders the `ping` query and the clock. `pnpm --filter app test` runs the Vitest unit tests in `src/**/*.test.ts`.
+- `src/store` holds client-only state: `clock` (ticks every second while the app is active, pauses in background). Components use `useAppSelector` / `useAppDispatch` from `@/store`; the root layout runs `useClock`, `useThemeSync` (the stored theme from `useSettings`, resolved by `resolveTheme` in `src/lib/theme.ts` against the clock) and `useTimeZoneSync` (the device's zone written into `settings.timeZone` once the row has loaded). Sheets are routes and the correction day rides on `?day=`, so there is no UI slice, and the user's preferences are the server's `settings` row, never mirrored.
+- `/debug` (dev only) renders the `ping` and `me` queries and the clock. `pnpm --filter app test` runs the Vitest unit tests in `src/**/*.test.ts`.
 
 ### Auth (Better Auth client)
 
@@ -130,14 +130,14 @@ docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = rep
 docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NODE_ENV=development -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
 ```
 
-The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouter }` from `@switch-time/api`, so no server code reaches the Metro bundle.
+The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouterClient }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
 ## Domain (activities / switches / stats)
 
 The clock always holds exactly one state: no end times are stored, the latest `switches` row is the current state and a segment ends when the next one starts. Tables live in `apps/api/src/db/schema/app.ts` (`activities`, `switches`, `excluded_days`, `user_settings`); sign-up seeds the 6 default activities and a settings row (`apps/api/src/db/seed-user.ts`, Better Auth `user.create.after`).
 
 - Migrations: `pnpm --filter api db:generate --name <name>` after editing the schema, `pnpm --filter api db:migrate` to apply locally (CI and App Platform run `dist/db/migrate.js`).
-- Every day boundary is computed in `user_settings.time_zone` (`dayBounds` / `localDay` in `packages/shared/src/time.ts`); the client is expected to keep it in sync through `settings.update`.
+- Every day boundary is computed in `user_settings.time_zone` (`dayBounds` / `localDay` in `packages/shared/src/time.ts`); the app writes the device's zone into it through `settings.update` when the settings row loads (`useTimeZoneSync` in the root layout), so a new account leaves the seeded Asia/Tokyo on first launch.
 - Idle rule (無操作とみなす時間): a segment longer than `idle_threshold_minutes` (default 720 = 12 h, above the 8 h work / 7 h sleep targets) is shown but left out of totals (`idleMs` per day in `stats.*`).
 - 計測なし / 除外: a past day without a tap is `auto_unused` while `auto_exclude_unused_days` is on (today is only "in progress"); manual exclusions (`excludedDays.exclude`) are stored, auto ones are computed per request. The streak counts measured days back from today (from yesterday until today has a tap) and skips manual exclusions (`packages/shared/src/stats.ts`).
 - Corrections: `switches.moveStart` moves ±15 min, clamped ≥1 min from its neighbours and from now; `replaceDay` rewrites one day in a transaction and backs 「元に戻す」 (the client keeps the previous rows). `activities.reorder` must receive a permutation of the active ids; the current state's activity and the last active one cannot be archived.

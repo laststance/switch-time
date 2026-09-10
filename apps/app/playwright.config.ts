@@ -4,7 +4,13 @@ import { defineConfig, devices } from '@playwright/test'
 // Locally the Compose API on :8080 is reused; CI starts both cold (.github/workflows/test.yml).
 export default defineConfig({
   testDir: 'e2e',
-  use: { baseURL: 'http://localhost:8081', ...devices['Desktop Chrome'] },
+  // The API seeds Asia/Tokyo and the fixtures are written in it; pinned here so the app's zone sync does not move the account to
+  // the runner's zone (UTC on GitHub).
+  use: {
+    baseURL: 'http://localhost:8081',
+    timezoneId: 'Asia/Tokyo',
+    ...devices['Desktop Chrome'],
+  },
   webServer: [
     {
       command: 'node ../api/dist/server.js',

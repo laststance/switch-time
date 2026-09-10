@@ -2,6 +2,7 @@ import { dayBounds, daySchema } from '@switch-time/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { useAllActivities } from '@/hooks/use-activities'
 import { useLocalToday } from '@/hooks/use-local-today'
 import {
   correctionRows,
@@ -27,7 +28,7 @@ export function useCorrection(dayParam: string | undefined) {
   const list = useQuery(
     orpc.switches.listByDay.queryOptions({ input: { day }, enabled: ready }),
   )
-  const activities = useQuery(orpc.activities.list.queryOptions())
+  const activities = useAllActivities()
   const [previous, setPrevious] = useState<{
     day: string
     rows: DaySnapshot

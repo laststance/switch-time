@@ -24,3 +24,13 @@ const client: AppRouterClient = createORPCClient(link)
  * @example const ping = useQuery(orpc.ping.queryOptions())
  */
 export const orpc = createTanstackQueryUtils(client)
+
+/** One `activities.list` row, archived ones included; screens narrow or join from it rather than redeclaring the shape. */
+export type ActivityRow = Awaited<
+  ReturnType<AppRouterClient['activities']['list']>
+>[number]
+
+/** One `switches` row as the API returns it: `switches.current` when there is one, each row of `switches.listByDay`. */
+export type SwitchRow = NonNullable<
+  Awaited<ReturnType<AppRouterClient['switches']['current']>>
+>
