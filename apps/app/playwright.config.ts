@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Web only. The API runs from its production bundle on :8080 and the exported site on :8081 (the dev CORS origin).
+// Web only. The API runs from its production bundle on :8080 and the exported site on :8081, which pipes `/api` to it
+// (scripts/serve-spa.mts): one origin, the shape App Platform serves, so the export carries no API origin at all.
 // Locally the Compose API on :8080 is reused; CI starts both cold (.github/workflows/test.yml).
 export default defineConfig({
   testDir: 'e2e',

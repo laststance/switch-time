@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "audit:web": "node scripts/audit-web-export.mts",
     "test": "vitest run",
-    "test:e2e": "EXPO_PUBLIC_API_ORIGIN=http://localhost:8080 expo export -p web --clear && playwright test"
+    "test:e2e": "expo export -p web --clear && playwright test"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.3",
