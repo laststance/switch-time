@@ -53,7 +53,8 @@ type DraftInputProps = Omit<
   'value' | 'defaultValue' | 'onChangeText' | 'onBlur'
 > & {
   value: string
-  onCommit: (text: string) => void
+  /** False means nothing was written — the schema refused the text, or it parsed to the value already stored — so the field shows that stored value again. */
+  onCommit: (text: string) => boolean
 }
 
 // A field that keeps its own draft and hands it over when focus leaves (Enter blurs a single-line field on both platforms);
@@ -66,11 +67,7 @@ function DraftInput({ value, onCommit, ...props }: DraftInputProps) {
       value={draft}
       onChangeText={setDraft}
       onBlur={() => {
-        onCommit(draft)
-        // Back to the stored text either way: a commit that took re-seeds the field through the row's `key` on the next render, and
-        // text that changed nothing (`1.50`, or anything unparsable while the target is already empty) would otherwise sit there as
-        // if it had been saved.
-        setDraft(value)
+        if (!onCommit(draft)) setDraft(value)
       }}
     />
   )

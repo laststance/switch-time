@@ -43,10 +43,18 @@ export function useActivityEditor() {
     // ponytail: one scope for every row (the editor edits one at a time); per-row scopes would need a mutation instance per row.
     scope: { id: 'activities.update' },
     ...orpc.activities.update.mutationOptions(),
-    ...write,
     // An in-flight list refetch would otherwise land on top of the row {@link useActivityEditor} just staged.
     onMutate: async () =>
       queryClient.cancelQueries({ queryKey: orpc.activities.list.queryKey() }),
+    // Only the last edit of a queue refetches (`write.onSettled` for every other write): an earlier settle would put the server's list,
+    // which predates the edit still waiting behind it, back over that edit's staged row until it lands.
+    onSettled: async () => {
+      const queued = queryClient.isMutating({
+        mutationKey: orpc.activities.update.mutationKey(),
+      })
+      if (queued === 1)
+        await invalidateKeys(queryClient, [orpc.activities.key()])
+    },
   })
   const create = useMutation({
     ...orpc.activities.create.mutationOptions(),
@@ -61,14 +69,14 @@ export function useActivityEditor() {
     ...write,
   })
   const rows = editorRows(activities.data, current?.activityId ?? null)
-  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; the field puts the stored text back.
+  // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; false tells the field to put itself back.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
     const queryKey = orpc.activities.list.queryKey()
     const before = queryClient.getQueryData(queryKey)
     // The cached row rather than the rendered one: it already carries an edit that has not settled yet.
     const latest = before?.find((each) => each.id === row.id) ?? row
     const input = activityInputSchema.safeParse({ ...latest, ...change })
-    if (!input.success) return
+    if (!input.success) return false
     // Staged here and not in onMutate: that one awaits cancelQueries first, and an edit committed in the gap would read the row
     // without this change and resend the old value. Rolled back to the list as it stood before this edit if the write fails.
     queryClient.setQueryData(queryKey, (rows) =>
@@ -83,6 +91,7 @@ export function useActivityEditor() {
       { id: row.id, ...input.data },
       { onError: () => queryClient.setQueryData(queryKey, before) },
     )
+    return true
   }
   return {
     rows,
@@ -100,12 +109,15 @@ export function useActivityEditor() {
       void activities.refetch()
       retryCurrent()
     },
-    rename: (row: EditorRow, name: string) => {
-      if (name !== row.name) patch(row, { name })
-    },
+    // False for text that parsed to what the row already holds (`1.50`, or anything unparsable while the target is empty): nothing is
+    // written, so the field goes back to the stored text rather than keeping what was typed as if it had been saved.
+    rename: (row: EditorRow, name: string) =>
+      name === row.name ? false : patch(row, { name }),
     retarget: (row: EditorRow, text: string) => {
       const targetHours = targetHoursFromText(text)
-      if (targetHours !== row.targetHours) patch(row, { targetHours })
+      return targetHours === row.targetHours
+        ? false
+        : patch(row, { targetHours })
     },
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),
