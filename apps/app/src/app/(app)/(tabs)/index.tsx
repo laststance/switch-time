@@ -18,8 +18,7 @@ import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatTime } from '@/lib/format'
 import { homeFallback } from '@/lib/home'
 import { hotkeyIndex } from '@/lib/hotkeys'
-
-const PENCIL = 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
+import { PENCIL } from '@/lib/icons'
 
 type Current = ReturnType<typeof useCurrentActivity>
 type HomeBodyProps = {
