@@ -56,27 +56,37 @@ test('the tabs work from the keyboard', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '設定' })).toBeVisible()
 })
 
-// ponytail: reached by URL (cold load, nothing beneath) until MVP-14 adds the in-app entry point; over-the-tabs was checked by hand.
-test('a sheet route opens as a dialog and its ✕ returns home', async ({
+test('訂正 opens the correction sheet over Home and its ✕ returns', async ({
   page,
 }) => {
   // Arrange
   await signUp(page)
 
   // Act
-  await page.goto('/correction')
+  await page.getByRole('link', { name: '訂正' }).click()
 
   // Assert
+  await expect(page).toHaveURL('/correction')
   await expect(
     page.getByRole('dialog', { name: '今日の記録を訂正' }),
   ).toBeVisible()
+  // Home stays mounted under the scrim (expo-router's web modal overlay hides it from the tree, not from the screen).
+  await expect(
+    page.getByRole('heading', {
+      name: 'いま',
+      exact: true,
+      includeHidden: true,
+    }),
+  ).toBeAttached()
   // Focus lands inside the dialog, so Tab and Escape start there instead of on the rail underneath.
   await expect(
     page.getByRole('dialog', { name: '今日の記録を訂正' }),
   ).toBeFocused()
   await page.getByRole('button', { name: '閉じる' }).click()
   await expect(page).toHaveURL('/')
-  await expect(page.getByRole('heading', { name: 'いま' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
 })
 
 test('an unknown URL shows the not-found screen with a way home', async ({
@@ -91,5 +101,7 @@ test('an unknown URL shows the not-found screen with a way home', async ({
   // Assert
   await expect(page.getByText('ページが見つかりません')).toBeVisible()
   await page.getByRole('link', { name: 'ホームへ戻る' }).click()
-  await expect(page.getByRole('heading', { name: 'いま' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
 })

@@ -16,7 +16,9 @@ test('a new user can sign up and lands on the first-launch screen', async ({
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
 
   // Assert
-  await expect(page.getByText('いま')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
   await expect(page).toHaveURL('/')
 })
 
@@ -27,7 +29,9 @@ test('signing out returns to sign-in and hides the app', async ({ page }) => {
   await page.getByLabel('メールアドレス').fill(`e2e-${Date.now()}@example.com`)
   await page.getByLabel('パスワード').fill(password)
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
-  await expect(page.getByText('いま')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
 
   // Act
   await page.getByRole('tab', { name: '設定' }).click()

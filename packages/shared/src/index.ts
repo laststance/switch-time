@@ -31,6 +31,7 @@ export {
 export {
   clampStart,
   MIN_SEGMENT_MS,
+  segmentsInRange,
   summarizeDays,
   type DayFacts,
   type DayStats,

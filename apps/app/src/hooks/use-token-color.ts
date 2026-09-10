@@ -12,3 +12,18 @@ export function useTokenColor(token: 'ink' | 'sub'): string | undefined {
   // Colour variables are strings on both platforms; the number side of the type is for lengths.
   return typeof value === 'string' ? value : undefined
 }
+
+type Token = 'ink' | 'sub' | 'line' | 'face'
+
+/**
+ * Several tokens as JS values on every platform, for a drawing that re-renders anyway (the dial ticks each second, so the web probe lag {@link useTokenColor} avoids is invisible).
+ * @example const tone = useTokenColors(['ink', 'line']); tone.ink
+ */
+export function useTokenColors<const T extends readonly Token[]>(
+  tokens: T,
+): Record<T[number], string> {
+  const values = useCSSVariable(tokens.map((token) => `--color-${token}`))
+  return Object.fromEntries(
+    tokens.map((token, index) => [token, String(values[index])]),
+  ) as Record<T[number], string>
+}

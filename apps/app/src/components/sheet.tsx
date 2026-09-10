@@ -2,8 +2,8 @@ import { router } from 'expo-router'
 import type { PropsWithChildren } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
-import { useEscapeKey } from '@/hooks/use-escape-key'
 import { useInitialFocus } from '@/hooks/use-initial-focus'
+import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { useWide } from '@/hooks/use-wide'
 import { cn } from '@/lib/utils'
 
@@ -35,7 +35,9 @@ export function Sheet({
         card: 'w-full max-w-[560px] rounded-sheet border border-line bg-sheet-bg p-5',
       }
     : { root: 'bg-sheet-bg', card: 'flex-1 px-5 pb-10 pt-3.5' }
-  useEscapeKey(dismiss)
+  useWebKeydown((event) => {
+    if (event.key === 'Escape') dismiss()
+  })
   return (
     <View className={cn('flex-1', look.root)}>
       {dialog && (
