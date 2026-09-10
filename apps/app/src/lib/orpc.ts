@@ -8,7 +8,10 @@ import { authClient } from './auth-client'
 import { API_ORIGIN } from './env'
 
 const link = new RPCLink({
-  url: `${API_ORIGIN}/api/rpc`,
+  // RPCLink runs `new URL(base)` with no base of its own, so the URL must be absolute: the production web export ships
+  // `API_ORIGIN` as '' (same origin behind App Platform's ingress), and the literal `/api/rpc` threw `Invalid URL` on every
+  // call. Resolved per call; native always has an `API_ORIGIN`, so `window` is only read on web.
+  url: () => `${API_ORIGIN || window.location.origin}/api/rpc`,
   // Web: the Better Auth session cookie must ride along, cross-origin in dev (8081 → 8080).
   fetch: async (request, init) =>
     globalThis.fetch(request, { ...init, credentials: 'include' }),
