@@ -76,6 +76,9 @@ export function useActivityEditor() {
         each.id === row.id ? { ...each, ...input.data } : each,
       ),
     )
+    // ponytail: an edit already queued behind a failed one still carries the failed row's fields, so it resends them. That repairs a
+    // dropped connection and is harmless for a value the server refuses (the queued write fails the same way); rebase the queue if
+    // partial failures ever need to survive. onSettled refetches either way, so the list ends on what the server actually holds.
     update.mutate(
       { id: row.id, ...input.data },
       { onError: () => queryClient.setQueryData(queryKey, before) },
