@@ -44,24 +44,9 @@ export function useActivityEditor() {
     scope: { id: 'activities.update' },
     ...orpc.activities.update.mutationOptions(),
     ...write,
-    // Written into the list first, so an edit committed while this one is in flight builds on it, not on the stale row.
-    onMutate: async ({ id, ...values }) => {
-      const queryKey = orpc.activities.list.queryKey()
-      await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData(queryKey)
-      queryClient.setQueryData(queryKey, (rows) =>
-        rows?.map((row) => (row.id === id ? { ...row, ...values } : row)),
-      )
-      return { previous }
-    },
-    // Put the row back at once rather than leaving the refused edit on screen until the refetch below answers.
-    onError: (_error, _input, context) => {
-      if (context)
-        queryClient.setQueryData(
-          orpc.activities.list.queryKey(),
-          context.previous,
-        )
-    },
+    // An in-flight list refetch would otherwise land on top of the row {@link useActivityEditor} just staged.
+    onMutate: async () =>
+      queryClient.cancelQueries({ queryKey: orpc.activities.list.queryKey() }),
   })
   const create = useMutation({
     ...orpc.activities.create.mutationOptions(),
@@ -78,14 +63,23 @@ export function useActivityEditor() {
   const rows = editorRows(activities.data, current?.activityId ?? null)
   // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; false tells the field to put itself back.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
+    const queryKey = orpc.activities.list.queryKey()
+    const before = queryClient.getQueryData(queryKey)
     // The cached row rather than the rendered one: it already carries an edit that has not settled yet.
-    const latest =
-      queryClient
-        .getQueryData(orpc.activities.list.queryKey())
-        ?.find((each) => each.id === row.id) ?? row
+    const latest = before?.find((each) => each.id === row.id) ?? row
     const input = activityInputSchema.safeParse({ ...latest, ...change })
     if (!input.success) return false
-    update.mutate({ id: row.id, ...input.data })
+    // Staged here and not in onMutate: that one awaits cancelQueries first, and an edit committed in the gap would read the row
+    // without this change and resend the old value. Rolled back to the list as it stood before this edit if the write fails.
+    queryClient.setQueryData(queryKey, (rows) =>
+      rows?.map((each) =>
+        each.id === row.id ? { ...each, ...input.data } : each,
+      ),
+    )
+    update.mutate(
+      { id: row.id, ...input.data },
+      { onError: () => queryClient.setQueryData(queryKey, before) },
+    )
     return true
   }
   return {
