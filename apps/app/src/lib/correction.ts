@@ -1,5 +1,9 @@
 import type { AppRouterClient } from '@switch-time/api'
-import { clampStart, MIN_SEGMENT_MS } from '@switch-time/shared'
+import {
+  clampStart,
+  MIN_SEGMENT_MS,
+  type ReplaceDayInput,
+} from '@switch-time/shared'
 
 import { formatDay, formatDuration, formatTime } from './format'
 
@@ -16,7 +20,7 @@ export type CorrectionActivity = Pick<
   'id' | 'name' | 'color' | 'iconKey'
 >
 /** What 「元に戻す」 keeps: the day's own rows as `switches.replaceDay` takes them. */
-export type DaySnapshot = { activityId: string; startedAt: Date }[]
+export type DaySnapshot = ReplaceDayInput['rows']
 
 export type CorrectionRow = {
   id: string

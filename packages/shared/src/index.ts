@@ -24,6 +24,7 @@ export {
   themeModeSchema,
   timeZoneSchema,
   type ActivityInput,
+  type ReplaceDayInput,
   type SettingsUpdate,
   type SignInInput,
   type SignUpInput,

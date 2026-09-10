@@ -58,10 +58,11 @@ export function useCorrection(dayParam: string | undefined) {
     ...orpc.switches.splitInHalf.mutationOptions(),
     ...edit,
   })
-  // Undo is not itself undoable: pressing 元に戻す twice would otherwise redo the edit.
+  // Undo is not itself undoable: pressing 元に戻す twice would otherwise redo the edit. Dropped on success, not on mutate,
+  // so a failed undo (offline, stale row) leaves 元に戻す armed for another try; the button is disabled while pending.
   const replaceDay = useMutation({
     ...orpc.switches.replaceDay.mutationOptions(),
-    onMutate: () => setPrevious(null),
+    onSuccess: () => setPrevious(null),
     onSettled: edit.onSettled,
   })
   const mutations = [
