@@ -80,7 +80,9 @@ test('splitting the current state shows on Home without a reload', async ({
   await page.getByRole('button', { name: '半分で分割' }).click()
   // Two 仕事 rows in the sheet (the unsplit row matched both halves' patterns); this also waits for the split to land.
   const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
-  await expect(dialog.getByRole('button', { name: /^仕事 / })).toHaveCount(2)
+  const halves = dialog.getByRole('button', { name: /^仕事 / })
+  await expect(halves.first()).toBeVisible()
+  await expect(halves).toHaveCount(2)
   await page.getByRole('button', { name: '完了' }).click()
 
   // Assert: Home counts the new row as a switch straight away.
