@@ -350,7 +350,7 @@ test('a color outside the palette is rejected', async () => {
   ).rejects.toMatchObject({ cause: { constraint: 'activities_color_palette' } })
 })
 
-test('an archived activity disappears from Home but keeps its history', async () => {
+test('archiving an activity flags it without dropping its day rows or totals', async () => {
   // Arrange: two days ago 休息 9:00 and 仕事 15:00, 睡眠 since yesterday 0:00 (the current state), so 休息 can be archived.
   const api = await signedIn('archive@example.com')
   const list = await api.activities.list()
@@ -372,7 +372,7 @@ test('an archived activity disappears from Home but keeps its history', async ()
   // Act
   const archived = await api.activities.archive({ id: rest })
 
-  // Assert: the live list (Home) drops it; the day's rows and totals (History) still carry it.
+  // Assert: the row is flagged and leaves the active set (what Home filters on); the day's rows and totals still carry it.
   const [after, listed, stats] = await Promise.all([
     api.activities.list(),
     api.switches.listByDay({ day }),

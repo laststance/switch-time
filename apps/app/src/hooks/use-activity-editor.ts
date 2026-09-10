@@ -34,6 +34,9 @@ export function useActivityEditor() {
     onSettled: async () => invalidateKeys(queryClient, [orpc.activities.key()]),
   }
   const update = useMutation({
+    // `update` resends the whole row, so two edits in flight at once would leave the server on whichever landed last, not last-typed.
+    // ponytail: one scope for every row (the editor edits one at a time); per-row scopes would need a mutation instance per row.
+    scope: { id: 'activities.update' },
     ...orpc.activities.update.mutationOptions(),
     ...write,
     // Written into the list first, so an edit committed while this one is in flight builds on it, not on the stale row.

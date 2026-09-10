@@ -28,8 +28,11 @@ export function useSettings() {
  */
 export function useUpdateSettings() {
   const queryClient = useQueryClient()
-  return useMutation(
-    orpc.settings.update.mutationOptions({
+  return useMutation({
+    // One scope for every settings write: two taps in flight at once could otherwise land out of order and leave the server on the
+    // older one, which the invalidation below then reads back over the newer optimistic value.
+    scope: { id: 'settings.update' },
+    ...orpc.settings.update.mutationOptions({
       onMutate: async (input) => {
         const queryKey = orpc.settings.get.queryKey()
         await queryClient.cancelQueries({ queryKey })
@@ -57,5 +60,5 @@ export function useUpdateSettings() {
           ])
       },
     }),
-  )
+  })
 }
