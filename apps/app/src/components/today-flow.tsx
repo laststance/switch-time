@@ -49,6 +49,8 @@ export function TodayFlow({
   const colors = Object.fromEntries(
     activities.map((activity) => [activity.id, activity.color]),
   )
+  // ponytail: labels are spaced evenly while slices are placed by elapsed time, so on the two DST days a year they drift
+  // by up to an hour of the bar's width; place each label at its own wall-clock percentage if a DST zone ever matters.
   const percent = (ms: number): `${number}%` => `${(ms / (end - start)) * 100}%`
   return (
     <View className={band.root}>
