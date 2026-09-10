@@ -146,12 +146,12 @@ The clock always holds exactly one state: no end times are stored, the latest `s
 
 One app, region `sgp` (no Tokyo region; ≈ 75–80 ms from Tokyo), described by `.do/app.yaml`:
 
-| Component        | Kind               | Source                                          | Route                        |
-| ---------------- | ------------------ | ----------------------------------------------- | ---------------------------- |
-| `api`            | Docker service     | `apps/api/Dockerfile`, context `/`              | `/api` (prefix preserved)    |
-| `db-migrate`     | `PRE_DEPLOY` job   | same image, `node dist/db/migrate.js`           | —                            |
-| `web`            | static site        | `pnpm --filter app build:web` → `apps/app/dist` | `/` (catch-all `index.html`) |
-| `switch-time-pg` | Managed PostgreSQL | attached by `cluster_name`                      | —                            |
+| Component        | Kind               | Source                                                 | Route                        |
+| ---------------- | ------------------ | ------------------------------------------------------ | ---------------------------- |
+| `api`            | Docker service     | `apps/api/Dockerfile`, context `/`                     | `/api` (prefix preserved)    |
+| `db-migrate`     | `PRE_DEPLOY` job   | same image, `node dist/db/migrate.js`                  | —                            |
+| `web`            | static site        | Node.js buildpack, root `pnpm build` → `apps/app/dist` | `/` (catch-all `index.html`) |
+| `switch-time-pg` | Managed PostgreSQL | attached by `cluster_name`                             | —                            |
 
 `/` and `/api` share one origin, so the Better Auth cookie is first-party and CORS stays off. The web export is a single-page bundle (`web.output: "single"`) so deep links such as `/history` resolve through the catch-all on any static host. `doctl apps spec validate --schema-only .do/app.yaml` checks the spec without a token.
 
@@ -159,8 +159,8 @@ First deploy (needs the team's DigitalOcean token):
 
 1. `brew install doctl && doctl auth init && doctl account get`
 2. Database: `doctl databases options versions --engine pg`, then `doctl databases create switch-time-pg --engine pg --version <newest> --region sgp1 --size db-s-1vcpu-2gb --num-nodes 1`, `doctl databases db create <cluster-id> switchtime`, `doctl databases user create <cluster-id> switchtime_app`. Pin `compose.yaml` to the same major.
-3. App: `doctl apps create --spec .do/app.yaml`, authorise the GitHub repository in the DigitalOcean console on first use, then set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) under the app's environment variables. Run `doctl apps spec get <app-id> > .do/app.yaml` afterwards so the committed spec carries the encrypted secret; never put the plaintext in the file.
-4. Verify: the deployment log shows `db-migrate` running the Drizzle migrations, `curl https://<app>.ondigitalocean.app/api/healthz` returns `{"status":"ok"}`, `/api/auth/ok` answers through the ingress, and `/` renders the web build.
+3. Authorise the GitHub repository once in the DigitalOcean console (Apps → Create App → GitHub), then create the app from a temporary copy of the spec that carries the secret, so the first deployment does not boot without one: `cp .do/app.yaml /tmp/app.yaml`, put `value: <openssl rand -base64 32>` under `BETTER_AUTH_SECRET` in the copy, `doctl apps create --spec /tmp/app.yaml --wait`, `rm /tmp/app.yaml`. Then `doctl apps spec get <app-id>` and paste the `EV[1:…]` value it returns into `.do/app.yaml`; never the plaintext.
+4. Verify: the deployment log shows `db-migrate` running the Drizzle migrations, `curl https://<app>.ondigitalocean.app/api/healthz` returns `{"status":"ok"}`, `/api/auth/ok` answers through the ingress, and `/` renders the web build. If `db-migrate` cannot reach the database, the cluster has trusted sources enabled without the app: `doctl databases firewalls append <cluster-id> --rule app:<app-id>`.
 
 After that every push to `main` builds `api` and `web`, runs the migration job and deploys (`deploy_on_push: true`). Alerts fire on `DEPLOYMENT_FAILED` and `DOMAIN_FAILED`.
 

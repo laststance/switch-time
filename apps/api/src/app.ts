@@ -36,6 +36,13 @@ export const app = new Hono()
 // ponytail: raise (or scope per route) when an upload endpoint appears.
 app.use('/api/*', bodyLimit({ maxSize: 100 * 1024 }))
 
+// App Platform puts its CDN in front of the whole app once a static site is attached; a cached session response would leak
+// between users, so every API response opts out.
+app.use('/api/*', async (c, next) => {
+  await next()
+  c.header('Cache-Control', 'no-store')
+})
+
 // Dev only: Expo web (:8081) calls the API (:8080) cross-origin. Production is same-origin behind App Platform ingress.
 if (env.NODE_ENV !== 'production') {
   app.use('/api/*', cors({ origin: env.APP_ORIGIN, credentials: true }))
