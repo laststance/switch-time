@@ -28,7 +28,12 @@ type HomeBodyProps = {
 
 // ホーム proper: header with the date and the 訂正 entry, the hero, the switch row and the 24-h bar.
 function HomeBody({ current, activity }: HomeBodyProps) {
-  const activities = useActivities().data ?? []
+  const live = useActivities().data ?? []
+  // A state archived from another device keeps its button (last, so the digit hotkeys keep their places) until the next switch:
+  // exactly one button is always the active one, and the row never loses the state the hero is showing.
+  const activities = live.some((row) => row.id === activity.id)
+    ? live
+    : [...live, activity]
   const allActivities = useAllActivities().data ?? []
   const switchTo = useSwitchTo()
   const { today, timeZone, start, end, segments, switchCount } = useToday()
