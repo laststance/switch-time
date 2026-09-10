@@ -117,3 +117,4 @@ export const replaceDayInputSchema = z.object({
     .array(z.object({ activityId: z.uuid(), startedAt: z.coerce.date() }))
     .max(500),
 })
+export type ReplaceDayInput = z.infer<typeof replaceDayInputSchema>

@@ -3,6 +3,7 @@ import { Link } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
+import { ActivityChip } from '@/components/activity-chip'
 import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
 import { StrokeIcon } from '@/components/stroke-icon'
@@ -15,7 +16,7 @@ import {
   type HistoryView,
   type Range,
 } from '@/lib/history'
-import { activityIcon, INFO, PENCIL } from '@/lib/icons'
+import { INFO, PENCIL } from '@/lib/icons'
 import { orpc } from '@/lib/orpc'
 import { cn } from '@/lib/utils'
 
@@ -249,17 +250,12 @@ function Breakdown({ rows }: { rows: BreakdownRow[] }) {
       {rows.map((row) => (
         <View key={row.id} className="gap-1.5">
           <View className="flex-row items-center gap-2">
-            <View
-              className="h-[26px] w-[26px] items-center justify-center rounded-chip"
-              style={{ backgroundColor: row.color }}
-            >
-              <StrokeIcon
-                d={activityIcon(row.iconKey)}
-                size={15}
-                strokeWidth={2}
-                color="#fff"
-              />
-            </View>
+            <ActivityChip
+              color={row.color}
+              iconKey={row.iconKey}
+              size={26}
+              iconSize={15}
+            />
             <Text className="flex-1 text-sm font-semibold text-ink">
               {row.name}
             </Text>

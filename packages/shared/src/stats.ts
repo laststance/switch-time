@@ -60,8 +60,7 @@ export function sumSegments(segments: readonly Segment[]): {
   return { totals, idleMs }
 }
 
-// A corrected segment keeps at least this much room from its neighbours and from now.
-/** Shortest segment a correction may leave behind; {@link clampStart} and the API's split guard both use it. */
+/** A corrected segment keeps at least this much room from its neighbours and from now ({@link clampStart}); a split needs twice it. */
 export const MIN_SEGMENT_MS = 60_000
 
 /**

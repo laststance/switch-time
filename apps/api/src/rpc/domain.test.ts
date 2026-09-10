@@ -186,6 +186,121 @@ test('a segment longer than the idle threshold is excluded from the day total', 
   expect(stats.streak).toBe(2)
 })
 
+const MIN = 60_000
+const yesterday = addDays(today, -1)
+
+test('merging into the previous record removes the row and the previous state now covers its time', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00.
+  const api = await signedIn('merge@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: 仕事, startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const before = await api.switches.listByDay({ day: yesterday })
+  const rest = before.rows[1]
+  if (!rest) throw new Error('fixture has no second row')
+
+  // Act
+  const merged = await api.switches.mergeIntoPrevious({ id: rest.id })
+
+  // Assert: two rows remain, the previous one is marked as merged and 仕事 now runs 9:00–18:00.
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    at(yesterday, 18),
+  ])
+  expect(merged).toMatchObject({ id: before.rows[0]?.id, source: 'merge' })
+  const day = await api.stats.day({ day: yesterday })
+  expect(day.totals[仕事]).toBe(9 * H)
+})
+
+test('splitting in half creates a second row at the midpoint with the same activity', async () => {
+  // Arrange: yesterday 仕事 9:00 then 休息 13:00.
+  const api = await signedIn('split@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: 仕事, startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+    ],
+  })
+  const before = await api.switches.listByDay({ day: yesterday })
+  const work = before.rows[0]
+  if (!work) throw new Error('fixture has no first row')
+
+  // Act
+  const created = await api.switches.splitInHalf({ id: work.id })
+
+  // Assert
+  expect(created).toMatchObject({
+    activityId: 仕事,
+    startedAt: at(yesterday, 11),
+    source: 'split',
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(
+    after.rows.map((row) => [row.activityId === 仕事, row.startedAt]),
+  ).toEqual([
+    [true, at(yesterday, 9)],
+    [true, at(yesterday, 11)],
+    [false, at(yesterday, 13)],
+  ])
+})
+
+test('moving a start time cannot cross the neighbouring rows', async () => {
+  // Arrange: three rows five minutes apart, so ±15 min always meets a neighbour.
+  const api = await signedIn('move@example.com')
+  const list = await api.activities.list()
+  const nine = at(yesterday, 9).getTime()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: new Date(nine) },
+      { activityId: idOf(list, '休息'), startedAt: new Date(nine + 5 * MIN) },
+      { activityId: idOf(list, '娯楽'), startedAt: new Date(nine + 10 * MIN) },
+    ],
+  })
+  const { rows } = await api.switches.listByDay({ day: yesterday })
+  const rest = rows[1]
+  if (!rest) throw new Error('fixture has no second row')
+
+  // Act
+  const earlier = await api.switches.moveStart({
+    id: rest.id,
+    deltaMinutes: -15,
+  })
+  const later = await api.switches.moveStart({ id: rest.id, deltaMinutes: 15 })
+
+  // Assert: clamped to one minute after 仕事, then one minute before 娯楽; a row with no room at all is refused.
+  expect(earlier.startedAt).toEqual(new Date(nine + MIN))
+  expect(later.startedAt).toEqual(new Date(nine + 9 * MIN))
+  expect(earlier.source).toBe('correction')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: new Date(nine) },
+      { activityId: idOf(list, '休息'), startedAt: new Date(nine + MIN) },
+      {
+        activityId: idOf(list, '娯楽'),
+        startedAt: new Date(nine + MIN + 30_000),
+      },
+    ],
+  })
+  const cramped = (await api.switches.listByDay({ day: yesterday })).rows[1]
+  if (!cramped) throw new Error('fixture has no second row')
+  await expect(
+    api.switches.moveStart({ id: cramped.id, deltaMinutes: 15 }),
+  ).rejects.toThrow('no room to move')
+})
+
 test('reorder rejects a position set that is not a permutation', async () => {
   // Arrange
   const api = await signedIn('reorder@example.com')
