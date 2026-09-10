@@ -64,10 +64,9 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
   const api = await apiAs(page)
   await expect.poll(async () => (await api.settings.get()).theme).toBe('dark')
   await page.reload()
-  await expect(page.getByRole('tablist')).toHaveCSS(
-    'background-color',
-    'rgb(17, 18, 22)',
-  )
+  const reloadedBar = page.getByRole('tablist')
+  await expect(reloadedBar).toBeVisible()
+  await expect(reloadedBar).toHaveCSS('background-color', 'rgb(17, 18, 22)')
 })
 
 test('a manually excluded day returns from the 未使用日の扱い sheet and the idle threshold persists', async ({
