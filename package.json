@@ -8,6 +8,9 @@
   "engines": {
     "node": "24.x"
   },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write"
+  },
   "scripts": {
     "prepare": "husky",
     "build": "pnpm -r --if-present run build",
@@ -25,9 +28,6 @@
     "dupes": "fallow dupes --fail-on-issues",
     "dead-code": "fallow dead-code --fail-on-issues",
     "check": "pnpm sherif && pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm dupes && pnpm dead-code && pnpm health"
-  },
-  "lint-staged": {
-    "*": "prettier --ignore-unknown --write"
   },
   "devDependencies": {
     "@laststance/react-next-eslint-plugin": "2.3.0",
