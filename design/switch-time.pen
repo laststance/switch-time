@@ -24717,6 +24717,3994 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "zjhG9",
+      "x": 3234,
+      "y": 0,
+      "name": "ST Phone / ホーム・detox 待機",
+      "context": "div",
+      "clip": true,
+      "width": 402,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "t8w6A4",
+          "name": "div",
+          "context": "div",
+          "clip": true,
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            58,
+            22,
+            12,
+            22
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "z714e",
+              "name": "div",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BDMQF",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P5Dp7L",
+                      "name": "div",
+                      "context": "div",
+                      "height": 23,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g7ncZw",
+                          "name": "9月7日（月）",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "9月7日（月）",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KnB91",
+                      "name": "button",
+                      "context": "button",
+                      "height": 44,
+                      "fill": "$surface",
+                      "cornerRadius": 22,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 6,
+                      "padding": [
+                        1,
+                        17
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "oeTpG",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 15,
+                          "height": 15,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "f7nkE",
+                              "x": 1.875,
+                              "y": 1.7991747856140137,
+                              "geometry": "M5.625 10.70083l5.625 0m-2.8125-10.3125c0.51777-0.51777 1.35723-0.51777 1.875 0 0.51777 0.51777 0.51777 1.35723 0 1.875l-7.8125 7.8125-2.5 0.625 0.625-2.50001 7.8125-7.81249z",
+                              "width": 11.25,
+                              "height": 10.700825214385986,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.25,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "O0BTYe",
+                          "name": "訂正",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "訂正",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zcdIs",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "v6pjP",
+                      "name": "svg",
+                      "context": "svg",
+                      "clip": true,
+                      "width": 200,
+                      "height": 200,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "cihE4",
+                          "x": 0.9999999999999999,
+                          "y": 0.9999999999999999,
+                          "width": 197.99999999999997,
+                          "height": 197.99999999999997,
+                          "stroke": "$activity-6",
+                          "strokeWidth": 1.5
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "aeixf",
+                          "x": 9.999999999999998,
+                          "y": 9.999999999999998,
+                          "fill": "$face",
+                          "width": 179.99999999999997,
+                          "height": 179.99999999999997,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999
+                        },
+                        {
+                          "type": "path",
+                          "id": "j78yBd",
+                          "x": 99.99999353441142,
+                          "y": 15.999999288785254,
+                          "geometry": "M0 0l0 16.52",
+                          "fill": "#000000",
+                          "width": 0,
+                          "height": 13.999998771538168,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "h0XQzK",
+                          "x": 108.36227546303958,
+                          "y": 16.46016007762844,
+                          "geometry": "M0.49339 0l-0.49339 4.69415",
+                          "fill": "#000000",
+                          "width": 0.418123148255429,
+                          "height": 3.97808915477688,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "HxPnr",
+                          "x": 116.63293353581832,
+                          "y": 17.835602517855367,
+                          "geometry": "M0.98135 0l-0.98135 4.61686",
+                          "fill": "#000000",
+                          "width": 0.8316557286149364,
+                          "height": 3.912589509608382,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "tF2ET",
+                          "x": 124.72135899430614,
+                          "y": 20.11125208967823,
+                          "geometry": "M1.45856 0l-1.45856 4.48899",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042262449102884,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "AT40t",
+                          "x": 132.53892801575742,
+                          "y": 23.262179099907307,
+                          "geometry": "M1.9198 0l-1.9198 4.31194",
+                          "fill": "#000000",
+                          "width": 1.626948987023305,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Wi6X3",
+                          "x": 137.00000310348253,
+                          "y": 27.253862154685844,
+                          "geometry": "M5.89999 0l-5.89999 10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "kChpi",
+                          "x": 147.02281628624866,
+                          "y": 32.04256801281945,
+                          "geometry": "M2.77435 0l-2.77435 3.81857",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.236072346315545,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "a6M5X",
+                          "x": 153.53044412903867,
+                          "y": 37.57582519014003,
+                          "geometry": "M3.15829 0l-3.15829 3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "JO8o2",
+                          "x": 159.45157843121027,
+                          "y": 43.79302525924424,
+                          "geometry": "M3.50766 0l-3.50766 3.15829",
+                          "fill": "#000000",
+                          "width": 2.9725931458554022,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "RAy7S",
+                          "x": 164.7213564080707,
+                          "y": 50.62603384761487,
+                          "geometry": "M3.81856 0l-3.81856 2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360658807269598,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "dMcVB",
+                          "x": 164.08587956832628,
+                          "y": 58.000002068988344,
+                          "geometry": "M10.21909 0l-10.21909 5.89999",
+                          "fill": "#000000",
+                          "width": 8.66024211301642,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "sBijc",
+                          "x": 173.0836254055217,
+                          "y": 65.83412299721928,
+                          "geometry": "M4.31195 0l-4.31195 1.91979",
+                          "fill": "#000000",
+                          "width": 3.6541954945709745,
+                          "height": 1.6269425214347193,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "p3Eoj",
+                          "x": 176.08452489820576,
+                          "y": 74.04257564221398,
+                          "geometry": "M4.48898 0l-4.48898 1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042230121159957,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Wdy3x",
+                          "x": 178.2518031233448,
+                          "y": 82.53541720115533,
+                          "geometry": "M4.61685 0l-4.61685 0.98135",
+                          "fill": "#000000",
+                          "width": 3.9125862768140887,
+                          "height": 0.8316492630263506,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "UPwFT",
+                          "x": 179.56175723318324,
+                          "y": 91.21960785429356,
+                          "geometry": "M4.69414 0l-4.69414 0.49338",
+                          "fill": "#000000",
+                          "width": 3.978082689188294,
+                          "height": 0.4181166826668432,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "R01CIJ",
+                          "x": 170.00000517247085,
+                          "y": 99.99999353441142,
+                          "geometry": "M16.51999 0l-16.51999 0",
+                          "fill": "#000000",
+                          "width": 13.999990689552435,
+                          "height": 0,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "HLFZM",
+                          "x": 179.56175723318324,
+                          "y": 108.36227546303958,
+                          "geometry": "M4.69414 0.49339l-4.69414-0.49339",
+                          "fill": "#000000",
+                          "width": 3.978082689188294,
+                          "height": 0.418123148255429,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "gLjrj",
+                          "x": 178.2518031233448,
+                          "y": 116.63293353581832,
+                          "geometry": "M4.61685 0.98135l-4.61685-0.98135",
+                          "fill": "#000000",
+                          "width": 3.9125862768140887,
+                          "height": 0.8316557286149364,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "BPzX9",
+                          "x": 176.0845119670286,
+                          "y": 124.72135899430614,
+                          "geometry": "M4.48898 1.45856l-4.48898-1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042230121159957,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "GowAs",
+                          "x": 173.0836254055217,
+                          "y": 132.53892801575742,
+                          "geometry": "M4.31194 1.9198l-4.31194-1.9198",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.626948987023305,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "wHJSF",
+                          "x": 164.08589249950344,
+                          "y": 137.00000310348253,
+                          "geometry": "M10.2191 5.89999l-10.2191-5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "LQFOG",
+                          "x": 164.7213564080707,
+                          "y": 147.02281628624866,
+                          "geometry": "M3.81856 2.77435l-3.81856-2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360658807269598,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "LeJuu",
+                          "x": 159.45159136238743,
+                          "y": 153.53044412903867,
+                          "geometry": "M3.50764 3.15829l-3.50764-3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "qqtLs",
+                          "x": 153.53044412903867,
+                          "y": 159.45157843121027,
+                          "geometry": "M3.15829 3.50766l-3.15829-3.50766",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.9725931458554022,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Qmt4t",
+                          "x": 147.02281628624866,
+                          "y": 164.7213564080707,
+                          "geometry": "M2.77435 3.81856l-2.77435-3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360658807269598,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "bR3xW",
+                          "x": 137.0000160346597,
+                          "y": 164.08587956832628,
+                          "geometry": "M5.89999 10.21909l-5.89999-10.21909",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66024211301642,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "VDccG",
+                          "x": 132.53892801575742,
+                          "y": 173.0836254055217,
+                          "geometry": "M1.91978 4.31195l-1.91978-4.31195",
+                          "fill": "#000000",
+                          "width": 1.6269360558461334,
+                          "height": 3.6541954945709745,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999997,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "i5YW2M",
+                          "x": 124.72134606312896,
+                          "y": 176.08452489820576,
+                          "geometry": "M1.45856 4.48898l-1.45856-4.48898",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042230121159957,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "lVA7H",
+                          "x": 116.63293353581832,
+                          "y": 178.2518031233448,
+                          "geometry": "M0.98134 4.61685l-0.98134-4.61685",
+                          "fill": "#000000",
+                          "width": 0.8316427974377648,
+                          "height": 3.9125862768140887,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "c0XUQD",
+                          "x": 108.36227546303958,
+                          "y": 179.56175723318324,
+                          "geometry": "M0.49339 4.69414l-0.49339-4.69414",
+                          "fill": "#000000",
+                          "width": 0.418123148255429,
+                          "height": 3.978082689188294,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "uwuco",
+                          "x": 100.00000646558858,
+                          "y": 170.00000517247085,
+                          "geometry": "M0 16.51999l0-16.51999",
+                          "fill": "#000000",
+                          "width": 0,
+                          "height": 13.999990689552435,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "I2xbnu",
+                          "x": 91.21960785429356,
+                          "y": 179.56175723318324,
+                          "geometry": "M0 4.69414l0.49338-4.69414",
+                          "fill": "#000000",
+                          "width": 0.4181166826668432,
+                          "height": 3.978082689188294,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "gyh8y",
+                          "x": 82.53541073556673,
+                          "y": 178.2518031233448,
+                          "geometry": "M0 4.61685l0.98135-4.61685",
+                          "fill": "#000000",
+                          "width": 0.8316492630263506,
+                          "height": 3.9125862768140887,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "O6UdYg",
+                          "x": 74.04257564221398,
+                          "y": 176.0845119670286,
+                          "geometry": "M0 4.48898l1.45856-4.48898",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042230121159957,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "yg6An",
+                          "x": 65.83412299721928,
+                          "y": 173.0836254055217,
+                          "geometry": "M0 4.31194l1.91979-4.31194",
+                          "fill": "#000000",
+                          "width": 1.6269425214347193,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "lFVmQ",
+                          "x": 58.000002068988344,
+                          "y": 164.08589249950344,
+                          "geometry": "M0 10.2191l5.89999-10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Y7xos0",
+                          "x": 50.62603708040916,
+                          "y": 164.7213564080707,
+                          "geometry": "M0 3.81856l2.77435-3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360658807269598,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "tQaze",
+                          "x": 43.793034957627114,
+                          "y": 159.45159136238743,
+                          "geometry": "M0 3.50764l3.15829-3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "j3o5tm",
+                          "x": 37.575834888522905,
+                          "y": 153.53044412903867,
+                          "geometry": "M0 3.15829l3.50764-3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "YqpfF",
+                          "x": 32.04257124561374,
+                          "y": 147.02281628624866,
+                          "geometry": "M0 2.77435l3.81856-2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360691135212525,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "VC4LN",
+                          "x": 27.253871853068723,
+                          "y": 137.0000160346597,
+                          "geometry": "M0 5.89999l10.2191-5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "e5Z1S",
+                          "x": 23.262182332701602,
+                          "y": 132.53892801575742,
+                          "geometry": "M0 1.91978l4.31194-1.91978",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.6269360558461334,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "bslg1",
+                          "x": 20.111255322472523,
+                          "y": 124.72134606312896,
+                          "geometry": "M0 1.45856l4.48899-1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042262449102884,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "tolLc",
+                          "x": 17.83560090145822,
+                          "y": 116.63293353581832,
+                          "geometry": "M0 0.98134l4.61686-0.98134",
+                          "fill": "#000000",
+                          "width": 3.912589509608382,
+                          "height": 0.8316427974377648,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "isO8v",
+                          "x": 16.46016007762844,
+                          "y": 108.36227546303958,
+                          "geometry": "M0 0.49339l4.69415-0.49339",
+                          "fill": "#000000",
+                          "width": 3.97808915477688,
+                          "height": 0.418123148255429,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "iNV2u",
+                          "x": 15.999999288785254,
+                          "y": 100.00000646558858,
+                          "geometry": "M0 0l16.52 0",
+                          "fill": "#000000",
+                          "width": 13.999998771538168,
+                          "height": 0,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Dduob",
+                          "x": 16.46016007762844,
+                          "y": 91.21960785429356,
+                          "geometry": "M0 0l4.69415 0.49338",
+                          "fill": "#000000",
+                          "width": 3.97808915477688,
+                          "height": 0.4181166826668432,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "P9rBE",
+                          "x": 17.835602517855367,
+                          "y": 82.53541073556673,
+                          "geometry": "M0 0l4.61686 0.98135",
+                          "fill": "#000000",
+                          "width": 3.912589509608382,
+                          "height": 0.8316492630263506,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Y80hZ",
+                          "x": 20.11125208967823,
+                          "y": 74.04257564221398,
+                          "geometry": "M0 0l4.48899 1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042262449102884,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "xEs8O",
+                          "x": 23.262179099907307,
+                          "y": 65.83412299721928,
+                          "geometry": "M0 0l4.31194 1.91979",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.6269425214347193,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "XSdwU",
+                          "x": 27.253862154685844,
+                          "y": 58.000002068988344,
+                          "geometry": "M0 0l10.2191 5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "W8YQGA",
+                          "x": 32.04256801281945,
+                          "y": 50.62603708040916,
+                          "geometry": "M0 0l3.81857 2.77435",
+                          "fill": "#000000",
+                          "width": 3.236072346315545,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "KcPpY",
+                          "x": 37.57582519014003,
+                          "y": 43.793034957627114,
+                          "geometry": "M0 0l3.50764 3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "gDEhs",
+                          "x": 43.79302525924424,
+                          "y": 37.575834888522905,
+                          "geometry": "M0 0l3.15829 3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "bDwJI",
+                          "x": 50.62603384761487,
+                          "y": 32.04257124561374,
+                          "geometry": "M0 0l2.77435 3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360691135212525,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Uw4Y7",
+                          "x": 58.000002068988344,
+                          "y": 27.253871853068723,
+                          "geometry": "M0 0l5.89999 10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "IH35B",
+                          "x": 65.83412299721928,
+                          "y": 23.262182332701602,
+                          "geometry": "M0 0l1.91979 4.31194",
+                          "fill": "#000000",
+                          "width": 1.6269425214347193,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "I8N6K",
+                          "x": 74.04257564221398,
+                          "y": 20.111255322472523,
+                          "geometry": "M0 0l1.45856 4.48899",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042262449102884,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "QaBDe",
+                          "x": 82.53541720115533,
+                          "y": 17.83560090145822,
+                          "geometry": "M0 0l0.98135 4.61686",
+                          "fill": "#000000",
+                          "width": 0.8316492630263506,
+                          "height": 3.912589509608382,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "hhYEV",
+                          "x": 91.21960785429356,
+                          "y": 16.46016007762844,
+                          "geometry": "M0 0l0.49338 4.69415",
+                          "fill": "#000000",
+                          "width": 0.4181166826668432,
+                          "height": 3.97808915477688,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "u5kAT",
+                          "x": 51.6719979754949,
+                          "y": 91.91299697100105,
+                          "geometry": "M0 0l25.0632 0.3658 36.93046 8.0948-0.62304 3.7229-37.5535-4.36954-23.81712-7.81396z",
+                          "fill": "$ink",
+                          "width": 52.53699674444683,
+                          "height": 10.324995396500926,
+                          "stroke": "$ink",
+                          "strokeWidth": 1.2,
+                          "strokeLinejoin": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "iOSdQ",
+                          "x": 95.8660061076536,
+                          "y": 96.94399429579911,
+                          "geometry": "M78.43578 43.71073l-29.32891-12.76405-49.10687-28.25274 1.46793-2.69394 50.3506 25.97298 26.61725 17.73775z",
+                          "fill": "$ink",
+                          "width": 66.47099640409824,
+                          "height": 37.042992801989534,
+                          "stroke": "$ink",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinejoin": "round"
+                        },
+                        {
+                          "type": "group",
+                          "id": "I3X3PY",
+                          "x": 0,
+                          "y": 0,
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "glaEg",
+                              "x": 24.41633515438791,
+                              "y": 92.05583475403866,
+                              "geometry": "M112.65944 11.84099l-112.65944-11.84099",
+                              "fill": "#000000",
+                              "width": 95.4741041539079,
+                              "height": 10.03473572811838,
+                              "stroke": "$activity-6",
+                              "strokeWidth": 1.2,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "vh0m4",
+                              "x": 112.17557910653021,
+                              "y": 104.69843308142454,
+                              "rotation": 84.00000000000003,
+                              "fill": "$activity-6",
+                              "width": 6.799999999999999,
+                              "height": 6.799999999999999
+                            }
+                          ]
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "aJQiG",
+                          "x": 94.39999999999999,
+                          "y": 94.39999999999999,
+                          "fill": "$face",
+                          "width": 11.2,
+                          "height": 11.2,
+                          "stroke": "$ink",
+                          "strokeWidth": 1.4
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "Rym2i",
+                          "x": 97.39999999999999,
+                          "y": 97.39999999999999,
+                          "fill": "$activity-6",
+                          "width": 5.2,
+                          "height": 5.2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "t2n8HN",
+                          "x": 99.09999999999998,
+                          "y": 99.09999999999998,
+                          "fill": "$face",
+                          "width": 1.8,
+                          "height": 1.8
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YaZKQ",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "height": 99,
+                  "layout": "vertical",
+                  "gap": 0.5,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "b3GZdW",
+                      "name": "div",
+                      "context": "div",
+                      "height": 33,
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "DobJM",
+                          "name": "span",
+                          "context": "span",
+                          "fill": "$activity-6",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "text",
+                          "id": "kQ159",
+                          "name": "娯楽",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "娯楽",
+                          "lineHeight": 1.18,
+                          "fontFamily": "Roboto",
+                          "fontSize": 22,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "cJv1t",
+                      "name": "1:19:46",
+                      "context": "span",
+                      "fill": "$ink",
+                      "content": "1:19:46",
+                      "lineHeight": 1.1,
+                      "fontFamily": "Roboto",
+                      "fontSize": 40,
+                      "fontWeight": "600",
+                      "letterSpacing": -0.8
+                    },
+                    {
+                      "type": "text",
+                      "id": "uH0iz",
+                      "name": "20:00 から · 今日 9 回切替",
+                      "context": "div",
+                      "fill": "$sub",
+                      "content": "20:00 から · 今日 9 回切替",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yKddm",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "D6WqA",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gQzeC",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "rBUAd",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "mOVh5",
+                                  "x": 2.5,
+                                  "y": 2.5,
+                                  "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                                  "width": 15,
+                                  "height": 15,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "AsqV7",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "zb7Uo",
+                                  "name": "家事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "家事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "w4ZZL4",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "MNVNX",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "vlWcB",
+                                  "x": 2.5,
+                                  "y": 4.166666507720947,
+                                  "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                                  "width": 15,
+                                  "height": 12.499999523162842,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "k333Ym",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "RKCsx",
+                                  "name": "仕事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "仕事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HnJI3",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "t9ND65",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "dSvAG",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "pcok4",
+                                  "x": 3.3333325386047363,
+                                  "y": 2.5,
+                                  "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                                  "width": 13.333333492279053,
+                                  "height": 13.333333015441895,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iwrl8",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "XR3ZO",
+                                  "name": "休息",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "休息",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "NEU49",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "s8ZOM",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "n3XPIS",
+                                  "x": 3.8692193031311035,
+                                  "y": 3.3333332538604736,
+                                  "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                                  "width": 12.797446727752686,
+                                  "height": 12.797447919845581,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yCQBx",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "XDYna",
+                                  "name": "睡眠",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "睡眠",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "b1ruJ",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "GxdMb",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "iw9Y5",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "FzFIf",
+                                  "x": 3.3333332538604736,
+                                  "y": 2.5,
+                                  "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                                  "width": 11.993587255477905,
+                                  "height": 15,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "TVISU",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "x778e",
+                                  "name": "食事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "食事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pFW3Z",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$activity-6",
+                          "cornerRadius": 10,
+                          "stroke": "$activity-6",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "NoGUi",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "ZQxxu",
+                                  "x": 1.6666666269302368,
+                                  "y": 6.666666507720947,
+                                  "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                                  "width": 16.66666543483734,
+                                  "height": 8.206464290618896,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "sG15l",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "V7AIu",
+                                  "name": "娯楽",
+                                  "context": "span",
+                                  "fill": "#ffffff",
+                                  "content": "娯楽",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RQJjU",
+                      "name": "detox row",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Hc7ho",
+                          "name": "detox icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "wind",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uZcsE",
+                          "name": "detox label",
+                          "fill": "$ink",
+                          "content": "detox",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "k9BVY",
+                          "name": "detox hint",
+                          "fill": "$sub",
+                          "content": "どの行動にも記録しない",
+                          "lineHeight": 1.25,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JsHdd",
+                  "name": "button",
+                  "context": "button",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QUBml",
+                      "name": "div",
+                      "context": "div",
+                      "clip": true,
+                      "fill": "$chip",
+                      "cornerRadius": 5,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "WcKaP",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-4",
+                          "width": 96.97,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Fhagn",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-1",
+                          "width": 11.19,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "u1DMh",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 7.45,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "d18LSp",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 63.39,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "XcTsY",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 11.19,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "jc7Vk",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 37.3,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "QcTih",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-3",
+                          "width": 7.45,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "DqsxL",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 48.48,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "I3ie6G",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 14.92,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Fr4fl",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-6",
+                          "width": 19.83,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "wE3y9",
+                          "name": "div",
+                          "context": "div",
+                          "width": 39.83,
+                          "height": 10
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R2bPf",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bDtu6",
+                          "name": "0:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "0:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h5QqM",
+                          "name": "12:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "12:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "u1Uyk",
+                          "name": "24:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "24:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VinA9",
+          "name": "div",
+          "context": "div",
+          "width": "fill_container",
+          "fill": "$tab-bg",
+          "stroke": "$line",
+          "strokeWidth": {
+            "top": 1
+          },
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "background_blur",
+            "radius": 12
+          },
+          "padding": [
+            9,
+            12,
+            30,
+            12
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Tr8AD",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "yB7JH",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "uyJuC",
+                      "x": 2.875,
+                      "y": 2.875,
+                      "geometry": "M8.625 0c-4.76346 0-8.625 3.86154-8.625 8.625 0 4.76345 3.86154 8.625 8.625 8.625 4.76345 0 8.625-3.86155 8.625-8.625 0-4.76346-3.86155-8.625-8.625-8.625m0 4.3125l0 4.3125 2.875 1.91667",
+                      "width": 17.25,
+                      "height": 17.25,
+                      "stroke": "$ink",
+                      "strokeWidth": 2.3,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "VCW5N",
+                  "name": "今",
+                  "context": "span",
+                  "fill": "$ink",
+                  "content": "今",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "J6jIHM",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "U7TtCg",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "r53w5",
+                      "x": 1.9166666269302368,
+                      "y": 3.8333332538604736,
+                      "geometry": "M1.91667 15.33333l0-9.58333m5.75 9.58333l0-15.33333m5.75 15.33333l0-6.70833m5.75 6.70833l-19.16667 0",
+                      "width": 19.16666543483734,
+                      "height": 15.333332777023315,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "YFSeE",
+                  "name": "記録",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "記録",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m0U1o",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "X6PKqR",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "oGJHO",
+                      "x": 2.5874998569488525,
+                      "y": 3.8333332538604736,
+                      "geometry": "M8.9125 10.54167c1.58782 0 2.875-1.28718 2.875-2.875 0-1.58782-1.28718-2.875-2.875-2.875-1.58782 0-2.875 1.28718-2.875 2.875 0 1.58782 1.28718 2.875 2.875 2.875m7.66667-2.875l1.4375-0.95834-1.15-2.68333-1.725 0.38333-1.53334-1.15 0.09584-1.82083-2.5875-1.4375-1.15 1.34167-1.91667 0-1.15-1.34167-2.5875 1.4375 0.09583 1.82083-1.53333 1.15-1.725-0.38333-1.15 2.68333 1.4375 0.95834-1.4375 0.95833 1.15 2.68333 1.725-0.38333 1.53333 1.15-0.09583 1.82083 2.5875 1.4375 1.15-1.34166 1.91667 0 1.15 1.34166 2.5875-1.4375-0.09584-1.82083 1.53334-1.15 1.725 0.38333 1.15-2.68333-1.4375-0.95833z",
+                      "width": 18.016666173934937,
+                      "height": 15.333332777023315,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hxOhk",
+                  "name": "設定",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "設定",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "JO2WL",
+      "x": 3696,
+      "y": 0,
+      "name": "ST Phone / ホーム・detox 中",
+      "context": "div",
+      "clip": true,
+      "width": 402,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "oT2jI",
+          "name": "div",
+          "context": "div",
+          "clip": true,
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            58,
+            22,
+            12,
+            22
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "I1e9tS",
+              "name": "div",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "QsLmd",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "t5g45k",
+                      "name": "div",
+                      "context": "div",
+                      "height": 23,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W52ps",
+                          "name": "9月7日（月）",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "9月7日（月）",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TDxYM",
+                      "name": "button",
+                      "context": "button",
+                      "height": 44,
+                      "fill": "$surface",
+                      "cornerRadius": 22,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 6,
+                      "padding": [
+                        1,
+                        17
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AW3hs",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 15,
+                          "height": 15,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "TlWi9",
+                              "x": 1.875,
+                              "y": 1.7991747856140137,
+                              "geometry": "M5.625 10.70083l5.625 0m-2.8125-10.3125c0.51777-0.51777 1.35723-0.51777 1.875 0 0.51777 0.51777 0.51777 1.35723 0 1.875l-7.8125 7.8125-2.5 0.625 0.625-2.50001 7.8125-7.81249z",
+                              "width": 11.25,
+                              "height": 10.700825214385986,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.25,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "s363p",
+                          "name": "訂正",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "訂正",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Csih7",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i7mrtI",
+                      "name": "svg",
+                      "context": "svg",
+                      "clip": true,
+                      "width": 200,
+                      "height": 200,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "F7VLo",
+                          "x": 0.9999999999999999,
+                          "y": 0.9999999999999999,
+                          "width": 197.99999999999997,
+                          "height": 197.99999999999997,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.5
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "N5kkm",
+                          "x": 9.999999999999998,
+                          "y": 9.999999999999998,
+                          "fill": "$face",
+                          "width": 179.99999999999997,
+                          "height": 179.99999999999997,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999
+                        },
+                        {
+                          "type": "path",
+                          "id": "xm36U",
+                          "x": 99.99999353441142,
+                          "y": 15.999999288785254,
+                          "geometry": "M0 0l0 16.52",
+                          "fill": "#000000",
+                          "width": 0,
+                          "height": 13.999998771538168,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "yszjV",
+                          "x": 108.36227546303958,
+                          "y": 16.46016007762844,
+                          "geometry": "M0.49339 0l-0.49339 4.69415",
+                          "fill": "#000000",
+                          "width": 0.418123148255429,
+                          "height": 3.97808915477688,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "tENnz",
+                          "x": 116.63293353581832,
+                          "y": 17.835602517855367,
+                          "geometry": "M0.98135 0l-0.98135 4.61686",
+                          "fill": "#000000",
+                          "width": 0.8316557286149364,
+                          "height": 3.912589509608382,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "tFG3B",
+                          "x": 124.72135899430614,
+                          "y": 20.11125208967823,
+                          "geometry": "M1.45856 0l-1.45856 4.48899",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042262449102884,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "mNhoM",
+                          "x": 132.53892801575742,
+                          "y": 23.262179099907307,
+                          "geometry": "M1.9198 0l-1.9198 4.31194",
+                          "fill": "#000000",
+                          "width": 1.626948987023305,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "uDHoA",
+                          "x": 137.00000310348253,
+                          "y": 27.253862154685844,
+                          "geometry": "M5.89999 0l-5.89999 10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "n3Zeag",
+                          "x": 147.02281628624866,
+                          "y": 32.04256801281945,
+                          "geometry": "M2.77435 0l-2.77435 3.81857",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.236072346315545,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "y65e1",
+                          "x": 153.53044412903867,
+                          "y": 37.57582519014003,
+                          "geometry": "M3.15829 0l-3.15829 3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "W7AckN",
+                          "x": 159.45157843121027,
+                          "y": 43.79302525924424,
+                          "geometry": "M3.50766 0l-3.50766 3.15829",
+                          "fill": "#000000",
+                          "width": 2.9725931458554022,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "fMvDe",
+                          "x": 164.7213564080707,
+                          "y": 50.62603384761487,
+                          "geometry": "M3.81856 0l-3.81856 2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360658807269598,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "b708ej",
+                          "x": 164.08587956832628,
+                          "y": 58.000002068988344,
+                          "geometry": "M10.21909 0l-10.21909 5.89999",
+                          "fill": "#000000",
+                          "width": 8.66024211301642,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "T2wsaz",
+                          "x": 173.0836254055217,
+                          "y": 65.83412299721928,
+                          "geometry": "M4.31195 0l-4.31195 1.91979",
+                          "fill": "#000000",
+                          "width": 3.6541954945709745,
+                          "height": 1.6269425214347193,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "UXrcc",
+                          "x": 176.08452489820576,
+                          "y": 74.04257564221398,
+                          "geometry": "M4.48898 0l-4.48898 1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042230121159957,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "pQmCN",
+                          "x": 178.2518031233448,
+                          "y": 82.53541720115533,
+                          "geometry": "M4.61685 0l-4.61685 0.98135",
+                          "fill": "#000000",
+                          "width": 3.9125862768140887,
+                          "height": 0.8316492630263506,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "a0FzDn",
+                          "x": 179.56175723318324,
+                          "y": 91.21960785429356,
+                          "geometry": "M4.69414 0l-4.69414 0.49338",
+                          "fill": "#000000",
+                          "width": 3.978082689188294,
+                          "height": 0.4181166826668432,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "a5OLF",
+                          "x": 170.00000517247085,
+                          "y": 99.99999353441142,
+                          "geometry": "M16.51999 0l-16.51999 0",
+                          "fill": "#000000",
+                          "width": 13.999990689552435,
+                          "height": 0,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "jzCNw",
+                          "x": 179.56175723318324,
+                          "y": 108.36227546303958,
+                          "geometry": "M4.69414 0.49339l-4.69414-0.49339",
+                          "fill": "#000000",
+                          "width": 3.978082689188294,
+                          "height": 0.418123148255429,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "qB3oN",
+                          "x": 178.2518031233448,
+                          "y": 116.63293353581832,
+                          "geometry": "M4.61685 0.98135l-4.61685-0.98135",
+                          "fill": "#000000",
+                          "width": 3.9125862768140887,
+                          "height": 0.8316557286149364,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "mvZM2",
+                          "x": 176.0845119670286,
+                          "y": 124.72135899430614,
+                          "geometry": "M4.48898 1.45856l-4.48898-1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042230121159957,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "CxnUw",
+                          "x": 173.0836254055217,
+                          "y": 132.53892801575742,
+                          "geometry": "M4.31194 1.9198l-4.31194-1.9198",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.626948987023305,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "y5XKb",
+                          "x": 164.08589249950344,
+                          "y": 137.00000310348253,
+                          "geometry": "M10.2191 5.89999l-10.2191-5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "ZaZIY",
+                          "x": 164.7213564080707,
+                          "y": 147.02281628624866,
+                          "geometry": "M3.81856 2.77435l-3.81856-2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360658807269598,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "dAoeJ",
+                          "x": 159.45159136238743,
+                          "y": 153.53044412903867,
+                          "geometry": "M3.50764 3.15829l-3.50764-3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "RfBLx",
+                          "x": 153.53044412903867,
+                          "y": 159.45157843121027,
+                          "geometry": "M3.15829 3.50766l-3.15829-3.50766",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.9725931458554022,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "d21ZV",
+                          "x": 147.02281628624866,
+                          "y": 164.7213564080707,
+                          "geometry": "M2.77435 3.81856l-2.77435-3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360658807269598,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "l2IHGU",
+                          "x": 137.0000160346597,
+                          "y": 164.08587956832628,
+                          "geometry": "M5.89999 10.21909l-5.89999-10.21909",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66024211301642,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "m6wYq",
+                          "x": 132.53892801575742,
+                          "y": 173.0836254055217,
+                          "geometry": "M1.91978 4.31195l-1.91978-4.31195",
+                          "fill": "#000000",
+                          "width": 1.6269360558461334,
+                          "height": 3.6541954945709745,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999997,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "JHU8H",
+                          "x": 124.72134606312896,
+                          "y": 176.08452489820576,
+                          "geometry": "M1.45856 4.48898l-1.45856-4.48898",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042230121159957,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "ahsAK",
+                          "x": 116.63293353581832,
+                          "y": 178.2518031233448,
+                          "geometry": "M0.98134 4.61685l-0.98134-4.61685",
+                          "fill": "#000000",
+                          "width": 0.8316427974377648,
+                          "height": 3.9125862768140887,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "aOy9t",
+                          "x": 108.36227546303958,
+                          "y": 179.56175723318324,
+                          "geometry": "M0.49339 4.69414l-0.49339-4.69414",
+                          "fill": "#000000",
+                          "width": 0.418123148255429,
+                          "height": 3.978082689188294,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "LE84c",
+                          "x": 100.00000646558858,
+                          "y": 170.00000517247085,
+                          "geometry": "M0 16.51999l0-16.51999",
+                          "fill": "#000000",
+                          "width": 0,
+                          "height": 13.999990689552435,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "S16ZvU",
+                          "x": 91.21960785429356,
+                          "y": 179.56175723318324,
+                          "geometry": "M0 4.69414l0.49338-4.69414",
+                          "fill": "#000000",
+                          "width": 0.4181166826668432,
+                          "height": 3.978082689188294,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "UJaOX",
+                          "x": 82.53541073556673,
+                          "y": 178.2518031233448,
+                          "geometry": "M0 4.61685l0.98135-4.61685",
+                          "fill": "#000000",
+                          "width": 0.8316492630263506,
+                          "height": 3.9125862768140887,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "izqSu",
+                          "x": 74.04257564221398,
+                          "y": 176.0845119670286,
+                          "geometry": "M0 4.48898l1.45856-4.48898",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042230121159957,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "uup0w",
+                          "x": 65.83412299721928,
+                          "y": 173.0836254055217,
+                          "geometry": "M0 4.31194l1.91979-4.31194",
+                          "fill": "#000000",
+                          "width": 1.6269425214347193,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "uOEGo",
+                          "x": 58.000002068988344,
+                          "y": 164.08589249950344,
+                          "geometry": "M0 10.2191l5.89999-10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "k55MVG",
+                          "x": 50.62603708040916,
+                          "y": 164.7213564080707,
+                          "geometry": "M0 3.81856l2.77435-3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360658807269598,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Pa5Eq",
+                          "x": 43.793034957627114,
+                          "y": 159.45159136238743,
+                          "geometry": "M0 3.50764l3.15829-3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "sFtPl",
+                          "x": 37.575834888522905,
+                          "y": 153.53044412903867,
+                          "geometry": "M0 3.15829l3.50764-3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "xxbpm",
+                          "x": 32.04257124561374,
+                          "y": 147.02281628624866,
+                          "geometry": "M0 2.77435l3.81856-2.77435",
+                          "fill": "#000000",
+                          "width": 3.2360691135212525,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "s0aYrC",
+                          "x": 27.253871853068723,
+                          "y": 137.0000160346597,
+                          "geometry": "M0 5.89999l10.2191-5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "AAvfP",
+                          "x": 23.262182332701602,
+                          "y": 132.53892801575742,
+                          "geometry": "M0 1.91978l4.31194-1.91978",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.6269360558461334,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "TUKKX",
+                          "x": 20.111255322472523,
+                          "y": 124.72134606312896,
+                          "geometry": "M0 1.45856l4.48899-1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042262449102884,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "I7qcct",
+                          "x": 17.83560090145822,
+                          "y": 116.63293353581832,
+                          "geometry": "M0 0.98134l4.61686-0.98134",
+                          "fill": "#000000",
+                          "width": 3.912589509608382,
+                          "height": 0.8316427974377648,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "K8vQBc",
+                          "x": 16.46016007762844,
+                          "y": 108.36227546303958,
+                          "geometry": "M0 0.49339l4.69415-0.49339",
+                          "fill": "#000000",
+                          "width": 3.97808915477688,
+                          "height": 0.418123148255429,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "Ay5e7",
+                          "x": 15.999999288785254,
+                          "y": 100.00000646558858,
+                          "geometry": "M0 0l16.52 0",
+                          "fill": "#000000",
+                          "width": 13.999998771538168,
+                          "height": 0,
+                          "stroke": "$ink",
+                          "strokeWidth": 3,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "u7WlyZ",
+                          "x": 16.46016007762844,
+                          "y": 91.21960785429356,
+                          "geometry": "M0 0l4.69415 0.49338",
+                          "fill": "#000000",
+                          "width": 3.97808915477688,
+                          "height": 0.4181166826668432,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "cpfyN",
+                          "x": 17.835602517855367,
+                          "y": 82.53541073556673,
+                          "geometry": "M0 0l4.61686 0.98135",
+                          "fill": "#000000",
+                          "width": 3.912589509608382,
+                          "height": 0.8316492630263506,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "MABhc",
+                          "x": 20.11125208967823,
+                          "y": 74.04257564221398,
+                          "geometry": "M0 0l4.48899 1.45856",
+                          "fill": "#000000",
+                          "width": 3.8042262449102884,
+                          "height": 1.2360653634798728,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "rGzC0",
+                          "x": 23.262179099907307,
+                          "y": 65.83412299721928,
+                          "geometry": "M0 0l4.31194 1.91979",
+                          "fill": "#000000",
+                          "width": 3.6541825633938028,
+                          "height": 1.6269425214347193,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "AXyuo",
+                          "x": 27.253862154685844,
+                          "y": 58.000002068988344,
+                          "geometry": "M0 0l10.2191 5.89999",
+                          "fill": "#000000",
+                          "width": 8.66025504419359,
+                          "height": 4.9999948275291315,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "fHfZc",
+                          "x": 32.04256801281945,
+                          "y": 50.62603708040916,
+                          "geometry": "M0 0l3.81857 2.77435",
+                          "fill": "#000000",
+                          "width": 3.236072346315545,
+                          "height": 2.351146633342161,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "A8B8c",
+                          "x": 37.57582519014003,
+                          "y": 43.793034957627114,
+                          "geometry": "M0 0l3.50764 3.15829",
+                          "fill": "#000000",
+                          "width": 2.972580214678231,
+                          "height": 2.676520913334216,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "T93nWt",
+                          "x": 43.79302525924424,
+                          "y": 37.575834888522905,
+                          "geometry": "M0 0l3.15829 3.50764",
+                          "fill": "#000000",
+                          "width": 2.676520913334216,
+                          "height": 2.972580214678231,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "saIul",
+                          "x": 50.62603384761487,
+                          "y": 32.04257124561374,
+                          "geometry": "M0 0l2.77435 3.81856",
+                          "fill": "#000000",
+                          "width": 2.351146633342161,
+                          "height": 3.2360691135212525,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "L8OQt",
+                          "x": 58.000002068988344,
+                          "y": 27.253871853068723,
+                          "geometry": "M0 0l5.89999 10.2191",
+                          "fill": "#000000",
+                          "width": 4.9999948275291315,
+                          "height": 8.66025504419359,
+                          "stroke": "$sub",
+                          "strokeWidth": 1.9999999999999998,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "zN3XH",
+                          "x": 65.83412299721928,
+                          "y": 23.262182332701602,
+                          "geometry": "M0 0l1.91979 4.31194",
+                          "fill": "#000000",
+                          "width": 1.6269425214347193,
+                          "height": 3.6541825633938028,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "AzuTE",
+                          "x": 74.04257564221398,
+                          "y": 20.111255322472523,
+                          "geometry": "M0 0l1.45856 4.48899",
+                          "fill": "#000000",
+                          "width": 1.2360653634798728,
+                          "height": 3.8042262449102884,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "vkpay",
+                          "x": 82.53541720115533,
+                          "y": 17.83560090145822,
+                          "geometry": "M0 0l0.98135 4.61686",
+                          "fill": "#000000",
+                          "width": 0.8316492630263506,
+                          "height": 3.912589509608382,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "cdPTg",
+                          "x": 91.21960785429356,
+                          "y": 16.46016007762844,
+                          "geometry": "M0 0l0.49338 4.69415",
+                          "fill": "#000000",
+                          "width": 0.4181166826668432,
+                          "height": 3.97808915477688,
+                          "stroke": "$line",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinecap": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "oRvd0",
+                          "x": 51.6719979754949,
+                          "y": 91.91299697100105,
+                          "geometry": "M0 0l25.0632 0.3658 36.93046 8.0948-0.62304 3.7229-37.5535-4.36954-23.81712-7.81396z",
+                          "fill": "$ink",
+                          "width": 52.53699674444683,
+                          "height": 10.324995396500926,
+                          "stroke": "$ink",
+                          "strokeWidth": 1.2,
+                          "strokeLinejoin": "round"
+                        },
+                        {
+                          "type": "path",
+                          "id": "GnXQo",
+                          "x": 95.8660061076536,
+                          "y": 96.94399429579911,
+                          "geometry": "M78.43578 43.71073l-29.32891-12.76405-49.10687-28.25274 1.46793-2.69394 50.3506 25.97298 26.61725 17.73775z",
+                          "fill": "$ink",
+                          "width": 66.47099640409824,
+                          "height": 37.042992801989534,
+                          "stroke": "$ink",
+                          "strokeWidth": 0.9999999999999999,
+                          "strokeLinejoin": "round"
+                        },
+                        {
+                          "type": "group",
+                          "id": "Wz6se",
+                          "x": 0,
+                          "y": 0,
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "KuxTT",
+                              "x": 24.41633515438791,
+                              "y": 92.05583475403866,
+                              "geometry": "M112.65944 11.84099l-112.65944-11.84099",
+                              "fill": "#000000",
+                              "width": 95.4741041539079,
+                              "height": 10.03473572811838,
+                              "stroke": "$sub",
+                              "strokeWidth": 1.2,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "gujrc",
+                              "x": 112.17557910653021,
+                              "y": 104.69843308142454,
+                              "rotation": 84.00000000000003,
+                              "fill": "$sub",
+                              "width": 6.799999999999999,
+                              "height": 6.799999999999999
+                            }
+                          ]
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "A0yP8",
+                          "x": 94.39999999999999,
+                          "y": 94.39999999999999,
+                          "fill": "$face",
+                          "width": 11.2,
+                          "height": 11.2,
+                          "stroke": "$ink",
+                          "strokeWidth": 1.4
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "a8GEsU",
+                          "x": 97.39999999999999,
+                          "y": 97.39999999999999,
+                          "fill": "$sub",
+                          "width": 5.2,
+                          "height": 5.2
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "i60a4z",
+                          "x": 99.09999999999998,
+                          "y": 99.09999999999998,
+                          "fill": "$face",
+                          "width": 1.8,
+                          "height": 1.8
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "z7pR1q",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "height": 99,
+                  "layout": "vertical",
+                  "gap": 0.5,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BiAvE",
+                      "name": "div",
+                      "context": "div",
+                      "height": 33,
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "i0GFv",
+                          "name": "span",
+                          "context": "span",
+                          "innerRadius": 0.6,
+                          "fill": "$sub",
+                          "width": 10,
+                          "height": 10
+                        },
+                        {
+                          "type": "text",
+                          "id": "Ovg9f",
+                          "name": "娯楽",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "detox",
+                          "lineHeight": 1.18,
+                          "fontFamily": "Roboto",
+                          "fontSize": 22,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "wlb72",
+                      "name": "1:19:46",
+                      "context": "span",
+                      "fill": "$sub",
+                      "content": "0:52:14",
+                      "lineHeight": 1.1,
+                      "fontFamily": "Roboto",
+                      "fontSize": 40,
+                      "fontWeight": "600",
+                      "letterSpacing": -0.8
+                    },
+                    {
+                      "type": "text",
+                      "id": "ZxQnk",
+                      "name": "20:00 から · 今日 9 回切替",
+                      "context": "div",
+                      "fill": "$sub",
+                      "content": "21:20 から · どの行動にも積み上がりません",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KulOV",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pySJu",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "z5v32",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YFxrp",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "EoBNH",
+                                  "x": 2.5,
+                                  "y": 2.5,
+                                  "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                                  "width": 15,
+                                  "height": 15,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bAHzP",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "JASrU",
+                                  "name": "家事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "家事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tee99",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wHgCo",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "aLJao",
+                                  "x": 2.5,
+                                  "y": 4.166666507720947,
+                                  "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                                  "width": 15,
+                                  "height": 12.499999523162842,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "G2p54",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NINrI",
+                                  "name": "仕事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "仕事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z5cCgs",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tzLpu",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "QKLP8",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "F2o5e",
+                                  "x": 3.3333325386047363,
+                                  "y": 2.5,
+                                  "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                                  "width": 13.333333492279053,
+                                  "height": 13.333333015441895,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "x1A7D",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "gjiON",
+                                  "name": "休息",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "休息",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KZkLy",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "IESxq",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "jDjub",
+                                  "x": 3.8692193031311035,
+                                  "y": 3.3333332538604736,
+                                  "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                                  "width": 12.797446727752686,
+                                  "height": 12.797447919845581,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SmF5R",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "J8uXo9",
+                                  "name": "睡眠",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "睡眠",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f6Php",
+                      "width": "fill_container",
+                      "height": 60,
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Z5hSw",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "FCNGf",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "rguva",
+                                  "x": 3.3333332538604736,
+                                  "y": 2.5,
+                                  "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                                  "width": 11.993587255477905,
+                                  "height": 15,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "F5nkTO",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aOlXn",
+                                  "name": "食事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "食事",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "p3iiIu",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "height": 60,
+                          "fill": "$surface",
+                          "cornerRadius": 10,
+                          "stroke": "$sub",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 9,
+                          "padding": [
+                            2,
+                            7
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "aur2r",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "nkRor",
+                                  "x": 1.6666666269302368,
+                                  "y": 6.666666507720947,
+                                  "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                                  "width": 16.66666543483734,
+                                  "height": 8.206464290618896,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OrCfD",
+                              "name": "span",
+                              "context": "span",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "gyrRm",
+                                  "name": "娯楽",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "娯楽",
+                                  "lineHeight": 1.2,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k1vDt",
+                      "name": "detox row",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ink",
+                      "cornerRadius": 10,
+                      "stroke": "$ink",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "TiqcD",
+                          "name": "detox icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "wind",
+                          "library": "lucide",
+                          "fill": "$bg"
+                        },
+                        {
+                          "type": "text",
+                          "id": "LoOqJ",
+                          "name": "detox label",
+                          "fill": "$bg",
+                          "content": "detox",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "DQJVq",
+                          "name": "detox hint",
+                          "opacity": 0.7,
+                          "fill": "$bg",
+                          "content": "どの行動にも記録しない",
+                          "lineHeight": 1.25,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xVE5l",
+                  "name": "button",
+                  "context": "button",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": [
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ZuPmm",
+                      "name": "div",
+                      "context": "div",
+                      "clip": true,
+                      "fill": "$chip",
+                      "cornerRadius": 5,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "jPtRt",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-4",
+                          "width": 96.97,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "cItCs",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-1",
+                          "width": 11.19,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "YvRZ8",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 7.45,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "J7vLNn",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 63.39,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Owl3O",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 11.19,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "Hu6K5",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 37.3,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "KlxcV",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-3",
+                          "width": 7.45,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "iuxHh",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-2",
+                          "width": 48.48,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "br6Po",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-5",
+                          "width": 14.92,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "tFKlc",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$activity-6",
+                          "width": 19.83,
+                          "height": 10
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "W366tP",
+                          "name": "detox segment",
+                          "width": 12.9,
+                          "height": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner"
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "l8euyp",
+                          "name": "div",
+                          "context": "div",
+                          "width": 26.93,
+                          "height": 10
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tc4HR",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Wh5Eg",
+                          "name": "0:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "0:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "RPncD",
+                          "name": "12:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "12:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "GpCfv",
+                          "name": "24:00",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "24:00",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "krUiR",
+          "name": "div",
+          "context": "div",
+          "width": "fill_container",
+          "fill": "$tab-bg",
+          "stroke": "$line",
+          "strokeWidth": {
+            "top": 1
+          },
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "background_blur",
+            "radius": 12
+          },
+          "padding": [
+            9,
+            12,
+            30,
+            12
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "r7aQSU",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "h9EVVn",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "nH7wM",
+                      "x": 2.875,
+                      "y": 2.875,
+                      "geometry": "M8.625 0c-4.76346 0-8.625 3.86154-8.625 8.625 0 4.76345 3.86154 8.625 8.625 8.625 4.76345 0 8.625-3.86155 8.625-8.625 0-4.76346-3.86155-8.625-8.625-8.625m0 4.3125l0 4.3125 2.875 1.91667",
+                      "width": 17.25,
+                      "height": 17.25,
+                      "stroke": "$ink",
+                      "strokeWidth": 2.3,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "GcBtX",
+                  "name": "今",
+                  "context": "span",
+                  "fill": "$ink",
+                  "content": "今",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OdWTr",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "I2zNQ",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "zJCQH",
+                      "x": 1.9166666269302368,
+                      "y": 3.8333332538604736,
+                      "geometry": "M1.91667 15.33333l0-9.58333m5.75 9.58333l0-15.33333m5.75 15.33333l0-6.70833m5.75 6.70833l-19.16667 0",
+                      "width": 19.16666543483734,
+                      "height": 15.333332777023315,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hXCke",
+                  "name": "記録",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "記録",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "R3p2eg",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "e9Kr6O",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "qaRmr",
+                      "x": 2.5874998569488525,
+                      "y": 3.8333332538604736,
+                      "geometry": "M8.9125 10.54167c1.58782 0 2.875-1.28718 2.875-2.875 0-1.58782-1.28718-2.875-2.875-2.875-1.58782 0-2.875 1.28718-2.875 2.875 0 1.58782 1.28718 2.875 2.875 2.875m7.66667-2.875l1.4375-0.95834-1.15-2.68333-1.725 0.38333-1.53334-1.15 0.09584-1.82083-2.5875-1.4375-1.15 1.34167-1.91667 0-1.15-1.34167-2.5875 1.4375 0.09583 1.82083-1.53333 1.15-1.725-0.38333-1.15 2.68333 1.4375 0.95834-1.4375 0.95833 1.15 2.68333 1.725-0.38333 1.53333 1.15-0.09583 1.82083 2.5875 1.4375 1.15-1.34166 1.91667 0 1.15 1.34166 2.5875-1.4375-0.09584-1.82083 1.53334-1.15 1.725 0.38333 1.15-2.68333-1.4375-0.95833z",
+                      "width": 18.016666173934937,
+                      "height": 15.333332777023315,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "z2gCo",
+                  "name": "設定",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "設定",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
