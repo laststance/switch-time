@@ -56,6 +56,7 @@ export function NowPanel({ look, startedAt }: NowPanelProps) {
   const band = BANDS[useWide() ? 'wide' : 'narrow']
   const tone = paint(look.color)
   const now = useAppSelector((s) => s.clock.now)
+  const elapsed = formatElapsed(now - startedAt)
   return (
     <View className={band.root}>
       <Dial size={band.dial} color={look.color} />
@@ -72,8 +73,9 @@ export function NowPanel({ look, startedAt }: NowPanelProps) {
             {look.name}
           </Text>
         </View>
-        <Readout className={tone.readout}>
-          {formatElapsed(now - startedAt)}
+        {/* aria-label replaces the visible digits for AT, so the ticking value stays in the name. */}
+        <Readout className={tone.readout} aria-label={`経過時間 ${elapsed}`}>
+          {elapsed}
         </Readout>
         <Text className="text-xs text-sub">{look.subtext}</Text>
       </View>
