@@ -4,6 +4,7 @@ import {
   MIN_SEGMENT_MS,
   dayBounds,
   daySchema,
+  localDay,
   moveStartInputSchema,
   replaceDayInputSchema,
 } from '@switch-time/shared'
@@ -217,9 +218,18 @@ export const switchesRouter = {
 
   // The next state takes over the row's span by starting where the row did.
   mergeIntoNext: authed.input(byId).handler(async ({ context, input }) => {
-    const { row, next } = await withNeighbours(context.user.id, input.id)
+    const [{ row, next }, { timeZone }] = await Promise.all([
+      withNeighbours(context.user.id, input.id),
+      getSettings(context.user.id),
+    ])
     // The current state has no later state to hand its time to.
     if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
+    // 元に戻す rewrites the row's day only: a next state pulled back from a later day would be deleted with it, for good.
+    const { end } = dayBounds(localDay(row.startedAt, timeZone), timeZone)
+    if (next.startedAt.getTime() >= end)
+      throw new ORPCError('CONFLICT', {
+        message: 'next state is on a later day',
+      })
     return mergeInto(row.id, next.id, { startedAt: row.startedAt })
   }),
 

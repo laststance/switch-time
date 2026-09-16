@@ -1,5 +1,10 @@
 import { dayBounds, daySchema } from '@switch-time/shared'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
@@ -34,14 +39,20 @@ export function useCorrection(dayParam: string | undefined) {
     rows: DaySnapshot
   } | null>(null)
   const edit = {
-    // Snapshot for undo only once the edit succeeded: a failed one (stale row, offline) must not arm 元に戻す with rows that
-    // would overwrite someone else's change. `list.data` is the pre-edit answer: the buttons wait for fetches, and the
-    // options are captured when mutate() runs. The day travels with it so a snapshot never replays into the next day.
-    onSuccess: () => {
-      if (list.data) setPrevious({ day, rows: daySnapshot(list.data) })
-    },
     onSettled: async () =>
       invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()]),
+  }
+  // The undo snapshot is taken when the button is pressed, when `list.data` is still the pre-edit answer (the buttons wait for
+  // fetches and writes); hook-level options are re-read at every render, so they would snapshot whatever arrived meanwhile.
+  // It arms 元に戻す only once the edit succeeded: a failed one (stale row, offline) must not leave rows that would overwrite
+  // someone else's change. The day travels with it so a snapshot never replays into the next day.
+  const withUndo = () => {
+    const snapshot = list.data ? { day, rows: daySnapshot(list.data) } : null
+    return {
+      onSuccess: () => {
+        if (snapshot) setPrevious(snapshot)
+      },
+    }
   }
   const moveStart = useMutation({
     ...orpc.switches.moveStart.mutationOptions(),
@@ -70,30 +81,23 @@ export function useCorrection(dayParam: string | undefined) {
     onSuccess: () => setPrevious(null),
     onSettled: edit.onSettled,
   })
-  const mutations = [
-    moveStart,
-    changeActivity,
-    mergeIntoPrevious,
-    mergeIntoNext,
-    splitInHalf,
-    replaceDay,
-  ]
+  // Any switches write holds the panel, not only this sheet's: a hotkey tap, or an edit still landing from a sheet closed mid-flight.
+  const writing = useIsMutating({ mutationKey: orpc.switches.key() }) > 0
   const bounds = { ...dayBounds(day, timeZone), now, timeZone }
   return {
     day,
     title: dayTitle(day, today),
     bounds,
     rows: correctionRows(list.data, activities.data, bounds),
-    pending:
-      list.isFetching || mutations.some((mutation) => mutation.isPending),
+    pending: list.isFetching || writing,
     canUndo: previous?.day === day,
     move: (id: string, deltaMinutes: 15 | -15) =>
-      moveStart.mutate({ id, deltaMinutes }),
+      moveStart.mutate({ id, deltaMinutes }, withUndo()),
     pick: (id: string, activityId: string | null) =>
-      changeActivity.mutate({ id, activityId }),
-    mergePrevious: (id: string) => mergeIntoPrevious.mutate({ id }),
-    mergeNext: (id: string) => mergeIntoNext.mutate({ id }),
-    split: (id: string) => splitInHalf.mutate({ id }),
+      changeActivity.mutate({ id, activityId }, withUndo()),
+    mergePrevious: (id: string) => mergeIntoPrevious.mutate({ id }, withUndo()),
+    mergeNext: (id: string) => mergeIntoNext.mutate({ id }, withUndo()),
+    split: (id: string) => splitInHalf.mutate({ id }, withUndo()),
     undo: () => {
       if (previous) replaceDay.mutate(previous)
     },

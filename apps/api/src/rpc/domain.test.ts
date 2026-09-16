@@ -488,6 +488,41 @@ test('merging into a detox next record keeps it detox: the merged time moves out
   expect(stats.days[0]).toMatchObject({ day, detoxMs: 6 * H })
 })
 
+test('the last record of a day cannot merge into the next day’s first switch, even one at exactly 0:00, so undoing the day cannot delete it', async () => {
+  // Arrange: two days ago 仕事 9:00 and 娯楽 18:00; yesterday opens with 家事 at 0:00 sharp.
+  const api = await signedIn('merge-next-cross-day@example.com')
+  const list = await api.activities.list()
+  const day = addDays(today, -2)
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(day, 18) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '家事'), startedAt: at(yesterday, 0) }],
+  })
+  const [, fun] = (await api.switches.listByDay({ day })).rows
+  if (!fun) throw new Error('fixture has fewer than two rows')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: fun.id })
+
+  // Assert: refused, and neither day lost or moved a row.
+  await expect(merge).rejects.toMatchObject({ code: 'CONFLICT' })
+  const [thatDay, nextDay] = await Promise.all([
+    api.switches.listByDay({ day }),
+    api.switches.listByDay({ day: yesterday }),
+  ])
+  expect(thatDay.rows.map((row) => row.startedAt)).toEqual([
+    at(day, 9),
+    at(day, 18),
+  ])
+  expect(nextDay.rows.map((row) => row.startedAt)).toEqual([at(yesterday, 0)])
+})
+
 test('splitting in half creates a second row at the midpoint with the same activity', async () => {
   // Arrange: yesterday 仕事 9:00 then 休息 13:00.
   const api = await signedIn('split@example.com')
