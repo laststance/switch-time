@@ -2,6 +2,12 @@ packages:
   - apps/*
   - packages/*
 
+# Wallaby loads Vitest internals from the repo root; pnpm isolation hides them otherwise.
+# https://wallabyjs.com/docs/integration/vitest/#using-pnpm
+publicHoistPattern:
+  - '*vitest*'
+  - vite-node
+
 # Refuse releases younger than 24h (supply-chain guard, same as laststance/happy-dom-extended).
 minimumReleaseAge: 1440
 
