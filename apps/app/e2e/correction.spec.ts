@@ -57,6 +57,43 @@ test('undo restores the row that was merged away', async ({ page }) => {
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
+test('merging into the next record hands the span to the next row, and undo brings the row back', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00 (today's first-launch tap closes 娯楽 at 24:00).
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await expect(rest).toBeVisible()
+
+  // Act: merge 休息 into 娯楽, then undo.
+  await rest.click()
+  await page.getByRole('button', { name: '次の記録に統合' }).click()
+  await expect(
+    page.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+  ).toBeVisible()
+  await expect(rest).toHaveCount(0)
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: 休息 is back with its old span and 娯楽 starts at 18:00 again.
+  await expect(rest).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
 test('splitting the current state shows on Home without a reload', async ({
   page,
 }) => {

@@ -34,7 +34,8 @@ const flags = (r: ReturnType<typeof correctionRows>[number]) => [
   r.editable,
   r.canMoveEarlier,
   r.canMoveLater,
-  r.canMerge,
+  r.canMergePrevious,
+  r.canMergeNext,
   r.canSplit,
 ]
 
@@ -59,12 +60,13 @@ test('a past day lists the carried-in state last and read-only, and clips the op
   // Act
   const rows = correctionRows(list, activities, bounds)
 
-  // Assert: 娯楽 cannot split (its midpoint falls on 9/9); 仕事 merges into the carried-in 睡眠.
+  // Assert: 娯楽 cannot split (its midpoint falls on 9/9) nor merge into the next record (9/9's 家事, which undo would lose);
+  // 仕事 merges into the carried-in 睡眠.
   expect(rows.map(flags)).toEqual([
-    ['娯楽', '18:00 – 24:00', '6h 00m', true, true, true, true, false],
-    ['休息', '12:00 – 18:00', '6h 00m', true, true, true, true, true],
-    ['仕事', '9:00 – 12:00', '3h 00m', true, true, true, true, true],
-    ['睡眠', '0:00 – 9:00', '9h 00m', false, false, false, false, false],
+    ['娯楽', '18:00 – 24:00', '6h 00m', true, true, true, true, false, false],
+    ['休息', '12:00 – 18:00', '6h 00m', true, true, true, true, true, true],
+    ['仕事', '9:00 – 12:00', '3h 00m', true, true, true, true, true, true],
+    ['睡眠', '0:00 – 9:00', '9h 00m', false, false, false, false, false, false],
   ])
   expect(rows.map((r) => [r.id, r.color, r.iconKey])).toEqual([
     ['f', '#D8579C', 'fun'],
@@ -114,6 +116,7 @@ test('a detox row names itself, has no colour and keeps every correction', () =>
     true,
     true,
     true,
+    true,
   ])
   expect(rows.map((r) => [r.id, r.activityId, r.color, r.iconKey])[1]).toEqual([
     'd',
@@ -144,11 +147,11 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
   // Act
   const rows = correctionRows(list, activities, bounds)
 
-  // Assert: 家事 cannot move later (now − 1 min is where it is) nor split (a 30 s half); 仕事 cannot move before 0:00 but
-  // merges into the carried-in state; the zero-length 睡眠 row is not listed.
+  // Assert: 家事 cannot move later (now − 1 min is where it is), split (a 30 s half) nor merge into a next record (it is the
+  // current state); 仕事 cannot move before 0:00 but merges both ways; the zero-length 睡眠 row is not listed.
   expect(rows.map(flags)).toEqual([
-    ['家事', '9:59 – いま', '1m', true, true, false, true, false],
-    ['仕事', '0:00 – 9:59', '9h 59m', true, false, true, true, true],
+    ['家事', '9:59 – いま', '1m', true, true, false, true, false, false],
+    ['仕事', '0:00 – 9:59', '9h 59m', true, false, true, true, true, true],
   ])
   expect(correctionRows(undefined, activities, bounds)).toEqual([])
   expect(correctionRows(list, undefined, bounds)).toEqual([])

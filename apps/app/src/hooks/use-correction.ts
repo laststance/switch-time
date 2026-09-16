@@ -15,7 +15,7 @@ import { invalidateKeys } from '@/lib/query'
 import { useAppSelector } from '@/store'
 
 /**
- * Everything the correction sheet needs for one day: the row model, the four `switches.*` edits and 「元に戻す」 (the rows as
+ * Everything the correction sheet needs for one day: the row model, the five `switches.*` edits and 「元に戻す」 (the rows as
  * they were before the last edit, written back through `switches.replaceDay`). Every edit invalidates `switches.*` and
  * `stats.*`, so Home and History pick it up at once. An invalid or missing `dayParam` means today.
  * @example const correction = useCorrection(params.day)
@@ -55,6 +55,10 @@ export function useCorrection(dayParam: string | undefined) {
     ...orpc.switches.mergeIntoPrevious.mutationOptions(),
     ...edit,
   })
+  const mergeIntoNext = useMutation({
+    ...orpc.switches.mergeIntoNext.mutationOptions(),
+    ...edit,
+  })
   const splitInHalf = useMutation({
     ...orpc.switches.splitInHalf.mutationOptions(),
     ...edit,
@@ -70,6 +74,7 @@ export function useCorrection(dayParam: string | undefined) {
     moveStart,
     changeActivity,
     mergeIntoPrevious,
+    mergeIntoNext,
     splitInHalf,
     replaceDay,
   ]
@@ -86,7 +91,8 @@ export function useCorrection(dayParam: string | undefined) {
       moveStart.mutate({ id, deltaMinutes }),
     pick: (id: string, activityId: string | null) =>
       changeActivity.mutate({ id, activityId }),
-    merge: (id: string) => mergeIntoPrevious.mutate({ id }),
+    mergePrevious: (id: string) => mergeIntoPrevious.mutate({ id }),
+    mergeNext: (id: string) => mergeIntoNext.mutate({ id }),
     split: (id: string) => splitInHalf.mutate({ id }),
     undo: () => {
       if (previous) replaceDay.mutate(previous)

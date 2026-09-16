@@ -66,6 +66,27 @@ const correct = async (id: string, values: Partial<SwitchRow>) =>
       .returning(),
   )
 
+/**
+ * Deletes a row and marks the neighbour that takes over its span as merged, in one transaction; `values` moves that neighbour
+ * (mergeIntoNext pulls the next state back to the row's start). Called by the two merge procedures.
+ * @example return mergeInto(row.id, next.id, { startedAt: row.startedAt }) // the next state, now starting at row.startedAt
+ */
+const mergeInto = async (
+  goneId: string,
+  keptId: string,
+  values: Partial<SwitchRow> = {},
+) =>
+  db.transaction(async (tx) => {
+    await tx.delete(switches).where(eq(switches.id, goneId))
+    return one(
+      await tx
+        .update(switches)
+        .set({ ...values, source: 'merge' })
+        .where(eq(switches.id, keptId))
+        .returning(),
+    )
+  })
+
 const byId = z.object({ id: z.uuid() })
 
 // The user's own row plus the rows on either side of it in the timeline (null at the ends); corrections are clamped to them.
@@ -191,16 +212,15 @@ export const switchesRouter = {
     const { row, prev } = await withNeighbours(context.user.id, input.id)
     // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
     if (!prev) throw new ORPCError('CONFLICT', { message: 'no previous state' })
-    return db.transaction(async (tx) => {
-      await tx.delete(switches).where(eq(switches.id, row.id))
-      return one(
-        await tx
-          .update(switches)
-          .set({ source: 'merge' })
-          .where(eq(switches.id, prev.id))
-          .returning(),
-      )
-    })
+    return mergeInto(row.id, prev.id)
+  }),
+
+  // The next state takes over the row's span by starting where the row did.
+  mergeIntoNext: authed.input(byId).handler(async ({ context, input }) => {
+    const { row, next } = await withNeighbours(context.user.id, input.id)
+    // The current state has no later state to hand its time to.
+    if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
+    return mergeInto(row.id, next.id, { startedAt: row.startedAt })
   }),
 
   splitInHalf: authed.input(byId).handler(async ({ context, input }) => {

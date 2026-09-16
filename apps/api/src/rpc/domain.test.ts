@@ -377,6 +377,48 @@ test('merging into the previous record removes the row and the previous state no
   expect(day.totals[仕事]).toBe(9 * H)
 })
 
+test('merging into the next record removes the row and the next state now starts where it did', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, 睡眠 23:00 (the current state).
+  const api = await signedIn('merge-next@example.com')
+  const list = await api.activities.list()
+  const 娯楽 = idOf(list, '娯楽')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: 娯楽, startedAt: at(yesterday, 18) },
+      { activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 23) },
+    ],
+  })
+  const before = await api.switches.listByDay({ day: yesterday })
+  const [, rest, fun, sleep] = before.rows
+  if (!rest || !fun || !sleep)
+    throw new Error('fixture has fewer than four rows')
+
+  // Act
+  const merged = await api.switches.mergeIntoNext({ id: rest.id })
+
+  // Assert: 休息 is gone, 娯楽 keeps its id and now runs 12:00–23:00; the current state has nothing to merge into.
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    at(yesterday, 12),
+    at(yesterday, 23),
+  ])
+  expect(merged).toMatchObject({
+    id: fun.id,
+    activityId: 娯楽,
+    startedAt: at(yesterday, 12),
+    source: 'merge',
+  })
+  const day = await api.stats.day({ day: yesterday })
+  expect(day.totals[娯楽]).toBe(11 * H)
+  await expect(
+    api.switches.mergeIntoNext({ id: sleep.id }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' })
+})
+
 test('splitting in half creates a second row at the midpoint with the same activity', async () => {
   // Arrange: yesterday 仕事 9:00 then 休息 13:00.
   const api = await signedIn('split@example.com')
