@@ -1,11 +1,8 @@
 # Switch Time — Design Tokens
 
-`ST Phone.dc.html` / `Settings Modal.dc.html` の `renderVals()` から抽出（Claude Design のモバイル成果物が唯一の出典）。
-**機械が読む正は `design-system/theme.json` ＋ `styles.css`**（Claude Design のデザインシステム側）。
-このファイルは人間用のドキュメント。デザインシステムを紐付けていないキャンバスに投げるときだけ、そのまま貼る。
-
-> `Switch Time.dc.html` の `.dv-*` CSS（`#1A1A1A` / `#2A78D6` など）はキャンバスの仕様シート自身のスタイル。
-> アプリのトークンではないので混ぜないこと。
+元は Claude Design のモバイル成果物（`ST Phone.dc.html` / `Settings Modal.dc.html`、2026-09-16 に削除 → `git show 552ac73:design/`）の `renderVals()` から抽出。
+**機械が読む正は `design-system/theme.json` ＋ `styles.css`**。pen 側は `switch-time.pen` の variables に同じ値が入っている。
+このファイルは人間用のドキュメント。
 
 ## 1. Theme tokens — light / dark ペア
 
@@ -26,7 +23,7 @@
 | `hatch` | `repeating-linear-gradient(135deg, rgba(27,26,23,.06) 0 4px, transparent 4px 8px)` | 同左 `rgba(255,255,255,.06)` | 未計測日の斜線 ※Web は破線ボーダー |
 
 ### ⚠️ 面ごとの上書き（Web にこの表をそのまま渡さないこと）
-`tabBg` と `hatch` は **react-native-web で生き残りません**。`ST Web.dc.html` は既に置き換え済みで、Web をデザイン/実装するときは必ずこちらを使う:
+`tabBg` と `hatch` は **react-native-web で生き残りません**。pen の `ST Web` フレームは既に置き換え済みで、Web をデザイン/実装するときは必ずこちらを使う:
 
 | token | iOS / Android / macOS | **Web (RN-web)** |
 |---|---|---|
@@ -115,12 +112,12 @@ Apple は SF Pro、Windows は Segoe UI（Variable）、Android は Roboto。同
 
 ## 検証
 
-Web / menubar のデザインを取得したら、リストに無い hex が混入していないか確認:
+`ST Web` / `ST Menubar` フレームに、トークン参照（`$ink` など）ではないリテラル hex が混入していないか:
 
 ```sh
-cd design && grep -ohiE '#[0-9a-f]{6}' 'ST Web.dc.html' 'ST Menubar.dc.html' \
+jq -r '.children[] | select(.name=="ST Web" or .name=="ST Menubar") | .. | strings | select(test("^#[0-9a-fA-F]{6}"))' design/switch-time.pen \
   | tr 'a-f' 'A-F' | sort -u \
-  | grep -viE '#(F5F2EB|111216|FFFFFF|1B1C22|1C1D22|1B1A17|F2EFE8|2A66C4|7FB2FF|E0A431|3B7BD9|4FA877|6C63D6|E0684A|D8579C|2BA3B5|8A6A4B)'
+  | grep -viE '^#(F5F2EB|111216|FFFFFF|1B1C22|1C1D22|1B1A17|F2EFE8|2A66C4|7FB2FF|E0A431|3B7BD9|4FA877|6C63D6|E0684A|D8579C|2BA3B5|8A6A4B)'
 ```
 
-出力が空なら OK。
+出力が `#000000`（影の色）だけなら OK（2026-09-16 時点）。活動色に alpha を足した tint（`#D8579C2E` など）は先頭 6 桁で弾かれる。

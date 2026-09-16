@@ -20,6 +20,10 @@ open -a Pen design/switch-time.pen   # これだけで MCP が繋がる
 
 以降 `get_app_state` / `execute` / `browser` が全部通る。CLI 認証は不要。
 
+> **MCP バイナリの `--app` が接続先を決める。** `~/.claude.json` の pencil は Pen.app 同梱の
+> `mcp-server-darwin-arm64 --app desktop` を使うこと。`~/.pencil/mcp/cursor/…` の `--app cursor` ビルドは
+> Cursor 内の pen エンジンに繋がり、Pen デスクトップの表示・Cmd+S とは**別ドキュメント**になる（2026-09-15 に踏んだ）。
+
 ## 取り込み方法（実証済み）
 
 公式ドキュメントには「HTML / URL インポートは無い」と書いてあるが、**アプリには有る**。
@@ -192,9 +196,7 @@ jq -r '.children[] | "\(.name)  x=\(.x)..\(.x+.width)  y=\(.y)..\(.y+.height)"' 
 
 ## `.dc.html` 資産の扱い — 決定済み
 
-`design/*.dc.html` / `support.js` / `verify-canvas.sh` / `baseline/` は移行後も
-リポジトリに残っている。**削除していない**。3択:
-
-**決定（2026-09-07）: 当面そのまま残す。** 再取り込みが必要になったとき効くし、
-移行元の記録にもなる。`.pen` と併走させて二重管理する意図ではない —
+`design/*.dc.html` / `support.js` / `ios-frame.jsx` / `verify-canvas.sh` / `baseline/` / 試作 html / `pull-canvas.sh` /
+`next-canvas-prompt.md` は移行後もしばらく残していたが、**2026-09-16 に削除した**。
+再取り込みが要るときは `git show 552ac73:design/<file>` で取り出す。
 **新規デザインは `.pen` 側だけを触ること。**
