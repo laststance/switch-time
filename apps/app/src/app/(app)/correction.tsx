@@ -127,7 +127,7 @@ type ActionsProps = {
   row: CorrectionRow
   pending: boolean
   onMove: (deltaMinutes: 15 | -15) => void
-  onPick: (activityId: string) => void
+  onPick: (activityId: string | null) => void
   onMerge: () => void
   onSplit: () => void
 }
@@ -185,6 +185,17 @@ function Actions({
               }}
             />
           ))}
+          <ActivityPill
+            name="detox"
+            color={null}
+            iconKey="wind"
+            selected={row.activityId === null}
+            disabled={pending}
+            // Same guard as the activity pills: re-picking detox on a detox row would be a pointless write.
+            onPress={() => {
+              if (row.activityId !== null) onPick(null)
+            }}
+          />
         </View>
       </View>
       <View className="flex-row gap-2">

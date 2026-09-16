@@ -84,7 +84,7 @@ export function useCorrection(dayParam: string | undefined) {
     canUndo: previous?.day === day,
     move: (id: string, deltaMinutes: 15 | -15) =>
       moveStart.mutate({ id, deltaMinutes }),
-    pick: (id: string, activityId: string) =>
+    pick: (id: string, activityId: string | null) =>
       changeActivity.mutate({ id, activityId }),
     merge: (id: string) => mergeIntoPrevious.mutate({ id }),
     split: (id: string) => splitInHalf.mutate({ id }),
