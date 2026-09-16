@@ -5,6 +5,7 @@ import {
   type ReplaceDayInput,
 } from '@switch-time/shared'
 
+import { DETOX } from './detox'
 import { formatDay, formatDuration, formatTime } from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
 
@@ -60,12 +61,7 @@ const UNKNOWN: CorrectionActivity = {
   iconKey: 'home',
 }
 // A detox row joins no activity: it names itself and has no colour, so the chip and the bar draw it outlined.
-const DETOX: CorrectionActivity = {
-  id: '',
-  name: 'detox',
-  color: null,
-  iconKey: 'wind',
-}
+const DETOX_ROW: CorrectionActivity = { id: '', ...DETOX }
 
 /**
  * Where a ±15 min move lands under the API's own clamp ({@link clampStart}), or null when it would not move in that direction
@@ -122,7 +118,7 @@ export function correctionRows(
           row,
           timeline[index - 1] ?? null,
           timeline[index + 1] ?? null,
-          row.activityId === null ? DETOX : byId.get(row.activityId),
+          row.activityId === null ? DETOX_ROW : byId.get(row.activityId),
           bounds,
         ),
       )

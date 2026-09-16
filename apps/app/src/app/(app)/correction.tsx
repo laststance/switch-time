@@ -9,6 +9,7 @@ import { dismissSheet, Sheet } from '@/components/sheet'
 import { useActivities } from '@/hooks/use-activities'
 import { useCorrection } from '@/hooks/use-correction'
 import type { CorrectionRow, DayBounds } from '@/lib/correction'
+import { DETOX } from '@/lib/detox'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
@@ -186,9 +187,9 @@ function Actions({
             />
           ))}
           <ActivityPill
-            name="detox"
-            color={null}
-            iconKey="wind"
+            name={DETOX.name}
+            color={DETOX.color}
+            iconKey={DETOX.iconKey}
             selected={row.activityId === null}
             disabled={pending}
             // Same guard as the activity pills: re-picking detox on a detox row would be a pointless write.

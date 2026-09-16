@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import { gridActivities, homeFallback, homeReady, nowLook } from './home'
+import {
+  badgeRing,
+  gridActivities,
+  homeFallback,
+  homeReady,
+  nowLook,
+} from './home'
 
 describe('homeFallback', () => {
   test('shows the first-launch screen only once the fetch answered with no current state', () => {
@@ -49,13 +55,28 @@ describe('homeFallback', () => {
 })
 
 describe('homeReady', () => {
-  test('renders the body for detox once the activity list has answered', () => {
-    // Arrange: the current switch has no activity, both queries have answered
+  test('renders the body as soon as the current activity has its row', () => {
+    // Arrange: the everyday case, an activity is current and its row came with the list
+    const working = {
+      current: { activityId: 'work' },
+      activity: { id: 'work' },
+      activitiesLoaded: true,
+    }
+
+    // Act
+    const ready = homeReady(working)
+
+    // Assert
+    expect(ready).toBe(true)
+  })
+
+  test('renders the body for detox once the activity list has answered, and keeps it when a later refetch fails', () => {
+    // Arrange: the current switch has no activity and the activity list is here (the hook keeps `activitiesLoaded` true through a
+    // failed background refetch, so the same input covers that case)
     const detox = {
       current: { activityId: null },
       activity: null,
-      isPending: false,
-      isError: false,
+      activitiesLoaded: true,
     }
 
     // Act
@@ -65,13 +86,12 @@ describe('homeReady', () => {
     expect(ready).toBe(true)
   })
 
-  test('waits for the activity list while detox is current', () => {
-    // Arrange
+  test('waits for the activity list while detox is current, loading or failed on its first fetch', () => {
+    // Arrange: the list has never answered, so there is nothing to draw the switch buttons from
     const loading = {
       current: { activityId: null },
       activity: null,
-      isPending: true,
-      isError: false,
+      activitiesLoaded: false,
     }
 
     // Act
@@ -86,8 +106,7 @@ describe('homeReady', () => {
     const partial = {
       current: { activityId: 'work' },
       activity: null,
-      isPending: false,
-      isError: false,
+      activitiesLoaded: false,
     }
 
     // Act
@@ -154,5 +173,30 @@ describe('gridActivities', () => {
 
     // Assert
     expect(buttons).toBe(live)
+  })
+})
+
+describe('badgeRing', () => {
+  test('rings the rail badge in sub while detox is current', () => {
+    // Arrange
+    const detox = { activityId: null }
+
+    // Act
+    const ring = badgeRing(detox)
+
+    // Assert
+    expect(ring).toBe('border-sub')
+  })
+
+  test('keeps the line ring before the first switch and under an activity, whose own colour goes on inline', () => {
+    // Arrange
+    const firstLaunch = null
+    const working = { activityId: 'work' }
+
+    // Act
+    const rings = [badgeRing(firstLaunch), badgeRing(working)]
+
+    // Assert
+    expect(rings).toEqual(['border-line', 'border-line'])
   })
 })

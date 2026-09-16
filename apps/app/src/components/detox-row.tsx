@@ -2,7 +2,8 @@ import { Pressable, Text } from 'react-native'
 
 import { StrokeIcon } from '@/components/stroke-icon'
 import { useTokenColor } from '@/hooks/use-token-color'
-import { WIND } from '@/lib/icons'
+import { DETOX } from '@/lib/detox'
+import { activityIcon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -42,8 +43,15 @@ export function DetoxRow({ active, onPress }: Props) {
         look.root,
       )}
     >
-      <StrokeIcon d={WIND} size={20} strokeWidth={2} color={look.icon} />
-      <Text className={cn('text-sm font-semibold', look.label)}>detox</Text>
+      <StrokeIcon
+        d={activityIcon(DETOX.iconKey)}
+        size={20}
+        strokeWidth={2}
+        color={look.icon}
+      />
+      <Text className={cn('text-sm font-semibold', look.label)}>
+        {DETOX.name}
+      </Text>
       <Text className={cn('text-xs', look.hint)}>どの行動にも記録しない</Text>
     </Pressable>
   )

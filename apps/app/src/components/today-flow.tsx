@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native'
 
 import { useWide } from '@/hooks/use-wide'
+import { legendEntries } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 // Wide web frames the bar as the 「今日の流れ」 card with a legend; phones show the bare 10 px bar under the switch row.
@@ -26,14 +27,20 @@ type Segment = {
   idle: boolean
 }
 
-// Idle (past the threshold) and detox (no activity) spans are outlined over the `chip` track; the rest fill with their colour.
-const slice = (segment: Segment, colors: Record<string, string>) =>
-  segment.idle || segment.activityId === null
+// A span or legend square with no colour (idle past the threshold, or detox) is outlined over the `chip` track; the rest fill.
+const paint = (color: string | null | undefined) =>
+  color === null
     ? {
         className: 'border border-dashed border-line',
         backgroundColor: undefined,
       }
-    : { className: '', backgroundColor: colors[segment.activityId] }
+    : { className: '', backgroundColor: color }
+const slice = (segment: Segment, colors: Record<string, string>) =>
+  paint(
+    segment.idle || segment.activityId === null
+      ? null
+      : colors[segment.activityId],
+  )
 
 type TodayFlowProps = {
   segments: Segment[]
@@ -46,6 +53,7 @@ type TodayFlowProps = {
 /**
  * The 24-hour bar: one absolutely placed slice per segment in its activity colour; idle segments (past the idle threshold) and
  * detox spans (no activity) are dashed over the `chip` fill on both platforms. Ponytail: the native hatch pattern is skipped, dashed reads the same.
+ * The wide legend ({@link legendEntries}) names every activity drawn, and detox when a span was recorded to nothing.
  * @example <TodayFlow segments={segments} activities={activities} start={start} end={end} />
  */
 export function TodayFlow({
@@ -71,22 +79,18 @@ export function TodayFlow({
             <Text className="text-xs text-sub">1本 = 24時間</Text>
           </View>
           <View className="flex-row flex-wrap gap-x-3.5 gap-y-1.5">
-            {activities
-              .filter((activity) =>
-                segments.some((segment) => segment.activityId === activity.id),
-              )
-              .map((activity) => (
-                <View
-                  key={activity.id}
-                  className="flex-row items-center gap-1.5"
-                >
+            {legendEntries(activities, segments).map((entry) => {
+              const look = paint(entry.color)
+              return (
+                <View key={entry.id} className="flex-row items-center gap-1.5">
                   <View
-                    className="h-2 w-2 rounded-[2px]"
-                    style={{ backgroundColor: activity.color }}
+                    className={cn('h-2 w-2 rounded-[2px]', look.className)}
+                    style={{ backgroundColor: look.backgroundColor }}
                   />
-                  <Text className="text-xs text-sub">{activity.name}</Text>
+                  <Text className="text-xs text-sub">{entry.name}</Text>
                 </View>
-              ))}
+              )
+            })}
           </View>
         </>
       )}

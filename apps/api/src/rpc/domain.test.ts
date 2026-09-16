@@ -237,7 +237,12 @@ test('detox time is left out of every total while the day stays measured', async
     [idOf(list, '仕事')]: 10_800_000,
     [idOf(list, '休息')]: 32_400_000,
   })
-  expect(stats.days[0]).toMatchObject({ day, measured: true, idleMs: 0 })
+  expect(stats.days[0]).toMatchObject({
+    day,
+    measured: true,
+    idleMs: 0,
+    detoxMs: 10_800_000,
+  })
 })
 
 test('a segment can be corrected onto detox and back', async () => {
@@ -263,6 +268,79 @@ test('a segment can be corrected onto detox and back', async () => {
     source: 'correction',
   })
   expect(restored).toMatchObject({ id: row.id, activityId: work })
+})
+
+test('a day spent entirely in detox is measured and lists its tap, with nothing to total', async () => {
+  // Arrange: two days ago a single tap, detox at 9:00; 睡眠 from 0:00 the next day closes it (15 h, over the idle threshold)
+  const api = await signedIn('detox-only-day@example.com')
+  const list = await api.activities.list()
+  const day = addDays(today, -2)
+  const dayAfter = addDays(today, -1)
+  await api.switches.replaceDay({
+    day,
+    rows: [{ activityId: null, startedAt: at(day, 9) }],
+  })
+  await api.switches.replaceDay({
+    day: dayAfter,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(dayAfter, 0) }],
+  })
+
+  // Act
+  const [stats, listed] = await Promise.all([
+    api.stats.day({ day }),
+    api.switches.listByDay({ day }),
+  ])
+
+  // Assert: the tap makes the day measured and its 15 h are detox, in no total and not idle either
+  expect(stats.days[0]).toMatchObject({
+    day,
+    measured: true,
+    totals: {},
+    idleMs: 0,
+    detoxMs: 54_000_000,
+  })
+  expect(stats.measuredDays).toBe(1)
+  expect(listed.rows.map((row) => row.activityId)).toEqual([null])
+})
+
+test('switching to an archived activity is refused', async () => {
+  // Arrange: 仕事 is the current state, so 休息 can be archived
+  const api = await signedIn('switch-archived@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await api.activities.archive({ id: rest })
+
+  // Act + Assert
+  await expect(
+    api.switches.switchTo({ activityId: rest }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('detox frees the previous state’s activity for archiving', async () => {
+  // Arrange: 仕事 then detox, so the current state has no activity for the archive guard to protect
+  const api = await signedIn('archive-during-detox@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  await api.switches.switchTo({ activityId: work })
+  await api.switches.switchTo({ activityId: null })
+
+  // Act
+  const archived = await api.activities.archive({ id: work })
+
+  // Assert: the guard covers the current state's activity only; 仕事 goes while the detox state stays current
+  expect(archived.archivedAt).toBeInstanceOf(Date)
+  expect((await api.switches.current())?.activityId).toBeNull()
+})
+
+test('a switch without an activityId is refused as input: detox is an explicit null, never an omission', async () => {
+  // Arrange
+  const api = await signedIn('switch-missing-id@example.com')
+
+  // Act + Assert
+  await expect(
+    // @ts-expect-error activityId is required even though it may be null
+    api.switches.switchTo({}),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
 })
 
 const MIN = 60_000
@@ -614,4 +692,68 @@ test('an account whose seed rows are missing gets them on the first settings rea
   // Assert
   expect(settings).toMatchObject({ timeZone: 'Asia/Tokyo', theme: 'auto' })
   expect(names).toEqual(['家事', '仕事', '休息', '睡眠', '食事', '娯楽'])
+})
+
+test('splitting a detox span keeps both halves detox', async () => {
+  // Arrange: yesterday 仕事 9:00, detox 12:00, 休息 18:00; the detox row is the one in the middle
+  const api = await signedIn('split-detox@example.com')
+  const list = await api.activities.list()
+  const yesterday = addDays(today, -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: null, startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const detox = (await api.switches.listByDay({ day: yesterday })).rows[1]
+  if (!detox) throw new Error('fixture has no second row')
+
+  // Act
+  const half = await api.switches.splitInHalf({ id: detox.id })
+
+  // Assert: the new row at 15:00 is detox too, so the time stays recorded to nothing on both sides of the cut
+  expect(half).toMatchObject({
+    activityId: null,
+    startedAt: at(yesterday, 15),
+    source: 'split',
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.activityId)).toEqual([
+    idOf(list, '仕事'),
+    null,
+    null,
+    idOf(list, '休息'),
+  ])
+})
+
+test('the very first tap can be detox: the clock starts on a state with no activity', async () => {
+  // Arrange: a fresh account, nothing tapped yet
+  const api = await signedIn('first-detox@example.com')
+  expect(await api.switches.current()).toBeNull()
+
+  // Act
+  const first = await api.switches.switchTo({ activityId: null })
+
+  // Assert: with no current row to compare against, a detox row is inserted and becomes the current state
+  expect(first).toMatchObject({ activityId: null, source: 'tap' })
+  expect((await api.switches.current())?.id).toBe(first.id)
+})
+
+test('another account cannot move a switch onto detox or switch to a foreign activity: both read as missing', async () => {
+  // Arrange: the owner has a switch on 仕事; the stranger has only its own seed
+  const owner = await signedIn('owner@example.com')
+  const stranger = await signedIn('stranger@example.com')
+  const work = idOf(await owner.activities.list(), '仕事')
+  const row = await owner.switches.switchTo({ activityId: work })
+
+  // Act + Assert: with activityId null the activity lookup is skipped, so the switch lookup alone must refuse the stranger
+  await expect(
+    stranger.switches.changeActivity({ id: row.id, activityId: null }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  await expect(
+    stranger.switches.switchTo({ activityId: work }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  expect((await owner.switches.current())?.activityId).toBe(work)
 })

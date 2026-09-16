@@ -51,9 +51,10 @@ function StepButton({
 }
 
 // Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `line` border on both platforms
-// (ponytail: the native hatch is skipped, as in TodayFlow).
+// (ponytail: the native hatch is skipped, as in TodayFlow), and a day that was all detox the same dash in `sub`, the detox tone.
 const CELL = {
   stack: 'bg-chip',
+  detox: 'border border-dashed border-sub bg-chip',
   excluded: 'border border-dashed border-line bg-chip',
   empty: 'bg-chip',
 }

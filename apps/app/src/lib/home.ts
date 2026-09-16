@@ -1,3 +1,5 @@
+import { DETOX } from './detox'
+
 /** What Home renders when it has no state to show: the retry notice, the first-launch screen, or the bare frame. */
 export type HomeFallback = 'error' | 'first-launch' | 'loading'
 
@@ -22,24 +24,20 @@ export function homeFallback({
 
 /**
  * Whether Home can show its body: the current switch's activity row is here, or the switch is detox (no activity by design) and
- * the activity list has answered, so the switch buttons never flash empty. Everything else falls to {@link homeFallback}.
- * @example homeReady({ current, activity: null, isPending: false, isError: false }) // true while detox
+ * the activity list has answered at least once, so the switch buttons never flash empty. A refetch that fails keeps the cached
+ * list, so detox stays on screen through it; only a list that never loaded falls to {@link homeFallback}.
+ * @example homeReady({ current: { activityId: null }, activity: null, activitiesLoaded: true }) // true while detox
  */
 export function homeReady({
   current,
   activity,
-  isPending,
-  isError,
+  activitiesLoaded,
 }: {
-  current: { activityId: string | null } | null
+  current: { activityId: string | null }
   activity: { id: string } | null
-  isPending: boolean
-  isError: boolean
+  activitiesLoaded: boolean
 }): boolean {
-  if (!current) return false
-  return (
-    activity !== null || (current.activityId === null && !isPending && !isError)
-  )
+  return activity !== null || (current.activityId === null && activitiesLoaded)
 }
 
 /** What the hero shows for the current state; `color` null is detox, which has no colour of its own. */
@@ -57,8 +55,8 @@ export function nowLook(
 ): NowLook {
   if (activity === null)
     return {
-      name: 'detox',
-      color: null,
+      name: DETOX.name,
+      color: DETOX.color,
       subtext: `${since} から · どの行動にも積み上がりません`,
     }
   return {
@@ -80,4 +78,15 @@ export function gridActivities<T extends { id: string }>(
   if (activity === null || live.some((row) => row.id === activity.id))
     return live
   return [...live, activity]
+}
+
+/**
+ * The rail badge's ring class: `sub` while detox (the state with no colour, as on the dial), `line` before the first switch; an
+ * activity's own colour goes on inline by the caller and wins over either.
+ * @example badgeRing({ activityId: null }) // 'border-sub'
+ */
+export function badgeRing(
+  current: { activityId: string | null } | null,
+): 'border-sub' | 'border-line' {
+  return current?.activityId === null ? 'border-sub' : 'border-line'
 }

@@ -1,6 +1,7 @@
 import type { AppRouterClient } from '@switch-time/api'
 import { addDays } from '@switch-time/shared'
 
+import { DETOX } from './detox'
 import {
   formatDay,
   formatDuration,
@@ -35,8 +36,11 @@ export type Cell = {
   day: string
   label: string
   today: boolean
-  /** `stack` and `excluded` link to the correction sheet; `empty` (before the first tap, or in the future) is inert. */
-  kind: 'stack' | 'excluded' | 'empty'
+  /**
+   * `stack`, `detox` (a measured day whose time all went to detox: outlined, nothing to stack) and `excluded` link to the
+   * correction sheet; `empty` (before the first tap, or in the future) is inert.
+   */
+  kind: 'stack' | 'detox' | 'excluded' | 'empty'
   ariaLabel: string
   slices: Slice[]
 }
@@ -120,6 +124,14 @@ function stackSlices(
   return slices
 }
 
+// What the cell's aria-label adds to the date, so the outline's meaning is read out too.
+const SUFFIX = {
+  stack: '',
+  detox: `・${DETOX.name}`,
+  excluded: '・計測なし',
+  empty: '',
+}
+
 function dayCell(
   stat: DayStat,
   today: string,
@@ -131,19 +143,23 @@ function dayCell(
     range === 'week'
       ? formatWeekday(stat.day)
       : String(Number(stat.day.slice(8)))
+  const slices = stackSlices(stat.totals, activities, BAR_PX[range])
   // Today is a stack even before its first tap (its carried-in state is already drawing); older untapped days are 計測なし.
+  // A measured day with nothing to stack but detox time is outlined, so a day off the clock does not read as an untapped one.
   const kind = stat.excluded
     ? 'excluded'
     : stat.measured || isToday
-      ? 'stack'
+      ? slices.length === 0 && stat.detoxMs > 0
+        ? 'detox'
+        : 'stack'
       : 'empty'
   return {
     day: stat.day,
     label: isToday ? '今日' : weekLabel,
     today: isToday,
     kind,
-    ariaLabel: `${formatDay(stat.day)}${kind === 'excluded' ? '・計測なし' : ''}`,
-    slices: stackSlices(stat.totals, activities, BAR_PX[range]),
+    ariaLabel: `${formatDay(stat.day)}${SUFFIX[kind]}`,
+    slices,
   }
 }
 

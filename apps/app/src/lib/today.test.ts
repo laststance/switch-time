@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { countSwitches, daySegments } from './today'
+import { countSwitches, daySegments, legendEntries } from './today'
 
 const row = (id: string, activityId: string, startedAt: string) => ({
   id,
@@ -55,4 +55,32 @@ test('the first row of a first day is the starting state, not a switch', () => {
   expect(laterDay).toBe(1)
   expect(countSwitches({ carriedIn: null, rows: [first] })).toBe(0)
   expect(countSwitches(undefined)).toBe(0)
+})
+
+test('the legend names each activity with a span today and adds detox when time was recorded to nothing', () => {
+  // Arrange: 仕事 and 睡眠 drew spans, 家事 did not; one span is detox
+  const activities = [
+    { id: 'home', name: '家事', color: '#E0A431' },
+    { id: 'work', name: '仕事', color: '#3B7BD9' },
+    { id: 'sleep', name: '睡眠', color: '#6C63D6' },
+  ]
+  const segments = [
+    { activityId: 'sleep' },
+    { activityId: 'work' },
+    { activityId: null },
+    { activityId: 'work' },
+  ]
+
+  // Act
+  const legend = legendEntries(activities, segments)
+
+  // Assert: list order rather than span order, detox last and without a colour; no detox entry without a detox span
+  expect(legend).toEqual([
+    { id: 'work', name: '仕事', color: '#3B7BD9' },
+    { id: 'sleep', name: '睡眠', color: '#6C63D6' },
+    { id: 'detox', name: 'detox', color: null },
+  ])
+  expect(legendEntries(activities, [{ activityId: 'work' }])).toEqual([
+    { id: 'work', name: '仕事', color: '#3B7BD9' },
+  ])
 })

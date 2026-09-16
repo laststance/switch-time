@@ -48,23 +48,26 @@ export function segmentsInRange(
 }
 
 /**
- * Per-activity ms of the non-idle segments plus the idle ms they exclude; detox segments add to neither.
- * @example sumSegments(segments) // { totals: { [workId]: 28_800_000 }, idleMs: 0 }
+ * Per-activity ms of the non-idle segments, the idle ms they exclude, and the detox ms recorded to nothing (in neither).
+ * @example sumSegments(segments) // { totals: { [workId]: 28_800_000 }, idleMs: 0, detoxMs: 3_600_000 }
  */
 export function sumSegments(segments: readonly Segment[]): {
   totals: Record<string, number>
   idleMs: number
+  /** Time recorded to no activity; History tells a detox-only day from an untapped one by it. */
+  detoxMs: number
 } {
   const totals: Record<string, number> = {}
   let idleMs = 0
+  let detoxMs = 0
   for (const segment of segments) {
-    // Detox is deliberately recorded to nothing: neither a total nor idle time.
-    if (segment.activityId === null) continue
     const length = segment.end - segment.start
-    if (segment.idle) idleMs += length
+    // Detox is deliberately recorded to nothing: neither a total nor idle time, however long it ran.
+    if (segment.activityId === null) detoxMs += length
+    else if (segment.idle) idleMs += length
     else totals[segment.activityId] = (totals[segment.activityId] ?? 0) + length
   }
-  return { totals, idleMs }
+  return { totals, idleMs, detoxMs }
 }
 
 /** A corrected segment keeps at least this much room from its neighbours and from now ({@link clampStart}); a split needs twice it. */
@@ -144,6 +147,7 @@ export type DayStats = DayStatus & {
   day: string
   totals: Record<string, number>
   idleMs: number
+  detoxMs: number
 }
 
 /**

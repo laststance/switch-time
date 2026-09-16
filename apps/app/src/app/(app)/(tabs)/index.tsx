@@ -100,8 +100,9 @@ function HomeBody({ current, activity }: HomeBodyProps) {
 }
 
 export default function HomeScreen() {
-  const { current, activity, isPending, isError, retry } = useCurrentActivity()
-  if (current && homeReady({ current, activity, isPending, isError }))
+  const { current, activity, activitiesLoaded, isPending, isError, retry } =
+    useCurrentActivity()
+  if (current && homeReady({ current, activity, activitiesLoaded }))
     return <HomeBody current={current} activity={activity} />
   const fallback = {
     error: <RetryNotice onRetry={retry} />,

@@ -35,16 +35,18 @@ export async function latestSwitch(userId: string): Promise<SwitchRow | null> {
 }
 
 /**
- * The user's own, unarchived activity; null (detox) has no row to check. switchTo, changeActivity and replaceDay share the
- * rule: an archived activity is hidden from the grid, so no segment may be recorded to it.
- * @example await liveActivity(userId, input.activityId)
+ * Rejects a segment recorded to an archived activity; null (detox) has no row to check. switchTo, changeActivity and
+ * replaceDay share the rule: an archived activity is hidden from the grid, so no segment may be recorded to it.
+ * @example await assertLiveActivity(userId, input.activityId)
  */
-async function liveActivity(userId: string, id: string | null) {
-  if (id === null) return null
+async function assertLiveActivity(
+  userId: string,
+  id: string | null,
+): Promise<void> {
+  if (id === null) return
   const activity = await ownActivity(userId, id)
   if (activity.archivedAt)
     throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
-  return activity
 }
 
 // A correction-sheet edit: the row keeps its id, its source becomes 'correction'.
@@ -125,7 +127,7 @@ export const switchesRouter = {
     .input(z.object({ activityId: z.uuid().nullable() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      await liveActivity(userId, input.activityId)
+      await assertLiveActivity(userId, input.activityId)
       const current = await latestSwitch(userId)
       // ponytail: read-then-insert without a per-user lock; two simultaneous taps from one account can both land.
       // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
@@ -173,7 +175,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const [row] = await Promise.all([
         ownSwitch(context.user.id, input.id),
-        liveActivity(context.user.id, input.activityId),
+        assertLiveActivity(context.user.id, input.activityId),
       ])
       return correct(row.id, { activityId: input.activityId })
     }),
@@ -245,7 +247,7 @@ export const switchesRouter = {
         })
       await Promise.all(
         [...new Set(input.rows.map((row) => row.activityId))].map(async (id) =>
-          liveActivity(userId, id),
+          assertLiveActivity(userId, id),
         ),
       )
       return db.transaction(async (tx) => {
