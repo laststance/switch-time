@@ -69,6 +69,36 @@ test('a segment longer than the idle threshold is flagged on its unclipped lengt
   expect(sums).toEqual({ totals: { work: 9 * H }, idleMs: 9 * H })
 })
 
+test('detox time is neither totalled nor counted as idle', () => {
+  // Arrange: 仕事 9:00, detox (no activity) 12:00, 休息 15:00, still running at 18:00
+  const day = dayBounds('2026-09-09', TZ)
+  const switches = [
+    { id: 'a', activityId: 'work', startedAt: at('2026-09-09', 9) },
+    { id: 'b', activityId: null, startedAt: at('2026-09-09', 12) },
+    { id: 'c', activityId: 'rest', startedAt: at('2026-09-09', 15) },
+  ]
+
+  // Act
+  const segments = segmentsInRange(
+    switches,
+    day.start,
+    day.end,
+    at('2026-09-09', 18),
+    12 * H,
+  )
+  const sums = sumSegments(segments)
+
+  // Assert: the detox span is still a segment (it is drawn), but it adds to no total and to no idle time
+  expect(segments[1]).toEqual({
+    switchId: 'b',
+    activityId: null,
+    start: at('2026-09-09', 12),
+    end: at('2026-09-09', 15),
+    idle: false,
+  })
+  expect(sums).toEqual({ totals: { work: 3 * H, rest: 3 * H }, idleMs: 0 })
+})
+
 test('a moved start never crosses its neighbours or the present', () => {
   // Act + Assert
   expect(clampStart(92 * H, 90 * H, 95 * H, 200 * H)).toBe(92 * H)

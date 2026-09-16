@@ -1,11 +1,16 @@
 import { addDays, dayBounds } from './time'
 
-/** What the stats helpers need from a `switches` row; `startedAt` in epoch ms. */
-export type SwitchLike = { id: string; activityId: string; startedAt: number }
+/** What the stats helpers need from a `switches` row; `startedAt` in epoch ms, `activityId` null = detox (recorded to no activity). */
+export type SwitchLike = {
+  id: string
+  activityId: string | null
+  startedAt: number
+}
 
 export type Segment = {
   switchId: string
-  activityId: string
+  /** null = detox: drawn like any span, never totalled. */
+  activityId: string | null
   start: number
   end: number
   /** Longer than 無操作とみなす時間: shown, but left out of totals. */
@@ -43,7 +48,7 @@ export function segmentsInRange(
 }
 
 /**
- * Per-activity ms of the non-idle segments plus the idle ms they exclude.
+ * Per-activity ms of the non-idle segments plus the idle ms they exclude; detox segments add to neither.
  * @example sumSegments(segments) // { totals: { [workId]: 28_800_000 }, idleMs: 0 }
  */
 export function sumSegments(segments: readonly Segment[]): {
@@ -53,6 +58,8 @@ export function sumSegments(segments: readonly Segment[]): {
   const totals: Record<string, number> = {}
   let idleMs = 0
   for (const segment of segments) {
+    // Detox is deliberately recorded to nothing: neither a total nor idle time.
+    if (segment.activityId === null) continue
     const length = segment.end - segment.start
     if (segment.idle) idleMs += length
     else totals[segment.activityId] = (totals[segment.activityId] ?? 0) + length

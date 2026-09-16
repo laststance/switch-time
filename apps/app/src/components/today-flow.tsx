@@ -19,7 +19,8 @@ const BANDS = {
 
 type Segment = {
   switchId: string
-  activityId: string
+  /** null = detox: outlined like an idle span. */
+  activityId: string | null
   start: number
   end: number
   idle: boolean
@@ -34,8 +35,8 @@ type TodayFlowProps = {
 }
 
 /**
- * The 24-hour bar: one absolutely placed slice per segment in its activity colour; idle segments (past the idle threshold) are
- * dashed over the `chip` fill on both platforms. Ponytail: the native hatch pattern is skipped, dashed reads the same.
+ * The 24-hour bar: one absolutely placed slice per segment in its activity colour; idle segments (past the idle threshold) and
+ * detox spans (no activity) are dashed over the `chip` fill on both platforms. Ponytail: the native hatch pattern is skipped, dashed reads the same.
  * @example <TodayFlow segments={segments} activities={activities} start={start} end={end} />
  */
 export function TodayFlow({
@@ -85,22 +86,27 @@ export function TodayFlow({
         aria-label="今日の流れ"
         className={cn('w-full overflow-hidden bg-chip', band.bar)}
       >
-        {segments.map((segment) => (
-          <View
-            key={segment.switchId}
-            className={cn(
-              'absolute inset-y-0',
-              segment.idle && 'border border-dashed border-line',
-            )}
-            style={{
-              left: percent(segment.start - start),
-              width: percent(segment.end - segment.start),
-              backgroundColor: segment.idle
-                ? undefined
-                : colors[segment.activityId],
-            }}
-          />
-        ))}
+        {segments.map((segment) => {
+          // Idle (past the threshold) and detox (no activity) spans are outlined, not filled.
+          const outlined = segment.idle || segment.activityId === null
+          return (
+            <View
+              key={segment.switchId}
+              className={cn(
+                'absolute inset-y-0',
+                outlined && 'border border-dashed border-line',
+              )}
+              style={{
+                left: percent(segment.start - start),
+                width: percent(segment.end - segment.start),
+                // TS does not narrow through the alias, so the detox branch still needs a key.
+                backgroundColor: outlined
+                  ? undefined
+                  : colors[segment.activityId ?? ''],
+              }}
+            />
+          )
+        })}
       </View>
       <View className="flex-row justify-between">
         {band.labels.map((label) => (
