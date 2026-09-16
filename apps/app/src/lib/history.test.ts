@@ -29,6 +29,7 @@ const day = (
   excluded: null,
   totals: {},
   idleMs: 0,
+  detoxMs: 0,
   ...overrides,
 })
 
@@ -143,6 +144,83 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
       ratio: 0,
     },
   ])
+})
+
+test('a day whose time all went to detox is outlined and named, instead of looking untapped', () => {
+  // Arrange: 9/7 was a whole day of detox, 9/8 mixed 仕事 with detox, today has only its carried-in detox so far
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06', { measured: true, totals: { work: 8 * H } }),
+      day('2026-09-07', { measured: true, detoxMs: 24 * H }),
+      day('2026-09-08', {
+        measured: true,
+        totals: { work: 10 * H },
+        detoxMs: 3 * H,
+      }),
+      day('2026-09-09', { measured: true, detoxMs: 9 * H }),
+    ],
+    totals: { work: 18 * H },
+    measuredDays: 4,
+    streak: 4,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: only the days with nothing but detox are outlined; a day that also stacked an activity stays a stack
+  expect(view.rows[0]?.map((cell) => [cell?.kind, cell?.ariaLabel])).toEqual([
+    ['empty', '9月3日（木）'],
+    ['empty', '9月4日（金）'],
+    ['empty', '9月5日（土）'],
+    ['stack', '9月6日（日）'],
+    ['detox', '9月7日（月）・detox'],
+    ['stack', '9月8日（火）'],
+    ['detox', '9月9日（水）・detox'],
+  ])
+  expect(view.rows[0]?.[4]?.slices).toEqual([])
+})
+
+test('a measured day whose only counted time is detox is outlined even when its activity time was idle-flagged', () => {
+  // Arrange: 9/9 had 13 h of 仕事 flagged idle (so nothing in totals) and 11 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', { measured: true, idleMs: 13 * H, detoxMs: 11 * H }),
+    ],
+    totals: {},
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: idle time is not stacked, so the day has nothing but detox to show and is outlined as detox
+  expect(view.rows[0]?.[6]?.kind).toBe('detox')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox')
+  expect(view.rows[0]?.[6]?.slices).toEqual([])
 })
 
 test('the month calendar pads Sunday-first rows and counts only the days up to today', () => {

@@ -55,7 +55,9 @@ Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, cont
 
 ## The active state
 
-Exactly one activity button is pressed at any moment. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
+Exactly one switch is pressed at any moment: an activity button, or the detox row. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
+
+Detox is the one state without a colour, because it has no activity: its full-width row under the grid inverts to a `--color-ink` fill with `--color-bg` text while it is pressed, and the dial's bezel ring, second hand and centre pin (the hour and minute hands stay `--color-ink`), the status dot (hollow) and the elapsed readout all fall back to `--color-sub`. Its span on the 24-h bar is outlined like an idle span, never filled, and it is never totalled; the bar's legend names it, and a History day that was tapped and then spent entirely in detox is outlined the same way in `--color-sub`, so it does not read as an untapped day. A day with no tap at all is 計測なし whatever was on the clock, detox included.
 
 ## The dial
 
@@ -85,7 +87,7 @@ Every other token is shared unchanged.
 
 ## Do
 
-- Keep exactly one activity active, always. There is no "nothing selected" state.
+- Keep exactly one switch pressed, always: one activity button, or the detox row (recording to no activity). There is no "nothing selected" state.
 - Put `.tabular` on every digit that changes on a timer.
 - Let the active activity's own color be the loudest thing on screen.
 - Design the longest-word language too — German or Finnish runs 2–3× the length of Japanese, and the menubar's fixed 3×2 grid breaks first.

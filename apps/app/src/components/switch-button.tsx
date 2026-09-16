@@ -17,8 +17,9 @@ type Props = {
 }
 
 /**
- * One activity switch: 150 px basis that wraps to 3 per row in the 640 px column and 2 on a phone. Exactly one in the row is
- * active and fills with its own colour; that is the whole state, no glow, no elevation (design rule). Inactive is `surface` + `line`.
+ * One activity switch: 150 px basis that wraps to 3 per row in the 640 px column and 2 on a phone. Exactly one in the row (or the
+ * {@link DetoxRow} under it) is active and fills with its own colour; that is the whole state, no glow, no elevation (design rule).
+ * Inactive is `surface` + `line`.
  * @example <SwitchButton name="仕事" color="#3B7BD9" iconKey="work" active onPress={() => switchTo.mutate({ activityId })} />
  */
 export function SwitchButton({

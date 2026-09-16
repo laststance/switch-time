@@ -110,11 +110,13 @@ export const moveStartInputSchema = z.object({
   deltaMinutes: z.literal([15, -15]),
 })
 
-/** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first. */
+/** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first; `activityId` null is a detox row. */
 export const replaceDayInputSchema = z.object({
   day: daySchema,
   rows: z
-    .array(z.object({ activityId: z.uuid(), startedAt: z.coerce.date() }))
+    .array(
+      z.object({ activityId: z.uuid().nullable(), startedAt: z.coerce.date() }),
+    )
     .max(500),
 })
 export type ReplaceDayInput = z.infer<typeof replaceDayInputSchema>

@@ -66,7 +66,64 @@ test('a segment longer than the idle threshold is flagged on its unclipped lengt
   )
 
   // Assert
-  expect(sums).toEqual({ totals: { work: 9 * H }, idleMs: 9 * H })
+  expect(sums).toEqual({ totals: { work: 9 * H }, idleMs: 9 * H, detoxMs: 0 })
+})
+
+test('detox time is neither totalled nor counted as idle', () => {
+  // Arrange: 仕事 9:00, detox (no activity) 12:00, 休息 15:00, still running at 18:00
+  const day = dayBounds('2026-09-09', TZ)
+  const switches = [
+    { id: 'a', activityId: 'work', startedAt: at('2026-09-09', 9) },
+    { id: 'b', activityId: null, startedAt: at('2026-09-09', 12) },
+    { id: 'c', activityId: 'rest', startedAt: at('2026-09-09', 15) },
+  ]
+
+  // Act
+  const segments = segmentsInRange(
+    switches,
+    day.start,
+    day.end,
+    at('2026-09-09', 18),
+    12 * H,
+  )
+  const sums = sumSegments(segments)
+
+  // Assert: the detox span is still a segment (it is drawn), but it adds to no total and to no idle time
+  expect(segments[1]).toEqual({
+    switchId: 'b',
+    activityId: null,
+    start: at('2026-09-09', 12),
+    end: at('2026-09-09', 15),
+    idle: false,
+  })
+  expect(sums).toEqual({
+    totals: { work: 3 * H, rest: 3 * H },
+    idleMs: 0,
+    detoxMs: 3 * H,
+  })
+})
+
+test('a detox longer than the idle threshold is still detox, not idle', () => {
+  // Arrange: 仕事 9:00, then detox from 10:00 still running at 1:00 the next day (15 h, over the 12 h threshold)
+  const day = dayBounds('2026-09-09', TZ)
+  const switches = [
+    { id: 'a', activityId: 'work', startedAt: at('2026-09-09', 9) },
+    { id: 'b', activityId: null, startedAt: at('2026-09-09', 10) },
+  ]
+
+  // Act
+  const segments = segmentsInRange(
+    switches,
+    day.start,
+    day.end,
+    at('2026-09-10', 1),
+    12 * H,
+  )
+  const sums = sumSegments(segments)
+
+  // Assert: the span is flagged idle by its length, but its 14 h inside the day are detox time, in no total and not idle
+  expect(segments[1]?.idle).toBe(true)
+  expect(sums).toEqual({ totals: { work: 1 * H }, idleMs: 0, detoxMs: 14 * H })
 })
 
 test('a moved start never crosses its neighbours or the present', () => {
@@ -172,6 +229,7 @@ test('range totals only include measured days and every excluded day is listed',
       excluded: null,
       totals: { work: 9 * H },
       idleMs: 6 * H,
+      detoxMs: 0,
     },
     {
       day: '2026-09-07',
@@ -179,6 +237,7 @@ test('range totals only include measured days and every excluded day is listed',
       excluded: 'auto_unused',
       totals: {},
       idleMs: 24 * H,
+      detoxMs: 0,
     },
     {
       day: '2026-09-08',
@@ -186,6 +245,7 @@ test('range totals only include measured days and every excluded day is listed',
       excluded: null,
       totals: { work: 10 * H, fun: 6 * H },
       idleMs: 8 * H,
+      detoxMs: 0,
     },
     {
       day: '2026-09-09',
@@ -193,6 +253,7 @@ test('range totals only include measured days and every excluded day is listed',
       excluded: null,
       totals: { sleep: 7 * H, work: 3 * H },
       idleMs: 0,
+      detoxMs: 0,
     },
   ])
   expect(summary.totals).toEqual({ work: 22 * H, fun: 6 * H, sleep: 7 * H })

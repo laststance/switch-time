@@ -9,9 +9,14 @@ import { dismissSheet, Sheet } from '@/components/sheet'
 import { useActivities } from '@/hooks/use-activities'
 import { useCorrection } from '@/hooks/use-correction'
 import type { CorrectionRow, DayBounds } from '@/lib/correction'
+import { DETOX } from '@/lib/detox'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
+
+// The selected card takes its row's colour on the border; detox has none and keeps the `line` hairline.
+const frame = (selected: boolean, color: string | null) =>
+  selected && color !== null ? { borderColor: color } : null
 
 type BarProps = {
   rows: CorrectionRow[]
@@ -25,17 +30,22 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
     `${(ms / (bounds.end - bounds.start)) * 100}%`
   // A merged or undone row's id lingers in the selection; with no row to highlight, nothing dims.
   const active = rows.some((row) => row.id === selectedId) ? selectedId : null
+  const dim = (id: string) => (active === null || active === id ? 1 : DIMMED)
   return (
     <View className="h-3 w-full overflow-hidden rounded-[6px] bg-chip">
       {rows.map((row) => (
         <View
           key={row.id}
-          className="absolute inset-y-0"
+          // A detox span has no colour: outlined, like the 24-h bar's idle spans.
+          className={cn(
+            'absolute inset-y-0',
+            row.color === null && 'border border-dashed border-line',
+          )}
           style={{
             left: percent(row.start - bounds.start),
             width: percent(row.end - row.start),
-            backgroundColor: row.color,
-            opacity: active === null || active === row.id ? 1 : DIMMED,
+            backgroundColor: row.color ?? undefined,
+            opacity: dim(row.id),
           }}
         />
       ))}
@@ -118,7 +128,7 @@ type ActionsProps = {
   row: CorrectionRow
   pending: boolean
   onMove: (deltaMinutes: 15 | -15) => void
-  onPick: (activityId: string) => void
+  onPick: (activityId: string | null) => void
   onMerge: () => void
   onSplit: () => void
 }
@@ -176,6 +186,17 @@ function Actions({
               }}
             />
           ))}
+          <ActivityPill
+            name={DETOX.name}
+            color={DETOX.color}
+            iconKey={DETOX.iconKey}
+            selected={row.activityId === null}
+            disabled={pending}
+            // Same guard as the activity pills: re-picking detox on a detox row would be a pointless write.
+            onPress={() => {
+              if (row.activityId !== null) onPick(null)
+            }}
+          />
         </View>
       </View>
       <View className="flex-row gap-2">
@@ -242,7 +263,7 @@ export default function CorrectionSheet() {
                 'rounded-card border border-line',
                 selected && 'bg-chip',
               )}
-              style={selected ? { borderColor: row.color } : null}
+              style={frame(selected, row.color)}
             >
               <RowHeader
                 row={row}

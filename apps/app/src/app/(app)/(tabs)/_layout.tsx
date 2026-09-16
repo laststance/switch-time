@@ -6,6 +6,7 @@ import { StrokeIcon } from '@/components/stroke-icon'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { useWide } from '@/hooks/use-wide'
+import { badgeRing } from '@/lib/home'
 import { cn } from '@/lib/utils'
 
 // Everything that differs between the 76 px rail (800 px and up) and the 60 px bottom bar.
@@ -28,7 +29,7 @@ export default function TabsLayout() {
   const variant = useWide() ? 'rail' : 'bar'
   const chrome = CHROME[variant]
   const ink = useTokenColor('ink')
-  const { activity } = useCurrentActivity()
+  const { current, activity } = useCurrentActivity()
   return (
     <Tabs asChild>
       <View className={cn('flex-1 bg-bg', chrome.root)}>
@@ -37,10 +38,13 @@ export default function TabsLayout() {
             role="tablist"
             className={cn('border-line bg-tab-bg', chrome.list)}
           >
-            {/* Rail badge: the ring takes the current activity's colour, `line` until the first switch. */}
+            {/* Rail badge: the ring takes the current activity's colour, `sub` while detox, `line` until the first switch. */}
             {variant === 'rail' && (
               <View
-                className="mb-3.5 h-9 w-9 items-center justify-center rounded-pill border-[3px] border-line bg-face text-ink"
+                className={cn(
+                  'mb-3.5 h-9 w-9 items-center justify-center rounded-pill border-[3px] bg-face text-ink',
+                  badgeRing(current),
+                )}
                 style={activity && { borderColor: activity.color }}
               >
                 <StrokeIcon

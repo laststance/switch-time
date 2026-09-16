@@ -1,6 +1,7 @@
 import { Link, usePathname } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 
+import { DetoxRow } from '@/components/detox-row'
 import { FirstLaunch } from '@/components/first-launch'
 import { NowPanel } from '@/components/now-panel'
 import { RetryNotice } from '@/components/retry-notice'
@@ -16,36 +17,37 @@ import { useToday } from '@/hooks/use-today'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatTime } from '@/lib/format'
-import { homeFallback } from '@/lib/home'
-import { hotkeyIndex } from '@/lib/hotkeys'
+import { gridActivities, homeFallback, homeReady, nowLook } from '@/lib/home'
+import { hotkeyIndex, isDetoxHotkey } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
 
 type Current = ReturnType<typeof useCurrentActivity>
 type HomeBodyProps = {
   current: NonNullable<Current['current']>
-  activity: NonNullable<Current['activity']>
+  /** Null while the current state is detox. */
+  activity: Current['activity']
 }
 
-// ホーム proper: header with the date and the 訂正 entry, the hero, the switch row and the 24-h bar.
+// ホーム proper: header with the date and the 訂正 entry, the hero, the switch row with the detox row under it, and the 24-h bar.
 function HomeBody({ current, activity }: HomeBodyProps) {
-  const live = useActivities().data ?? []
-  // A state archived from another device keeps its button (last, so the digit hotkeys keep their places) until the next switch:
-  // exactly one button is always the active one, and the row never loses the state the hero is showing.
-  const activities = live.some((row) => row.id === activity.id)
-    ? live
-    : [...live, activity]
+  const activities = gridActivities(useActivities().data ?? [], activity)
   const allActivities = useAllActivities().data ?? []
   const switchTo = useSwitchTo()
   const { today, timeZone, start, end, segments, switchCount } = useToday()
   const ink = useTokenColor('ink')
   const pathname = usePathname()
   // Pressing the active state again is a no-op on the server too; skipping it saves the three refetches the mutation triggers.
-  const pick = (activityId: string) => {
+  const pick = (activityId: string | null) => {
     if (activityId !== current.activityId) switchTo.mutate({ activityId })
   }
   useWebKeydown((event) => {
     // A sheet above Home (or another tab, Home stays mounted) owns the keyboard.
     if (pathname !== '/') return
+    // `0` is detox (the menubar's ⌘0); the other digits pick by position.
+    if (isDetoxHotkey(event)) {
+      pick(null)
+      return
+    }
     const picked = activities[hotkeyIndex(event)]
     if (picked) pick(picked.id)
   })
@@ -60,10 +62,12 @@ function HomeBody({ current, activity }: HomeBodyProps) {
         </Link>
       </ScreenHeader>
       <NowPanel
-        activity={activity}
+        look={nowLook(
+          activity,
+          formatTime(current.startedAt, timeZone),
+          switchCount,
+        )}
         startedAt={current.startedAt.getTime()}
-        since={formatTime(current.startedAt, timeZone)}
-        switchCount={switchCount}
       />
       <View className="flex-row items-baseline justify-between">
         <Text className="text-sm font-semibold text-ink">切り替え</Text>
@@ -81,6 +85,10 @@ function HomeBody({ current, activity }: HomeBodyProps) {
           />
         ))}
       </View>
+      <DetoxRow
+        active={current.activityId === null}
+        onPress={() => pick(null)}
+      />
       <TodayFlow
         segments={segments}
         activities={allActivities}
@@ -92,8 +100,9 @@ function HomeBody({ current, activity }: HomeBodyProps) {
 }
 
 export default function HomeScreen() {
-  const { current, activity, isPending, isError, retry } = useCurrentActivity()
-  if (current && activity)
+  const { current, activity, activitiesLoaded, isPending, isError, retry } =
+    useCurrentActivity()
+  if (current && homeReady({ current, activity, activitiesLoaded }))
     return <HomeBody current={current} activity={activity} />
   const fallback = {
     error: <RetryNotice onRetry={retry} />,

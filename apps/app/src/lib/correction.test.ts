@@ -12,7 +12,7 @@ const TZ = 'Asia/Tokyo'
 const MIN = 60_000
 const at = (day: string, hour: number, minute = 0) =>
   new Date(dayBounds(day, TZ).start + hour * 60 * MIN + minute * MIN)
-const row = (id: string, activityId: string, startedAt: Date) => ({
+const row = (id: string, activityId: string | null, startedAt: Date) => ({
   id,
   userId: 'u',
   activityId,
@@ -81,6 +81,50 @@ test('a past day lists the carried-in state last and read-only, and clips the op
   expect(rows[0]?.start).toBe(at(day, 18).getTime())
   expect(rows[0]?.end).toBe(bounds.end)
   expect(rows[3]?.start).toBe(bounds.start)
+})
+
+test('a detox row names itself, has no colour and keeps every correction', () => {
+  // Arrange: 仕事 9:00, detox 12:00, 娯楽 18:00 on a past day; the detox span is the one in the middle.
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at(day, 9)),
+      row('d', null, at(day, 12)),
+      row('f', 'fun', at(day, 18)),
+    ],
+    carriedOut: row('h', 'home', at('2026-09-09', 8)),
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+
+  // Assert: the detox row is drawn without a colour and with the wind glyph; 「元に戻す」 writes it back as null.
+  expect(rows.map(flags)[1]).toEqual([
+    'detox',
+    '12:00 – 18:00',
+    '6h 00m',
+    true,
+    true,
+    true,
+    true,
+    true,
+  ])
+  expect(rows.map((r) => [r.id, r.activityId, r.color, r.iconKey])[1]).toEqual([
+    'd',
+    null,
+    null,
+    'wind',
+  ])
+  expect(daySnapshot(list)[1]).toEqual({
+    activityId: null,
+    startedAt: at(day, 12),
+  })
 })
 
 test('today keeps the first row at or after 0:00 and the current row out of the future', () => {

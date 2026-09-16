@@ -46,6 +46,8 @@ services:
       - ./apps/api/src:/repo/apps/api/src
       # ...and the migrations, which the container applies on start (no rebuild after `db:generate`).
       - ./apps/api/drizzle:/repo/apps/api/drizzle
+      # ...and the shared package's source: the image bakes it at build, so without this a shared edit needs `up --build`.
+      - ./packages/shared/src:/repo/packages/shared/src
     depends_on:
       db:
         condition: service_healthy

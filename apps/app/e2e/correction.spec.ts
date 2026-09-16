@@ -94,3 +94,71 @@ test('splitting the current state shows on Home without a reload', async ({
   await expect(page).toHaveURL('/')
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
+
+test('a detox row lists as detox and comes back through undo', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, detox 12:00, 娯楽 18:00
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: null, startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const detox = page.getByRole('button', { name: 'detox 12:00 – 18:00 6h 00m' })
+  await expect(detox).toBeVisible()
+
+  // Act: merge the detox span into 仕事, then undo
+  await detox.click()
+  await expect(page.getByRole('radio', { name: 'detox' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await page.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    page.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: 「元に戻す」 wrote the detox row back as a row with no activity
+  await expect(detox).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+  ).toBeVisible()
+})
+
+test('the picker turns a segment into detox', async ({ page }) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  await page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+
+  // Act
+  await page.getByRole('radio', { name: 'detox' }).click()
+
+  // Assert: the row is now detox and the picker shows it as the row's state
+  await expect(
+    page.getByRole('button', { name: 'detox 9:00 – 12:00 3h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'detox' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+})

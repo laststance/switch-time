@@ -76,9 +76,10 @@ export const switches = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    activityId: uuid('activity_id')
-      .notNull()
-      .references(() => activities.id, { onDelete: 'cascade' }),
+    // null = detox: the state is "no activity", and the time until the next row is recorded to nothing.
+    activityId: uuid('activity_id').references(() => activities.id, {
+      onDelete: 'cascade',
+    }),
     // No end time: a segment lasts until the next row (or now); the latest row is the current state.
     startedAt: timestamptz('started_at').notNull(),
     source: switchSource('source').default('tap').notNull(),
