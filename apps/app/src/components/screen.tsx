@@ -17,7 +17,8 @@ export function Screen({ children }: PropsWithChildren) {
     >
       <View
         className={cn(
-          'w-full max-w-[640px] flex-1 gap-4',
+          // grow fills a short page so the wide side-rules reach the tab; shrink-0 keeps the column as tall as its children so the ScrollView can move.
+          'w-full max-w-[640px] grow shrink-0 gap-4',
           wide ? 'border-x border-line px-6 pb-8 pt-6' : 'px-4 pb-6 pt-4',
         )}
       >

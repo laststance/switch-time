@@ -118,6 +118,23 @@ test('digit 0 starts detox and a digit hands the clock back to an activity', asy
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
 })
 
+test('narrow Home keeps the clock on screen and can scroll to the 24-h bar', async ({
+  page,
+}) => {
+  // Arrange: a short phone frame — production Safari used to clip いま and the dial above the switch row
+  await page.setViewportSize({ width: 390, height: 600 })
+  await signUp(page)
+
+  // Assert
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeInViewport()
+  await expect(page.getByText(readout)).toBeInViewport()
+  const bar = page.getByRole('img', { name: '今日の流れ' })
+  await bar.scrollIntoViewIfNeeded()
+  await expect(bar).toBeInViewport()
+})
+
 test('a reload while detox lands on Home in detox, not on the first-launch screen', async ({
   page,
 }) => {

@@ -32,7 +32,7 @@ export default function TabsLayout() {
   const { current, activity } = useCurrentActivity()
   return (
     <Tabs asChild>
-      <View className={cn('flex-1 bg-bg', chrome.root)}>
+      <View className={cn('min-h-0 flex-1 bg-bg', chrome.root)}>
         <TabList asChild style={chrome.layout}>
           <View
             role="tablist"
@@ -66,7 +66,8 @@ export default function TabsLayout() {
             </TabTrigger>
           </View>
         </TabList>
-        <TabSlot />
+        {/* Default flexShrink: 0 lets a tall Home grow past the tab frame; flex-col-reverse then clips the clock and the Screen ScrollView never gets a height. */}
+        <TabSlot style={{ flex: 1, minHeight: 0 }} />
       </View>
     </Tabs>
   )
