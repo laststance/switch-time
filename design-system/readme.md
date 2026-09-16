@@ -57,7 +57,7 @@ Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, cont
 
 Exactly one switch is pressed at any moment: an activity button, or the detox row. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
 
-Detox is the one state without a colour, because it has no activity: its full-width row under the grid inverts to a `--color-ink` fill with `--color-bg` text while it is pressed, and the dial's ring and hands, the status dot (hollow) and the elapsed readout all fall back to `--color-sub`. Its span on the 24-h bar is outlined like an idle span, never filled, and it is never totalled.
+Detox is the one state without a colour, because it has no activity: its full-width row under the grid inverts to a `--color-ink` fill with `--color-bg` text while it is pressed, and the dial's bezel ring, second hand and centre pin (the hour and minute hands stay `--color-ink`), the status dot (hollow) and the elapsed readout all fall back to `--color-sub`. Its span on the 24-h bar is outlined like an idle span, never filled, and it is never totalled; the bar's legend names it, and a History day that was all detox is outlined the same way in `--color-sub`, so it never reads as an untapped day.
 
 ## The dial
 

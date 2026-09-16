@@ -16,7 +16,7 @@ const port = Number(process.argv[2] ?? 8081)
 // Where playwright.config.ts boots (or reuses) the API bundle; E2E_API_PORT moves it with the config.
 const api = {
   host: 'localhost',
-  port: Number(process.env.E2E_API_PORT ?? 8080),
+  port: Number(process.env.E2E_API_PORT || 8080),
 }
 const types: Record<string, string> = {
   '.html': 'text/html',

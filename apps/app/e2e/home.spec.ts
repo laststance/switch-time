@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { signUp } from './helpers'
+import { apiAs, signUp } from './helpers'
 
 const readout = /^\d+:\d{2}:\d{2}$/
 
@@ -122,4 +122,30 @@ test('digit 0 starts detox and a digit hands the clock back to an activity', asy
     page.locator('[role="button"][aria-pressed="true"]'),
   ).toHaveCount(1)
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+})
+
+test('a reload while detox lands on Home in detox, not on the first-launch screen', async ({
+  page,
+}) => {
+  // Arrange: detox written through the API, so the reload never races an optimistic tap
+  await signUp(page)
+  const api = await apiAs(page)
+  await api.switches.switchTo({ activityId: null })
+
+  // Act
+  await page.reload()
+
+  // Assert: Home mounts straight into detox once the activity list has answered, and the wide card's legend names it
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toHaveCount(0)
+  // The hero's name, the detox row's label and the 「今日の流れ」 legend entry: without the legend there would be two.
+  await expect(page.getByText('detox', { exact: true })).toHaveCount(3)
 })

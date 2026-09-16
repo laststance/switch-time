@@ -65,3 +65,42 @@ test('the week view shows the excluded day dashed and out of the average', async
     'dashed',
   )
 })
+
+test('a day spent in detox is outlined in sub, named detox, and opens its correction sheet', async ({
+  page,
+}) => {
+  // Arrange: yesterday one tap into detox at 9:00; today's 家事 tap (signUp) closes it, so the day is measured with nothing to stack
+  await signUp(page)
+  const api = await apiAs(page)
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: null, startedAt: at(yesterday, 9) }],
+  })
+
+  // Act
+  await page.getByRole('tab', { name: '記録' }).click()
+
+  // Assert: the day reads as detox rather than 計測なし, and its dash is the `sub` tone of its own weekday label (an untapped
+  // day dashes in `line`)
+  await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
+  const detox = page.getByRole('link', { name: /・detox$/ })
+  await expect(detox).toHaveCount(1)
+  await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
+  const track = detox.locator('div').first()
+  await expect(track).toHaveCSS('border-top-style', 'dashed')
+  const sub = await detox
+    .locator('div')
+    .last()
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(track).toHaveCSS('border-top-color', sub)
+
+  // The outlined day still opens the correction sheet, listing the detox span
+  await detox.click()
+  await expect(
+    page.getByRole('dialog', { name: /の記録を訂正$/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'detox 9:00 – 24:00 15h 00m' }),
+  ).toBeVisible()
+})
