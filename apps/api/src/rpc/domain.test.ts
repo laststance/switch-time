@@ -2,7 +2,7 @@ import { addDays, dayBounds, localDay } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 import { expect, test } from 'vitest'
 
-import { db } from '../db/client'
+import { db, pool } from '../db/client'
 import { activities, switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
@@ -375,6 +375,255 @@ test('merging into the previous record removes the row and the previous state no
   expect(merged).toMatchObject({ id: before.rows[0]?.id, source: 'merge' })
   const day = await api.stats.day({ day: yesterday })
   expect(day.totals[仕事]).toBe(9 * H)
+})
+
+test('merging into the next record removes the row and the next state now starts where it did', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, 睡眠 23:00 (the current state).
+  const api = await signedIn('merge-next@example.com')
+  const list = await api.activities.list()
+  const 娯楽 = idOf(list, '娯楽')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: 娯楽, startedAt: at(yesterday, 18) },
+      { activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 23) },
+    ],
+  })
+  const [, rest, fun] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!rest || !fun) throw new Error('fixture has fewer than three rows')
+
+  // Act
+  const merged = await api.switches.mergeIntoNext({ id: rest.id })
+
+  // Assert: 休息 is gone, 娯楽 keeps its id and now runs 12:00–23:00.
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    at(yesterday, 12),
+    at(yesterday, 23),
+  ])
+  expect(merged).toMatchObject({
+    id: fun.id,
+    activityId: 娯楽,
+    startedAt: at(yesterday, 12),
+    source: 'merge',
+  })
+  const day = await api.stats.day({ day: yesterday })
+  expect(day.totals[娯楽]).toBe(11 * H)
+})
+
+test('the current state cannot merge into the next record, since no state starts after it', async () => {
+  // Arrange: 仕事 is the only row, so it is the current state.
+  const api = await signedIn('merge-next-current@example.com')
+  const work = await api.switches.switchTo({
+    activityId: idOf(await api.activities.list(), '仕事'),
+  })
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: work.id })
+
+  // Assert: refused, and the clock keeps its state.
+  await expect(merge).rejects.toThrow('no next state')
+  expect(await api.switches.current()).toMatchObject({ id: work.id })
+})
+
+test('another account cannot merge a switch into the next record: the id reads as missing and the owner’s rows stay as they were', async () => {
+  // Arrange: the owner has yesterday 仕事 9:00 then 休息 12:00; the stranger has only its own seed.
+  const owner = await signedIn('merge-next-owner@example.com')
+  const stranger = await signedIn('merge-next-stranger@example.com')
+  const list = await owner.activities.list()
+  await owner.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  const [work, rest] = (await owner.switches.listByDay({ day: yesterday })).rows
+  if (!work || !rest) throw new Error('fixture has fewer than two rows')
+
+  // Act + Assert: 仕事 has a next state the owner could merge into, so only the ownership check can refuse the stranger.
+  await expect(
+    stranger.switches.mergeIntoNext({ id: work.id }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const after = await owner.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.id, row.startedAt, row.source])).toEqual([
+    [work.id, at(yesterday, 9), 'correction'],
+    [rest.id, at(yesterday, 12), 'correction'],
+  ])
+})
+
+test('merging into a detox next record keeps it detox: the merged time moves out of the totals into detox', async () => {
+  // Arrange: two days ago 仕事 9:00, detox 12:00, 休息 15:00 (9h, closed by yesterday's 00:00 睡眠).
+  const api = await signedIn('merge-next-detox@example.com')
+  const list = await api.activities.list()
+  const 休息 = idOf(list, '休息')
+  const day = addDays(today, -2)
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
+      { activityId: null, startedAt: at(day, 12) },
+      { activityId: 休息, startedAt: at(day, 15) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
+  })
+  const [work, detox] = (await api.switches.listByDay({ day })).rows
+  if (!work || !detox) throw new Error('fixture has fewer than two rows')
+
+  // Act
+  const merged = await api.switches.mergeIntoNext({ id: work.id })
+
+  // Assert: the detox row keeps its id and no activity and now runs 9:00–15:00, so 仕事's 3h are detox time, in no total.
+  expect(merged).toMatchObject({
+    id: detox.id,
+    activityId: null,
+    startedAt: at(day, 9),
+    source: 'merge',
+  })
+  const [after, stats] = await Promise.all([
+    api.switches.listByDay({ day }),
+    api.stats.day({ day }),
+  ])
+  expect(after.rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [null, at(day, 9)],
+    [休息, at(day, 15)],
+  ])
+  expect(stats.totals).toEqual({ [休息]: 9 * H })
+  expect(stats.days[0]).toMatchObject({ day, detoxMs: 6 * H })
+})
+
+test('the last record of a day cannot merge into the next day’s first switch, even one at exactly 0:00, so undoing the day cannot delete it', async () => {
+  // Arrange: two days ago 仕事 9:00 and 娯楽 18:00; yesterday opens with 家事 at 0:00 sharp.
+  const api = await signedIn('merge-next-cross-day@example.com')
+  const list = await api.activities.list()
+  const day = addDays(today, -2)
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(day, 18) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '家事'), startedAt: at(yesterday, 0) }],
+  })
+  const [, fun] = (await api.switches.listByDay({ day })).rows
+  if (!fun) throw new Error('fixture has fewer than two rows')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: fun.id })
+
+  // Assert: refused, and neither day lost or moved a row.
+  await expect(merge).rejects.toThrow('next state is on a later day')
+  const [thatDay, nextDay] = await Promise.all([
+    api.switches.listByDay({ day }),
+    api.switches.listByDay({ day: yesterday }),
+  ])
+  expect(thatDay.rows.map((row) => row.startedAt)).toEqual([
+    at(day, 9),
+    at(day, 18),
+  ])
+  expect(nextDay.rows.map((row) => row.startedAt)).toEqual([at(yesterday, 0)])
+})
+
+test('the day a merge may not leave is the account’s own: a record two hours before its midnight cannot merge into one half an hour after', async () => {
+  // Arrange: Los Angeles; its midnight falls in the middle of a Tokyo day and of a UTC day, so both records share those days.
+  const LA = 'America/Los_Angeles'
+  const api = await signedIn('merge-next-zone@example.com')
+  const list = await api.activities.list()
+  await api.settings.update({ timeZone: LA })
+  const zoneYesterday = addDays(localDay(new Date(), LA), -1)
+  const zoneTwoDaysAgo = addDays(zoneYesterday, -1)
+  await api.switches.replaceDay({
+    day: zoneTwoDaysAgo,
+    rows: [
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: new Date(dayBounds(zoneTwoDaysAgo, LA).end - 2 * H),
+      },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: zoneYesterday,
+    rows: [
+      {
+        activityId: idOf(list, '休息'),
+        startedAt: new Date(dayBounds(zoneYesterday, LA).start + 0.5 * H),
+      },
+    ],
+  })
+  const [late] = (await api.switches.listByDay({ day: zoneTwoDaysAgo })).rows
+  if (!late) throw new Error('fixture has no row')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: late.id })
+
+  // Assert
+  await expect(merge).rejects.toThrow('next state is on a later day')
+})
+
+test('a merge of a record that another device has just merged away is refused, so the span stays with the record that merge gave it to', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00. Another device's 前の記録に統合 on 休息 has deleted it and marked
+  // 仕事 as merged, but has not committed yet.
+  const api = await signedIn('merge-race@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const [work, rest, fun] = (await api.switches.listByDay({ day: yesterday }))
+    .rows
+  if (!work || !rest || !fun)
+    throw new Error('fixture has fewer than three rows')
+  const restDeletedUncommitted = Promise.withResolvers<void>()
+  const otherMergeMayCommit = Promise.withResolvers<void>()
+  const otherMerge = db.transaction(async (tx) => {
+    await tx.delete(switches).where(eq(switches.id, rest.id))
+    await tx
+      .update(switches)
+      .set({ source: 'merge' })
+      .where(eq(switches.id, work.id))
+    restDeletedUncommitted.resolve()
+    await otherMergeMayCommit.promise
+  })
+  await restDeletedUncommitted.promise
+
+  // Act: 次の記録に統合 on 休息 still reads the row, and its delete waits for the other merge; then that merge commits.
+  const merge = api.switches.mergeIntoNext({ id: rest.id })
+  const refused = expect(merge).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  await expect
+    .poll(
+      async () => {
+        const { rows } = await pool.query<{ waiting: number }>(
+          `select count(*)::int as waiting from pg_stat_activity
+           where datname = current_database() and wait_event_type = 'Lock' and query ilike 'delete from "switches"%'`,
+        )
+        return rows[0]?.waiting
+      },
+      { timeout: 3_000 },
+    )
+    .toBe(1)
+  otherMergeMayCommit.resolve()
+  await otherMerge
+
+  // Assert: the second merge finds 休息 gone and is refused, so 仕事 keeps 9:00–18:00 and 娯楽 still starts at 18:00.
+  await refused
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.id, row.startedAt, row.source])).toEqual([
+    [work.id, at(yesterday, 9), 'merge'],
+    [fun.id, at(yesterday, 18), 'correction'],
+  ])
 })
 
 test('splitting in half creates a second row at the midpoint with the same activity', async () => {

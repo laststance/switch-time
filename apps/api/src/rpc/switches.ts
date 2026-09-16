@@ -4,6 +4,7 @@ import {
   MIN_SEGMENT_MS,
   dayBounds,
   daySchema,
+  localDay,
   moveStartInputSchema,
   replaceDayInputSchema,
 } from '@switch-time/shared'
@@ -65,6 +66,34 @@ const correct = async (id: string, values: Partial<SwitchRow>) =>
       .where(eq(switches.id, id))
       .returning(),
   )
+
+/**
+ * Deletes a row and marks the neighbour that takes over its span as merged, in one transaction, or NOT_FOUND if either row is
+ * already gone; `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start). Called by the two
+ * merge procedures.
+ * @example return mergeInto(row.id, next.id, { startedAt: row.startedAt }) // the next state, now starting at row.startedAt
+ */
+const mergeInto = async (
+  goneId: string,
+  keptId: string,
+  values: Partial<SwitchRow> = {},
+) =>
+  db.transaction(async (tx) => {
+    // Another merge may have removed the row since the caller read it: refuse (rolling back) rather than move the neighbour.
+    one(
+      await tx
+        .delete(switches)
+        .where(eq(switches.id, goneId))
+        .returning({ id: switches.id }),
+    )
+    return one(
+      await tx
+        .update(switches)
+        .set({ ...values, source: 'merge' })
+        .where(eq(switches.id, keptId))
+        .returning(),
+    )
+  })
 
 const byId = z.object({ id: z.uuid() })
 
@@ -191,16 +220,24 @@ export const switchesRouter = {
     const { row, prev } = await withNeighbours(context.user.id, input.id)
     // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
     if (!prev) throw new ORPCError('CONFLICT', { message: 'no previous state' })
-    return db.transaction(async (tx) => {
-      await tx.delete(switches).where(eq(switches.id, row.id))
-      return one(
-        await tx
-          .update(switches)
-          .set({ source: 'merge' })
-          .where(eq(switches.id, prev.id))
-          .returning(),
-      )
-    })
+    return mergeInto(row.id, prev.id)
+  }),
+
+  // The next state takes over the row's span by starting where the row did.
+  mergeIntoNext: authed.input(byId).handler(async ({ context, input }) => {
+    const [{ row, next }, { timeZone }] = await Promise.all([
+      withNeighbours(context.user.id, input.id),
+      getSettings(context.user.id),
+    ])
+    // The current state has no later state to hand its time to.
+    if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
+    // 元に戻す rewrites the row's day only: a next state pulled back from a later day would be deleted with it, for good.
+    const { end } = dayBounds(localDay(row.startedAt, timeZone), timeZone)
+    if (next.startedAt.getTime() >= end)
+      throw new ORPCError('CONFLICT', {
+        message: 'next state is on a later day',
+      })
+    return mergeInto(row.id, next.id, { startedAt: row.startedAt })
   }),
 
   splitInHalf: authed.input(byId).handler(async ({ context, input }) => {

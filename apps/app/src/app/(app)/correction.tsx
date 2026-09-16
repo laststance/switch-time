@@ -110,14 +110,21 @@ type ActionButtonProps = {
   title: string
   disabled: boolean
   onPress: () => void
+  className?: string
 }
 
-function ActionButton({ title, disabled, onPress }: ActionButtonProps) {
+// Full width in a column; pass `flex-1` only inside a row (in a column it collapses the button to its text height).
+function ActionButton({
+  title,
+  disabled,
+  onPress,
+  className,
+}: ActionButtonProps) {
   return (
     <Control
       disabled={disabled}
       onPress={onPress}
-      className="h-11 flex-1 rounded-chip border border-line"
+      className={cn('h-11 rounded-chip border border-line', className)}
     >
       <Text className="text-xs font-semibold text-ink">{title}</Text>
     </Control>
@@ -129,17 +136,19 @@ type ActionsProps = {
   pending: boolean
   onMove: (deltaMinutes: 15 | -15) => void
   onPick: (activityId: string | null) => void
-  onMerge: () => void
+  onMergePrevious: () => void
+  onMergeNext: () => void
   onSplit: () => void
 }
 
-// The panel under the selected row: ±15 min on the start, the activity picker, merge and split.
+// The panel under the selected row: ±15 min on the start, the activity picker, merge either way and split.
 function Actions({
   row,
   pending,
   onMove,
   onPick,
-  onMerge,
+  onMergePrevious,
+  onMergeNext,
   onSplit,
 }: ActionsProps) {
   const live = useActivities().data ?? []
@@ -199,12 +208,21 @@ function Actions({
           />
         </View>
       </View>
-      <View className="flex-row gap-2">
-        <ActionButton
-          title="前の記録に統合"
-          disabled={!can(row.canMerge)}
-          onPress={onMerge}
-        />
+      <View className="gap-2">
+        <View className="flex-row gap-2">
+          <ActionButton
+            title="前の記録に統合"
+            disabled={!can(row.canMergePrevious)}
+            onPress={onMergePrevious}
+            className="flex-1"
+          />
+          <ActionButton
+            title="次の記録に統合"
+            disabled={!can(row.canMergeNext)}
+            onPress={onMergeNext}
+            className="flex-1"
+          />
+        </View>
         <ActionButton
           title="半分で分割"
           disabled={!can(row.canSplit)}
@@ -278,7 +296,8 @@ export default function CorrectionSheet() {
                     correction.move(row.id, deltaMinutes)
                   }
                   onPick={(activityId) => correction.pick(row.id, activityId)}
-                  onMerge={() => correction.merge(row.id)}
+                  onMergePrevious={() => correction.mergePrevious(row.id)}
+                  onMergeNext={() => correction.mergeNext(row.id)}
                   onSplit={() => correction.split(row.id)}
                 />
               )}

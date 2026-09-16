@@ -42,7 +42,8 @@ export type CorrectionRow = {
   editable: boolean
   canMoveEarlier: boolean
   canMoveLater: boolean
-  canMerge: boolean
+  canMergePrevious: boolean
+  canMergeNext: boolean
   canSplit: boolean
 }
 
@@ -161,7 +162,10 @@ function describeRow(
     canMoveEarlier:
       editable && moveTarget(row, prev, next, bounds, -15) !== null,
     canMoveLater: editable && moveTarget(row, prev, next, bounds, 15) !== null,
-    canMerge: editable && prev !== null,
+    canMergePrevious: editable && prev !== null,
+    // Merging moves the next row back to this row's start, so that row must be the day's own: 「元に戻す」 rewrites this day
+    // only, and would drop the next day's first switch for good.
+    canMergeNext: editable && next !== null && trueEnd < bounds.end,
     // Both halves keep the clamp's margin and the new row stays inside the day.
     canSplit:
       editable &&
