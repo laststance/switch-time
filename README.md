@@ -47,7 +47,7 @@ pnpm db:psql                  # psql into the switchtime database
 pnpm db:reset                 # docker compose down -v: drop the volume, next `up` starts from an empty database
 ```
 
-`compose.yaml` builds the `dev` target of `apps/api/Dockerfile` and bind-mounts `apps/api/src`, so editing a file restarts the API inside the container. Postgres 18 matches the newest major DigitalOcean Managed Databases offers; `docker/postgres/init.sql` also creates `switchtime_test` for Vitest. Inside Compose the database host is `db` (set on the `api` service); `.env` keeps `localhost` so `pnpm --filter api dev` on the host reaches the same Postgres. `apps/api/src/env.ts` loads the repo-root `.env` when it exists, so every `pnpm --filter api …` script sees it.
+`compose.yaml` builds the `dev` target of `apps/api/Dockerfile` and bind-mounts `apps/api/src`, `apps/api/drizzle` and `packages/shared/src`, so editing a file restarts the API inside the container and a new migration only needs `docker compose restart api`. Postgres 18 matches the newest major DigitalOcean Managed Databases offers; `docker/postgres/init.sql` also creates `switchtime_test` for Vitest. Inside Compose the database host is `db` (set on the `api` service); `.env` keeps `localhost` so `pnpm --filter api dev` on the host reaches the same Postgres. `apps/api/src/env.ts` loads the repo-root `.env` when it exists, so every `pnpm --filter api …` script sees it.
 
 ### Database (Drizzle ORM 1.0 RC)
 
