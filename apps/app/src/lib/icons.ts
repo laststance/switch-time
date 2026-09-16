@@ -25,8 +25,15 @@ export const PENCIL = 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'
 /** The 「未使用日の扱い」 footnote's info circle. */
 export const INFO = 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01'
 
+/** lucide `wind`: the detox row on ホーム and the detox chip / pill in the correction sheet. */
+export const WIND =
+  'M12.8 19.6A2 2 0 1 0 14 16H2M17.5 8a2.5 2.5 0 1 1 2 4H2M9.8 4.4A2 2 0 1 1 11 8H2'
+
+// Every glyph a row may carry: the activity icons plus detox's wind, which the editor never cycles to.
+const GLYPHS: Record<string, string> = { ...ICONS, wind: WIND }
+
 /**
- * Stroke path for an activity's `iconKey`; an unknown key (a renamed custom activity) still draws as the house.
+ * Stroke path for an activity's `iconKey` (or detox's `wind`); an unknown key (a renamed custom activity) still draws as the house.
  * @example <StrokeIcon d={activityIcon('work')} size={20} strokeWidth={2} color={ink} />
  */
-export const activityIcon = (iconKey: string): string => ICONS[iconKey] ?? HOME
+export const activityIcon = (iconKey: string): string => GLYPHS[iconKey] ?? HOME

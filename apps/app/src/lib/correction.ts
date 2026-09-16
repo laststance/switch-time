@@ -12,18 +12,22 @@ import type { ActivityRow, SwitchRow } from './orpc'
 export type ListedDay = Awaited<
   ReturnType<AppRouterClient['switches']['listByDay']>
 >
+/** What a row is drawn with; `color` null is detox, which has no colour of its own (outlined, never filled). */
 export type CorrectionActivity = Pick<
   ActivityRow,
-  'id' | 'name' | 'color' | 'iconKey'
->
+  'id' | 'name' | 'iconKey'
+> & {
+  color: ActivityRow['color'] | null
+}
 /** What 「元に戻す」 keeps: the day's own rows as `switches.replaceDay` takes them. */
 export type DaySnapshot = ReplaceDayInput['rows']
 
 export type CorrectionRow = {
   id: string
-  activityId: string
+  /** null = detox. */
+  activityId: string | null
   name: string
-  color: string
+  color: string | null
   iconKey: string
   /** The span drawn for the row, clipped to the day: the carried-in state starts at 0:00, the current state ends now. */
   start: number
@@ -54,6 +58,13 @@ const UNKNOWN: CorrectionActivity = {
   name: '…',
   color: 'transparent',
   iconKey: 'home',
+}
+// A detox row joins no activity: it names itself and has no colour, so the chip and the bar draw it outlined.
+const DETOX: CorrectionActivity = {
+  id: '',
+  name: 'detox',
+  color: null,
+  iconKey: 'wind',
 }
 
 /**
@@ -111,7 +122,7 @@ export function correctionRows(
           row,
           timeline[index - 1] ?? null,
           timeline[index + 1] ?? null,
-          byId.get(row.activityId),
+          row.activityId === null ? DETOX : byId.get(row.activityId),
           bounds,
         ),
       )

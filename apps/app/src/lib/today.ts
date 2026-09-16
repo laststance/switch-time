@@ -1,6 +1,6 @@
 import { segmentsInRange } from '@switch-time/shared'
 
-type Row = { id: string; activityId: string; startedAt: Date }
+type Row = { id: string; activityId: string | null; startedAt: Date }
 type DayList = { carriedIn: Row | null; rows: Row[] }
 
 /**

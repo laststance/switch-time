@@ -1,0 +1,1 @@
+ALTER TABLE "switches" ALTER COLUMN "activity_id" DROP NOT NULL;

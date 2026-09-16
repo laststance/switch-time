@@ -34,6 +34,19 @@ export async function latestSwitch(userId: string): Promise<SwitchRow | null> {
   return row ?? null
 }
 
+/**
+ * The user's own, unarchived activity; null (detox) has no row to check. switchTo, changeActivity and replaceDay share the
+ * rule: an archived activity is hidden from the grid, so no segment may be recorded to it.
+ * @example await liveActivity(userId, input.activityId)
+ */
+async function liveActivity(userId: string, id: string | null) {
+  if (id === null) return null
+  const activity = await ownActivity(userId, id)
+  if (activity.archivedAt)
+    throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
+  return activity
+}
+
 // A correction-sheet edit: the row keeps its id, its source becomes 'correction'.
 const correct = async (id: string, values: Partial<SwitchRow>) =>
   one(
@@ -108,12 +121,11 @@ export const switchesRouter = {
   current: authed.handler(async ({ context }) => latestSwitch(context.user.id)),
 
   switchTo: authed
-    .input(z.object({ activityId: z.uuid() }))
+    // null = detox: from now on the time is recorded to no activity, until the next real one.
+    .input(z.object({ activityId: z.uuid().nullable() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      const activity = await ownActivity(userId, input.activityId)
-      if (activity.archivedAt)
-        throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
+      await liveActivity(userId, input.activityId)
       const current = await latestSwitch(userId)
       // ponytail: read-then-insert without a per-user lock; two simultaneous taps from one account can both land.
       // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
@@ -157,15 +169,12 @@ export const switchesRouter = {
     }),
 
   changeActivity: authed
-    .input(z.object({ id: z.uuid(), activityId: z.uuid() }))
+    .input(z.object({ id: z.uuid(), activityId: z.uuid().nullable() }))
     .handler(async ({ context, input }) => {
-      const [row, activity] = await Promise.all([
+      const [row] = await Promise.all([
         ownSwitch(context.user.id, input.id),
-        ownActivity(context.user.id, input.activityId),
+        liveActivity(context.user.id, input.activityId),
       ])
-      // Same rule as switchTo: an archived activity is hidden from the grid, so no segment may be moved onto it.
-      if (activity.archivedAt)
-        throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
       return correct(row.id, { activityId: input.activityId })
     }),
 
@@ -234,14 +243,11 @@ export const switchesRouter = {
           message:
             'rows must be ordered by startedAt, each one later than the last',
         })
-      const rowActivities = await Promise.all(
+      await Promise.all(
         [...new Set(input.rows.map((row) => row.activityId))].map(async (id) =>
-          ownActivity(userId, id),
+          liveActivity(userId, id),
         ),
       )
-      // Same rule as switchTo and changeActivity: an archived activity is hidden from the grid, so no segment may use it.
-      if (rowActivities.some((activity) => activity.archivedAt))
-        throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
       return db.transaction(async (tx) => {
         await tx
           .delete(switches)

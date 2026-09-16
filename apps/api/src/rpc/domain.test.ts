@@ -186,6 +186,85 @@ test('a segment longer than the idle threshold is excluded from the day total', 
   expect(stats.streak).toBe(2)
 })
 
+test('switching to detox creates a state with no activity and pressing it again keeps the row', async () => {
+  // Arrange
+  const api = await signedIn('detox@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  await api.switches.switchTo({ activityId: work })
+
+  // Act
+  const detox = await api.switches.switchTo({ activityId: null })
+  const again = await api.switches.switchTo({ activityId: null })
+
+  // Assert
+  expect(detox).toMatchObject({ activityId: null, source: 'tap' })
+  expect(again.id).toBe(detox.id)
+  expect((await api.switches.current())?.id).toBe(detox.id)
+})
+
+test('detox time is left out of every total while the day stays measured', async () => {
+  // Arrange: two days ago 9:00 仕事, 12:00 detox, 15:00 休息 (9h, closed by yesterday's 00:00 睡眠)
+  const api = await signedIn('detox-stats@example.com')
+  const list = await api.activities.list()
+  const day = addDays(today, -2)
+  const yesterday = addDays(today, -1)
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
+      { activityId: null, startedAt: at(day, 12) },
+      { activityId: idOf(list, '休息'), startedAt: at(day, 15) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
+  })
+
+  // Act
+  const [stats, listed] = await Promise.all([
+    api.stats.day({ day }),
+    api.switches.listByDay({ day }),
+  ])
+
+  // Assert: the detox row is stored and listed, but its 3h are in no total and are not idle either
+  expect(listed.rows.map((row) => row.activityId)).toEqual([
+    idOf(list, '仕事'),
+    null,
+    idOf(list, '休息'),
+  ])
+  expect(stats.totals).toEqual({
+    [idOf(list, '仕事')]: 10_800_000,
+    [idOf(list, '休息')]: 32_400_000,
+  })
+  expect(stats.days[0]).toMatchObject({ day, measured: true, idleMs: 0 })
+})
+
+test('a segment can be corrected onto detox and back', async () => {
+  // Arrange
+  const api = await signedIn('detox-correction@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const row = await api.switches.switchTo({ activityId: work })
+
+  // Act
+  const detoxed = await api.switches.changeActivity({
+    id: row.id,
+    activityId: null,
+  })
+  const restored = await api.switches.changeActivity({
+    id: row.id,
+    activityId: work,
+  })
+
+  // Assert
+  expect(detoxed).toMatchObject({
+    id: row.id,
+    activityId: null,
+    source: 'correction',
+  })
+  expect(restored).toMatchObject({ id: row.id, activityId: work })
+})
+
 const MIN = 60_000
 const yesterday = addDays(today, -1)
 
