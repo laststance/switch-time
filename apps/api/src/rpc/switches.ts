@@ -68,8 +68,9 @@ const correct = async (id: string, values: Partial<SwitchRow>) =>
   )
 
 /**
- * Deletes a row and marks the neighbour that takes over its span as merged, in one transaction; `values` moves that neighbour
- * (mergeIntoNext pulls the next state back to the row's start). Called by the two merge procedures.
+ * Deletes a row and marks the neighbour that takes over its span as merged, in one transaction, or NOT_FOUND if either row is
+ * already gone; `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start). Called by the two
+ * merge procedures.
  * @example return mergeInto(row.id, next.id, { startedAt: row.startedAt }) // the next state, now starting at row.startedAt
  */
 const mergeInto = async (
@@ -78,7 +79,13 @@ const mergeInto = async (
   values: Partial<SwitchRow> = {},
 ) =>
   db.transaction(async (tx) => {
-    await tx.delete(switches).where(eq(switches.id, goneId))
+    // Another merge may have removed the row since the caller read it: refuse (rolling back) rather than move the neighbour.
+    one(
+      await tx
+        .delete(switches)
+        .where(eq(switches.id, goneId))
+        .returning({ id: switches.id }),
+    )
     return one(
       await tx
         .update(switches)

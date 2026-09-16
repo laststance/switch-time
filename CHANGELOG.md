@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
   「元に戻す」 only rewrites the day it was pressed on. The server refuses that
   merge as well, judging the day in the account's time zone, and the running
   state has no later record to merge into.
+- Either merge is refused when another device has just merged the same record
+  away, rather than succeeding as well and handing its span to a different
+  record.
 
 ### Changed
 
@@ -51,6 +54,8 @@ All notable changes to this project are documented here. The format follows
   record, another account's id, and both refusals (the running state, and a
   next record on a later day at 0:00 sharp and in a Los Angeles account).
   `canMergeNext` is unit-tested at the midnight boundary.
+- An API test races two merges of one record against the real Postgres: it
+  holds one merge's transaction open until the other waits on it.
 - Playwright covers undo after a merge in either direction, after a merge and a
   15-minute move, after 活動を変える and after 半分で分割, the panel waiting for
   an edit from a closed sheet, a past day's last record that cannot merge into

@@ -2,7 +2,7 @@ import { addDays, dayBounds, localDay } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 import { expect, test } from 'vitest'
 
-import { db } from '../db/client'
+import { db, pool } from '../db/client'
 import { activities, switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
@@ -567,6 +567,63 @@ test('the day a merge may not leave is the account’s own: a record two hours b
 
   // Assert
   await expect(merge).rejects.toThrow('next state is on a later day')
+})
+
+test('a merge of a record that another device has just merged away is refused, so the span stays with the record that merge gave it to', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00. Another device's 前の記録に統合 on 休息 has deleted it and marked
+  // 仕事 as merged, but has not committed yet.
+  const api = await signedIn('merge-race@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const [work, rest, fun] = (await api.switches.listByDay({ day: yesterday }))
+    .rows
+  if (!work || !rest || !fun)
+    throw new Error('fixture has fewer than three rows')
+  const restDeletedUncommitted = Promise.withResolvers<void>()
+  const otherMergeMayCommit = Promise.withResolvers<void>()
+  const otherMerge = db.transaction(async (tx) => {
+    await tx.delete(switches).where(eq(switches.id, rest.id))
+    await tx
+      .update(switches)
+      .set({ source: 'merge' })
+      .where(eq(switches.id, work.id))
+    restDeletedUncommitted.resolve()
+    await otherMergeMayCommit.promise
+  })
+  await restDeletedUncommitted.promise
+
+  // Act: 次の記録に統合 on 休息 still reads the row, and its delete waits for the other merge; then that merge commits.
+  const merge = api.switches.mergeIntoNext({ id: rest.id })
+  const refused = expect(merge).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  await expect
+    .poll(
+      async () => {
+        const { rows } = await pool.query<{ waiting: number }>(
+          `select count(*)::int as waiting from pg_stat_activity
+           where datname = current_database() and wait_event_type = 'Lock' and query ilike 'delete from "switches"%'`,
+        )
+        return rows[0]?.waiting
+      },
+      { timeout: 3_000 },
+    )
+    .toBe(1)
+  otherMergeMayCommit.resolve()
+  await otherMerge
+
+  // Assert: the second merge finds 休息 gone and is refused, so 仕事 keeps 9:00–18:00 and 娯楽 still starts at 18:00.
+  await refused
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.id, row.startedAt, row.source])).toEqual([
+    [work.id, at(yesterday, 9), 'merge'],
+    [fun.id, at(yesterday, 18), 'correction'],
+  ])
 })
 
 test('splitting in half creates a second row at the midpoint with the same activity', async () => {
