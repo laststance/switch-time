@@ -62,9 +62,7 @@ test('tapping 仕事 lights only 仕事 and restarts the elapsed counter', async
     'aria-pressed',
     'false',
   )
-  await expect(
-    page.locator('[role="button"][aria-pressed="true"]'),
-  ).toHaveCount(1)
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
 
@@ -85,9 +83,7 @@ test('tapping detox unpresses every activity, dims the readout and outlines the 
     'aria-pressed',
     'false',
   )
-  await expect(
-    page.locator('[role="button"][aria-pressed="true"]'),
-  ).toHaveCount(1)
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   const subtext = page.getByText(
     /^\d+:\d{2} から · どの行動にも積み上がりません$/,
   )
@@ -118,9 +114,7 @@ test('digit 0 starts detox and a digit hands the clock back to an activity', asy
     'true',
   )
   await expect(detox).toHaveAttribute('aria-pressed', 'false')
-  await expect(
-    page.locator('[role="button"][aria-pressed="true"]'),
-  ).toHaveCount(1)
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
 })
 

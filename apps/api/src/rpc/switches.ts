@@ -7,13 +7,13 @@ import {
   moveStartInputSchema,
   replaceDayInputSchema,
 } from '@switch-time/shared'
-import { and, asc, desc, eq, gt, gte, lt } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '../db/client'
-import { switches } from '../db/schema/app'
+import { activities, switches } from '../db/schema/app'
 
-import { authed, one, ownActivity, ownSwitch } from './base'
+import { authed, one, ownSwitch } from './base'
 import { getSettings } from './settings'
 
 type SwitchRow = typeof switches.$inferSelect
@@ -37,15 +37,22 @@ export async function latestSwitch(userId: string): Promise<SwitchRow | null> {
 /**
  * Rejects a segment recorded to an archived activity; null (detox) has no row to check. switchTo, changeActivity and
  * replaceDay share the rule: an archived activity is hidden from the grid, so no segment may be recorded to it.
- * @example await assertLiveActivity(userId, input.activityId)
+ * One ownership-scoped query however many ids arrive, so a 500-row replaceDay cannot fan out into 500 of them.
+ * @example await assertLiveActivities(userId, [input.activityId])
  */
-async function assertLiveActivity(
+async function assertLiveActivities(
   userId: string,
-  id: string | null,
+  ids: readonly (string | null)[],
 ): Promise<void> {
-  if (id === null) return
-  const activity = await ownActivity(userId, id)
-  if (activity.archivedAt)
+  const wanted = [...new Set(ids.filter((id) => id !== null))]
+  if (wanted.length === 0) return
+  const rows = await db
+    .select({ archivedAt: activities.archivedAt })
+    .from(activities)
+    .where(and(eq(activities.userId, userId), inArray(activities.id, wanted)))
+  // A row short means an id is another user's or none at all; both look like a miss on purpose, as in {@link one}.
+  if (rows.length !== wanted.length) throw new ORPCError('NOT_FOUND')
+  if (rows.some((row) => row.archivedAt !== null))
     throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
 }
 
@@ -127,7 +134,7 @@ export const switchesRouter = {
     .input(z.object({ activityId: z.uuid().nullable() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      await assertLiveActivity(userId, input.activityId)
+      await assertLiveActivities(userId, [input.activityId])
       const current = await latestSwitch(userId)
       // ponytail: read-then-insert without a per-user lock; two simultaneous taps from one account can both land.
       // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
@@ -175,7 +182,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const [row] = await Promise.all([
         ownSwitch(context.user.id, input.id),
-        assertLiveActivity(context.user.id, input.activityId),
+        assertLiveActivities(context.user.id, [input.activityId]),
       ])
       return correct(row.id, { activityId: input.activityId })
     }),
@@ -245,10 +252,9 @@ export const switchesRouter = {
           message:
             'rows must be ordered by startedAt, each one later than the last',
         })
-      await Promise.all(
-        [...new Set(input.rows.map((row) => row.activityId))].map(async (id) =>
-          assertLiveActivity(userId, id),
-        ),
+      await assertLiveActivities(
+        userId,
+        input.rows.map((row) => row.activityId),
       )
       return db.transaction(async (tx) => {
         await tx
