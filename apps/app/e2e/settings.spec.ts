@@ -12,6 +12,19 @@ const shift = (day: string, n: number) =>
     .toISOString()
     .slice(0, 10)
 
+/** What {@link paintBrowserChrome} writes so Safari's URL bar matches 明／暗. */
+const browserChrome = () => ({
+  colorScheme: document.documentElement.style.colorScheme,
+  themeColor: document
+    .querySelector('meta[name="theme-color"]:not([media])')
+    ?.getAttribute('content'),
+  liveMedia: [
+    ...document.querySelectorAll(
+      'meta[name="theme-color"][media]:not([media="not all"])',
+    ),
+  ].map((el) => el.getAttribute('media')),
+})
+
 test('cycling a color on 家事 persists after reload and shows on the Home button', async ({
   page,
 }) => {
@@ -50,6 +63,13 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
   const bar = page.getByRole('tablist')
   await expect(bar).toBeVisible()
   await expect(bar).toHaveCSS('background-color', 'rgb(245, 242, 235)')
+  await expect
+    .poll(async () => page.evaluate(browserChrome))
+    .toEqual({
+      colorScheme: 'light',
+      themeColor: '#f5f2eb',
+      liveMedia: [],
+    })
 
   // Act
   await page.getByRole('button', { name: '暗' }).click()
@@ -60,6 +80,13 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
     'true',
   )
   await expect(bar).toHaveCSS('background-color', 'rgb(17, 18, 22)')
+  await expect
+    .poll(async () => page.evaluate(browserChrome))
+    .toEqual({
+      colorScheme: 'dark',
+      themeColor: '#111216',
+      liveMedia: [],
+    })
   // The chrome flipped on the optimistic value; wait for the server before reloading on top of it.
   const api = await apiAs(page)
   await expect.poll(async () => (await api.settings.get()).theme).toBe('dark')
@@ -67,6 +94,13 @@ test('switching appearance to dark applies immediately', async ({ page }) => {
   const reloadedBar = page.getByRole('tablist')
   await expect(reloadedBar).toBeVisible()
   await expect(reloadedBar).toHaveCSS('background-color', 'rgb(17, 18, 22)')
+  await expect
+    .poll(async () => page.evaluate(browserChrome))
+    .toEqual({
+      colorScheme: 'dark',
+      themeColor: '#111216',
+      liveMedia: [],
+    })
 })
 
 test('a manually excluded day returns from the 未使用日の扱い sheet and the idle threshold persists', async ({

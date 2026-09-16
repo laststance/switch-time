@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Uniwind } from 'uniwind'
 
 import { useSettings } from '@/hooks/use-settings'
-import { resolveTheme } from '@/lib/theme'
+import { paintBrowserChrome, resolveTheme } from '@/lib/theme'
 import { useAppSelector } from '@/store'
 
 /**
@@ -15,5 +15,6 @@ export function useThemeSync() {
   const theme = useAppSelector((s) => resolveTheme(mode, new Date(s.clock.now)))
   useEffect(() => {
     Uniwind.setTheme(theme)
+    paintBrowserChrome(theme)
   }, [theme])
 }
