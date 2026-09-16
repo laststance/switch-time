@@ -391,15 +391,13 @@ test('merging into the next record removes the row and the next state now starts
       { activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 23) },
     ],
   })
-  const before = await api.switches.listByDay({ day: yesterday })
-  const [, rest, fun, sleep] = before.rows
-  if (!rest || !fun || !sleep)
-    throw new Error('fixture has fewer than four rows')
+  const [, rest, fun] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!rest || !fun) throw new Error('fixture has fewer than three rows')
 
   // Act
   const merged = await api.switches.mergeIntoNext({ id: rest.id })
 
-  // Assert: 休息 is gone, 娯楽 keeps its id and now runs 12:00–23:00; the current state has nothing to merge into.
+  // Assert: 休息 is gone, 娯楽 keeps its id and now runs 12:00–23:00.
   const after = await api.switches.listByDay({ day: yesterday })
   expect(after.rows.map((row) => row.startedAt)).toEqual([
     at(yesterday, 9),
@@ -414,9 +412,21 @@ test('merging into the next record removes the row and the next state now starts
   })
   const day = await api.stats.day({ day: yesterday })
   expect(day.totals[娯楽]).toBe(11 * H)
-  await expect(
-    api.switches.mergeIntoNext({ id: sleep.id }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+})
+
+test('the current state cannot merge into the next record, since no state starts after it', async () => {
+  // Arrange: 仕事 is the only row, so it is the current state.
+  const api = await signedIn('merge-next-current@example.com')
+  const work = await api.switches.switchTo({
+    activityId: idOf(await api.activities.list(), '仕事'),
+  })
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: work.id })
+
+  // Assert: refused, and the clock keeps its state.
+  await expect(merge).rejects.toThrow('no next state')
+  expect(await api.switches.current()).toMatchObject({ id: work.id })
 })
 
 test('another account cannot merge a switch into the next record: the id reads as missing and the owner’s rows stay as they were', async () => {
@@ -511,7 +521,7 @@ test('the last record of a day cannot merge into the next day’s first switch, 
   const merge = api.switches.mergeIntoNext({ id: fun.id })
 
   // Assert: refused, and neither day lost or moved a row.
-  await expect(merge).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(merge).rejects.toThrow('next state is on a later day')
   const [thatDay, nextDay] = await Promise.all([
     api.switches.listByDay({ day }),
     api.switches.listByDay({ day: yesterday }),
@@ -521,6 +531,42 @@ test('the last record of a day cannot merge into the next day’s first switch, 
     at(day, 18),
   ])
   expect(nextDay.rows.map((row) => row.startedAt)).toEqual([at(yesterday, 0)])
+})
+
+test('the day a merge may not leave is the account’s own: a record two hours before its midnight cannot merge into one half an hour after', async () => {
+  // Arrange: Los Angeles; its midnight falls in the middle of a Tokyo day and of a UTC day, so both records share those days.
+  const LA = 'America/Los_Angeles'
+  const api = await signedIn('merge-next-zone@example.com')
+  const list = await api.activities.list()
+  await api.settings.update({ timeZone: LA })
+  const zoneYesterday = addDays(localDay(new Date(), LA), -1)
+  const zoneTwoDaysAgo = addDays(zoneYesterday, -1)
+  await api.switches.replaceDay({
+    day: zoneTwoDaysAgo,
+    rows: [
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: new Date(dayBounds(zoneTwoDaysAgo, LA).end - 2 * H),
+      },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: zoneYesterday,
+    rows: [
+      {
+        activityId: idOf(list, '休息'),
+        startedAt: new Date(dayBounds(zoneYesterday, LA).start + 0.5 * H),
+      },
+    ],
+  })
+  const [late] = (await api.switches.listByDay({ day: zoneTwoDaysAgo })).rows
+  if (!late) throw new Error('fixture has no row')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({ id: late.id })
+
+  // Assert
+  await expect(merge).rejects.toThrow('next state is on a later day')
 })
 
 test('splitting in half creates a second row at the midpoint with the same activity', async () => {

@@ -94,6 +94,144 @@ test('merging into the next record hands the span to the next row, and undo brin
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
+test('undo after a merge and then a 15-minute move takes back only the move', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, with 休息 merged into 娯楽 through the sheet.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  await page.getByRole('button', { name: '次の記録に統合' }).click()
+  const merged = page.getByRole('button', {
+    name: '娯楽 12:00 – 24:00 12h 00m',
+  })
+  await expect(merged).toBeVisible()
+
+  // Act: move 娯楽 15 minutes earlier, then undo.
+  await merged.click()
+  await page.getByRole('button', { name: '15分早める' }).click()
+  await expect(
+    page.getByRole('button', { name: '娯楽 11:45 – 24:00 12h 15m' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: 娯楽 starts at 12:00 again and 休息 stays merged away.
+  await expect(merged).toBeVisible()
+  await expect(rest).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('undo turns a changed activity back', async ({ page }) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, with 仕事 turned into 家事 through the picker.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  await work.click()
+  await page.getByRole('radio', { name: '家事' }).click()
+  const chore = page.getByRole('button', { name: '家事 9:00 – 12:00 3h 00m' })
+  await expect(chore).toBeVisible()
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert
+  await expect(work).toBeVisible()
+  await expect(chore).toHaveCount(0)
+})
+
+test('undo joins a split row back into one', async ({ page }) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, with 仕事 split at 10:30.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  await work.click()
+  await page.getByRole('button', { name: '半分で分割' }).click()
+  const secondHalf = page.getByRole('button', {
+    name: '仕事 10:30 – 12:00 1h 30m',
+  })
+  await expect(secondHalf).toBeVisible()
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert
+  await expect(work).toBeVisible()
+  await expect(secondHalf).toHaveCount(0)
+})
+
+test('an edit still landing after its sheet closed holds the next sheet until it lands', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00; the API applies a merge into the next record but its answer is held back.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  await page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }).click()
+  await page.getByRole('button', { name: '次の記録に統合' }).click()
+
+  // Act: close the sheet with the merge in flight, then open today's from Home and select 家事.
+  await page.getByRole('button', { name: '完了' }).click()
+  await page.getByRole('link', { name: '訂正' }).click()
+  await page
+    .getByRole('dialog', { name: '今日の記録を訂正' })
+    .getByRole('button', { name: /^家事 / })
+    .click()
+
+  // Assert: 家事 could merge into yesterday's 娯楽, but only once the held answer has landed.
+  const mergePrevious = page.getByRole('button', { name: '前の記録に統合' })
+  await expect(mergePrevious).toBeDisabled()
+  answer.resolve()
+  await expect(mergePrevious).toBeEnabled()
+})
+
 test('the last row of a past day cannot merge into the next day’s first switch', async ({
   page,
 }) => {
