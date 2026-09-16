@@ -1,14 +1,14 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Web only. The API runs from its production bundle on :8080 and the exported site on :8081, which pipes `/api` to it
+// Web only. The API runs from its production bundle on :4000 and the exported site on :4001, which pipes `/api` to it
 // (scripts/serve-spa.mts): one origin, the shape App Platform serves, so the export carries no API origin at all.
-// Locally the Compose API on :8080 is reused; CI starts both cold (.github/workflows/test.yml). E2E_API_PORT / E2E_APP_PORT
+// Locally the Compose API on :4000 is reused; CI starts both cold (.github/workflows/test.yml). E2E_API_PORT / E2E_APP_PORT
 // move both when another project holds the defaults on this machine (scripts/serve-spa.mts and e2e/helpers.ts read the same).
 // `||`, not `??`: an empty value passes the both-or-neither guard below and would otherwise build `http://localhost:/api`.
-const apiPort = process.env.E2E_API_PORT || '8080'
-const appPort = process.env.E2E_APP_PORT || '8081'
+const apiPort = process.env.E2E_API_PORT || '4000'
+const appPort = process.env.E2E_APP_PORT || '4001'
 // Both or neither: `webServer.env` only reaches a server Playwright starts, and a reused Compose API keeps its own APP_ORIGIN
-// (:8081), so a lone E2E_APP_PORT would fail every sign-up with Invalid origin.
+// (:4001), so a lone E2E_APP_PORT would fail every sign-up with Invalid origin.
 if (Boolean(process.env.E2E_API_PORT) !== Boolean(process.env.E2E_APP_PORT))
   throw new Error('Set E2E_API_PORT and E2E_APP_PORT together, or neither')
 export default defineConfig({

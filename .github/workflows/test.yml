@@ -59,7 +59,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://switchtime:switchtime@localhost:5432/switchtime_test
-      APP_ORIGIN: http://localhost:8081
+      APP_ORIGIN: http://localhost:4001
       # Any 32+ bytes: sessions created here never leave the job.
       BETTER_AUTH_SECRET: e2e-only-secret-0123456789abcdefghijklmnopqrstuvwxyz
     steps:

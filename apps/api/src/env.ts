@@ -5,9 +5,9 @@ import { dbEnv } from './db/env'
 // The server's variables on top of {@link dbEnv}, which already loaded `.env` and validated the database ones.
 const serverEnv = z
   .object({
-    PORT: z.coerce.number().int().positive().default(8080),
+    PORT: z.coerce.number().int().positive().default(4000),
     // Origin of the web app: the Expo dev server locally, the same origin as the API in production.
-    APP_ORIGIN: z.url().default('http://localhost:8081'),
+    APP_ORIGIN: z.url().default('http://localhost:4001'),
     // `openssl rand -base64 32`; signs session cookies, so it must never change between deploys.
     BETTER_AUTH_SECRET: z.string().min(32),
   })

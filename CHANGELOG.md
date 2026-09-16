@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [Unreleased]
+
+### Changed
+
+- Local defaults are :4000 (API) and :4001 (Expo / Playwright) so they no
+  longer collide with other projects on :8080 / :8081. Production still
+  listens on 8080 inside the container. `E2E_API_PORT` / `E2E_APP_PORT` still
+  move both.
+
 ## [0.2.0.0] - 2026-09-17
 
 ### Added

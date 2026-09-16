@@ -30,7 +30,7 @@ services:
       target: dev
     ports:
       # All interfaces on purpose: a phone running Expo Go reaches the API over the LAN (unlike the database, nothing here is a public credential).
-      - '8080:8080'
+      - '4000:4000'
     env_file:
       - path: .env
         required: false
@@ -38,7 +38,7 @@ services:
       # Inside Compose the database host is `db`; .env keeps `localhost` for running the API on the host.
       DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime
       TEST_DATABASE_URL: postgres://switchtime:switchtime@db:5432/switchtime_test
-      PORT: 8080
+      PORT: 4000
       # The db service speaks plain TCP: a DATABASE_CA_CERT kept in .env for reaching DigitalOcean from the host must not turn TLS on here.
       DATABASE_CA_CERT: ''
     volumes:

@@ -13,7 +13,7 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   // Where Better Auth itself is served (absolute links, callbacks, cookie flags): the API's own origin.
   // In production that is the web app's origin too (one origin behind App Platform ingress); locally the API is
-  // :8080 while the Expo dev server on APP_ORIGIN (:8081) is only a trusted caller (see the dev CORS in app.ts).
+  // :4000 while the Expo dev server on APP_ORIGIN (:4001) is only a trusted caller (see the dev CORS in app.ts).
   baseURL:
     env.NODE_ENV === 'production'
       ? env.APP_ORIGIN
@@ -21,7 +21,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     env.APP_ORIGIN,
     'switchtime://',
-    // Expo Go serves the app from exp://<lan-ip>:8081 while developing.
+    // Expo Go serves the app from exp://<lan-ip>:4001 while developing.
     ...(env.NODE_ENV === 'development' ? ['exp://**'] : []),
   ],
   emailAndPassword: { enabled: true },

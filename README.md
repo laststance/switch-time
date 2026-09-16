@@ -42,7 +42,7 @@ pnpm check
 
 ```sh
 cp .env.example .env          # DATABASE_URL, TEST_DATABASE_URL, PORT, APP_ORIGIN, BETTER_AUTH_SECRET
-pnpm dev:backend              # docker compose up --build: Postgres 18 + the API (tsx watch) on http://localhost:8080
+pnpm dev:backend              # docker compose up --build: Postgres 18 + the API (tsx watch) on http://localhost:4000
 pnpm db:psql                  # psql into the switchtime database
 pnpm db:reset                 # docker compose down -v: drop the volume, next `up` starts from an empty database
 ```
@@ -68,13 +68,13 @@ Email + password only, served by the same Hono process at `/api/auth/*` (`apps/a
 
 - Auth tables come from the CLI, never by hand: `npx auth@1.7.3 generate --config src/auth.ts --output src/db/schema/auth.ts -y` (CLI pinned to the runtime version) (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
 - oRPC procedures read the session from the request headers (`src/rpc/router.ts`): `authed` procedures throw `UNAUTHORIZED` without one; `me` returns the current user.
-- Dev cookies: `localhost:8081` → `localhost:8080` is same-site, so the defaults (`sameSite: lax`) work; the client sends `credentials: 'include'`. Production is same-origin (MVP-09).
+- Dev cookies: `localhost:4001` → `localhost:4000` is same-site, so the defaults (`sameSite: lax`) work; the client sends `credentials: 'include'`. Production is same-origin (MVP-09).
 
 ## App (`apps/app`)
 
 ```sh
-pnpm --filter app dev         # expo start (press i / a / w, or scan the QR code)
-pnpm --filter app web         # expo start --web → http://localhost:8081
+pnpm --filter app dev         # expo start --port 4001 (press i / a / w, or scan the QR code)
+pnpm --filter app web         # expo start --web --port 4001 → http://localhost:4001
 pnpm --filter app build:web   # expo export -p web → apps/app/dist (`build` aliases it, so `pnpm build` / CI run it too)
 cd apps/app && npx expo-doctor
 ```
@@ -88,7 +88,7 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 ### Data layer (oRPC + TanStack Query + Redux Toolkit)
 
 - `src/lib/orpc.ts` builds the typed oRPC client from `AppRouterClient` (a type-only import from `@switch-time/api`, so Metro never bundles server code) and exposes `orpc.<procedure>.queryOptions()` for TanStack Query. Server data lives in TanStack Query only; it is never copied into Redux.
-- `EXPO_PUBLIC_API_ORIGIN` selects the API origin: unset means `http://localhost:8080` in dev and same-origin (`''`) in the production web build. For a physical device point it at the machine's LAN IP, e.g. `EXPO_PUBLIC_API_ORIGIN=http://192.168.1.10:8080 pnpm --filter app dev`. That `http://` origin is for development only: a native release build refuses to start unless the origin is `https://`, because the SecureStore session rides on every request as a `Cookie` header.
+- `EXPO_PUBLIC_API_ORIGIN` selects the API origin: unset means `http://localhost:4000` in dev and same-origin (`''`) in the production web build. For a physical device point it at the machine's LAN IP, e.g. `EXPO_PUBLIC_API_ORIGIN=http://192.168.1.10:4000 pnpm --filter app dev`. That `http://` origin is for development only: a native release build refuses to start unless the origin is `https://`, because the SecureStore session rides on every request as a `Cookie` header.
 - `src/store` holds client-only state: `clock` (ticks every second while the app is active, pauses in background). Components use `useAppSelector` / `useAppDispatch` from `@/store`; the root layout runs `useClock`, `useThemeSync` (the stored theme from `useSettings`, resolved by `resolveTheme` in `src/lib/theme.ts` against the clock) and `useTimeZoneSync` (the device's zone written into `settings.timeZone` once the row has loaded). Sheets are routes and the correction day rides on `?day=`, so there is no UI slice, and the user's preferences are the server's `settings` row, never mirrored.
 - `/debug` (dev only) renders the `ping` and `me` queries and the clock. `pnpm --filter app test` runs the Vitest unit tests in `src/**/*.test.ts`.
 
@@ -96,7 +96,7 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 
 - `src/lib/auth-client.ts`: `createAuthClient` from `better-auth/react`; on native the Expo plugin keeps the session in `expo-secure-store` and `src/lib/orpc.ts` replays it as a `Cookie` header, on web the first-party cookie does the work.
 - Route groups: `(auth)/sign-in`, `(auth)/sign-up` (Zod schemas `signInSchema` / `signUpSchema` from `@switch-time/shared`, first issue per field inline, Better Auth's message above the form) and `(app)/…` guarded in `(app)/_layout.tsx`: anonymous visitors are redirected to `/sign-in?next=<path>` and return there after signing in. `useSignOut` ends the session, clears the TanStack cache, dispatches `resetApp` and shows sign-in.
-- Playwright (web): `pnpm --filter app test:e2e` exports the site exactly as the production image does, with no `EXPO_PUBLIC_API_ORIGIN` (`--clear`, like `build:web`: Metro's transform cache is not keyed on `EXPO_PUBLIC_*` values, so an export after one with a different origin would ship the stale origin), then serves it on :8081 with `/api` piped to the API bundle on :8080 (`scripts/serve-spa.mts`; `node ../api/dist/server.js`, reused when the Compose API already listens there), the one-origin shape App Platform's ingress gives the app. A relative API URL that breaks only in that shape therefore fails every e2e test. CI runs the same in the `e2e` job with a Postgres service. `E2E_API_PORT` / `E2E_APP_PORT` move both ports when another project holds :8080 / :8081; set them together or not at all (the config refuses one without the other: a reused Compose API keeps its own `APP_ORIGIN`, so a lone app port would fail every sign-up with Invalid origin). The reused Compose API applies migrations only at start (`docker compose restart api` after a new one, before `test:e2e`); `packages/shared/src` is bind-mounted like `apps/api/src`, so shared edits reach it live.
+- Playwright (web): `pnpm --filter app test:e2e` exports the site exactly as the production image does, with no `EXPO_PUBLIC_API_ORIGIN` (`--clear`, like `build:web`: Metro's transform cache is not keyed on `EXPO_PUBLIC_*` values, so an export after one with a different origin would ship the stale origin), then serves it on :4001 with `/api` piped to the API bundle on :4000 (`scripts/serve-spa.mts`; `node ../api/dist/server.js`, reused when the Compose API already listens there), the one-origin shape App Platform's ingress gives the app. A relative API URL that breaks only in that shape therefore fails every e2e test. CI runs the same in the `e2e` job with a Postgres service. `E2E_API_PORT` / `E2E_APP_PORT` move both ports when another project holds :4000 / :4001; set them together or not at all (the config refuses one without the other: a reused Compose API keeps its own `APP_ORIGIN`, so a lone app port would fail every sign-up with Invalid origin). The reused Compose API applies migrations only at start (`docker compose restart api` after a new one, before `test:e2e`); `packages/shared/src` is bind-mounted like `apps/api/src`, so shared edits reach it live.
 
 ### Shell (expo-router)
 
@@ -121,16 +121,16 @@ Scaffolded from `expo-template-default@sdk-57` (`src/app/` routes, typed routes,
 ## API (`apps/api`)
 
 ```sh
-pnpm --filter api dev        # tsx watch, http://localhost:8080 (env is Zod-validated at boot: src/db/env.ts for the database, src/env.ts for the server)
-curl localhost:8080/api/healthz
+pnpm --filter api dev        # tsx watch, http://localhost:4000 (env is Zod-validated at boot: src/db/env.ts for the database, src/env.ts for the server)
+curl localhost:4000/api/healthz
 pnpm --filter api build      # tsdown → dist/server.js (workspace packages inlined, npm deps external)
 docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = repo root
 # Joins the Compose network to reach its Postgres as `db` (the host port is loopback-only, unreachable from a container on Docker Engine).
 # --env-file supplies BETTER_AUTH_SECRET; NODE_ENV=development because the image defaults to production, which refuses a database without DATABASE_CA_CERT.
-docker run --rm --network switch-time_default -p 8080:8080 --env-file .env -e NODE_ENV=development -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
+docker run --rm --network switch-time_default -p 4000:4000 --env-file .env -e NODE_ENV=development -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
 ```
 
-The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:8081`). `apps/app` imports only `type { AppRouterClient }` from `@switch-time/api`, so no server code reaches the Metro bundle.
+The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:4001`). `apps/app` imports only `type { AppRouterClient }` from `@switch-time/api`, so no server code reaches the Metro bundle.
 
 ## Domain (activities / switches / stats)
 
