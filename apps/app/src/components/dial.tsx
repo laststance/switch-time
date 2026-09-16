@@ -19,8 +19,8 @@ const TICKS = Array.from({ length: 60 }, (_, index) => ({
 
 type DialProps = {
   size: number
-  /** The current activity's colour: the bezel ring, the second hand and the centre pin. */
-  color: string
+  /** The current activity's colour: the bezel ring, the second hand and the centre pin. Null is detox: they fall back to `sub`. */
+  color: string | null
 }
 
 /**
@@ -30,6 +30,8 @@ type DialProps = {
  */
 export function Dial({ size, color }: DialProps) {
   const tone = useTokenColors(['ink', 'sub', 'line', 'face'])
+  // Detox has no colour of its own: the activity parts go quiet in `sub`.
+  const ring = color ?? tone.sub
   const now = useAppSelector((s) => s.clock.now)
   const { showSecondHand } = useSettings().settings
   const angles = handAngles(new Date(now))
@@ -40,7 +42,7 @@ export function Dial({ size, color }: DialProps) {
         cy={100}
         r={99}
         fill="none"
-        stroke={color}
+        stroke={ring}
         strokeWidth={1.5}
       />
       <Circle
@@ -87,11 +89,11 @@ export function Dial({ size, color }: DialProps) {
             y1={120}
             x2={100}
             y2={24}
-            stroke={color}
+            stroke={ring}
             strokeWidth={1.2}
             strokeLinecap="round"
           />
-          <Circle cx={100} cy={116} r={3.4} fill={color} />
+          <Circle cx={100} cy={116} r={3.4} fill={ring} />
         </G>
       )}
       <Circle
@@ -102,7 +104,7 @@ export function Dial({ size, color }: DialProps) {
         stroke={tone.ink}
         strokeWidth={1.4}
       />
-      <Circle cx={100} cy={100} r={2.6} fill={color} />
+      <Circle cx={100} cy={100} r={2.6} fill={ring} />
       <Circle cx={100} cy={100} r={0.9} fill={tone.face} />
     </Svg>
   )

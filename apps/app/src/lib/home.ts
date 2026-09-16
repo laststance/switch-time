@@ -19,3 +19,65 @@ export function homeFallback({
   if (isPending || hasCurrent) return 'loading'
   return 'first-launch'
 }
+
+/**
+ * Whether Home can show its body: the current switch's activity row is here, or the switch is detox (no activity by design) and
+ * the activity list has answered, so the grid never flashes empty. Everything else falls to {@link homeFallback}.
+ * @example homeReady({ current, activity: null, isPending: false, isError: false }) // true while detox
+ */
+export function homeReady({
+  current,
+  activity,
+  isPending,
+  isError,
+}: {
+  current: { activityId: string | null } | null
+  activity: { id: string } | null
+  isPending: boolean
+  isError: boolean
+}): boolean {
+  if (!current) return false
+  return (
+    activity !== null || (current.activityId === null && !isPending && !isError)
+  )
+}
+
+/** What the hero shows for the current state; `color` null is detox, which has no colour of its own. */
+export type NowLook = { name: string; color: string | null; subtext: string }
+
+/**
+ * The hero's texts and colour for the current state: the activity in its own colour with today's switch count, or detox in no
+ * colour with the reminder that nothing accumulates.
+ * @example nowLook(null, '21:20', 3).subtext // '21:20 から · どの行動にも積み上がりません'
+ */
+export function nowLook(
+  activity: { name: string; color: string } | null,
+  since: string,
+  switchCount: number,
+): NowLook {
+  if (activity === null)
+    return {
+      name: 'detox',
+      color: null,
+      subtext: `${since} から · どの行動にも積み上がりません`,
+    }
+  return {
+    name: activity.name,
+    color: activity.color,
+    subtext: `${since} から · 今日 ${switchCount} 回切替`,
+  }
+}
+
+/**
+ * The switch buttons: the live activities, plus the current one when another device archived it, kept last so the digit hotkeys
+ * keep their places and the grid never loses the state the hero is showing. Detox adds nothing: the detox row is its button.
+ * @example gridActivities(live, activity)
+ */
+export function gridActivities<T extends { id: string }>(
+  live: T[],
+  activity: T | null,
+): T[] {
+  if (activity === null || live.some((row) => row.id === activity.id))
+    return live
+  return [...live, activity]
+}

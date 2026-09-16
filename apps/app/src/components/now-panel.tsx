@@ -4,6 +4,7 @@ import { Dial } from '@/components/dial'
 import { Readout } from '@/components/readout'
 import { useWide } from '@/hooks/use-wide'
 import { formatElapsed } from '@/lib/format'
+import type { NowLook } from '@/lib/home'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 
@@ -23,46 +24,58 @@ const BANDS = {
   },
 }
 
+// Detox has no colour of its own (pen 310ed5c): a hollow `sub` dot, the name in ink, the readout dimmed; the dial falls back to `sub`.
+const paint = (color: string | null) =>
+  color === null
+    ? {
+        dot: 'border-2 border-sub',
+        name: 'text-ink',
+        readout: 'text-sub',
+        fill: undefined,
+        ink: undefined,
+      }
+    : {
+        dot: '',
+        name: '',
+        readout: '',
+        fill: { backgroundColor: color },
+        ink: { color },
+      }
+
 type NowPanelProps = {
-  activity: { name: string; color: string }
+  /** The current state's texts and colour ({@link nowLook}). */
+  look: NowLook
   startedAt: number
-  /** `H:MM` of `startedAt` in the user's time zone (the 「から」 line). */
-  since: string
-  switchCount: number
 }
 
 /**
- * The hero of Home: the dial, the current activity in its own colour and the elapsed time ticking from the clock slice.
- * @example <NowPanel activity={activity} startedAt={current.startedAt.getTime()} since="9:05" switchCount={3} />
+ * The hero of Home: the dial, the current state in its own colour (detox in none) and the elapsed time ticking from the clock slice.
+ * @example <NowPanel look={nowLook(activity, since, switchCount)} startedAt={current.startedAt.getTime()} />
  */
-export function NowPanel({
-  activity,
-  startedAt,
-  since,
-  switchCount,
-}: NowPanelProps) {
+export function NowPanel({ look, startedAt }: NowPanelProps) {
   const band = BANDS[useWide() ? 'wide' : 'narrow']
+  const tone = paint(look.color)
   const now = useAppSelector((s) => s.clock.now)
   return (
     <View className={band.root}>
-      <Dial size={band.dial} color={activity.color} />
+      <Dial size={band.dial} color={look.color} />
       <View className={band.status}>
         <View className="flex-row items-center gap-2">
           <View
-            className="h-2.5 w-2.5 rounded-pill"
-            style={{ backgroundColor: activity.color }}
+            className={cn('h-2.5 w-2.5 rounded-pill', tone.dot)}
+            style={tone.fill}
           />
           <Text
-            className={cn('font-bold tracking-tight', band.name)}
-            style={{ color: activity.color }}
+            className={cn('font-bold tracking-tight', band.name, tone.name)}
+            style={tone.ink}
           >
-            {activity.name}
+            {look.name}
           </Text>
         </View>
-        <Readout>{formatElapsed(now - startedAt)}</Readout>
-        <Text className="text-xs text-sub">
-          {since} から · 今日 {switchCount} 回切替
-        </Text>
+        <Readout className={tone.readout}>
+          {formatElapsed(now - startedAt)}
+        </Readout>
+        <Text className="text-xs text-sub">{look.subtext}</Text>
       </View>
     </View>
   )

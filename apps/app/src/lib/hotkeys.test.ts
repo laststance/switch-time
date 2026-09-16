@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { hotkeyIndex } from './hotkeys'
+import { hotkeyIndex, isDetoxHotkey } from './hotkeys'
 
 test('digits pick activities by position and modifier combos are left to the browser', () => {
   // Arrange
@@ -23,4 +23,20 @@ test('digits pick activities by position and modifier combos are left to the bro
   // Assert
   expect(picks.slice(0, 2)).toEqual([0, 5])
   expect(picks.slice(2)).toEqual([-1, NaN, -1])
+})
+
+test('the plain 0 starts detox, a modifier combo or another digit does not', () => {
+  // Arrange
+  const press = (key: string, metaKey = false) => ({
+    key,
+    metaKey,
+    ctrlKey: false,
+    altKey: false,
+  })
+
+  // Act
+  const detox = [press('0'), press('0', true), press('1')].map(isDetoxHotkey)
+
+  // Assert
+  expect(detox).toEqual([true, false, false])
 })
