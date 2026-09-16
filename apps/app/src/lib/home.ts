@@ -22,7 +22,7 @@ export function homeFallback({
 
 /**
  * Whether Home can show its body: the current switch's activity row is here, or the switch is detox (no activity by design) and
- * the activity list has answered, so the grid never flashes empty. Everything else falls to {@link homeFallback}.
+ * the activity list has answered, so the switch buttons never flash empty. Everything else falls to {@link homeFallback}.
  * @example homeReady({ current, activity: null, isPending: false, isError: false }) // true while detox
  */
 export function homeReady({
@@ -70,7 +70,7 @@ export function nowLook(
 
 /**
  * The switch buttons: the live activities, plus the current one when another device archived it, kept last so the digit hotkeys
- * keep their places and the grid never loses the state the hero is showing. Detox adds nothing: the detox row is its button.
+ * keep their places and the buttons never lose the state the hero is showing. Detox adds nothing: the detox row is its button.
  * @example gridActivities(live, activity)
  */
 export function gridActivities<T extends { id: string }>(

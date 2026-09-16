@@ -11,7 +11,7 @@ type Props = {
 }
 
 /**
- * The full-width row under the switch grid that records the time to no activity. Pressed, it inverts to `ink` on `bg` (the
+ * The full-width row under the switch buttons that records the time to no activity. Pressed, it inverts to `ink` on `bg` (the
  * design's "no colour = no activity"); otherwise it reads like an unpressed switch. It reports its state with aria-pressed like
  * {@link SwitchButton}, so exactly one of the switch buttons and this row is pressed at any moment.
  * @example <DetoxRow active={current.activityId === null} onPress={() => pick(null)} />

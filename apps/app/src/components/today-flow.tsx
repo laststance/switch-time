@@ -26,6 +26,15 @@ type Segment = {
   idle: boolean
 }
 
+// Idle (past the threshold) and detox (no activity) spans are outlined over the `chip` track; the rest fill with their colour.
+const slice = (segment: Segment, colors: Record<string, string>) =>
+  segment.idle || segment.activityId === null
+    ? {
+        className: 'border border-dashed border-line',
+        backgroundColor: undefined,
+      }
+    : { className: '', backgroundColor: colors[segment.activityId] }
+
 type TodayFlowProps = {
   segments: Segment[]
   activities: { id: string; name: string; color: string }[]
@@ -87,22 +96,15 @@ export function TodayFlow({
         className={cn('w-full overflow-hidden bg-chip', band.bar)}
       >
         {segments.map((segment) => {
-          // Idle (past the threshold) and detox (no activity) spans are outlined, not filled.
-          const outlined = segment.idle || segment.activityId === null
+          const look = slice(segment, colors)
           return (
             <View
               key={segment.switchId}
-              className={cn(
-                'absolute inset-y-0',
-                outlined && 'border border-dashed border-line',
-              )}
+              className={cn('absolute inset-y-0', look.className)}
               style={{
                 left: percent(segment.start - start),
                 width: percent(segment.end - segment.start),
-                // TS does not narrow through the alias, so the detox branch still needs a key.
-                backgroundColor: outlined
-                  ? undefined
-                  : colors[segment.activityId ?? ''],
+                backgroundColor: look.backgroundColor,
               }}
             />
           )

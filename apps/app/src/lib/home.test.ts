@@ -150,9 +150,9 @@ describe('gridActivities', () => {
     const live = [{ id: 'home' }]
 
     // Act
-    const grid = gridActivities(live, null)
+    const buttons = gridActivities(live, null)
 
     // Assert
-    expect(grid).toBe(live)
+    expect(buttons).toBe(live)
   })
 })
