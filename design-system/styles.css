@@ -106,7 +106,7 @@ body {
   padding: var(--space-4);
 }
 
-/* The core interaction: one of these is always active, exactly one. */
+/* The core interaction: one of these, or the detox row under them, is always active, exactly one. */
 .switch-btn {
   display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-3) var(--space-4);

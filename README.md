@@ -134,7 +134,7 @@ The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*
 
 ## Domain (activities / switches / stats)
 
-The clock always holds exactly one state: no end times are stored, the latest `switches` row is the current state and a segment ends when the next one starts. Tables live in `apps/api/src/db/schema/app.ts` (`activities`, `switches`, `excluded_days`, `user_settings`); sign-up seeds the 6 default activities and a settings row (`apps/api/src/db/seed-user.ts`, Better Auth `user.create.after`).
+The clock always holds exactly one state: no end times are stored, the latest `switches` row is the current state and a segment ends when the next one starts. A row with `activity_id` null is detox (the detox row under the switch grid, `0` on the keyboard): the time until the next row is drawn but recorded to no activity. Tables live in `apps/api/src/db/schema/app.ts` (`activities`, `switches`, `excluded_days`, `user_settings`); sign-up seeds the 6 default activities and a settings row (`apps/api/src/db/seed-user.ts`, Better Auth `user.create.after`).
 
 - Migrations: `pnpm --filter api db:generate --name <name>` after editing the schema, `pnpm --filter api db:migrate` to apply locally (CI and App Platform run `dist/db/migrate.js`).
 - Every day boundary is computed in `user_settings.time_zone` (`dayBounds` / `localDay` in `packages/shared/src/time.ts`); the app writes the device's zone into it through `settings.update` when the settings row loads (`useTimeZoneSync` in the root layout), so a new account leaves the seeded Asia/Tokyo on first launch.
