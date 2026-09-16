@@ -35,7 +35,7 @@
 
 ## 2. Activity palette — **バックエンドのデータ。スタイルではない**
 
-`PALETTE` の8色。ユーザーが `cycleColor` で各活動に割り当て、Convex の `activities` 行に保存される。
+`PALETTE` の8色。ユーザーが `cycleColor` で各活動に割り当て、Postgres の `activities` 行（`apps/api/src/db/schema/app.ts`）に保存される。
 → **全プラットフォームでバイト単位で一致必須**。Web 側が別の緑を発明すると同じ活動が端末ごとに違う色で出る。
 
 ```js
@@ -107,6 +107,11 @@ Apple は SF Pro、Windows は Segoe UI（Variable）、Android は Roboto。同
 選択中の活動ボタン: `background: activity.color` / `color: #fff` / `border: activity.color`。
 **それだけ。グローは付けない** — アクセント色で着色した drop shadow は「AI っぽさ」の最大の原因なので復活させないこと。
 塗りだけで状態は十分伝わる。非選択は `surface` + `line`。
+
+押されているのは常にちょうど1つ。活動ボタンか、その下の全幅 detox 行（`activity_id` null ＝ どの行動にも記録しない）。
+**detox は色を持たない唯一の状態**: 押されている間は `ink` 塗り＋`bg` 文字に反転し、盤面のベゼルリング・秒針・中心ピン（時針と分針は `ink` のまま）、
+ステータスの点（中抜き）、経過時間は `sub` に落ちる。24h バーの detox スパンと、記録の「タップはあったが全部 detox だった日」のセルは
+塗らずに `sub` の破線の輪郭で描く — `hatch`（未計測日）とは別の描き分けなので、計測なしの日と混ざらない。
 
 ---
 
