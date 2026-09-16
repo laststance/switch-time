@@ -11310,7 +11310,7 @@
           "y": 0,
           "name": "div",
           "context": "div",
-          "width": 958,
+          "width": 402,
           "height": 1478,
           "layout": "vertical",
           "justifyContent": "end",
@@ -11324,7 +11324,7 @@
               "name": "div",
               "context": "div",
               "fill": "#0a0a0c80",
-              "width": "fill_container(958)",
+              "width": 402,
               "height": 1478,
               "effect": {
                 "type": "background_blur",
@@ -11466,6 +11466,7 @@
                   "name": "div",
                   "context": "div",
                   "clip": true,
+                  "width": "fill_container",
                   "fill": "$chip",
                   "cornerRadius": 6,
                   "children": [
@@ -11476,7 +11477,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-4",
-                      "width": 248.63,
+                      "width": 98.04,
                       "height": 12
                     },
                     {
@@ -11485,7 +11486,7 @@
                       "name": "div",
                       "context": "div",
                       "fill": "$activity-1",
-                      "width": 28.69,
+                      "width": 11.31,
                       "height": 12
                     },
                     {
@@ -11495,7 +11496,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-5",
-                      "width": 19.13,
+                      "width": 7.54,
                       "height": 12
                     },
                     {
@@ -11505,7 +11506,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-2",
-                      "width": 162.56,
+                      "width": 64.1,
                       "height": 12
                     },
                     {
@@ -11515,7 +11516,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-5",
-                      "width": 28.69,
+                      "width": 11.31,
                       "height": 12
                     },
                     {
@@ -11525,7 +11526,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-2",
-                      "width": 95.63,
+                      "width": 37.71,
                       "height": 12
                     },
                     {
@@ -11535,7 +11536,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-3",
-                      "width": 19.13,
+                      "width": 7.54,
                       "height": 12
                     },
                     {
@@ -11545,7 +11546,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-2",
-                      "width": 124.31,
+                      "width": 49.02,
                       "height": 12
                     },
                     {
@@ -11555,7 +11556,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-5",
-                      "width": 38.25,
+                      "width": 15.08,
                       "height": 12
                     },
                     {
@@ -11565,7 +11566,7 @@
                       "context": "div",
                       "opacity": 0.4,
                       "fill": "$activity-6",
-                      "width": 51.02,
+                      "width": 20.12,
                       "height": 12
                     },
                     {
@@ -11573,7 +11574,7 @@
                       "id": "FN3Qu",
                       "name": "div",
                       "context": "div",
-                      "width": 101.98,
+                      "width": 40.23,
                       "height": 12
                     }
                   ]
@@ -12973,7 +12974,6 @@
                               "name": "div",
                               "context": "div",
                               "width": "fill_container",
-                              "height": 63,
                               "layout": "vertical",
                               "gap": 7,
                               "children": [
@@ -12995,348 +12995,381 @@
                                   "name": "div",
                                   "context": "div",
                                   "width": "fill_container",
+                                  "layout": "vertical",
                                   "gap": 7,
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "ueMvM",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "fill": "$activity-1",
-                                      "cornerRadius": 19,
-                                      "stroke": "$activity-1",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
+                                      "id": "QcNnn",
+                                      "name": "div",
+                                      "context": "div",
+                                      "width": "fill_container",
+                                      "gap": 7,
                                       "children": [
                                         {
                                           "type": "frame",
-                                          "id": "dvTmj",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
+                                          "id": "ueMvM",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "fill": "$activity-1",
+                                          "cornerRadius": 19,
+                                          "stroke": "$activity-1",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "path",
-                                              "id": "kQmcP",
-                                              "x": 1.875,
-                                              "y": 1.875,
-                                              "geometry": "M0 5l5.625-5 5.625 5 0 6.25-11.25 0 0-6.25z",
-                                              "width": 11.25,
-                                              "height": 11.25,
-                                              "stroke": "#FFF",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
+                                              "type": "frame",
+                                              "id": "dvTmj",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "kQmcP",
+                                                  "x": 1.875,
+                                                  "y": 1.875,
+                                                  "geometry": "M0 5l5.625-5 5.625 5 0 6.25-11.25 0 0-6.25z",
+                                                  "width": 11.25,
+                                                  "height": 11.25,
+                                                  "stroke": "#FFF",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "g6hvs5",
+                                              "name": "家事",
+                                              "context": "span",
+                                              "fill": "#ffffff",
+                                              "content": "家事",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
                                             }
                                           ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "g6hvs5",
-                                          "name": "家事",
-                                          "context": "span",
-                                          "fill": "#ffffff",
-                                          "content": "家事",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "bm1pw",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "cornerRadius": 19,
+                                          "stroke": "$line",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "tgFaf",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "esmtp",
+                                                  "x": 1.875,
+                                                  "y": 3.125,
+                                                  "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
+                                                  "width": 11.25,
+                                                  "height": 9.375,
+                                                  "stroke": "$ink",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "f4KVO",
+                                              "name": "仕事",
+                                              "context": "span",
+                                              "fill": "$ink",
+                                              "content": "仕事",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "QZoYh",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "cornerRadius": 19,
+                                          "stroke": "$line",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "b1YtnI",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "XaG3h",
+                                                  "x": 2.5,
+                                                  "y": 1.875,
+                                                  "geometry": "M0 3.75l7.5 0 0 3.75c0 1.38071-1.11929 2.5-2.5 2.5l-2.5 0c-1.38071 0-2.5-1.11929-2.5-2.5l0-3.75z m7.5 1.25l1.25 0c0.69036 0 1.25 0.55964 1.25 1.25 0 0.69036-0.55964 1.25-1.25 1.25l-1.25 0m-5.625-7.5l0 1.875m2.5-1.875l0 1.875",
+                                                  "width": 10,
+                                                  "height": 10,
+                                                  "stroke": "$ink",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "L1ZQu",
+                                              "name": "休息",
+                                              "context": "span",
+                                              "fill": "$ink",
+                                              "content": "休息",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "bm1pw",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "cornerRadius": 19,
-                                      "stroke": "$line",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
+                                      "id": "SdwlG",
+                                      "name": "div",
+                                      "context": "div",
+                                      "width": "fill_container",
+                                      "gap": 7,
                                       "children": [
                                         {
                                           "type": "frame",
-                                          "id": "tgFaf",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
+                                          "id": "zZKgJ",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "cornerRadius": 19,
+                                          "stroke": "$line",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "path",
-                                              "id": "esmtp",
-                                              "x": 1.875,
-                                              "y": 3.125,
-                                              "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
-                                              "width": 11.25,
-                                              "height": 9.375,
-                                              "stroke": "$ink",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
+                                              "type": "frame",
+                                              "id": "wrTsY",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "YJjbj",
+                                                  "x": 2.90191388130188,
+                                                  "y": 2.5,
+                                                  "geometry": "M9.59809 6.5625c-1.87828 0.80259-4.05589 0.38201-5.5002-1.0623-1.44431-1.44431-1.86489-3.62192-1.0623-5.5002-2.06834 0.88381-3.29196 3.03992-2.99011 5.26884 0.30185 2.22891 2.05486 3.98192 4.28377 4.28377 2.22891 0.30185 4.38503-0.92176 5.26884-2.99011",
+                                                  "width": 9.59808611869812,
+                                                  "height": 9.5980863571167,
+                                                  "stroke": "$ink",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "irXbb",
+                                              "name": "睡眠",
+                                              "context": "span",
+                                              "fill": "$ink",
+                                              "content": "睡眠",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
                                             }
                                           ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "f4KVO",
-                                          "name": "仕事",
-                                          "context": "span",
-                                          "fill": "$ink",
-                                          "content": "仕事",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "QZoYh",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "cornerRadius": 19,
-                                      "stroke": "$line",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
                                           "type": "frame",
-                                          "id": "b1YtnI",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
+                                          "id": "pewYe",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "cornerRadius": 19,
+                                          "stroke": "$line",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "path",
-                                              "id": "XaG3h",
-                                              "x": 2.5,
-                                              "y": 1.875,
-                                              "geometry": "M0 3.75l7.5 0 0 3.75c0 1.38071-1.11929 2.5-2.5 2.5l-2.5 0c-1.38071 0-2.5-1.11929-2.5-2.5l0-3.75z m7.5 1.25l1.25 0c0.69036 0 1.25 0.55964 1.25 1.25 0 0.69036-0.55964 1.25-1.25 1.25l-1.25 0m-5.625-7.5l0 1.875m2.5-1.875l0 1.875",
-                                              "width": 10,
-                                              "height": 10,
-                                              "stroke": "$ink",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
+                                              "type": "frame",
+                                              "id": "QYnDR",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "e4tbEi",
+                                                  "x": 2.5,
+                                                  "y": 1.875,
+                                                  "geometry": "M1.875 0l0 11.25m-1.875-11.25l0 3.125c0 1.03553 0.83947 1.875 1.875 1.875 1.03553 0 1.875-0.83947 1.875-1.875l0-3.125m3.75 0c-1.25 1.25-1.25 5 0 6.25l0 5m0-5c1.25-1.25 1.875-3.75 1.25-6.25",
+                                                  "width": 8.995190620422363,
+                                                  "height": 11.25,
+                                                  "stroke": "$ink",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "zu73S",
+                                              "name": "食事",
+                                              "context": "span",
+                                              "fill": "$ink",
+                                              "content": "食事",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
                                             }
                                           ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "L1ZQu",
-                                          "name": "休息",
-                                          "context": "span",
-                                          "fill": "$ink",
-                                          "content": "休息",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "zZKgJ",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "cornerRadius": 19,
-                                      "stroke": "$line",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
                                           "type": "frame",
-                                          "id": "wrTsY",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
+                                          "id": "t91vx",
+                                          "name": "button",
+                                          "context": "button",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "cornerRadius": 19,
+                                          "stroke": "$line",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "gap": 6,
+                                          "padding": [
+                                            1,
+                                            14
+                                          ],
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
                                           "children": [
                                             {
-                                              "type": "path",
-                                              "id": "YJjbj",
-                                              "x": 2.90191388130188,
-                                              "y": 2.5,
-                                              "geometry": "M9.59809 6.5625c-1.87828 0.80259-4.05589 0.38201-5.5002-1.0623-1.44431-1.44431-1.86489-3.62192-1.0623-5.5002-2.06834 0.88381-3.29196 3.03992-2.99011 5.26884 0.30185 2.22891 2.05486 3.98192 4.28377 4.28377 2.22891 0.30185 4.38503-0.92176 5.26884-2.99011",
-                                              "width": 9.59808611869812,
-                                              "height": 9.5980863571167,
-                                              "stroke": "$ink",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "irXbb",
-                                          "name": "睡眠",
-                                          "context": "span",
-                                          "fill": "$ink",
-                                          "content": "睡眠",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "pewYe",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "cornerRadius": 19,
-                                      "stroke": "$line",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "QYnDR",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
-                                          "children": [
+                                              "type": "frame",
+                                              "id": "V3c6u",
+                                              "name": "svg",
+                                              "context": "svg",
+                                              "clip": true,
+                                              "width": 15,
+                                              "height": 15,
+                                              "layout": "none",
+                                              "children": [
+                                                {
+                                                  "type": "path",
+                                                  "id": "pIuGC",
+                                                  "x": 1.25,
+                                                  "y": 5,
+                                                  "geometry": "M2.5 0l7.5 0c1.38071 0 2.5 1.11929 2.5 2.5l0 1.875c-0.04118 0.80923-0.59751 1.50045-1.37923 1.71365-0.78172 0.2132-1.61195-0.09987-2.05827-0.77615l-0.9375-0.9375-3.75 0-0.9375 0.9375c-0.44631 0.67627-1.27655 0.98935-2.05827 0.77615-0.78172-0.2132-1.33806-0.90442-1.37923-1.71365l0-1.875c0-1.38071 1.11929-2.5 2.5-2.5m0.625 1.875l0 1.875m-0.9375-0.9375l1.875 0m4.6875-0.3125l0.00625 0m1.24375 0.9375l0.00625 0",
+                                                  "width": 12.5,
+                                                  "height": 6.154848098754883,
+                                                  "stroke": "$ink",
+                                                  "strokeWidth": 1.375,
+                                                  "strokeLinejoin": "round",
+                                                  "strokeLinecap": "round"
+                                                }
+                                              ]
+                                            },
                                             {
-                                              "type": "path",
-                                              "id": "e4tbEi",
-                                              "x": 2.5,
-                                              "y": 1.875,
-                                              "geometry": "M1.875 0l0 11.25m-1.875-11.25l0 3.125c0 1.03553 0.83947 1.875 1.875 1.875 1.03553 0 1.875-0.83947 1.875-1.875l0-3.125m3.75 0c-1.25 1.25-1.25 5 0 6.25l0 5m0-5c1.25-1.25 1.875-3.75 1.25-6.25",
-                                              "width": 8.995190620422363,
-                                              "height": 11.25,
-                                              "stroke": "$ink",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
+                                              "type": "text",
+                                              "id": "EOYpN",
+                                              "name": "娯楽",
+                                              "context": "span",
+                                              "fill": "$ink",
+                                              "content": "娯楽",
+                                              "lineHeight": 1.25,
+                                              "textAlign": "center",
+                                              "fontFamily": "Roboto",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
                                             }
                                           ]
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "zu73S",
-                                          "name": "食事",
-                                          "context": "span",
-                                          "fill": "$ink",
-                                          "content": "食事",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "t91vx",
-                                      "name": "button",
-                                      "context": "button",
-                                      "height": 38,
-                                      "cornerRadius": 19,
-                                      "stroke": "$line",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner",
-                                      "gap": 6,
-                                      "padding": [
-                                        1,
-                                        14
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "V3c6u",
-                                          "name": "svg",
-                                          "context": "svg",
-                                          "clip": true,
-                                          "width": 15,
-                                          "height": 15,
-                                          "layout": "none",
-                                          "children": [
-                                            {
-                                              "type": "path",
-                                              "id": "pIuGC",
-                                              "x": 1.25,
-                                              "y": 5,
-                                              "geometry": "M2.5 0l7.5 0c1.38071 0 2.5 1.11929 2.5 2.5l0 1.875c-0.04118 0.80923-0.59751 1.50045-1.37923 1.71365-0.78172 0.2132-1.61195-0.09987-2.05827-0.77615l-0.9375-0.9375-3.75 0-0.9375 0.9375c-0.44631 0.67627-1.27655 0.98935-2.05827 0.77615-0.78172-0.2132-1.33806-0.90442-1.37923-1.71365l0-1.875c0-1.38071 1.11929-2.5 2.5-2.5m0.625 1.875l0 1.875m-0.9375-0.9375l1.875 0m4.6875-0.3125l0.00625 0m1.24375 0.9375l0.00625 0",
-                                              "width": 12.5,
-                                              "height": 6.154848098754883,
-                                              "stroke": "$ink",
-                                              "strokeWidth": 1.375,
-                                              "strokeLinejoin": "round",
-                                              "strokeLinecap": "round"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "EOYpN",
-                                          "name": "娯楽",
-                                          "context": "span",
-                                          "fill": "$ink",
-                                          "content": "娯楽",
-                                          "lineHeight": 1.25,
-                                          "textAlign": "center",
-                                          "fontFamily": "Roboto",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
                                         }
                                       ]
                                     }
@@ -13350,37 +13383,80 @@
                               "name": "div",
                               "context": "div",
                               "width": "fill_container",
+                              "layout": "vertical",
                               "gap": 8,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "PkRP8",
-                                  "name": "前の記録に統合",
-                                  "context": "button",
+                                  "id": "U0gzE",
+                                  "name": "div",
+                                  "context": "div",
                                   "width": "fill_container",
-                                  "height": 44,
-                                  "cornerRadius": 10,
-                                  "stroke": "$line",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "padding": [
-                                    1,
-                                    6
-                                  ],
-                                  "justifyContent": "center",
-                                  "alignItems": "center",
+                                  "gap": 8,
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "m9MKTF",
-                                      "fill": "$ink",
-                                      "content": "前の記録に統合",
-                                      "lineHeight": 1.25,
-                                      "textAlign": "center",
-                                      "fontFamily": "Roboto",
-                                      "fontSize": 12,
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "PkRP8",
+                                      "name": "前の記録に統合",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "m9MKTF",
+                                          "fill": "$ink",
+                                          "content": "前の記録に統合",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Fc3Iz",
+                                      "name": "次の記録に統合",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "lhLaT",
+                                          "fill": "$ink",
+                                          "content": "次の記録に統合",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -13568,6 +13644,7 @@
                   "id": "n44VrI",
                   "name": "div",
                   "context": "div",
+                  "width": "fill_container",
                   "gap": 8,
                   "children": [
                     {
@@ -13575,7 +13652,7 @@
                       "id": "Y5ske",
                       "name": "元に戻す",
                       "context": "button",
-                      "width": 308.67,
+                      "width": 120,
                       "height": 52,
                       "cornerRadius": 10,
                       "stroke": "$line",
@@ -13607,7 +13684,7 @@
                       "id": "Gzlrb",
                       "name": "完了",
                       "context": "button",
-                      "width": 601.33,
+                      "width": "fill_container",
                       "height": 52,
                       "fill": "$ink",
                       "cornerRadius": 10,
@@ -13649,7 +13726,7 @@
       "context": "div",
       "clip": true,
       "width": 402,
-      "height": 1478.01,
+      "height": 1478,
       "fill": "$bg",
       "layout": "vertical",
       "children": [
@@ -14827,7 +14904,7 @@
           "y": 0,
           "name": "div",
           "context": "div",
-          "width": 958,
+          "width": 402,
           "height": 1478,
           "layout": "vertical",
           "justifyContent": "end",
@@ -14841,7 +14918,7 @@
               "name": "div",
               "context": "div",
               "fill": "#0a0a0c80",
-              "width": "fill_container(958)",
+              "width": 402,
               "height": 1478,
               "effect": {
                 "type": "background_blur",
@@ -15070,7 +15147,6 @@
                   "name": "div",
                   "context": "div",
                   "width": "fill_container",
-                  "height": 137,
                   "fill": "$chip",
                   "cornerRadius": 16,
                   "layout": "vertical",
@@ -15087,13 +15163,12 @@
                       "context": "div",
                       "width": "fill_container",
                       "height": 29,
-                      "layout": "none",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "text",
                           "id": "ldDhP",
-                          "x": 0,
-                          "y": 3,
                           "name": "無操作とみなす時間",
                           "context": "span",
                           "fill": "$ink",
@@ -15106,8 +15181,6 @@
                         {
                           "type": "frame",
                           "id": "DZMWX",
-                          "x": 830,
-                          "y": 0,
                           "name": "span",
                           "context": "span",
                           "layout": "vertical",
@@ -15277,6 +15350,8 @@
                       "name": "これより長く同じ状態のまま操作がなければ、その時間は集計に含めません。",
                       "context": "div",
                       "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
                       "content": "これより長く同じ状態のまま操作がなければ、その時間は集計に含めません。",
                       "lineHeight": 1.6,
                       "fontFamily": "Roboto",
@@ -16834,7 +16909,7 @@
           "y": 0,
           "name": "div",
           "context": "div",
-          "width": 958,
+          "width": 402,
           "height": 1478,
           "layout": "none",
           "children": [
@@ -16845,7 +16920,7 @@
               "y": 0,
               "name": "div",
               "context": "div",
-              "width": "fill_container(958)",
+              "width": 402,
               "height": 1478,
               "layout": "vertical",
               "justifyContent": "end",
@@ -16859,7 +16934,7 @@
                   "name": "div",
                   "context": "div",
                   "fill": "#0a0a0c80",
-                  "width": "fill_container(958)",
+                  "width": 402,
                   "height": 1478,
                   "effect": {
                     "type": "background_blur",
@@ -17192,7 +17267,7 @@
                                   "id": "u7F3J",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "家事",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
@@ -17425,7 +17500,7 @@
                                   "id": "y0CPmU",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "仕事",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
@@ -17658,7 +17733,7 @@
                                   "id": "JbAdd",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "休息",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
@@ -17891,7 +17966,7 @@
                                   "id": "G6Kjd",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "睡眠",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
@@ -18124,7 +18199,7 @@
                                   "id": "C0qNm",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "食事",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
@@ -18357,7 +18432,7 @@
                                   "id": "x8K10G",
                                   "fill": "$ink",
                                   "textGrowth": "fixed-width",
-                                  "width": 686,
+                                  "width": "fill_container",
                                   "content": "娯楽",
                                   "fontFamily": "Roboto",
                                   "fontSize": 18,
