@@ -19149,7 +19149,7 @@
       "context": "div",
       "clip": true,
       "width": 420,
-      "height": 600,
+      "height": 658,
       "fill": "$bg",
       "cornerRadius": 12,
       "layout": "vertical",
@@ -19552,7 +19552,7 @@
                       "name": "⌘1〜6",
                       "context": "span",
                       "fill": "$sub",
-                      "content": "⌘1〜6",
+                      "content": "⌘0〜6",
                       "lineHeight": 1.25,
                       "fontFamily": "Roboto",
                       "fontSize": 12,
@@ -20254,6 +20254,80 @@
                           ]
                         }
                       ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "w4ifD",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    0,
+                    15
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "foAFI",
+                      "name": "detox left",
+                      "gap": 9,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "YH5jT",
+                          "name": "detox icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "wind",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        },
+                        {
+                          "type": "text",
+                          "id": "lXdEA",
+                          "name": "detox label",
+                          "fill": "$ink",
+                          "content": "detox",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QQZRz",
+                          "name": "detox hint",
+                          "fill": "$sub",
+                          "content": "どの行動にも記録しない",
+                          "lineHeight": 1.25,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "L5l4xo",
+                      "name": "detox shortcut",
+                      "context": "span",
+                      "fill": "$sub",
+                      "content": "⌘0",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "600"
                     }
                   ]
                 }
@@ -22553,6 +22627,59 @@
                                       ]
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ucJ3j",
+                              "name": "detox row",
+                              "width": "fill_container",
+                              "height": 48,
+                              "fill": "$surface",
+                              "cornerRadius": 10,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 9,
+                              "padding": [
+                                2,
+                                7
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Sq2fO",
+                                  "name": "detox icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "wind",
+                                  "library": "lucide",
+                                  "fill": "$ink"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "K8Gdaa",
+                                  "name": "detox label",
+                                  "fill": "$ink",
+                                  "content": "detox",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "HHxUc",
+                                  "name": "detox hint",
+                                  "fill": "$sub",
+                                  "content": "どの行動にも記録しない",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
