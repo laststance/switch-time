@@ -126,11 +126,14 @@ test('narrow Home keeps the clock on screen and can scroll to the 24-h bar', asy
   await signUp(page)
 
   // Assert
-  await expect(
-    page.getByRole('heading', { name: 'いま', exact: true }),
-  ).toBeInViewport()
-  await expect(page.getByText(readout)).toBeInViewport()
+  const heading = page.getByRole('heading', { name: 'いま', exact: true })
+  const elapsed = page.getByLabel('経過時間')
   const bar = page.getByRole('img', { name: '今日の流れ' })
+  await expect(heading).toBeVisible()
+  await expect(heading).toBeInViewport()
+  await expect(elapsed).toBeVisible()
+  await expect(elapsed).toBeInViewport()
+  await expect(bar).toBeVisible()
   await bar.scrollIntoViewIfNeeded()
   await expect(bar).toBeInViewport()
 })
