@@ -85,6 +85,31 @@ test('a past day lists the carried-in state last and read-only, and clips the op
   expect(rows[3]?.start).toBe(bounds.start)
 })
 
+test('the last row cannot merge into the next day’s switch even when that switch sits exactly on midnight', () => {
+  // Arrange: 仕事 9:00 and 娯楽 18:00 on 9/8 (the first states ever); 家事 at 9/9 0:00 sharp closes 娯楽 on the day's very end.
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: [row('w', 'work', at(day, 9)), row('f', 'fun', at(day, 18))],
+    carriedOut: row('h', 'home', at('2026-09-09', 0)),
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+
+  // Assert: 娯楽 still splits (its 21:00 midpoint is inside 9/8) but must not hand its span to 9/9's 家事, which 「元に戻す」 on
+  // 9/8 would drop; 仕事 merges into 娯楽 but has no previous record.
+  expect(rows.map(flags)).toEqual([
+    ['娯楽', '18:00 – 24:00', '6h 00m', true, true, true, true, false, true],
+    ['仕事', '9:00 – 18:00', '9h 00m', true, true, true, false, true, true],
+  ])
+})
+
 test('a detox row names itself, has no colour and keeps every correction', () => {
   // Arrange: 仕事 9:00, detox 12:00, 娯楽 18:00 on a past day; the detox span is the one in the middle.
   const day = '2026-09-08'

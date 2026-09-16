@@ -94,6 +94,129 @@ test('merging into the next record hands the span to the next row, and undo brin
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
+test('the last row of a past day cannot merge into the next day’s first switch', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00; today's first-launch tap is the record after 娯楽.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const fun = page.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' })
+  await expect(fun).toBeVisible()
+
+  // Act
+  await fun.click()
+
+  // Assert: 「元に戻す」 rewrites yesterday only and would drop today's switch, so only the backward merge is offered.
+  // Enabled first, so 次の記録に統合 is disabled by its own flag rather than by a fetch in flight.
+  await expect(
+    page.getByRole('button', { name: '前の記録に統合' }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole('button', { name: '次の記録に統合' }),
+  ).toBeDisabled()
+})
+
+test('the two merge buttons share a line and 半分で分割 spans the full width below them', async ({
+  page,
+}) => {
+  // Arrange: a wide window, so the sheet is the 560 px dialog; yesterday's 仕事 9:00 stays editable whatever the clock says.
+  await page.setViewportSize({ width: 1024, height: 860 })
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' })
+  await expect(work).toBeVisible()
+
+  // Act
+  await work.click()
+  const split = page.getByRole('button', { name: '半分で分割' })
+  await expect(split).toBeVisible()
+
+  // Assert: two 240 px halves 8 px apart, then one 488 px button 8 px below (flex-1 on it would collapse it to its text).
+  const [previousBox, nextBox, splitBox] = await Promise.all([
+    page.getByRole('button', { name: '前の記録に統合' }).boundingBox(),
+    page.getByRole('button', { name: '次の記録に統合' }).boundingBox(),
+    split.boundingBox(),
+  ])
+  if (!previousBox || !nextBox || !splitBox)
+    throw new Error('an action button has no box')
+  expect(previousBox).toMatchObject({ width: 240, height: 44 })
+  expect(nextBox).toMatchObject({
+    x: previousBox.x + 248,
+    y: previousBox.y,
+    width: 240,
+    height: 44,
+  })
+  expect(splitBox).toMatchObject({
+    x: previousBox.x,
+    y: previousBox.y + 52,
+    width: 488,
+    height: 44,
+  })
+})
+
+test('on a phone-width screen the two merge buttons still share a line at equal width, with 半分で分割 full width below', async ({
+  page,
+}) => {
+  // Arrange: a phone-width window, so the sheet fills the screen; yesterday's 仕事 9:00 stays editable whatever the clock says.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' })
+  await expect(work).toBeVisible()
+
+  // Act
+  await work.click()
+  const split = page.getByRole('button', { name: '半分で分割' })
+  await expect(split).toBeVisible()
+
+  // Assert: two 156 px halves 8 px apart, then one 320 px button 8 px below.
+  const [previousBox, nextBox, splitBox] = await Promise.all([
+    page.getByRole('button', { name: '前の記録に統合' }).boundingBox(),
+    page.getByRole('button', { name: '次の記録に統合' }).boundingBox(),
+    split.boundingBox(),
+  ])
+  if (!previousBox || !nextBox || !splitBox)
+    throw new Error('an action button has no box')
+  expect(previousBox).toMatchObject({ width: 156, height: 44 })
+  expect(nextBox).toMatchObject({
+    x: previousBox.x + 164,
+    y: previousBox.y,
+    width: 156,
+    height: 44,
+  })
+  expect(splitBox).toMatchObject({
+    x: previousBox.x,
+    y: previousBox.y + 52,
+    width: 320,
+    height: 44,
+  })
+})
+
 test('splitting the current state shows on Home without a reload', async ({
   page,
 }) => {
