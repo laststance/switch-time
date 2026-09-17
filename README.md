@@ -127,7 +127,8 @@ pnpm --filter api build      # tsdown → dist/server.js (workspace packages inl
 docker build -f apps/api/Dockerfile -t switch-time-api .   # build context = repo root
 # Joins the Compose network to reach its Postgres as `db` (the host port is loopback-only, unreachable from a container on Docker Engine).
 # --env-file supplies BETTER_AUTH_SECRET; NODE_ENV=development because the image defaults to production, which refuses a database without DATABASE_CA_CERT.
-docker run --rm --network switch-time_default -p 4000:4000 --env-file .env -e NODE_ENV=development -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
+# PORT=4000 matches -p: the image defaults to App Platform's 8080, and an .env copied before 4000 still says 8080.
+docker run --rm --network switch-time_default -p 4000:4000 --env-file .env -e NODE_ENV=development -e PORT=4000 -e DATABASE_CA_CERT= -e DATABASE_URL=postgres://switchtime:switchtime@db:5432/switchtime switch-time-api
 ```
 
 The API owns the `/api` prefix (`/api/healthz`, `/api/rpc/*`, later `/api/auth/*`); App Platform ingress routes `/api` to it without stripping the prefix. CORS is enabled only outside production, for the Expo web dev server at `APP_ORIGIN` (default `http://localhost:4001`). `apps/app` imports only `type { AppRouterClient }` from `@switch-time/api`, so no server code reaches the Metro bundle.
