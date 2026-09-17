@@ -268,18 +268,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Refresh metro and drop the image-size audit exceptions
-
-**What:** Run `pnpm update -r 'metro' 'metro-*'` so that the `metro@0.87.0` copy moves to 0.87.1, and check that `pnpm why image-size` comes back empty. Then delete the `audit` block (GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq and their comment) from `pnpm-workspace.yaml`, and confirm that `pnpm audit --prod --audit-level high` still passes.
-
-**Why:** Both advisories (high severity, image-size ≤ 2.0.2, no patched version listed) are ignored so that the Production Dependency Audit passes. Today the only path to image-size is `metro@0.87.0` → `image-size@1.2.1`, at build time. An ignore entry, though, would also hide any new path to the package.
-
-**Context:** metro 0.87.1 (2026-09-13) no longer depends on image-size, and neither do 0.84.5 and 0.84.6, the copies that Expo and the React Native CLI plugin use. The 0.87.0 copy comes in through `@react-native/metro-config` 0.87.1 (the `*` peer of `react-native-worklets`) and `metro-config@0.87.0`, which pins it exactly. The `metro-cache` and `metro-transform-worker` peers of `uniwind` hold it as well, so updating only `metro` and `metro-config` leaves it in place. On a scratch copy (2026-09-17), `pnpm update -r --lockfile-only 'metro' 'metro-*'` left no image-size in the lockfile and changed no `package.json`. `pnpm audit --prod --audit-level high` then passed without the ignore list, while the current lockfile fails it on the two high advisories. Two moderate findings (uuid, decode-uri-component) stay below that level either way. A lockfile run doesn't show that the app still bundles on the new metro, so also run the app's `build:web` and `test:e2e`, and follow Expo's pins (`npx expo install --check`). Deferred during MVP-02..06 (2026-09-09).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Line up the native build's peer dependencies before the first prebuild
 
 **What:** Before `expo prebuild` or an EAS build, pin `react-native-worklets` to a version that `expo-modules-core` accepts, and `@react-native/metro-config` to the `react-native` version (0.86.3). Then check with `pnpm peers check` and `npx expo install --check`.
@@ -291,7 +279,7 @@
 
 Expo Go and the web export don't notice either mismatch. A native build compiles against these versions, which are outside the declared ranges and untested together.
 
-**Context:** Noted on issue #8 (2026-09-09) during MVP-06. That note says the SDK 57 template pairs `react-native-worklets` 0.10.x with `react-native-reanimated`. The same check also lists `vitest` 5.0.0 against the `^2 || ^3 || ^4` peer range of `better-auth`, which has nothing to do with native builds. On a scratch copy (2026-09-17), an `overrides` entry `'@react-native/metro-config': 0.86.3` in `pnpm-workspace.yaml` moved every copy of that package to 0.86.3, but the lockfile still held `metro@0.87.0` and image-size afterwards (see "Refresh metro and drop the image-size audit exceptions"). The web export is the only build today.
+**Context:** Noted on issue #8 (2026-09-09) during MVP-06. That note says the SDK 57 template pairs `react-native-worklets` 0.10.x with `react-native-reanimated`. The same check also lists `vitest` 5.0.0 against the `^2 || ^3 || ^4` peer range of `better-auth`, which has nothing to do with native builds. On a scratch copy (2026-09-17), an `overrides` entry `'@react-native/metro-config': 0.86.3` in `pnpm-workspace.yaml` moved every copy of that package to 0.86.3. The web export is the only build today.
 
 **Effort:** S
 **Priority:** P4
@@ -313,3 +301,18 @@ Expo Go and the web export don't notice either mismatch. A native build compiles
 **Priority:** P1
 **Depends on:** None
 **Completed:** v0.2.1.0 (2026-09-17)
+
+### Refresh metro and drop the image-size audit exceptions
+
+**What:** Run `pnpm update -r 'metro' 'metro-*'` so that the `metro@0.87.0` copy moves to 0.87.1, and check that `pnpm why image-size` comes back empty. Then delete the `audit` block (GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq and their comment) from `pnpm-workspace.yaml`, and confirm that `pnpm audit --prod --audit-level high` still passes.
+
+**Why:** Both advisories (high severity, image-size ≤ 2.0.2, no patched version listed) are ignored so that the Production Dependency Audit passes. Today the only path to image-size is `metro@0.87.0` → `image-size@1.2.1`, at build time. An ignore entry, though, would also hide any new path to the package.
+
+**Context:** metro 0.87.1 (2026-09-13) no longer depends on image-size, and neither do 0.84.5 and 0.84.6, the copies that Expo and the React Native CLI plugin use. The 0.87.0 copy comes in through `@react-native/metro-config` 0.87.1 (the `*` peer of `react-native-worklets`) and `metro-config@0.87.0`, which pins it exactly. The `metro-cache` and `metro-transform-worker` peers of `uniwind` hold it as well, so updating only `metro` and `metro-config` leaves it in place. On a scratch copy (2026-09-17), `pnpm update -r --lockfile-only 'metro' 'metro-*'` left no image-size in the lockfile and changed no `package.json`. `pnpm audit --prod --audit-level high` then passed without the ignore list, while the current lockfile fails it on the two high advisories. Two moderate findings (uuid, decode-uri-component) stay below that level either way. A lockfile run doesn't show that the app still bundles on the new metro, so also run the app's `build:web` and `test:e2e`, and follow Expo's pins (`npx expo install --check`). Deferred during MVP-02..06 (2026-09-09).
+
+**Resolution:** Done on the branch with a full install; the scratch run above was only the first look. `pnpm update -r 'metro' 'metro-*'` moved the 0.87 set to 0.87.1 and changed only `pnpm-lock.yaml`. image-size and `queue` left the lockfile, and metro 0.87.1 parses with `flow-parser` 0.331.0 where 0.87.0 used `hermes-parser`. The `metro` and `metro-cache` peers of `uniwind` now resolve to the 0.84.6 copy, and its optional `metro-transform-worker` peer is no longer linked. That is harmless here: with Expo's metro config, uniwind loads Expo's transform worker instead (`getTransformWorker` in `uniwind/dist/metro/transformer.cjs`). The `audit` block is gone from `pnpm-workspace.yaml`, and `pnpm audit --prod --audit-level high` passes with only the two moderate findings above. The web export from `build:web` is byte-identical to the one built before the update. The API's production install (`pnpm deploy --prod`, as in `apps/api/Dockerfile`) contains none of the changed packages: `pnpm why` shows metro under the API only through the optional expo peers of `@better-auth/expo`, which that install leaves out. `audit:web` passes, and `pnpm peers check` reports the same three unmet peers as before, so "Line up the native build's peer dependencies before the first prebuild" still holds. `npx expo install --check` lists seven Expo packages one patch behind (`expo` ~57.0.23 and six `expo-*` modules). That predates this change and is left alone. Nothing that ships changes, so there is no version bump.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+**Completed:** 2026-09-17 (no release: nothing that ships changed)
