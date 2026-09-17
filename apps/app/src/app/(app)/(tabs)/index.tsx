@@ -36,7 +36,8 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const { today, timeZone, start, end, segments, switchCount } = useToday()
   const ink = useTokenColor('ink')
   const pathname = usePathname()
-  // Pressing the active state again is a no-op on the server too; skipping it saves the three refetches the mutation triggers.
+  // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
+  // Skipping the call also saves the three refetches the mutation triggers.
   const pick = (activityId: string | null) => {
     if (activityId !== current.activityId) switchTo.mutate({ activityId })
   }
