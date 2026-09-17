@@ -37,3 +37,8 @@ apps/app/uniwind-types.d.ts
 # Playwright output (apps/app/e2e)
 apps/app/test-results/
 apps/app/playwright-report/
+
+# Global ~/.gitignore_global ignores `.cursor`. Keep this project's MCP config addable.
+!.cursor/
+.cursor/*
+!.cursor/mcp.json

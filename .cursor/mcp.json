@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "wallaby": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${userHome}/.wallaby/mcp"]
+    }
+  }
+}
