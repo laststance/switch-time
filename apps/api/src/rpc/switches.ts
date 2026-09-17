@@ -36,23 +36,37 @@ export async function latestSwitch(userId: string): Promise<SwitchRow | null> {
 }
 
 /**
- * Rejects a segment recorded to an archived activity; null (detox) has no row to check. switchTo, changeActivity and
- * replaceDay share the rule: an archived activity is hidden from the grid, so no segment may be recorded to it.
- * One ownership-scoped query however many ids arrive, so a 500-row replaceDay cannot fan out into 500 of them.
- * @example await assertLiveActivities(userId, [input.activityId])
+ * Rejects an id that is not the user's (null = detox, nothing to check) in one query however many ids arrive; returns one
+ * archivedAt per distinct id, unordered. It is replaceDay's only activity check: 「元に戻す」 must write back rows that name an
+ * archived activity, so the user's own client can also write past time onto one, a trade-off the owner accepted.
+ * @example await ownActivities(userId, input.rows.map((row) => row.activityId)) // NOT_FOUND if any id is a stranger's
  */
-async function assertLiveActivities(
+async function ownActivities(
   userId: string,
   ids: readonly (string | null)[],
-): Promise<void> {
+): Promise<Pick<typeof activities.$inferSelect, 'archivedAt'>[]> {
   const wanted = [...new Set(ids.filter((id) => id !== null))]
-  if (wanted.length === 0) return
+  if (wanted.length === 0) return []
   const rows = await db
     .select({ archivedAt: activities.archivedAt })
     .from(activities)
     .where(and(eq(activities.userId, userId), inArray(activities.id, wanted)))
   // A row short means an id is another user's or none at all; both look like a miss on purpose, as in {@link one}.
   if (rows.length !== wanted.length) throw new ORPCError('NOT_FOUND')
+  return rows
+}
+
+/**
+ * Rejects an archived activity (the user can no longer pick it) or one that is not the user's, for the writes that pick an
+ * activity: switchTo and changeActivity. splitInHalf copies its row's own activity and the merges only move time, so neither
+ * calls it; replaceDay stops at {@link ownActivities}.
+ * @example await assertLiveActivities(userId, [input.activityId])
+ */
+async function assertLiveActivities(
+  userId: string,
+  ids: readonly (string | null)[],
+): Promise<void> {
+  const rows = await ownActivities(userId, ids)
   if (rows.some((row) => row.archivedAt !== null))
     throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
 }
@@ -260,7 +274,8 @@ export const switchesRouter = {
     )
   }),
 
-  // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction.
+  // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction. Rows on an archived
+  // activity are accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good.
   replaceDay: authed
     .input(replaceDayInputSchema)
     .handler(async ({ context, input }) => {
@@ -289,7 +304,8 @@ export const switchesRouter = {
           message:
             'rows must be ordered by startedAt, each one later than the last',
         })
-      await assertLiveActivities(
+      // After the in-memory checks, so a malformed request never costs the activity lookup.
+      await ownActivities(
         userId,
         input.rows.map((row) => row.activityId),
       )
@@ -307,9 +323,10 @@ export const switchesRouter = {
         return tx
           .insert(switches)
           .values(
+            // `userId` after the spread: a row never names another account, whatever the input schema lets through.
             input.rows.map((row) => ({
-              userId,
               ...row,
+              userId,
               source: 'correction' as const,
             })),
           )

@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
-## [Unreleased]
+## [0.2.1.0] - 2026-09-17
 
 ### Changed
 
@@ -12,6 +12,35 @@ All notable changes to this project are documented here. The format follows
   longer collide with other projects on :8080 / :8081. Production still
   listens on 8080 inside the container. `E2E_API_PORT` / `E2E_APP_PORT` still
   move both.
+
+### Fixed
+
+- 「元に戻す」 restores a day that holds a record of an archived activity.
+  Before, it failed without a message on such a day, so a record merged away
+  there could not be brought back. Switching to an archived activity, or
+  changing a record to one, is still refused.
+
+### Known issues
+
+- A record of an archived activity that was merged away can be brought back
+  only with 「元に戻す」, while the 訂正 sheet that made the edit is still open.
+  After that it cannot be rebuilt: 活動を変える offers live activities only,
+  and an archived activity cannot be restored.
+
+### Developer experience
+
+- `switches.replaceDay` no longer shares the archived-activity guard with
+  `switchTo` and `changeActivity`: it checks only that each row's activity
+  belongs to the account, and sets the account on every row it writes after
+  the client's fields. The README's correction notes say which write refuses
+  what.
+- API tests cover a replaced day that ends on an archived activity (it runs on
+  as the current state, and a tap on it is refused), 「元に戻す」 on a day with
+  an archived record, one activity on several rows, another account's activity
+  alone or beside the user's own, 半分で分割 on an archived record, and the
+  current state merged into the archived record before it.
+- Playwright covers undo after 次の記録に統合 onto an archived record; the test
+  archives the activity through the API.
 
 ## [0.2.0.0] - 2026-09-17
 

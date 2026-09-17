@@ -849,8 +849,8 @@ test('an empty settings update is rejected as input, not as a database error', a
   })
 })
 
-test('a replaced day cannot be written onto an archived activity', async () => {
-  // Arrange
+test('a replaced day can end on an archived activity, which then runs on as the current state', async () => {
+  // Arrange: no switches yet, so nothing keeps 休息 from being archived
   const api = await signedIn('replace-archived@example.com')
   const list = await api.activities.list()
   const work = idOf(list, '仕事')
@@ -858,16 +858,224 @@ test('a replaced day cannot be written onto an archived activity', async () => {
   await api.activities.archive({ id: rest })
   const yesterday = addDays(today, -1)
 
-  // Act + Assert
-  await expect(
-    api.switches.replaceDay({
-      day: yesterday,
-      rows: [
-        { activityId: work, startedAt: at(yesterday, 9) },
-        { activityId: rest, startedAt: at(yesterday, 12) },
-      ],
-    }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  // Act
+  const written = await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: work, startedAt: at(yesterday, 9) },
+      { activityId: rest, startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert: nothing was recorded after 12:00, so the archived 休息 is what runs now
+  expect(written.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [work, at(yesterday, 9)],
+    [rest, at(yesterday, 12)],
+  ])
+  expect(await api.switches.current()).toMatchObject({
+    activityId: rest,
+    startedAt: at(yesterday, 12),
+  })
+})
+
+test('tapping an archived activity that is still the current state is refused, and that state keeps running', async () => {
+  // Arrange: 休息 archived before any switch, then a replaced day ends on it, so the archived 休息 is the current state
+  const api = await signedIn('retap-archived@example.com')
+  const rest = idOf(await api.activities.list(), '休息')
+  await api.activities.archive({ id: rest })
+  const yesterday = addDays(today, -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: rest, startedAt: at(yesterday, 12) }],
+  })
+
+  // Act: the archived check runs before the same-state shortcut, so the re-tap is refused, not answered
+  const retap = api.switches.switchTo({ activityId: rest })
+
+  // Assert: refused, and the archived 休息 keeps running from 12:00
+  await expect(retap).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  expect(await api.switches.current()).toMatchObject({
+    activityId: rest,
+    startedAt: at(yesterday, 12),
+  })
+})
+
+test('元に戻す restores a day whose rows include an archived activity', async () => {
+  // Arrange: yesterday 仕事 9:00 and 休息 12:00; 家事 is the current state, so 休息 can be archived; then 仕事 moves to 9:15
+  const api = await signedIn('undo-archived@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const yesterday = addDays(today, -1)
+  const snapshot = [
+    { activityId: work, startedAt: at(yesterday, 9) },
+    { activityId: rest, startedAt: at(yesterday, 12) },
+  ]
+  const [first] = await api.switches.replaceDay({
+    day: yesterday,
+    rows: snapshot,
+  })
+  if (!first) throw new Error('seed failed')
+  await api.switches.switchTo({ activityId: idOf(list, '家事') })
+  await api.activities.archive({ id: rest })
+  await api.switches.moveStart({ id: first.id, deltaMinutes: 15 })
+  // The edit moved 仕事 only, so the archived 休息 rides along in the snapshot as a bystander
+  const edited = await api.switches.listByDay({ day: yesterday })
+  expect(edited.rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [work, at(yesterday, 9.25)],
+    [rest, at(yesterday, 12)],
+  ])
+
+  // Act
+  await api.switches.replaceDay({ day: yesterday, rows: snapshot })
+
+  // Assert
+  const { rows } = await api.switches.listByDay({ day: yesterday })
+  expect(rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [work, at(yesterday, 9)],
+    [rest, at(yesterday, 12)],
+  ])
+})
+
+test('a replaced day cannot be written onto another account’s activity: it reads as missing', async () => {
+  // Arrange: the stranger sends the owner's 仕事 id
+  const owner = await signedIn('replace-owner@example.com')
+  const stranger = await signedIn('replace-stranger@example.com')
+  const work = idOf(await owner.activities.list(), '仕事')
+  const yesterday = addDays(today, -1)
+
+  // Act
+  const replacement = stranger.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: work, startedAt: at(yesterday, 9) }],
+  })
+
+  // Assert: refused, and nothing reached the stranger's day
+  await expect(replacement).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  expect((await stranger.switches.listByDay({ day: yesterday })).rows).toEqual(
+    [],
+  )
+})
+
+test('元に戻す writes back a day where one activity holds several rows', async () => {
+  // Arrange: 仕事 before and after 休息, the everyday shape of a day; the ownership check must count 仕事 once
+  const api = await signedIn('replace-repeated@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const yesterday = addDays(today, -1)
+
+  // Act
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: work, startedAt: at(yesterday, 9) },
+      { activityId: rest, startedAt: at(yesterday, 12) },
+      { activityId: work, startedAt: at(yesterday, 13) },
+    ],
+  })
+
+  // Assert
+  const { rows } = await api.switches.listByDay({ day: yesterday })
+  expect(rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [work, at(yesterday, 9)],
+    [rest, at(yesterday, 12)],
+    [work, at(yesterday, 13)],
+  ])
+})
+
+test('a replaced day that slips in another account’s activity beside the user’s own is refused, and the day stays as it was', async () => {
+  // Arrange: the stranger's yesterday holds 仕事 9:00; the replacement pairs the stranger's 休息 with the owner's 仕事
+  const owner = await signedIn('replace-mixed-owner@example.com')
+  const stranger = await signedIn('replace-mixed-stranger@example.com')
+  const ownersWork = idOf(await owner.activities.list(), '仕事')
+  const strangersList = await stranger.activities.list()
+  const strangersWork = idOf(strangersList, '仕事')
+  const strangersRest = idOf(strangersList, '休息')
+  const yesterday = addDays(today, -1)
+  await stranger.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: strangersWork, startedAt: at(yesterday, 9) }],
+  })
+
+  // Act
+  const replacement = stranger.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: strangersRest, startedAt: at(yesterday, 10) },
+      { activityId: ownersWork, startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert: refused, and the stranger's day still holds only its 仕事 9:00
+  await expect(replacement).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const { rows } = await stranger.switches.listByDay({ day: yesterday })
+  expect(rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [strangersWork, at(yesterday, 9)],
+  ])
+})
+
+test('splitting a record of an archived activity keeps both halves on that activity', async () => {
+  // Arrange: yesterday 休息 10:00 then 仕事 12:00; 家事 is the current state, so 休息 can be archived
+  const api = await signedIn('split-archived@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const work = idOf(list, '仕事')
+  const yesterday = addDays(today, -1)
+  const [restRow] = await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: rest, startedAt: at(yesterday, 10) },
+      { activityId: work, startedAt: at(yesterday, 12) },
+    ],
+  })
+  if (!restRow) throw new Error('seed failed')
+  await api.switches.switchTo({ activityId: idOf(list, '家事') })
+  await api.activities.archive({ id: rest })
+
+  // Act
+  const half = await api.switches.splitInHalf({ id: restRow.id })
+
+  // Assert: the new row at 11:00 stays 休息; only the writes that pick an activity refuse an archived one
+  expect(half).toMatchObject({
+    activityId: rest,
+    startedAt: at(yesterday, 11),
+    source: 'split',
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [rest, at(yesterday, 10)],
+    [rest, at(yesterday, 11)],
+    [work, at(yesterday, 12)],
+  ])
+})
+
+test('merging the current state into the record of an archived activity makes that activity the current state', async () => {
+  // Arrange: yesterday 休息 10:00 then 仕事 12:00; 仕事 is the current state, so 休息 can be archived
+  const api = await signedIn('merge-onto-archived@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const work = idOf(list, '仕事')
+  const yesterday = addDays(today, -1)
+  const [, workRow] = await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: rest, startedAt: at(yesterday, 10) },
+      { activityId: work, startedAt: at(yesterday, 12) },
+    ],
+  })
+  if (!workRow) throw new Error('seed failed')
+  await api.activities.archive({ id: rest })
+
+  // Act
+  await api.switches.mergeIntoPrevious({ id: workRow.id })
+
+  // Assert: 「前の記録に統合」 checks no activity, so the archived 休息 now runs on from 10:00
+  expect(await api.switches.current()).toMatchObject({
+    activityId: rest,
+    startedAt: at(yesterday, 10),
+    source: 'merge',
+  })
 })
 
 test('a replaced day rejects two segments that start at the same moment', async () => {
