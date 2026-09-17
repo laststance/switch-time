@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test'
 import type { AppRouterClient } from '@switch-time/api'
 
 // The same port playwright.config.ts boots (or reuses) the API on.
-const API_ORIGIN = `http://localhost:${process.env.E2E_API_PORT || '8080'}`
+const API_ORIGIN = `http://localhost:${process.env.E2E_API_PORT || '4000'}`
 
 /**
  * Creates a fresh account through the UI and taps 家事 on the first-launch screen, so every shell test starts signed in on Home.
