@@ -94,6 +94,43 @@ test('merging into the next record hands the span to the next row, and undo brin
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
+test('undo brings back a row merged into the record of an archived activity', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, then 休息 archived (today's first-launch tap 家事 is the current state).
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await api.activities.archive({ id: idOf(list, '休息') })
+  await page.goto(`/correction?day=${yesterday}`)
+  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  await work.click()
+  await page.getByRole('button', { name: '次の記録に統合' }).click()
+  await expect(
+    page.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await expect(work).toHaveCount(0)
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: 仕事 is back and the archived 休息 starts at 12:00 again, with nothing further to undo
+  await expect(work).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
 test('undo after a merge and then a 15-minute move takes back only the move', async ({
   page,
 }) => {
