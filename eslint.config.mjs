@@ -14,6 +14,8 @@ export default defineConfig([
       'coverage/**',
       '.artifacts/**',
       '.fallow/**',
+      // Agent worktrees (AGENTS.md): each one under .claude/worktrees is a full checkout with its own config.
+      '.claude/**',
       // Bundler config: CommonJS, outside apps/app/tsconfig.json's include (typed linting would reject it).
       'apps/app/metro.config.js',
     ],
