@@ -228,6 +228,75 @@
 **Priority:** P3
 **Depends on:** None
 
+## Auth
+
+### Stop sign-up from telling whether an e-mail is registered
+
+**What:** Make e-mail sign-up answer an address that already has an account the same way as a new one. Either turn on `requireEmailVerification` once there is a mailer, or set `autoSignIn: false` and send the user to sign in after signing up. When e-mail links or social sign-in bring auth deep links, also narrow the native entry in `trustedOrigins` from `switchtime://` to `switchtime://auth`.
+
+**Why:** With neither option set, Better Auth 1.7.3 answers a sign-up for an existing address with 422 `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`, so anyone can check which addresses have an account. With either option, it returns the same 200 for both and hashes the password anyway to even out the timing.
+
+**Context:** `apps/api/src/auth.ts` sets only `emailAndPassword: { enabled: true }`. The branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`, so it waits for a mailer; with one, `onExistingUserSignUp` can also tell the owner of the address. `autoSignIn: false` needs no mailer but adds a sign-in step after 登録, so design it in the pen file first, and keep the navigation in the `(auth)` layout as sign-in does. A host-less `switchtime://` trusts every URL of the scheme, while `switchtime://auth` trusts only that host (`trusted-origins.mjs`). Deferred during MVP-02..06 (2026-09-09). The client-IP item from the same list is done: `advanced.ipAddress.ipAddressHeaders` reads `do-connecting-ip`.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** A mailer, for the `requireEmailVerification` route
+
+## Infrastructure
+
+### Give the README's production image and the Compose dev image different names
+
+**What:** Tag the README's production build something other than `switch-time-api` (for example `switch-time-api:prod`), or give the Compose `api` service its own `image:` name. Update the README's `docker run` to match.
+
+**Why:** `compose.yaml` sets `name: switch-time`, and its `api` service builds the `dev` target with no `image:`, so Compose tags that image `switch-time-api:latest`. The README's `docker build -f apps/api/Dockerfile -t switch-time-api .` uses the same tag, and the last build owns it. After the README build, `docker compose up -d` without `--build` runs the production image. That image sets `NODE_ENV=production`, which neither Compose nor `.env` overrides, so `env.ts` refuses the `http://` `APP_ORIGIN` and the API exits. In the other direction, the README's `docker run … switch-time-api` starts the dev image unless the production image was just rebuilt. This is reasoned from the config, not reproduced.
+
+**Context:** README, "API" section. `pnpm dev:backend` runs `docker compose up --build`, so the usual path is safe. Found during PR #48 (2026-09-17) and left out of that PR.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Say in the README how to reach the production database from a laptop
+
+**What:** Add to the DigitalOcean steps that, while the cluster has trusted sources, a laptop needs `doctl databases firewalls append <cluster-id> --rule ip_addr:<your-ip>` before `psql` connects, including step 2's `doadmin` session. Remove that rule afterwards with `doctl databases firewalls remove <cluster-id> --uuid <rule-uuid>`, and keep the `app:<app-id>` rule.
+
+**Why:** The production cluster's only trusted source is the App Platform app (`doctl databases firewalls list <cluster-id>`). A direct `psql` from a laptop therefore times out without saying why, and the README mentions only the app rule, in step 4.
+
+**Context:** Removing the app rule cuts off `db-migrate` and the API. Deferred after the 2026-09-11 production QA run.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Refresh metro and drop the image-size audit exceptions
+
+**What:** Run `pnpm update -r 'metro' 'metro-*'` so that the `metro@0.87.0` copy moves to 0.87.1, and check that `pnpm why image-size` comes back empty. Then delete the `audit` block (GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq and their comment) from `pnpm-workspace.yaml`, and confirm that `pnpm audit --prod --audit-level high` still passes.
+
+**Why:** Both advisories (high severity, image-size ≤ 2.0.2, no patched version listed) are ignored so that the Production Dependency Audit passes. Today the only path to image-size is `metro@0.87.0` → `image-size@1.2.1`, at build time. An ignore entry, though, would also hide any new path to the package.
+
+**Context:** metro 0.87.1 (2026-09-13) no longer depends on image-size, and neither do 0.84.5 and 0.84.6, the copies that Expo and the React Native CLI plugin use. The 0.87.0 copy comes in through `@react-native/metro-config` 0.87.1 (the `*` peer of `react-native-worklets`) and `metro-config@0.87.0`, which pins it exactly. The `metro-cache` and `metro-transform-worker` peers of `uniwind` hold it as well, so updating only `metro` and `metro-config` leaves it in place. On a scratch copy (2026-09-17), `pnpm update -r --lockfile-only 'metro' 'metro-*'` left no image-size in the lockfile and changed no `package.json`. `pnpm audit --prod --audit-level high` then passed without the ignore list, while the current lockfile fails it on the two high advisories. Two moderate findings (uuid, decode-uri-component) stay below that level either way. A lockfile run doesn't show that the app still bundles on the new metro, so also run the app's `build:web` and `test:e2e`, and follow Expo's pins (`npx expo install --check`). Deferred during MVP-02..06 (2026-09-09).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Line up the native build's peer dependencies before the first prebuild
+
+**What:** Before `expo prebuild` or an EAS build, pin `react-native-worklets` to a version that `expo-modules-core` accepts, and `@react-native/metro-config` to the `react-native` version (0.86.3). Then check with `pnpm peers check` and `npx expo install --check`.
+
+**Why:** `pnpm peers check` reports both as unmet:
+
+- `react-native-worklets` 0.12.1, pulled in by `@expo/ui` through `expo-router`. `expo-modules-core@57.0.17` wants `^0.7.4 || ^0.8.0 || ^0.9.0 || ^0.10.0`.
+- `@react-native/metro-config` 0.87.1. `@react-native/community-cli-plugin@0.86.3` wants 0.86.3.
+
+Expo Go and the web export don't notice either mismatch. A native build compiles against these versions, which are outside the declared ranges and untested together.
+
+**Context:** Noted on issue #8 (2026-09-09) during MVP-06. That note says the SDK 57 template pairs `react-native-worklets` 0.10.x with `react-native-reanimated`. The same check also lists `vitest` 5.0.0 against the `^2 || ^3 || ^4` peer range of `better-auth`, which has nothing to do with native builds. On a scratch copy (2026-09-17), an `overrides` entry `'@react-native/metro-config': 0.86.3` in `pnpm-workspace.yaml` moved every copy of that package to 0.86.3, but the lockfile still held `metro@0.87.0` and image-size afterwards (see "Refresh metro and drop the image-size audit exceptions"). The web export is the only build today.
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** Starting native builds
+
 ## Completed
 
 ### Let 「元に戻す」 restore a day that holds an archived activity
