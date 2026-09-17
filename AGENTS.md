@@ -27,7 +27,7 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 
   Don't put it under the repository's `.codex/`: Codex's workspace-write sandbox keeps that directory read-only. `codex --worktree` is an experimental feature that checks out the starting checkout's `HEAD` detached, so use the commands above.
 
-- Before running anything in a new worktree, copy `.env` from the main checkout (it is untracked), then run `pnpm install`.
+- Before running anything in a new worktree, make sure it has `.env` (it is untracked), then run `pnpm install`. Claude Code copies `.env` from the main checkout into each worktree it creates, because `.worktreeinclude` lists it. A Codex worktree, or any other made with `git worktree add`, needs it copied by hand.
 - Run `pnpm check` and the other scripts inside the worktree. ESLint and Prettier skip `.claude/` (`eslint.config.mjs`, `.prettierignore`): each worktree there is a full checkout, and the main checkout's lint would fail on it.
 - The API tests share one `_test` database and empty it before every test. Never run them in two checkouts at once.
 - Playwright reuses a server that already listens on :4000 / :4001 (`reuseExistingServer`), and that server may belong to another checkout. In a worktree, set `E2E_API_PORT` and `E2E_APP_PORT` together to free ports so the run starts this worktree's own build.

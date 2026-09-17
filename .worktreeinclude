@@ -1,0 +1,2 @@
+# Gitignored files that Claude Code copies from the main checkout into each worktree it creates (AGENTS.md).
+.env
