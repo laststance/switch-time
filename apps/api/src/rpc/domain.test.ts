@@ -889,10 +889,11 @@ test('tapping an archived activity that is still the current state is refused, a
     rows: [{ activityId: rest, startedAt: at(yesterday, 12) }],
   })
 
-  // Act + Assert: the archived check runs before the same-state shortcut, so the re-tap is refused, not answered
-  await expect(
-    api.switches.switchTo({ activityId: rest }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  // Act: the archived check runs before the same-state shortcut, so the re-tap is refused, not answered
+  const retap = api.switches.switchTo({ activityId: rest })
+
+  // Assert: refused, and the archived 休息 keeps running from 12:00
+  await expect(retap).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   expect(await api.switches.current()).toMatchObject({
     activityId: rest,
     startedAt: at(yesterday, 12),
@@ -943,13 +944,14 @@ test('a replaced day cannot be written onto another account’s activity: it rea
   const work = idOf(await owner.activities.list(), '仕事')
   const yesterday = addDays(today, -1)
 
-  // Act + Assert
-  await expect(
-    stranger.switches.replaceDay({
-      day: yesterday,
-      rows: [{ activityId: work, startedAt: at(yesterday, 9) }],
-    }),
-  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  // Act
+  const replacement = stranger.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: work, startedAt: at(yesterday, 9) }],
+  })
+
+  // Assert: refused, and nothing reached the stranger's day
+  await expect(replacement).rejects.toMatchObject({ code: 'NOT_FOUND' })
   expect((await stranger.switches.listByDay({ day: yesterday })).rows).toEqual(
     [],
   )
@@ -996,16 +998,17 @@ test('a replaced day that slips in another account’s activity beside the user�
     rows: [{ activityId: strangersWork, startedAt: at(yesterday, 9) }],
   })
 
-  // Act + Assert
-  await expect(
-    stranger.switches.replaceDay({
-      day: yesterday,
-      rows: [
-        { activityId: strangersRest, startedAt: at(yesterday, 10) },
-        { activityId: ownersWork, startedAt: at(yesterday, 12) },
-      ],
-    }),
-  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  // Act
+  const replacement = stranger.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: strangersRest, startedAt: at(yesterday, 10) },
+      { activityId: ownersWork, startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert: refused, and the stranger's day still holds only its 仕事 9:00
+  await expect(replacement).rejects.toMatchObject({ code: 'NOT_FOUND' })
   const { rows } = await stranger.switches.listByDay({ day: yesterday })
   expect(rows.map((row) => [row.activityId, row.startedAt])).toEqual([
     [strangersWork, at(yesterday, 9)],
