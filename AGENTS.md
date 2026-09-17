@@ -16,7 +16,7 @@ A change that alters what the user sees starts in the design file, and the code 
 
 Unless the user says otherwise, a Claude Code or Codex task that changes the repository runs in its own git worktree, on a new branch cut from the latest `origin/main`. Don't edit files in the main checkout.
 
-- Claude Code: `EnterWorktree` (or `claude --worktree <name>`) creates `.claude/worktrees/<name>` on a new branch from `origin/main` and moves the session into it.
+- Claude Code: run `git fetch origin`, then `EnterWorktree`, which creates `.claude/worktrees/<name>` on a new branch `worktree-<name>` and moves the session into it (`claude --worktree <name>` does the same for a new session). The branch starts at the locally cached `origin/HEAD`, which is `origin/main` here, and Claude Code refetches it only when the last fetch is more than 24 hours old, so fetch first.
 - Codex: create the worktree outside the repository, then start Codex in it.
 
   ```sh
