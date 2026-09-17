@@ -40,6 +40,7 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 
 `TODOS.md` is the list of open work. When a PR fixes an item on it, the same PR updates `TODOS.md`; don't leave that to a later cleanup PR.
 
-- Move the item under `## Completed` at the bottom, as `/ship` does. Add a `**Resolution:**` paragraph (what the PR did, and anything it left out) and a `**Completed:**` line: `vX.Y.Z.W (YYYY-MM-DD)` when the PR ships a release, or the date and the reason when it doesn't.
+- Delete the item. `TODOS.md` keeps no `## Completed` section: the PR description says what the fix did and what it left out, and the CHANGELOG records the change when the PR ships a release. `/ship` moves finished items under `## Completed`; delete them instead.
 - If the PR fixes only part of an item, rewrite the item to cover what is left, and keep its priority unless the owner changes it.
-- In the same PR, update any other item the fix affects, such as one that cites a version the PR changed or quotes a title the PR rewrote.
+- If the fix leaves a related gap that the item did not cover, add the gap as a new item in the same PR.
+- In the same PR, update any other item the fix affects: one that refers to the deleted item (point it at the PR or the release instead), cites a version the PR changed, or quotes a title the PR rewrote.
