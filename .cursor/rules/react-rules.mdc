@@ -1,0 +1,235 @@
+---
+description: React Coding Rules
+globs: **/*.tsx
+alwaysApply: false
+---
+
+---
+paths: '**/*.{tsx,jsx}'
+---
+
+# React Coding Rules
+
+## Industry Standards
+
+Most React 19+ developers (90%+) follow these practices:
+
+| Practice | This protects you from... |
+|----------|---------------------------|
+| `Suspense + use()` for data fetching | Race conditions, memory leaks, manual loading state bugs |
+| `useOptimistic + startTransition` for instant feedback | Complex rollback logic, janky UX |
+| `useTransition` for heavy updates | UI freezing, unresponsive inputs |
+| `useSyncExternalStore` for subscriptions | Tearing in concurrent mode, SSR hydration mismatches |
+| `<Activity>` for visibility toggle | Lost form state, unnecessary re-mounts |
+| `ts-pattern` for 4+ conditions | Non-exhaustive handling, runtime type errors |
+| Extract hooks at 3+ useState | God components, untestable logic |
+
+## ❌ Violations
+
+| Legacy Pattern | Consequence |
+|----------------|-------------|
+| `useState(loading) + useEffect(fetch)` | Race conditions, memory leaks on unmount |
+| Manual optimistic + try/catch rollback | Error-prone, inconsistent UI states |
+| `{isOpen && <Component />}` | State lost on every toggle |
+| `useEffect` for external subscriptions | Tearing bugs, SSR hydration errors |
+| if/else chains for discriminated unions | Missed cases, no compile-time safety |
+| 5+ useState in one component | Unmaintainable, hard to test |
+
+---
+
+## API Selection Matrix
+
+| Problem | ❌ Legacy | ✅ Modern |
+|---------|----------|----------|
+| Loading state | `useState + useEffect(fetch)` | `Suspense + use()` |
+| Optimistic UI | `useState + try/catch + rollback` | `useOptimistic + startTransition` |
+| Non-blocking updates | `useState + debounce` | `useTransition` / `useDeferredValue` |
+| Form pending state | `useState(isPending)` | `useFormStatus` / `useActionState` |
+| State preservation | `{isOpen && <Modal />}` | `<Activity mode={...}>` |
+| Effect with latest props | `useEffect + useRef` | `useEffectEvent` |
+| External subscriptions | `useEffect + cleanup` | `useSyncExternalStore` |
+| Complex conditionals | if/else chains | `match().with().exhaustive()` |
+
+---
+
+## Custom Hook Extraction
+
+| Signal | Action |
+|--------|--------|
+| 3+ useState in component | Extract to `useXxxState` hook |
+| useEffect with subscription | Extract using `useSyncExternalStore` |
+| Form with validation | Extract to `useXxxForm` with `useActionState` |
+| Modal/dialog state | Extract to `useXxxDialog` hook |
+| Same logic in 2+ components | Consolidate to shared hook |
+
+```tsx
+// ❌ God Component with scattered state
+function BoardPage() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState('general')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalData, setModalData] = useState(null)
+  const [isPending, setIsPending] = useState(false)
+}
+
+// ✅ Focused custom hooks
+function BoardPage() {
+  const settings = useBoardSettings()
+  const modal = useProjectModal()
+  // Component focuses on rendering, not state orchestration
+}
+```
+
+---
+
+## React 19+ Quick Reference
+
+### `Suspense + use()` - Data Fetching
+
+```tsx
+// ❌ LEGACY: Manual loading orchestration
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetchUser(userId)
+      .then(setUser)
+      .catch(setError)
+      .finally(() => setLoading(false))
+  }, [userId])
+
+  if (loading) return <Skeleton />
+  if (error) return <Error />
+  return <Profile user={user} />
+}
+
+// ✅ MODERN: Declarative with Suspense
+function UserProfile({ userPromise }: { userPromise: Promise<User> }) {
+  const user = use(userPromise)
+  return <Profile user={user} />
+}
+
+// Usage
+<ErrorBoundary fallback={<Error />}>
+  <Suspense fallback={<Skeleton />}>
+    <UserProfile userPromise={fetchUser(userId)} />
+  </Suspense>
+</ErrorBoundary>
+```
+
+### `<Activity>` - State Preservation
+
+```tsx
+<Activity mode={isVisible ? 'visible' : 'hidden'}>
+  <Sidebar /> {/* State persists across visibility changes */}
+</Activity>
+```
+
+### `use()` - Context After Early Return
+
+```tsx
+function Heading({ children }: { children?: React.ReactNode }) {
+  if (!children) return null
+  const theme = use(ThemeContext) // ✅ Works after early return
+  return <h1 style={{ color: theme.color }}>{children}</h1>
+}
+```
+
+### `useOptimistic` - Instant UI Feedback
+
+```tsx
+const [optimistic, setOptimistic] = useOptimistic(items)
+startTransition(async () => {
+  setOptimistic([...items, newItem]) // Instant update
+  await saveItem(newItem) // Auto-reverts on error
+})
+```
+
+### `useTransition` - Non-blocking Updates
+
+```tsx
+const [isPending, startTransition] = useTransition()
+startTransition(() => setExpensiveState(value)) // UI stays responsive
+```
+
+### `useSyncExternalStore` - External Subscriptions
+
+```tsx
+const width = useSyncExternalStore(
+  (cb) => { window.addEventListener('resize', cb); return () => window.removeEventListener('resize', cb) },
+  () => window.innerWidth,
+  () => 0 // SSR fallback
+)
+```
+
+### `useEffectEvent` - Stable Effect Callbacks
+
+```tsx
+const onConnected = useEffectEvent(() => notify(theme)) // Always reads latest
+useEffect(() => { conn.on('connected', onConnected) }, [roomId]) // Only roomId triggers
+```
+
+---
+
+## Form Actions (React 19+)
+
+```tsx
+<form action={async (formData) => { 'use server'; await save(formData) }}>
+  <input name="email" />
+  <SubmitButton /> {/* useFormStatus inside */}
+</form>
+```
+
+**Note**: `useFormStatus` must be called from a CHILD component of `<form>`, not the same component.
+
+---
+
+## React 19 Syntax Updates
+
+| Pattern | ❌ Old | ✅ New |
+|---------|--------|--------|
+| forwardRef | `forwardRef((props, ref) => ...)` | `function Input({ ref, ...props })` |
+| Context Provider | `<Ctx.Provider value={...}>` | `<Ctx value={...}>` |
+| Ref cleanup | — | `ref={(node) => { setup(); return cleanup }}` |
+| Document metadata | `<Head>` (Next.js) | `<title>`, `<meta>` anywhere in tree |
+
+---
+
+## ts-pattern Usage
+
+| Scenario | Recommendation |
+|----------|----------------|
+| Simple boolean | Ternary `? :` |
+| 2-3 cases | `if/else` or `switch` |
+| 4+ cases / discriminated unions | `match().with().exhaustive()` |
+| State machines | `match([state, action])` |
+
+```tsx
+match(result)
+  .with({ type: 'loading' }, () => <Spinner />)
+  .with({ type: 'error' }, ({ error }) => <Error error={error} />)
+  .with({ type: 'ok' }, ({ data }) => <View data={data} />)
+  .exhaustive() // Compile-time check: all cases handled
+```
+
+---
+
+## Component Design Principles
+
+- **Reuse UI components** from `/src/components/ui` — ask when missing
+- **Extract pure functions** outside components (via arguments, not closures)
+- **Non-exported helpers** below component definition
+- **Use `*Action` suffix** for async action props
+
+---
+
+## Next.js v16
+
+| v15 | v16 |
+|-----|-----|
+| `middleware.ts` | `proxy.ts` |
+| `export function middleware()` | `export function proxy()` |
+
