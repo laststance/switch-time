@@ -35,3 +35,11 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
   - Claude Code, in the session that created it: `ExitWorktree` with `remove`. If it refuses because the branch has commits (it did right after PR #50 merged), use `keep` instead and finish from the main checkout as in the next item.
   - From the main checkout, after pulling `main`: `git worktree remove <path>`, then `git branch -d <branch>`. After a squash or rebase merge, `-d` can refuse, because `main` then holds new commits rather than the branch's own. Confirm that the PR shows as merged (`gh pr view <number> --json state`), then delete the branch with `git branch -D <branch>`.
   - Delete the remote branch as well (`gh pr merge --delete-branch` does it). If another open PR is based on that branch, retarget it to `main` first, or GitHub closes it.
+
+## Close a TODOS.md item in the PR that fixes it
+
+`TODOS.md` is the list of open work. When a PR fixes an item on it, the same PR updates `TODOS.md`; don't leave that to a later cleanup PR.
+
+- Move the item under `## Completed` at the bottom, as `/ship` does. Add a `**Resolution:**` paragraph (what the PR did, and anything it left out) and a `**Completed:**` line: `vX.Y.Z.W (YYYY-MM-DD)` when the PR ships a release, or the date and the reason when it doesn't.
+- If the PR fixes only part of an item, rewrite the item to cover what is left, and keep its priority unless the owner changes it.
+- In the same PR, update any other item the fix affects, such as one that cites a version the PR changed or quotes a title the PR rewrote.
