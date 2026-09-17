@@ -6,6 +6,9 @@ coverage
 .artifacts
 .fallow
 
+# Agent worktrees (AGENTS.md): full checkouts, formatted from inside each one.
+.claude
+
 # Design assets are pulled/generated (pen.dev, Claude Design exports); never reformat them.
 design
 design-system
