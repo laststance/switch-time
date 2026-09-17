@@ -16,23 +16,11 @@
 
 ## Correction
 
-### Let 「元に戻す」 restore a day that holds an archived activity
-
-**What:** Pick one of two fixes: (a) `replaceDay` checks only that the activities are the user's, or (b) the merges refuse (CONFLICT plus a row flag) on a day that holds a row of an archived activity.
-
-**Why:** The undo snapshot carries every row's `activityId`, and `replaceDay` refuses archived ones (`BAD_REQUEST 'activity is archived'`). After any edit on such a day, 「元に戻す」 fails every time, silently. For a merge that loses data: the merged-away row never comes back, and a row of the archived activity cannot even be rebuilt by hand, because `changeActivity` refuses archived ids too.
-
-**Context:** Archiving refuses only the current state's activity, and past rows keep the archived id. (a) reverses "a replaced day cannot be written onto an archived activity" in `domain.test.ts` (7e3f204) and lets a client write fresh time onto a hidden activity on past days; (b) keeps that rule but blocks a legitimate merge and needs a client flag. The hole has been there since 0.1.0.0 for 「前の記録に統合」 (and for undoing ±15 min, 活動を変える and 半分で分割); 0.2.0.0 adds 「次の記録に統合」 to the same path. Raised by the red team during the 0.2.0.0 ship, and found again by Codex's adversarial pass; the choice was left to the owner.
-
-**Effort:** S
-**Priority:** P1
-**Depends on:** None
-
 ### Serialize a user's switch writes and re-read the neighbours inside them
 
-**What:** Take a per-user lock at the start of every `switches.*` write transaction (`pg_advisory_xact_lock` on the user id), and move `withNeighbours` and the merge's day check inside it.
+**What:** Take a per-user lock at the start of every `switches.*` write transaction (`pg_advisory_xact_lock` on the user id), and move `withNeighbours` and the merge's day check inside it. Take the same lock in `activities.archive`, and check for an archived activity inside it in `switchTo` and `changeActivity`.
 
-**Why:** `mergeIntoNext` reads the row and its next state before its transaction, then writes the row's start onto the next state by id. Two devices merging neighbouring records at once both succeed, and a span moves to the wrong activity for good: from 仕事 9:00, 休息 12:00, 娯楽 18:00, merging 仕事 into 休息 and 休息 into 娯楽 together leaves 娯楽 starting at 12:00 instead of 9:00, and 9:00–12:00 goes to whatever came before 仕事. A split racing a merge does the same, and `mergeIntoNext` on one row racing `mergeIntoPrevious` on the next can deadlock (a silent 500).
+**Why:** `mergeIntoNext` reads the row and its next state before its transaction, then writes the row's start onto the next state by id. Two devices merging neighbouring records at once both succeed, and a span moves to the wrong activity for good: from 仕事 9:00, 休息 12:00, 娯楽 18:00, merging 仕事 into 休息 and 休息 into 娯楽 together leaves 娯楽 starting at 12:00 instead of 9:00, and 9:00–12:00 goes to whatever came before 仕事. A split racing a merge does the same, and `mergeIntoNext` on one row racing `mergeIntoPrevious` on the next can deadlock (a silent 500). Two 「元に戻す」 of one day at once (two tabs or devices) keep both inserts: under READ COMMITTED the second delete cannot see the first one's new rows, so every row appears twice, and the next undo on that day fails the order check. A tap, or a 活動を変える on the latest record, can also land between `archive`'s current-state check and its write, leaving an archived activity running, and two archives at once can pass the last-live-activity count together.
 
 **Context:** New in 0.2.0.0 for `mergeIntoNext`; `mergeIntoPrevious` writes no time, and its update fails (rolling back the delete) when the kept row is already gone. Two merges of the same record no longer both succeed: `mergeInto` requires its delete to remove the row. `moveStart` and `splitInHalf` have computed their new time from a read outside the transaction since 0.1.0.0, and `switchTo` already names the missing per-user lock in a `ponytail:` comment. Needs a concurrency test against the real Postgres; the same-record test in `domain.test.ts` shows how to hold one transaction open and wait on `pg_stat_activity` until the other blocks. Raised by Codex's adversarial pass (as P1) and the Claude adversarial pass during the 0.2.0.0 ship; left to the owner before merging.
 
@@ -46,7 +34,7 @@
 
 **Why:** 「元に戻す」 deletes the day's whole window and writes the snapshot back without looking. A switch made on another device after the snapshot's data was fetched (up to the 30 s `staleTime`), or after the edit while 元に戻す is still armed, is deleted for good, and the current state silently reverts. It happens on one device too: when the refetch after an edit fails, the sheet unlocks on the pre-edit list, so the next edit snapshots that list and 元に戻す reverts both edits; and a merge paused offline arms 元に戻す with rows from before the connection dropped.
 
-**Context:** The snapshot is `list.data` when the button is pressed (`use-correction.ts`), and Home's today view shares the `listByDay` key. Once the edit's invalidation has refetched, `queryClient.getQueryData` holds the rows the edit left. A client-only stopgap is `staleTime: 0` on the sheet's list plus holding the panel after a failed refetch (`list.isRefetchError`); it does not cover the offline case, which the id check does. Raised by the red team during the 0.2.0.0 ship; Codex and the Claude adversarial pass added the one-device paths.
+**Context:** The snapshot is `list.data` when the button is pressed (`use-correction.ts`), and Home's today view shares the `listByDay` key. Once the edit's invalidation has refetched, `queryClient.getQueryData` holds the rows the edit left. A client-only stopgap is `staleTime: 0` on the sheet's list plus holding the panel after a failed refetch (`list.isRefetchError`); it does not cover the offline case, which the id check does. Since 0.2.1.0 (the archived-day undo fix under Completed) this also reaches days that hold a record of an archived activity, today included once an activity used earlier today is archived: `replaceDay` used to refuse those days outright. A sheet left open across that deploy with a failed undo still armed replays its old snapshot on the next press. Raised by the red team during the 0.2.0.0 ship; Codex and the Claude adversarial pass added the one-device paths.
 
 **Effort:** M
 **Priority:** P2
@@ -70,7 +58,7 @@
 
 **Why:** `listByDay` is keyed by the day string, but the server windows it with the stored time zone. After a change, a cached answer (30 s `staleTime`) still holds the old window while the sheet computes `dayBounds` with the new one, so the row flags and the undo snapshot disagree with the day `replaceDay` rewrites: 「元に戻す」 then fails, or deletes rows the snapshot never had. For someone with two devices in different time zones this is routine rather than a rare settings change: `use-time-zone-sync.ts` writes the focused device's zone whenever it differs, so the stored zone flips back and forth.
 
-**Context:** `useUpdateSettings` refetches `settings.*` and `stats.*` only. The server checks day bounds for 「次の記録に統合」 (0.2.0.0); `moveStart` and `splitInHalf` still trust the client's flags, so a mismatched window can also leave a stray row on the next day after 「元に戻す」. Pre-existing, raised by the review during the 0.2.0.0 ship; Codex and the Claude adversarial pass found it again, and the adversarial pass suggests the zone flipping may make it P1.
+**Context:** `useUpdateSettings` refetches `settings.*` and `stats.*` only. The server checks day bounds for 「次の記録に統合」 (0.2.0.0); `moveStart` and `splitInHalf` still trust the client's flags, so a mismatched window can also leave a stray row on the next day after 「元に戻す」. Since 0.2.1.0 the undo that deletes rows the snapshot never had also reaches days that hold a record of an archived activity, which `replaceDay` used to refuse before deleting anything. Pre-existing, raised by the review during the 0.2.0.0 ship; Codex and the Claude adversarial pass found it again, and the adversarial pass suggests the zone flipping may make it P1.
 
 **Effort:** S
 **Priority:** P2
@@ -121,6 +109,18 @@
 **Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list. Extend the held-answer e2e to press 元に戻す after the answer lands. Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
 
 **Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Rebuild a merged-away record of an archived activity
+
+**What:** Give the user a way to bring back a record of an archived activity once 「元に戻す」 is gone. Either `changeActivity` accepts the user's archived activity on a past row (and 活動を変える offers it there), or an `activities.unarchive` route with a control in 設定 brings the activity back so the usual edits can rebuild the row.
+
+**Why:** Since 0.2.1.0, 「元に戻す」 restores a day that holds such a record (see "Let 「元に戻す」 restore a day that holds an archived activity" under Completed), but only while the sheet that made the edit is open. After 完了, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
+
+**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them", since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Left out of scope when the owner chose (a) for that fix; raised by the review during the 0.2.1.0 ship.
+
+**Effort:** M
 **Priority:** P3
 **Depends on:** None
 
@@ -178,6 +178,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Make the database refuse a switch that names another account's activity
+
+**What:** Add a unique constraint on `activities (id, user_id)` and replace the `switches.activity_id` foreign key with a composite one, `(activity_id, user_id)` → `activities (id, user_id)`, keeping `on delete cascade`; generate the migration.
+
+**Why:** The foreign key checks only that `activity_id` exists, so the one thing that keeps a user's timeline off another account's activity is the route code: `ownActivities` in `switches.ts`. A future write path that forgets that call would store a cross-account reference: the day would total time under an activity the client cannot name, and deleting the other account would cascade into this user's timeline and remove those rows.
+
+**Context:** Nothing reaches it today: every write that takes an activity id from the client calls `ownActivities` (directly or through `assertLiveActivities`), `splitInHalf` copies the id from the user's own row, activities never change owner, and they disappear only with their account. A composite key with the default `MATCH SIMPLE` still accepts a null `activity_id` (detox). `domain.test.ts` has the stranger cases to keep green ("a replaced day cannot be written onto another account’s activity", and the mixed-in one). Raised by the testing pass and the Claude adversarial pass during the 0.2.1.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Design
 
 ### Check the 24-h bar's detox legend swatch at 1x
@@ -217,3 +229,18 @@
 **Depends on:** None
 
 ## Completed
+
+### Let 「元に戻す」 restore a day that holds an archived activity
+
+**What:** Pick one of two fixes: (a) `replaceDay` checks only that the activities are the user's, or (b) the merges refuse (CONFLICT plus a row flag) on a day that holds a row of an archived activity.
+
+**Why:** The undo snapshot carries every row's `activityId`, and `replaceDay` refuses archived ones (`BAD_REQUEST 'activity is archived'`). After any edit on such a day, 「元に戻す」 fails every time, silently. For a merge that loses data: the merged-away row never comes back, and a row of the archived activity cannot even be rebuilt by hand, because `changeActivity` refuses archived ids too.
+
+**Context:** Archiving refuses only the current state's activity, and past rows keep the archived id. (a) reverses "a replaced day cannot be written onto an archived activity" in `domain.test.ts` (7e3f204) and lets a client write fresh time onto a hidden activity on past days; (b) keeps that rule but blocks a legitimate merge and needs a client flag. The hole has been there since 0.1.0.0 for 「前の記録に統合」 (and for undoing ±15 min, 活動を変える and 半分で分割); 0.2.0.0 adds 「次の記録に統合」 to the same path. Raised by the red team during the 0.2.0.0 ship, and found again by Codex's adversarial pass; the choice was left to the owner.
+
+**Resolution:** (a), the owner's call on 2026-09-17. `replaceDay` now checks ownership only, through `ownActivities`: a stranger's id still reads as NOT_FOUND, alone or mixed in with the user's own. `switchTo` and `changeActivity` still refuse archived activities. The owner accepted that a user's own API client can write past time onto their archived activity. On the latest recorded day, such a row can also run on as the current state. `archive` refuses the current state's activity, so archiving itself ends in that state only when a tap or a 活動を変える on the latest record, from another device, lands between its check and its write (see the P1 lock). An undo replayed after another device archived the activity reaches it too, and 「前の記録に統合」 already could, since it checks no activity. Home keeps an archived current activity as its last button (`gridActivities`). Tests pin the rule. In `domain.test.ts`: the flipped 7e3f204 test, which also shows the archived activity running on as the current state; a re-tap of that state, which `switchTo` still refuses; a merge into the previous record that makes an archived activity the current state; a bystander-row undo; a day with one activity on several rows; a stranger's id mixed in with the user's own; and a split that keeps both halves on the archived activity. In the e2e: merging into an archived activity's record and undoing it. One gap stays out of scope: a row merged away and not undone still cannot be rebuilt by hand, because `changeActivity` refuses archived ids. It is tracked under Correction as "Rebuild a merged-away record of an archived activity".
+
+**Effort:** S
+**Priority:** P1
+**Depends on:** None
+**Completed:** v0.2.1.0 (2026-09-17)
