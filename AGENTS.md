@@ -33,5 +33,5 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 - Playwright reuses a server that already listens on :4000 / :4001 (`reuseExistingServer`), and that server may belong to another checkout. In a worktree, set `E2E_API_PORT` and `E2E_APP_PORT` together to free ports so the run starts this worktree's own build.
 - Once the PR is merged, remove the worktree and its branches:
   - Claude Code, in the session that created it: `ExitWorktree` with `remove`. If it refuses because the branch has commits (it did right after PR #50 merged), use `keep` instead and finish from the main checkout as in the next item.
-  - From the main checkout, after pulling `main`: `git worktree remove <path>`, then `git branch -d <branch>`.
+  - From the main checkout, after pulling `main`: `git worktree remove <path>`, then `git branch -d <branch>`. After a squash or rebase merge, `-d` can refuse, because `main` then holds new commits rather than the branch's own. Confirm that the PR shows as merged (`gh pr view <number> --json state`), then delete the branch with `git branch -D <branch>`.
   - Delete the remote branch as well (`gh pr merge --delete-branch` does it). If another open PR is based on that branch, retarget it to `main` first, or GitHub closes it.
