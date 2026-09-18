@@ -45,7 +45,7 @@ export function Segmented<T extends string | number>({
       role="group"
       aria-label={label}
       className={cn(
-        'flex-row rounded-chip bg-chip',
+        'bg-chip flex-row rounded-chip',
         look.trough,
         disabled && 'opacity-40',
       )}

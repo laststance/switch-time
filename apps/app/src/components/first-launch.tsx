@@ -26,7 +26,7 @@ export function FirstLaunch() {
   const ink = useTokenColor('ink')
   return (
     <View className="items-center gap-3.5 pt-8">
-      <View className="h-[88px] w-[88px] items-center justify-center rounded-[26px] bg-face text-ink">
+      <View className="bg-face text-ink h-22 w-22 items-center justify-center rounded-[26px]">
         <Svg width={88} height={88} viewBox="0 0 120 120" color={ink}>
           {ARCS.map((arc) => (
             <Circle
@@ -65,11 +65,11 @@ export function FirstLaunch() {
       <Text
         role="heading"
         aria-level={1}
-        className="text-center text-xl font-bold tracking-tight text-ink"
+        className="text-ink text-center text-xl font-bold tracking-tight"
       >
         いま何をしている？
       </Text>
-      <Text className="max-w-[280px] text-center text-sm leading-[25px] text-sub">
+      <Text className="text-sub max-w-70 text-center text-sm leading-6.25">
         タップした瞬間から時間が積み上がります。記録を止める操作はありません。
       </Text>
       <View className="w-full flex-row flex-wrap gap-2.5 pt-2.5">
@@ -86,7 +86,7 @@ export function FirstLaunch() {
         ))}
       </View>
       <Link href="/settings">
-        <Text className="py-3 text-xs font-medium text-sub underline">
+        <Text className="text-sub py-3 text-xs font-medium underline">
           項目をあとで編集する
         </Text>
       </Link>

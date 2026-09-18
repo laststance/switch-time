@@ -32,14 +32,14 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
   const active = rows.some((row) => row.id === selectedId) ? selectedId : null
   const dim = (id: string) => (active === null || active === id ? 1 : DIMMED)
   return (
-    <View className="h-3 w-full overflow-hidden rounded-[6px] bg-chip">
+    <View className="bg-chip h-3 w-full overflow-hidden rounded-md">
       {rows.map((row) => (
         <View
           key={row.id}
           // A detox span has no colour: outlined, like the 24-h bar's idle spans.
           className={cn(
             'absolute inset-y-0',
-            row.color === null && 'border border-dashed border-line',
+            row.color === null && 'border-line border border-dashed',
           )}
           style={{
             left: percent(row.start - bounds.start),
@@ -67,7 +67,7 @@ function RowHeader({ row, selected, onPress }: RowHeaderProps) {
       aria-expanded={selected}
       disabled={!row.editable}
       onPress={onPress}
-      className="h-[58px] flex-row items-center gap-3 px-3.5"
+      className="h-14.5 flex-row items-center gap-3 px-3.5"
     >
       <ActivityChip
         color={row.color}
@@ -76,10 +76,10 @@ function RowHeader({ row, selected, onPress }: RowHeaderProps) {
         iconSize={18}
       />
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-semibold text-ink">{row.name}</Text>
-        <Text className="text-xs text-sub tabular">{row.range}</Text>
+        <Text className="text-ink text-sm font-semibold">{row.name}</Text>
+        <Text className="text-sub text-xs tabular">{row.range}</Text>
       </View>
-      <Text className="text-sm font-semibold text-sub tabular">
+      <Text className="text-sub text-sm font-semibold tabular">
         {row.duration}
       </Text>
     </Pressable>
@@ -99,9 +99,9 @@ function StepButton({ glyph, label, disabled, onPress }: StepProps) {
       label={label}
       disabled={disabled}
       onPress={onPress}
-      className="h-11 w-11 rounded-chip border border-line bg-sheet-bg"
+      className="border-line bg-sheet-bg h-11 w-11 rounded-chip border"
     >
-      <Text className="text-md text-ink">{glyph}</Text>
+      <Text className="text-ink text-md">{glyph}</Text>
     </Control>
   )
 }
@@ -124,9 +124,9 @@ function ActionButton({
     <Control
       disabled={disabled}
       onPress={onPress}
-      className={cn('h-11 rounded-chip border border-line', className)}
+      className={cn('border-line h-11 rounded-chip border', className)}
     >
-      <Text className="text-xs font-semibold text-ink">{title}</Text>
+      <Text className="text-ink text-xs font-semibold">{title}</Text>
     </Control>
   )
 }
@@ -155,16 +155,16 @@ function Actions({
   // One gate for every control: nothing is pressable while a fetch or an edit is in flight.
   const can = (flag: boolean) => !pending && flag
   return (
-    <View className="gap-3 px-3.5 pb-3.5 pt-0.5">
+    <View className="gap-3 px-3.5 pt-0.5 pb-3.5">
       <View className="flex-row items-center gap-2.5">
-        <Text className="flex-1 text-xs font-medium text-sub">開始時刻</Text>
+        <Text className="text-sub flex-1 text-xs font-medium">開始時刻</Text>
         <StepButton
           glyph="−"
           label="15分早める"
           disabled={!can(row.canMoveEarlier)}
           onPress={() => onMove(-15)}
         />
-        <Text className="px-3 text-md font-semibold text-ink tabular">
+        <Text className="text-ink px-3 text-md font-semibold tabular">
           {row.startLabel}
         </Text>
         <StepButton
@@ -174,12 +174,12 @@ function Actions({
           onPress={() => onMove(15)}
         />
       </View>
-      <View className="gap-[7px]">
-        <Text className="text-xs font-medium text-sub">活動を変える</Text>
+      <View className="gap-1.75">
+        <Text className="text-sub text-xs font-medium">活動を変える</Text>
         <View
           role="radiogroup"
           aria-label="活動を変える"
-          className="flex-row flex-wrap gap-[7px]"
+          className="flex-row flex-wrap gap-1.75"
         >
           {live.map((activity) => (
             <ActivityPill
@@ -241,16 +241,16 @@ function Footer({ canUndo, onUndo }: FooterProps) {
       <Control
         disabled={!canUndo}
         onPress={onUndo}
-        className="h-[52px] flex-1 rounded-chip border border-line"
+        className="border-line h-13 flex-1 rounded-chip border"
       >
-        <Text className="text-sm font-semibold text-ink">元に戻す</Text>
+        <Text className="text-ink text-sm font-semibold">元に戻す</Text>
       </Control>
       <Pressable
         role="button"
         onPress={dismissSheet}
-        className="h-[52px] flex-[2] items-center justify-center rounded-chip bg-ink"
+        className="bg-ink h-13 flex-2 items-center justify-center rounded-chip"
       >
-        <Text className="text-sm font-semibold text-sheet-bg">完了</Text>
+        <Text className="text-sheet-bg text-sm font-semibold">完了</Text>
       </Pressable>
     </View>
   )
@@ -278,7 +278,7 @@ export default function CorrectionSheet() {
             <View
               key={row.id}
               className={cn(
-                'rounded-card border border-line',
+                'border-line rounded-card border',
                 selected && 'bg-chip',
               )}
               style={frame(selected, row.color)}

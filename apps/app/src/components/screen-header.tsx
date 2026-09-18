@@ -16,12 +16,12 @@ export function ScreenHeader({ title, aside, children }: ScreenHeaderProps) {
       <Text
         role="heading"
         aria-level={1}
-        className="text-lg font-bold tracking-tight text-ink"
+        className="text-ink text-lg font-bold tracking-tight"
       >
         {title}
       </Text>
       <View className="flex-row items-center gap-3">
-        {aside && <Text className="text-sm font-medium text-sub">{aside}</Text>}
+        {aside && <Text className="text-sub text-sm font-medium">{aside}</Text>}
         {children}
       </View>
     </View>

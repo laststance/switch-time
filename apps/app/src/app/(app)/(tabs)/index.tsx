@@ -56,9 +56,9 @@ function HomeBody({ current, activity }: HomeBodyProps) {
     <Screen>
       <ScreenHeader title="いま" aside={formatDay(today)}>
         <Link href="/correction" asChild>
-          <Pressable className="h-11 flex-row items-center gap-1.5 rounded-pill border border-line bg-surface px-4 text-ink">
+          <Pressable className="border-line bg-surface text-ink h-11 flex-row items-center gap-1.5 rounded-pill border px-4">
             <StrokeIcon d={PENCIL} size={15} strokeWidth={2} color={ink} />
-            <Text className="text-xs font-semibold text-ink">訂正</Text>
+            <Text className="text-ink text-xs font-semibold">訂正</Text>
           </Pressable>
         </Link>
       </ScreenHeader>
@@ -71,8 +71,8 @@ function HomeBody({ current, activity }: HomeBodyProps) {
         startedAt={current.startedAt.getTime()}
       />
       <View className="flex-row items-baseline justify-between">
-        <Text className="text-sm font-semibold text-ink">切り替え</Text>
-        <Text className="text-xs text-sub">押した瞬間から積み上がります</Text>
+        <Text className="text-ink text-sm font-semibold">切り替え</Text>
+        <Text className="text-sub text-xs">押した瞬間から積み上がります</Text>
       </View>
       <View className="flex-row flex-wrap gap-2.5">
         {activities.map((item) => (

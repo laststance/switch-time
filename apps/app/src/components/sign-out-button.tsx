@@ -18,7 +18,7 @@ export function SignOutButton() {
         disabled={signOut.isPending}
       />
       {signOut.error ? (
-        <Text role="alert" className="text-center text-xs text-ink">
+        <Text role="alert" className="text-ink text-center text-xs">
           {signOut.error.message}
         </Text>
       ) : null}

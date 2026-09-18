@@ -7,13 +7,13 @@ import { Pressable, Text, View } from 'react-native'
 export function RetryNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <View className="items-center gap-3 py-10">
-      <Text className="text-sm text-sub">読み込めませんでした</Text>
+      <Text className="text-sub text-sm">読み込めませんでした</Text>
       <Pressable
         role="button"
         onPress={onRetry}
-        className="h-11 items-center justify-center rounded-pill border border-line bg-surface px-5"
+        className="border-line bg-surface h-11 items-center justify-center rounded-pill border px-5"
       >
-        <Text className="text-xs font-semibold text-ink">再読み込み</Text>
+        <Text className="text-ink text-xs font-semibold">再読み込み</Text>
       </Pressable>
     </View>
   )

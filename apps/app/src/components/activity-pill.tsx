@@ -59,7 +59,7 @@ export function ActivityPill({
       disabled={disabled}
       onPress={onPress}
       className={cn(
-        'h-[38px] flex-row items-center gap-1.5 rounded-pill border px-3.5',
+        'h-9.5 flex-row items-center gap-1.5 rounded-pill border px-3.5',
         look.root,
         disabled && 'opacity-40',
       )}

@@ -1,0 +1,25 @@
+/* Shared @theme for the app and for Prettier's Tailwind plugins.
+   Uniwind cannot live in the Prettier entry: the v4 design-system loader
+   resolves `@import 'uniwind'` to JS (`Invalid declaration: "use strict"`). */
+@theme {
+  /* Radius: three tiers so size reads as hierarchy. Pills are status only, never a button. */
+  --radius-chip: 10px;
+  --radius-card: 16px;
+  --radius-sheet: 28px;
+  --radius-pill: 9999px;
+
+  /* Type scale 10/12/15/18/22/28/40 plus the elapsed-time hero. No font family: each OS draws its own UI face. */
+  --text-2xs: 10px;
+  --text-xs: 12px;
+  --text-sm: 15px;
+  --text-md: 18px;
+  --text-lg: 22px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+  --text-display: 52px;
+}
+
+/* Every clock and elapsed-time readout: tabular figures, so the digits do not jitter as they tick. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}

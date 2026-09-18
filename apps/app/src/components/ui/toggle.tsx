@@ -35,12 +35,12 @@ export function Toggle({
         onChange(!value)
       }}
       className={cn(
-        'h-[30px] w-[52px] justify-center rounded-pill px-0.5',
-        value ? 'items-end bg-accent' : 'items-start bg-chip',
+        'h-7.5 w-13 justify-center rounded-pill px-0.5',
+        value ? 'bg-accent items-end' : 'bg-chip items-start',
         disabled && 'opacity-40',
       )}
     >
-      <View className="h-[26px] w-[26px] rounded-pill bg-white" />
+      <View className="h-6.5 w-6.5 rounded-pill bg-white" />
     </Pressable>
   )
 }

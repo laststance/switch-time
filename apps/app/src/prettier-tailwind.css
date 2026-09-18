@@ -1,0 +1,4 @@
+/* Prettier Tailwind entry: same design tokens as the app, without Uniwind.
+   Pointed to by apps/app/.prettierrc.json. */
+@import 'tailwindcss';
+@import './theme.css';

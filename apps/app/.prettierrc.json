@@ -1,0 +1,11 @@
+{
+  "singleQuote": true,
+  "semi": false,
+  "plugins": [
+    "prettier-plugin-tailwindcss",
+    "prettier-plugin-tailwindcss-canonical-classes"
+  ],
+  "tailwindStylesheet": "./src/prettier-tailwind.css",
+  "tailwindcssCanonicalStylesheet": "./src/prettier-tailwind.css",
+  "tailwindFunctions": ["cn", "clsx"]
+}

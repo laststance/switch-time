@@ -52,10 +52,7 @@ export function NavItem({
       )}
     >
       <View
-        className={cn(
-          'flex-1 items-center justify-center gap-[3px]',
-          look.tone,
-        )}
+        className={cn('flex-1 items-center justify-center gap-0.75', look.tone)}
       >
         <StrokeIcon
           d={NAV_ICONS[icon]}

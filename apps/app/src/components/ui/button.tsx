@@ -25,7 +25,7 @@ export function Button({
       disabled={disabled}
       className={cn(
         'h-12 items-center justify-center rounded-chip px-4',
-        variant === 'primary' ? 'bg-accent' : 'border border-line bg-chip',
+        variant === 'primary' ? 'bg-accent' : 'border-line bg-chip border',
         disabled && 'opacity-40',
         className,
       )}

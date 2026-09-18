@@ -11,7 +11,7 @@ export function Readout({ className, ...props }: TextProps) {
   return (
     <Text
       {...props}
-      className={cn('tabular text-display text-ink', className)}
+      className={cn('text-ink text-display tabular', className)}
     />
   )
 }

@@ -44,7 +44,7 @@ export default function SignUpScreen() {
         asChild
       >
         <Pressable role="link" className="items-center py-2">
-          <Text className="text-xs text-accent">サインインはこちら</Text>
+          <Text className="text-accent text-xs">サインインはこちら</Text>
         </Pressable>
       </Link>
     </AuthCard>

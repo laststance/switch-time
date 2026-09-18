@@ -45,7 +45,7 @@ function StepButton({
       onPress={onPress}
       className="h-9 w-9 rounded-chip"
     >
-      <Text className="text-md text-ink">{glyph}</Text>
+      <Text className="text-ink text-md">{glyph}</Text>
     </Control>
   )
 }
@@ -64,7 +64,7 @@ function DayCell({ cell, height }: { cell: Cell; height: number }) {
     <>
       <View
         className={cn(
-          'w-full flex-col-reverse overflow-hidden rounded-[6px]',
+          'w-full flex-col-reverse overflow-hidden rounded-md',
           CELL[cell.kind],
         )}
         style={{ height }}
@@ -72,7 +72,7 @@ function DayCell({ cell, height }: { cell: Cell; height: number }) {
         {cell.slices.map((slice) => (
           <View
             key={slice.activityId}
-            className={cn(slice.top && 'rounded-t-[6px]')}
+            className={cn(slice.top && 'rounded-t-md')}
             style={{ height: slice.height, backgroundColor: slice.color }}
           />
         ))}
@@ -114,7 +114,7 @@ function Chart({
   onStep: (delta: number) => void
 }) {
   return (
-    <View className="gap-3.5 rounded-card border border-line bg-surface px-4 pb-3.5 pt-[18px]">
+    <View className="border-line bg-surface gap-3.5 rounded-card border px-4 pt-4.5 pb-3.5">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-1">
           <StepButton
@@ -122,7 +122,7 @@ function Chart({
             glyph="‹"
             onPress={() => onStep(-1)}
           />
-          <Text className="text-sm font-semibold text-ink">{view.title}</Text>
+          <Text className="text-ink text-sm font-semibold">{view.title}</Text>
           <StepButton
             label={`次の${unit}`}
             glyph="›"
@@ -130,14 +130,14 @@ function Chart({
             onPress={() => onStep(1)}
           />
         </View>
-        <Text className="text-2xs text-sub">1本 = 24時間</Text>
+        <Text className="text-sub text-2xs">1本 = 24時間</Text>
       </View>
       {view.weekdays.length > 0 && (
         <View className="flex-row gap-1.5">
           {view.weekdays.map((weekday) => (
             <Text
               key={weekday}
-              className="flex-1 text-center text-2xs text-sub"
+              className="text-sub flex-1 text-center text-2xs"
             >
               {weekday}
             </Text>
@@ -169,10 +169,10 @@ function Cards({ view }: { view: HistoryView }) {
       {cards.map(([label, value]) => (
         <View
           key={label}
-          className="flex-1 gap-1 rounded-card border border-line bg-surface px-4 py-3.5"
+          className="border-line bg-surface flex-1 gap-1 rounded-card border px-4 py-3.5"
         >
-          <Text className="text-2xs text-sub">{label}</Text>
-          <Text className="text-xl font-semibold text-ink tabular">
+          <Text className="text-sub text-2xs">{label}</Text>
+          <Text className="text-ink text-xl font-semibold tabular">
             {value}
           </Text>
         </View>
@@ -187,12 +187,12 @@ function Footnote({ count }: { count: number }) {
   if (count === 0) return null
   return (
     <Link href="/excluded-days" asChild>
-      <Pressable className="flex-row items-center gap-2.5 rounded-card bg-chip px-4 py-[13px] text-sub">
+      <Pressable className="bg-chip text-sub flex-row items-center gap-2.5 rounded-card px-4 py-3.25">
         <StrokeIcon d={INFO} size={18} strokeWidth={1.8} color={sub} />
-        <Text className="flex-1 text-xs text-sub">
+        <Text className="text-sub flex-1 text-xs">
           アプリを使わなかった {count}日 は平均から除外しています（点線の日）
         </Text>
-        <Text className="text-sm text-sub">›</Text>
+        <Text className="text-sub text-sm">›</Text>
       </Pressable>
     </Link>
   )
@@ -200,10 +200,10 @@ function Footnote({ count }: { count: number }) {
 
 function Breakdown({ rows }: { rows: BreakdownRow[] }) {
   return (
-    <View className="gap-3.5 rounded-card border border-line bg-surface p-4">
+    <View className="border-line bg-surface gap-3.5 rounded-card border p-4">
       <View className="flex-row items-baseline justify-between">
-        <Text className="text-sm font-semibold text-ink">状態別</Text>
-        <Text className="text-2xs text-sub">合計 ／ 1日あたり</Text>
+        <Text className="text-ink text-sm font-semibold">状態別</Text>
+        <Text className="text-sub text-2xs">合計 ／ 1日あたり</Text>
       </View>
       {rows.map((row) => (
         <View key={row.id} className="gap-1.5">
@@ -214,17 +214,17 @@ function Breakdown({ rows }: { rows: BreakdownRow[] }) {
               size={26}
               iconSize={15}
             />
-            <Text className="flex-1 text-sm font-semibold text-ink">
+            <Text className="text-ink flex-1 text-sm font-semibold">
               {row.name}
             </Text>
-            <Text className="text-sm font-semibold text-ink tabular">
+            <Text className="text-ink text-sm font-semibold tabular">
               {row.total}
             </Text>
-            <Text className="pl-3 text-xs text-sub tabular">{row.average}</Text>
+            <Text className="text-sub pl-3 text-xs tabular">{row.average}</Text>
           </View>
-          <View className="h-2 overflow-hidden rounded-[4px] bg-chip">
+          <View className="bg-chip h-2 overflow-hidden rounded-sm">
             <View
-              className="h-full rounded-[4px]"
+              className="h-full rounded-sm"
               style={{
                 width: `${row.ratio * 100}%`,
                 backgroundColor: row.color,
@@ -241,9 +241,9 @@ function CorrectionButton() {
   const ink = useTokenColor('ink')
   return (
     <Link href="/correction" asChild>
-      <Pressable className="h-[52px] flex-row items-center justify-center gap-2 rounded-chip border border-line text-ink">
+      <Pressable className="border-line text-ink h-13 flex-row items-center justify-center gap-2 rounded-chip border">
         <StrokeIcon d={PENCIL} size={16} strokeWidth={2} color={ink} />
-        <Text className="text-sm font-semibold text-ink">記録を訂正する</Text>
+        <Text className="text-ink text-sm font-semibold">記録を訂正する</Text>
       </Pressable>
     </Link>
   )

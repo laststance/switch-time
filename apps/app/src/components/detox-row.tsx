@@ -39,7 +39,7 @@ export function DetoxRow({ active, onPress }: Props) {
       aria-pressed={active}
       onPress={onPress}
       className={cn(
-        'h-12 w-full flex-row items-center justify-center gap-[9px] rounded-chip border px-4',
+        'h-12 w-full flex-row items-center justify-center gap-2.25 rounded-chip border px-4',
         look.root,
       )}
     >

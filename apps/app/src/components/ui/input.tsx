@@ -11,7 +11,7 @@ export function Input({ className, ...props }: TextInputProps) {
     <TextInput
       {...props}
       className={cn(
-        'h-12 w-full rounded-chip border border-line bg-surface px-3 text-sm text-ink',
+        'border-line bg-surface text-ink h-12 w-full rounded-chip border px-3 text-sm',
         className,
       )}
     />

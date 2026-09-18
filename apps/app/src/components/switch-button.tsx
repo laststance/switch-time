@@ -52,7 +52,7 @@ export function SwitchButton({
       aria-pressed={active}
       onPress={onPress}
       className={cn(
-        'h-[60px] shrink grow basis-[150px] flex-row items-center justify-center gap-2 rounded-chip border',
+        'h-15 shrink grow basis-37.5 flex-row items-center justify-center gap-2 rounded-chip border',
         look.root,
       )}
       style={look.style}

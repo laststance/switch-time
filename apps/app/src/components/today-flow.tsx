@@ -75,8 +75,8 @@ export function TodayFlow({
       {wide && (
         <>
           <View className="flex-row items-baseline justify-between">
-            <Text className="text-sm font-semibold text-ink">今日の流れ</Text>
-            <Text className="text-xs text-sub">1本 = 24時間</Text>
+            <Text className="text-ink text-sm font-semibold">今日の流れ</Text>
+            <Text className="text-sub text-xs">1本 = 24時間</Text>
           </View>
           <View className="flex-row flex-wrap gap-x-3.5 gap-y-1.5">
             {legendEntries(activities, segments).map((entry) => {
@@ -84,10 +84,10 @@ export function TodayFlow({
               return (
                 <View key={entry.id} className="flex-row items-center gap-1.5">
                   <View
-                    className={cn('h-2 w-2 rounded-[2px]', look.className)}
+                    className={cn('h-2 w-2 rounded-xs', look.className)}
                     style={{ backgroundColor: look.backgroundColor }}
                   />
-                  <Text className="text-xs text-sub">{entry.name}</Text>
+                  <Text className="text-sub text-xs">{entry.name}</Text>
                 </View>
               )
             })}
@@ -97,7 +97,7 @@ export function TodayFlow({
       <View
         role="img"
         aria-label="今日の流れ"
-        className={cn('w-full overflow-hidden bg-chip', band.bar)}
+        className={cn('bg-chip w-full overflow-hidden', band.bar)}
       >
         {segments.map((segment) => {
           const look = slice(segment, colors)
@@ -116,7 +116,7 @@ export function TodayFlow({
       </View>
       <View className="flex-row justify-between">
         {band.labels.map((label) => (
-          <Text key={label} className="text-2xs text-sub">
+          <Text key={label} className="text-sub text-2xs">
             {label}
           </Text>
         ))}

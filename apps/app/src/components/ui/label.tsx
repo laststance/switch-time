@@ -7,5 +7,5 @@ import { cn } from '@/lib/utils'
  * @example <Label>メールアドレス</Label>
  */
 export function Label({ className, ...props }: TextProps) {
-  return <Text {...props} className={cn('text-xs text-sub', className)} />
+  return <Text {...props} className={cn('text-sub text-xs', className)} />
 }

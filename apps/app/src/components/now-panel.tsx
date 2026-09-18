@@ -77,7 +77,7 @@ export function NowPanel({ look, startedAt }: NowPanelProps) {
         <Readout className={tone.readout} aria-label={`経過時間 ${elapsed}`}>
           {elapsed}
         </Readout>
-        <Text className="text-xs text-sub">{look.subtext}</Text>
+        <Text className="text-sub text-xs">{look.subtext}</Text>
       </View>
     </View>
   )

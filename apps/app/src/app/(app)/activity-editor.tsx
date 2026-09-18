@@ -40,7 +40,7 @@ type RowProps = { row: EditorRow; editor: ReturnType<typeof useActivityEditor> }
 function ActivityRow({ row, editor }: RowProps) {
   const pending = editor.pending
   return (
-    <View className="flex-row items-center gap-2 rounded-card bg-chip py-2 pl-1 pr-2">
+    <View className="bg-chip flex-row items-center gap-2 rounded-card py-2 pr-2 pl-1">
       <View>
         <Control
           label={`${row.name}を上へ`}
@@ -48,7 +48,7 @@ function ActivityRow({ row, editor }: RowProps) {
           onPress={() => editor.move(row, -1)}
           className="h-5 w-7"
         >
-          <Text className="text-2xs text-sub">▲</Text>
+          <Text className="text-sub text-2xs">▲</Text>
         </Control>
         <Control
           label={`${row.name}を下へ`}
@@ -56,7 +56,7 @@ function ActivityRow({ row, editor }: RowProps) {
           onPress={() => editor.move(row, 1)}
           className="h-5 w-7"
         >
-          <Text className="text-2xs text-sub">▼</Text>
+          <Text className="text-sub text-2xs">▼</Text>
         </Control>
       </View>
       <Control
@@ -79,7 +79,7 @@ function ActivityRow({ row, editor }: RowProps) {
         className="h-11 w-7"
       >
         <View
-          className="h-[18px] w-[18px] rounded-pill"
+          className="h-4.5 w-4.5 rounded-pill"
           style={{ backgroundColor: row.color }}
         />
       </Control>
@@ -93,7 +93,7 @@ function ActivityRow({ row, editor }: RowProps) {
           className="h-10 text-md font-semibold"
         />
         <View className="flex-row items-center gap-1.5">
-          <Text className="text-2xs text-sub">1日の目安</Text>
+          <Text className="text-sub text-2xs">1日の目安</Text>
           <DraftInput
             key={row.targetText}
             aria-label={`${row.name}の1日の目安`}
@@ -102,7 +102,7 @@ function ActivityRow({ row, editor }: RowProps) {
             onCommit={(text) => editor.retarget(row, text)}
             className="h-8 w-14 text-center text-xs"
           />
-          <Text className="text-2xs text-sub">時間</Text>
+          <Text className="text-sub text-2xs">時間</Text>
         </View>
       </View>
       <Control
@@ -111,7 +111,7 @@ function ActivityRow({ row, editor }: RowProps) {
         onPress={() => editor.remove(row)}
         className="h-11 w-9"
       >
-        <Text className="text-md text-sub">🗑</Text>
+        <Text className="text-sub text-md">🗑</Text>
       </Control>
     </View>
   )
@@ -139,9 +139,9 @@ export default function ActivityEditorSheet() {
       <Control
         disabled={blocked}
         onPress={editor.add}
-        className="h-[52px] rounded-chip border border-line"
+        className="border-line h-13 rounded-chip border"
       >
-        <Text className="text-sm font-semibold text-ink">＋ 項目を追加</Text>
+        <Text className="text-ink text-sm font-semibold">＋ 項目を追加</Text>
       </Control>
     </Sheet>
   )

@@ -10,6 +10,9 @@ publicHoistPattern:
 
 # Refuse releases younger than 24h (supply-chain guard, same as laststance/happy-dom-extended).
 minimumReleaseAge: 1440
+# Own package: 0.1.6 chains with prettier-plugin-tailwindcss 0.8.1 (published today).
+minimumReleaseAgeExclude:
+  - prettier-plugin-tailwindcss-canonical-classes
 
 # pnpm 12 blocks install scripts by default; allow only what we have vetted.
 allowBuilds:

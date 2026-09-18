@@ -56,16 +56,16 @@ export function Sheet({ title, hint, children }: SheetProps) {
       >
         <View className="flex-row items-start gap-3">
           <View className="flex-1 gap-1">
-            <Text className="text-lg font-bold text-ink">{title}</Text>
-            <Text className="text-xs leading-[18px] text-sub">{hint}</Text>
+            <Text className="text-ink text-lg font-bold">{title}</Text>
+            <Text className="text-sub text-xs leading-4.5">{hint}</Text>
           </View>
           <Pressable
             role="button"
             aria-label="閉じる"
-            className="h-11 w-11 items-center justify-center rounded-pill bg-chip"
+            className="bg-chip h-11 w-11 items-center justify-center rounded-pill"
             onPress={dismissSheet}
           >
-            <Text className="text-md text-ink">✕</Text>
+            <Text className="text-ink text-md">✕</Text>
           </Pressable>
         </View>
         {children}

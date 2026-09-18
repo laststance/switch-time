@@ -12,12 +12,12 @@ type AuthCardProps = PropsWithChildren<{ title: string; error: string | null }>
  */
 export function AuthCard({ title, error, children }: AuthCardProps) {
   return (
-    <View className="flex-1 items-center justify-center bg-bg p-5">
-      <View className="w-full max-w-sm gap-4 rounded-card border border-line bg-surface p-6">
-        <Text className="text-xl font-semibold text-ink">{title}</Text>
+    <View className="bg-bg flex-1 items-center justify-center p-5">
+      <View className="border-line bg-surface w-full max-w-sm gap-4 rounded-card border p-6">
+        <Text className="text-ink text-xl font-semibold">{title}</Text>
         {error ? (
-          <View className="rounded-chip bg-chip px-3 py-2">
-            <Text role="alert" className="text-xs text-ink">
+          <View className="bg-chip rounded-chip px-3 py-2">
+            <Text role="alert" className="text-ink text-xs">
               {error}
             </Text>
           </View>
@@ -42,7 +42,7 @@ export function Field({ label, error, children }: FieldProps) {
     <View className="gap-1">
       <Label>{label}</Label>
       {children}
-      {error ? <Text className="text-xs text-ink">{error}</Text> : null}
+      {error ? <Text className="text-ink text-xs">{error}</Text> : null}
     </View>
   )
 }

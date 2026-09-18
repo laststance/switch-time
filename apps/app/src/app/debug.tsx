@@ -20,12 +20,12 @@ export default function DebugScreen() {
   }
 
   return (
-    <View className="flex-1 items-center justify-center gap-4 bg-bg p-5">
-      <Text className="text-xs text-sub">ping</Text>
-      <Text className="text-sm text-ink">{describe(ping)}</Text>
-      <Text className="text-xs text-sub">me</Text>
-      <Text className="text-sm text-ink">{describe(me)}</Text>
-      <Text className="text-xs text-sub">clock</Text>
+    <View className="bg-bg flex-1 items-center justify-center gap-4 p-5">
+      <Text className="text-sub text-xs">ping</Text>
+      <Text className="text-ink text-sm">{describe(ping)}</Text>
+      <Text className="text-sub text-xs">me</Text>
+      <Text className="text-ink text-sm">{describe(me)}</Text>
+      <Text className="text-sub text-xs">clock</Text>
       <Readout className="text-lg">
         {new Date(now).toLocaleTimeString()}
       </Readout>

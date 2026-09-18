@@ -35,7 +35,7 @@ export default function SignInScreen() {
         asChild
       >
         <Pressable role="link" className="items-center py-2">
-          <Text className="text-xs text-accent">新規登録はこちら</Text>
+          <Text className="text-accent text-xs">新規登録はこちら</Text>
         </Pressable>
       </Link>
     </AuthCard>

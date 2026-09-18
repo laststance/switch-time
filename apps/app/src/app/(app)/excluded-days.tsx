@@ -28,8 +28,8 @@ export default function ExcludedDaysSheet() {
         <RetryNotice onRetry={retry} />
       ) : (
         <>
-          <View className="flex-row items-center gap-3 rounded-card bg-chip px-4 py-3.5">
-            <Text className="flex-1 text-sm font-semibold text-ink">
+          <View className="bg-chip flex-row items-center gap-3 rounded-card px-4 py-3.5">
+            <Text className="text-ink flex-1 text-sm font-semibold">
               自動で除外する
             </Text>
             <Toggle
@@ -41,12 +41,12 @@ export default function ExcludedDaysSheet() {
               }
             />
           </View>
-          <View className="gap-3 rounded-card bg-chip px-4 py-3.5">
+          <View className="bg-chip gap-3 rounded-card px-4 py-3.5">
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-semibold text-ink">
+              <Text className="text-ink text-sm font-semibold">
                 無操作とみなす時間
               </Text>
-              <Text className="text-md font-semibold text-ink tabular">
+              <Text className="text-ink text-md font-semibold tabular">
                 {idleLabel(settings.idleThresholdMinutes)}
               </Text>
             </View>
@@ -60,13 +60,13 @@ export default function ExcludedDaysSheet() {
                 update.mutate({ idleThresholdMinutes })
               }
             />
-            <Text className="text-2xs leading-4 text-sub">
+            <Text className="text-sub text-2xs leading-4">
               これより長く同じ状態のまま操作がなければ、その時間は集計に含めません。
             </Text>
           </View>
         </>
       )}
-      <Text className="text-xs text-sub">除外中の日（タップで戻す）</Text>
+      <Text className="text-sub text-xs">除外中の日（タップで戻す）</Text>
       {excluded.isError ? (
         <RetryNotice onRetry={excluded.retry} />
       ) : (
@@ -77,17 +77,17 @@ export default function ExcludedDaysSheet() {
               label={`${formatDay(row.day)}を戻す`}
               disabled={excluded.pending}
               onPress={() => excluded.include(row.day)}
-              className="h-[52px] flex-row gap-3 rounded-card border border-line px-4"
+              className="border-line h-13 flex-row gap-3 rounded-card border px-4"
             >
-              <Text className="flex-1 text-sm font-semibold text-ink">
+              <Text className="text-ink flex-1 text-sm font-semibold">
                 {formatDay(row.day)}
               </Text>
-              <Text className="text-xs text-sub">{REASONS[row.reason]}</Text>
-              <Text className="text-xs font-semibold text-accent">戻す</Text>
+              <Text className="text-sub text-xs">{REASONS[row.reason]}</Text>
+              <Text className="text-accent text-xs font-semibold">戻す</Text>
             </Control>
           ))}
           {excluded.empty && (
-            <Text className="py-3 text-center text-xs text-sub">
+            <Text className="text-sub py-3 text-center text-xs">
               除外中の日はありません
             </Text>
           )}

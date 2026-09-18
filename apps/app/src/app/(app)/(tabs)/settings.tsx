@@ -33,53 +33,53 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <ScreenHeader title="設定" />
-      <View className="rounded-card border border-line bg-surface">
+      <View className="border-line bg-surface rounded-card border">
         <Link href="/activity-editor" asChild>
           <Pressable aria-label="活動項目" className={ROW}>
-            <Text className="flex-1 text-sm font-semibold text-ink">
+            <Text className="text-ink flex-1 text-sm font-semibold">
               活動項目
             </Text>
             <View className="flex-row pl-1">
               {activities.map((activity) => (
                 <View
                   key={activity.id}
-                  className="-ml-1 h-3.5 w-3.5 rounded-pill border-2 border-surface"
+                  className="border-surface -ml-1 h-3.5 w-3.5 rounded-pill border-2"
                   style={{ backgroundColor: activity.color }}
                 />
               ))}
             </View>
-            <Text className="text-xs text-sub">{activities.length}項目</Text>
-            <Text className="text-sm text-sub">›</Text>
+            <Text className="text-sub text-xs">{activities.length}項目</Text>
+            <Text className="text-sub text-sm">›</Text>
           </Pressable>
         </Link>
         <Link href="/excluded-days" asChild>
           <Pressable
             aria-label="未使用日の自動除外"
-            className={cn(ROW, 'border-t border-line')}
+            className={cn(ROW, 'border-line border-t')}
           >
             {/* text-sub: on web the icon inherits the colour, and no ancestor here sets one. */}
-            <View className="h-[30px] w-[30px] items-center justify-center rounded-chip bg-chip text-sub">
+            <View className="bg-chip text-sub h-7.5 w-7.5 items-center justify-center rounded-chip">
               <StrokeIcon d={INFO} size={16} strokeWidth={1.8} color={sub} />
             </View>
             <View className="flex-1 gap-0.5">
-              <Text className="text-sm font-semibold text-ink">
+              <Text className="text-ink text-sm font-semibold">
                 未使用日の自動除外
               </Text>
-              <Text className="text-2xs text-sub">
+              <Text className="text-sub text-2xs">
                 {exclusionSummary(settings, ready)}
               </Text>
             </View>
-            <Text className="text-sm text-sub">›</Text>
+            <Text className="text-sub text-sm">›</Text>
           </Pressable>
         </Link>
       </View>
-      <View className="rounded-card border border-line bg-surface">
+      <View className="border-line bg-surface rounded-card border">
         {isError ? (
           <RetryNotice onRetry={retry} />
         ) : (
           <>
             <View className={ROW}>
-              <Text className="flex-1 text-sm font-semibold text-ink">
+              <Text className="text-ink flex-1 text-sm font-semibold">
                 外観
               </Text>
               <Segmented
@@ -90,8 +90,8 @@ export default function SettingsScreen() {
                 onChange={(theme) => update.mutate({ theme })}
               />
             </View>
-            <View className={cn(ROW, 'border-t border-line')}>
-              <Text className="flex-1 text-sm font-semibold text-ink">
+            <View className={cn(ROW, 'border-line border-t')}>
+              <Text className="text-ink flex-1 text-sm font-semibold">
                 秒針を表示
               </Text>
               <Toggle
@@ -106,7 +106,7 @@ export default function SettingsScreen() {
       </View>
       <SignOutButton />
       {/* The ST Phone design says 記録はこの端末に保存されます; records live on the account, so both platforms say 自動保存. */}
-      <Text className="mt-auto py-2 text-center text-xs leading-5 text-sub">
+      <Text className="text-sub mt-auto py-2 text-center text-xs leading-5">
         {Platform.OS === 'web'
           ? 'Switch Time Web 1.0 · 記録は自動保存'
           : 'Switch Time 1.0 · 記録は自動保存'}

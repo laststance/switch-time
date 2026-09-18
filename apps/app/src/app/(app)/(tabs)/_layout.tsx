@@ -32,7 +32,7 @@ export default function TabsLayout() {
   const { current, activity } = useCurrentActivity()
   return (
     <Tabs asChild>
-      <View className={cn('min-h-0 flex-1 bg-bg', chrome.root)}>
+      <View className={cn('bg-bg min-h-0 flex-1', chrome.root)}>
         <TabList asChild style={chrome.layout}>
           <View
             role="tablist"
@@ -42,7 +42,7 @@ export default function TabsLayout() {
             {variant === 'rail' && (
               <View
                 className={cn(
-                  'mb-3.5 h-9 w-9 items-center justify-center rounded-pill border-[3px] bg-face text-ink',
+                  'bg-face text-ink mb-3.5 h-9 w-9 items-center justify-center rounded-pill border-[3px]',
                   badgeRing(current),
                 )}
                 style={activity && { borderColor: activity.color }}
