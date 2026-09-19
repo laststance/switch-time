@@ -46,3 +46,7 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 - If the PR fixes only part of an item, rewrite the item to cover what is left, and keep its priority unless the owner changes it.
 - If the fix leaves a related gap that the item did not cover, add the gap as a new item in the same PR.
 - In the same PR, update any other item the fix affects: one that refers to the deleted item (point it at the PR or the release instead), cites a version the PR changed, or quotes a title the PR rewrote.
+
+## Cloud Agent environment
+
+Cloud Agents do not run Docker Compose. PostgreSQL 18 listens on `localhost:5432` with the `.env.example` credentials (`switchtime` / `switchtime` / `switchtime` and `switchtime_test`), and install writes `.env` including a generated `BETTER_AUTH_SECRET`. After start the API is on `:4100`; open the Expo web app with `pnpm --filter app web` (`:4101`). Node is `24.20.0` from nvm — prepend `$HOME/.nvm/versions/node/v24.20.0/bin` if `node -v` still shows 22 from `/exec-daemon`.
