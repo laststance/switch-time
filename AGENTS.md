@@ -14,6 +14,8 @@ A change that alters what the user sees starts in the design file, and the code 
 
 ## Work in a new git worktree
 
+Cursor stays in the current checkout. Do not create a worktree unless the user asks for one.
+
 Unless the user says otherwise, a Claude Code or Codex task that changes the repository runs in its own git worktree, on a new branch cut from the latest `origin/main`. Don't edit files in the main checkout.
 
 - Claude Code: run `git fetch origin`, then `EnterWorktree`, which creates `.claude/worktrees/<name>` on a new branch `worktree-<name>` and moves the session into it (`claude --worktree <name>` does the same for a new session). The branch starts at the locally cached `origin/HEAD`, which is `origin/main` here, and Claude Code refetches it only when the last fetch is more than 24 hours old, so fetch first.
@@ -30,7 +32,7 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 - Before running anything in a new worktree, make sure it has `.env` (it is untracked), then run `pnpm install`. Claude Code copies `.env` from the main checkout into each worktree it creates, because `.worktreeinclude` lists it. A Codex worktree, or any other made with `git worktree add`, needs it copied by hand.
 - Run `pnpm check` and the other scripts inside the worktree. ESLint and Prettier skip `.claude/` (`eslint.config.mjs`, `.prettierignore`): each worktree there is a full checkout, and the main checkout's lint would fail on it.
 - The API tests share one `_test` database and empty it before every test. Never run them in two checkouts at once.
-- Playwright reuses a server that already listens on :4000 / :4001 (`reuseExistingServer`), and that server may belong to another checkout. In a worktree, set `E2E_API_PORT` and `E2E_APP_PORT` together to free ports so the run starts this worktree's own build.
+- Playwright reuses a server that already listens on :4100 / :4101 (`reuseExistingServer`), and that server may belong to another checkout. In a worktree, set `E2E_API_PORT` and `E2E_APP_PORT` together to free ports so the run starts this worktree's own build.
 - Once the PR is merged, remove the worktree and its branches:
   - Claude Code, in the session that created it: `ExitWorktree` with `remove`. If it refuses because the branch has commits (it did right after PR #50 merged), use `keep` instead and finish from the main checkout as in the next item.
   - From the main checkout, after pulling `main`: `git worktree remove <path>`, then `git branch -d <branch>`. After a squash or rebase merge, `-d` can refuse, because `main` then holds new commits rather than the branch's own. Confirm that the PR shows as merged (`gh pr view <number> --json state`), then delete the branch with `git branch -D <branch>`.

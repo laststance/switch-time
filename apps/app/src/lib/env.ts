@@ -5,7 +5,7 @@ import { Platform } from 'react-native'
  * `EXPO_PUBLIC_API_ORIGIN` for a device on the LAN. Shared by {@link orpc} and {@link authClient}.
  */
 export const API_ORIGIN =
-  process.env.EXPO_PUBLIC_API_ORIGIN ?? (__DEV__ ? 'http://localhost:4000' : '')
+  process.env.EXPO_PUBLIC_API_ORIGIN ?? (__DEV__ ? 'http://localhost:4100' : '')
 
 // A native release build replays the SecureStore session as a Cookie header on every request: the origin must be set (no
 // same-origin fallback exists there) and must be https, or the session travels in cleartext. Dev keeps http for a LAN device.

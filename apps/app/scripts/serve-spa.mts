@@ -1,7 +1,7 @@
 /// <reference types="node" />
 // Static server for the Playwright run: `expo serve` has no catch-all for `web.output: single`, so this mirrors
 // App Platform's `catchall_document: index.html` and its `/api` route (.do/app.yaml): `/api/*` is piped to the API
-// on :4000, so the export runs with the production `API_ORIGIN` of `''` (one origin). Usage: node scripts/serve-spa.mts [port]
+// on :4100, so the export runs with the production `API_ORIGIN` of `''` (one origin). Usage: node scripts/serve-spa.mts [port]
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import {
   createServer,
@@ -12,11 +12,11 @@ import {
 import { extname, join, normalize } from 'node:path'
 
 const root = join(import.meta.dirname, '../dist')
-const port = Number(process.argv[2] ?? 4001)
+const port = Number(process.argv[2] ?? 4101)
 // Where playwright.config.ts boots (or reuses) the API bundle; E2E_API_PORT moves it with the config.
 const api = {
   host: 'localhost',
-  port: Number(process.env.E2E_API_PORT || 4000),
+  port: Number(process.env.E2E_API_PORT || 4100),
 }
 const types: Record<string, string> = {
   '.html': 'text/html',

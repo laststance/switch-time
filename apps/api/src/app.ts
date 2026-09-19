@@ -43,7 +43,7 @@ app.use('/api/*', async (c, next) => {
   c.header('Cache-Control', 'no-store')
 })
 
-// Dev only: Expo web (:4001) calls the API (:4000) cross-origin. Production is same-origin behind App Platform ingress.
+// Dev only: Expo web (:4101) calls the API (:4100) cross-origin. Production is same-origin behind App Platform ingress.
 if (env.NODE_ENV !== 'production') {
   app.use('/api/*', cors({ origin: env.APP_ORIGIN, credentials: true }))
 }

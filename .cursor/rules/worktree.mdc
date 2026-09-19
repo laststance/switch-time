@@ -1,0 +1,8 @@
+---
+description: Cursor does not create git worktrees unless asked
+alwaysApply: true
+---
+
+# Worktrees
+
+Stay in the current checkout. Do not create a git worktree unless the user asks for one.

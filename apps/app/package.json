@@ -4,8 +4,8 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start --port 4001",
-    "web": "expo start --web --port 4001",
+    "dev": "expo start --port 4101",
+    "web": "expo start --web --port 4101",
     "build": "pnpm build:web",
     "build:web": "expo export -p web --clear",
     "typecheck": "tsc -p tsconfig.json",
