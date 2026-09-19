@@ -6,7 +6,8 @@
     "design-system/**",
     ".artifacts/**",
     "**/dist/**",
-    "**/.expo/**"
+    "**/.expo/**",
+    "apps/app/src/prettier-tailwind.css"
   ],
   "health": {
     "ignore": ["**/*.test.ts", "**/*.test.tsx"]
