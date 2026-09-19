@@ -49,4 +49,4 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 
 ## Cloud Agent environment
 
-Cloud Agents do not run Docker Compose. PostgreSQL 18 listens on `localhost:5432` with the `.env.example` credentials (`switchtime` / `switchtime` / `switchtime` and `switchtime_test`), and install writes `.env` including a generated `BETTER_AUTH_SECRET`. After start the API is on `:4100`; open the Expo web app with `pnpm --filter app web` (`:4101`). Node is `24.20.0` from nvm — prepend `$HOME/.nvm/versions/node/v24.20.0/bin` if `node -v` still shows 22 from `/exec-daemon`.
+Cloud Agents use the documented Compose backend (`docker compose up --build`: Postgres 18 + the API). systemd is not PID 1, so start launches `dockerd` itself, then Compose. install writes `.env` including a generated `BETTER_AUTH_SECRET`. After start the API is on `:4100`; open the Expo web app with `pnpm --filter app web` (`:4101`). Node is `24.20.0` from nvm — prepend `$HOME/.nvm/versions/node/v24.20.0/bin` if `node -v` still shows 22 from `/exec-daemon`.
