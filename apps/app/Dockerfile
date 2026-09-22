@@ -3,10 +3,11 @@
 # App Platform builds the `web` static site from this file and copies /repo/apps/app/dist out of the image (.do/app.yaml):
 # its Node.js buildpack runs `pnpm install --prod=false`, which pnpm 12 rejects (pnpm/pnpm#14553), so buildpacks are out.
 
-FROM node:24-slim
+FROM node:26-slim
 # HUSKY=0 skips the root `prepare` hook; CI=true makes pnpm and Expo non-interactive.
 ENV CI=true HUSKY=0
-RUN corepack enable
+# Node 25+ no longer bundles Corepack; install it so `packageManager` (with its hash) still picks the pnpm release.
+RUN npm install -g corepack@0.36.0 && corepack enable
 WORKDIR /repo
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared ./packages/shared
