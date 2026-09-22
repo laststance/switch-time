@@ -37,7 +37,8 @@ export function useActivityEditor() {
     retry: retryCurrent,
   } = useCurrentActivity()
   const write = {
-    onSettled: async () => invalidateKeys(queryClient, [orpc.activities.key()]),
+    onSettled: async (): Promise<void> =>
+      invalidateKeys(queryClient, [orpc.activities.key()]),
   }
   const update = useMutation({
     // `update` resends the whole row, so two edits in flight at once would leave the server on whichever landed last, not last-typed.
@@ -106,7 +107,7 @@ export function useActivityEditor() {
     ].some(Boolean),
     // Either query failing leaves the sheet with an empty list and no reason; it swaps in a 再読み込み notice instead.
     isError: [activities.isError, currentError].some(Boolean),
-    retry: () => {
+    retry: (): void => {
       void activities.refetch()
       retryCurrent()
     },
@@ -122,7 +123,7 @@ export function useActivityEditor() {
     },
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),
-    move: (row: EditorRow, delta: 1 | -1) =>
+    move: (row: EditorRow, delta: 1 | -1): void =>
       reorder.mutate({
         ids: reorderIds(
           rows.map((each) => each.id),
@@ -130,8 +131,8 @@ export function useActivityEditor() {
           delta,
         ),
       }),
-    remove: (row: EditorRow) => archive.mutate({ id: row.id }),
-    add: () =>
+    remove: (row: EditorRow): void => archive.mutate({ id: row.id }),
+    add: (): void =>
       create.mutate({
         ...NEW_ACTIVITY,
         color: spareColor(rows.map((each) => each.color)),

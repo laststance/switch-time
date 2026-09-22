@@ -24,6 +24,6 @@ export function useCurrentActivity() {
     isPending: queries.some((query) => query.isPending),
     // Surfaced rather than folded into isPending: a failed fetch must offer a retry instead of an empty frame forever.
     isError: queries.some((query) => query.isError),
-    retry: () => queries.forEach((query) => void query.refetch()),
+    retry: (): void => queries.forEach((query) => void query.refetch()),
   }
 }

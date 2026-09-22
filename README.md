@@ -14,8 +14,8 @@ Roadmap and decisions live in the epic [#1](https://github.com/laststance/switch
 
 ## Prerequisites
 
-- Node.js `24.20.0` (`.node-version`; use fnm/nodenv/Volta)
-- pnpm `12.3.4` — pinned in `packageManager`. pnpm 10+ downloads and runs the pinned version by default ([`pmOnFail: download`](https://pnpm.io/settings/cli#pmonfail)); if yours does not, install it explicitly with `npm install -g pnpm@12.3.4` or run `corepack enable`. CI installs it through `pnpm/setup` in `.github/actions/prepare`.
+- Node.js `26.10.0` (`.node-version`; use fnm/nodenv/Volta)
+- pnpm `12.3.4` — pinned in `packageManager`. pnpm 10+ downloads and runs the pinned version by default ([`pmOnFail: download`](https://pnpm.io/settings/cli#pmonfail)); if yours does not, install it explicitly with `npm install -g pnpm@12.3.4` (Node 25+ no longer bundles Corepack; `npm install -g corepack && corepack enable` also works). CI installs it through `pnpm/setup` in `.github/actions/prepare`.
 - Docker with Compose v2.24+ (`compose.yaml` uses `env_file: required: false`) — only for the local backend below
 
 ```sh
@@ -66,7 +66,7 @@ pnpm --filter api db:studio     # Drizzle Studio against DATABASE_URL
 
 Email + password only, served by the same Hono process at `/api/auth/*` (`apps/api/src/auth.ts`): `@better-auth/drizzle-adapter/relations-v2` on the Drizzle instance, the `@better-auth/expo` server plugin, adapter writes in one transaction, `baseURL` = the API's own origin (`APP_ORIGIN` in production, `http://localhost:$PORT` otherwise), `trustedOrigins` = `APP_ORIGIN` plus `switchtime://` (and `exp://**` in development). Rate limiting keeps Better Auth's default (production only) and keys by the App Platform ingress's `do-connecting-ip` header (`advanced.ipAddress.ipAddressHeaders`; the ingress writes its own hop into `x-forwarded-for`, and without the header Better Auth warns and uses one shared bucket). `BETTER_AUTH_SECRET` is required (`openssl rand -base64 32`), and in production `APP_ORIGIN` must be `https://` (the cookie `Secure` flag derives from it). Every `/api/*` request body is capped at 100 KB.
 
-- Auth tables come from the CLI, never by hand: `npx auth@1.7.3 generate --config src/auth.ts --output src/db/schema/auth.ts -y` (CLI pinned to the runtime version) (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
+- Auth tables come from the CLI, never by hand: `npx auth@1.7.5 generate --config src/auth.ts --output src/db/schema/auth.ts -y` (CLI pinned to the runtime version) (run from `apps/api`), then `pnpm --filter api db:generate` for the SQL.
 - oRPC procedures read the session from the request headers (`src/rpc/router.ts`): `authed` procedures throw `UNAUTHORIZED` without one; `me` returns the current user.
 - Dev cookies: `localhost:4101` → `localhost:4100` is same-site, so the defaults (`sameSite: lax`) work; the client sends `credentials: 'include'`. Production is same-origin (MVP-09).
 

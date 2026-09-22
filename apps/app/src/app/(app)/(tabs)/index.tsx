@@ -38,7 +38,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const pathname = usePathname()
   // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
   // Skipping the call also saves the three refetches the mutation triggers.
-  const pick = (activityId: string | null) => {
+  const pick = (activityId: string | null): void => {
     if (activityId !== current.activityId) switchTo.mutate({ activityId })
   }
   useWebKeydown((event) => {

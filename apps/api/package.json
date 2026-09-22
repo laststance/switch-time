@@ -22,25 +22,25 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "1.7.3",
-    "@better-auth/expo": "1.7.3",
+    "@better-auth/drizzle-adapter": "1.7.5",
+    "@better-auth/expo": "1.7.5",
     "@hono/node-server": "2.1.1",
-    "@orpc/client": "1.15.0",
-    "@orpc/server": "1.15.0",
+    "@orpc/client": "1.15.2",
+    "@orpc/server": "1.15.2",
     "@switch-time/shared": "workspace:*",
-    "better-auth": "1.7.3",
+    "better-auth": "1.7.5",
     "drizzle-orm": "1.0.0-rc.4",
-    "hono": "4.13.7",
+    "hono": "4.13.8",
     "pg": "8.23.0",
-    "zod": "4.5.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
+    "@types/node": "26.6.2",
     "@types/pg": "8.23.1",
     "drizzle-kit": "1.0.0-rc.4",
     "tsdown": "0.23.0",
-    "tsx": "4.23.13",
+    "tsx": "4.23.15",
     "typescript": "~6.0.3",
-    "vitest": "5.0.0"
+    "vitest": "5.0.1"
   }
 }

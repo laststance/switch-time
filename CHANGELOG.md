@@ -10,6 +10,27 @@ All notable changes to this project are documented here. The format follows
 
 - Local defaults are :4100 (API) and :4101 (Expo / Playwright) so they no
   longer collide with nsx on :4000. Production still listens on 8080.
+- Dependencies are on their latest releases as of 2026-09-22, except
+  TypeScript (still 6.0.3; 7.0.2 is a major) and the seven packages Expo SDK
+  57 pins (`react` and `react-dom` 19.2.3, `react-native` 0.86.3,
+  `react-native-safe-area-context` 5.7.0, `react-native-screens` 4.26.2,
+  `react-native-svg` 15.15.4, `@types/react` 19.2.18): React Native 0.87.1
+  breaks the web export, because `@expo/cli` 57 imports
+  `react-native/rn-get-polyfills`, which 0.87 no longer exports. Moved: Expo
+  SDK 57 patches (`expo` 57.0.24, `expo-router` 57.0.22), Better Auth 1.7.5,
+  oRPC 1.15.2, Hono 4.13.8, Zod 4.6.5, TanStack Query 5.103.2, Vitest 5.0.1,
+  ESLint 10.11.0, Prettier 3.9.8, Fallow 3.27.0 and `@types/node` 26.6.2, with
+  transitive dependencies moved within their ranges.
+- Node.js 26 is the runtime: `.node-version` says 26.10.0, `engines.node`
+  `26.x`, and both Dockerfiles build on `node:26-slim`. That image no longer
+  ships Corepack (dropped in Node 25), so they install it from npm before
+  `corepack enable`; `packageManager` still picks the pnpm release.
+
+### Developer experience
+
+- `eslint-config-ts-prefixer` 5.1.0 brings `ts-prefixer/explicit-void-return-type`:
+  a function whose return type is inferred as `void` or `Promise<void>` must
+  spell it. `pnpm lint:fix` wrote the 37 annotations this needed.
 
 ## [0.2.1.0] - 2026-09-17
 

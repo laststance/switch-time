@@ -33,10 +33,12 @@ export function useAuthForm<T extends Record<string, string>>(
     onSuccess: () => queryClient.clear(),
   })
 
-  const set = (key: keyof T) => (text: string) =>
-    setValues((current) => ({ ...current, [key]: text }))
+  const set =
+    (key: keyof T) =>
+    (text: string): void =>
+      setValues((current) => ({ ...current, [key]: text }))
 
-  const onSubmit = () => {
+  const onSubmit = (): void => {
     const parsed = schema.safeParse(values)
     if (!parsed.success) return setFieldErrors(firstIssuePerField(parsed.error))
     setFieldErrors({})

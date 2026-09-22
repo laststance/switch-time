@@ -10,7 +10,7 @@ const API_ORIGIN = `http://localhost:${process.env.E2E_API_PORT || '4100'}`
  * Creates a fresh account through the UI and taps 家事 on the first-launch screen, so every shell test starts signed in on Home.
  * @example await signUp(page)
  */
-export async function signUp(page: Page) {
+export async function signUp(page: Page): Promise<void> {
   await page.goto('/sign-up')
   await page.getByLabel('名前').fill('E2E')
   await page

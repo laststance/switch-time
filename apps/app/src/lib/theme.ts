@@ -20,7 +20,7 @@ export function resolveTheme(mode: ThemeMode, now: Date): 'light' | 'dark' {
  * Tints the browser chrome to the resolved `bg` so a dark Home is not framed by paper-white Safari bars; no-ops off web.
  * @example paintBrowserChrome('dark')
  */
-export function paintBrowserChrome(theme: 'light' | 'dark') {
+export function paintBrowserChrome(theme: 'light' | 'dark'): void {
   if (typeof document === 'undefined') return
   document.documentElement.style.colorScheme = theme
   // First paint uses OS media metas; once the resolved band is known they would fight 明／暗.

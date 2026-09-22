@@ -10,7 +10,7 @@ const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone
  * changes the device), so every day boundary the API computes follows the user's clock. A failed write waits for the next launch.
  * @example useTimeZoneSync()
  */
-export function useTimeZoneSync() {
+export function useTimeZoneSync(): void {
   const { settings, ready } = useSettings()
   const { mutate, isError } = useUpdateSettings()
   useEffect(() => {
