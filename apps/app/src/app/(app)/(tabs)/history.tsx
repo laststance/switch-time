@@ -289,7 +289,7 @@ export default function HistoryScreen() {
   const [range, setRange] = useState<Range>('week')
   const [offset, setOffset] = useState(0)
   // A new range starts at its latest window.
-  const pickRange = (next: Range) => {
+  const pickRange = (next: Range): void => {
     setRange(next)
     setOffset(0)
   }

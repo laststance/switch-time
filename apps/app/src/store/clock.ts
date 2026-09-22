@@ -32,7 +32,7 @@ export function startClock(
   appState: AppStateLike,
 ) {
   let timer: ReturnType<typeof setInterval> | undefined
-  const run = (active: boolean) => {
+  const run = (active: boolean): void => {
     clearInterval(timer)
     timer = undefined
     if (!active) return
@@ -47,7 +47,7 @@ export function startClock(
   const subscription = appState.addEventListener('change', (state) =>
     run(state === 'active'),
   )
-  return () => {
+  return (): void => {
     clearInterval(timer)
     subscription.remove()
   }

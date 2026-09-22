@@ -32,7 +32,7 @@ const types: Record<string, string> = {
 
 // Forwards one `/api/*` request verbatim (query string included) under the API's own Host, as the ingress does;
 // Set-Cookie comes back as an array, which writeHead passes through, so the Better Auth cookie lands on this origin.
-function proxy(req: IncomingMessage, res: ServerResponse) {
+function proxy(req: IncomingMessage, res: ServerResponse): void {
   const upstream = request(
     {
       ...api,

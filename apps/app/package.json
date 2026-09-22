@@ -14,21 +14,21 @@
     "test:e2e": "expo export -p web --clear && playwright test"
   },
   "dependencies": {
-    "@better-auth/expo": "1.7.3",
-    "@orpc/client": "1.15.0",
-    "@orpc/tanstack-query": "1.15.0",
+    "@better-auth/expo": "1.7.5",
+    "@orpc/client": "1.15.2",
+    "@orpc/tanstack-query": "1.15.2",
     "@reduxjs/toolkit": "2.12.0",
     "@switch-time/shared": "workspace:*",
-    "@tanstack/react-query": "5.102.8",
-    "better-auth": "1.7.3",
+    "@tanstack/react-query": "5.103.2",
+    "better-auth": "1.7.5",
     "clsx": "2.1.1",
-    "expo": "57.0.21",
-    "expo-constants": "57.0.17",
-    "expo-linking": "57.0.9",
-    "expo-network": "57.0.1",
-    "expo-router": "57.0.20",
-    "expo-secure-store": "57.0.3",
-    "expo-web-browser": "57.0.2",
+    "expo": "57.0.24",
+    "expo-constants": "57.0.19",
+    "expo-linking": "57.0.10",
+    "expo-network": "57.0.2",
+    "expo-router": "57.0.22",
+    "expo-secure-store": "57.0.4",
+    "expo-web-browser": "57.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -37,17 +37,17 @@
     "react-native-svg": "15.15.4",
     "react-native-web": "0.21.2",
     "react-redux": "9.3.0",
-    "tailwind-merge": "3.6.0",
+    "tailwind-merge": "3.7.0",
     "tailwindcss": "4.3.3",
     "uniwind": "1.12.0",
-    "zod": "4.5.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@switch-time/api": "workspace:*",
-    "@types/node": "24.13.3",
+    "@types/node": "26.6.2",
     "@types/react": "19.2.18",
     "typescript": "~6.0.3",
-    "vitest": "5.0.0"
+    "vitest": "5.0.1"
   }
 }

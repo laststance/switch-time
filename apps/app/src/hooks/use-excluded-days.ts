@@ -31,6 +31,6 @@ export function useExcludedDays() {
     // A failed list would otherwise read as 除外中の日はありません, which is a different answer.
     isError: list.isError,
     retry: () => void list.refetch(),
-    include: (day: string) => include.mutate({ day }),
+    include: (day: string): void => include.mutate({ day }),
   }
 }

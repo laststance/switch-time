@@ -9,7 +9,7 @@ import { activities, userSettings } from './schema/app'
  * account ({@link getSettings}, `activities.list`), so every insert ignores conflicts: seeding twice is a no-op.
  * @example await seedUser(user.id)
  */
-export async function seedUser(userId: string) {
+export async function seedUser(userId: string): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.insert(userSettings).values({ userId }).onConflictDoNothing()
     await tx

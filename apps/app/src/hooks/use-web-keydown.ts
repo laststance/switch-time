@@ -6,11 +6,11 @@ import { Platform } from 'react-native'
  * The handler always sees the latest render (Escape on sheets, the digit hotkeys on Home) without re-subscribing.
  * @example useWebKeydown((event) => { if (event.key === 'Escape') dismiss() })
  */
-export function useWebKeydown(handler: (event: KeyboardEvent) => void) {
+export function useWebKeydown(handler: (event: KeyboardEvent) => void): void {
   const onKeydown = useEffectEvent(handler)
   useEffect(() => {
     if (Platform.OS !== 'web') return
     window.addEventListener('keydown', onKeydown)
-    return () => window.removeEventListener('keydown', onKeydown)
+    return (): void => window.removeEventListener('keydown', onKeydown)
   }, [])
 }

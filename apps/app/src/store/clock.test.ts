@@ -7,7 +7,9 @@ test('the clock slice pauses ticking while the app is backgrounded', () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-09-09T10:00:00Z'))
   let state = clockSlice.getInitialState()
-  const dispatch = (action: ReturnType<typeof clockSlice.actions.tick>) => {
+  const dispatch = (
+    action: ReturnType<typeof clockSlice.actions.tick>,
+  ): void => {
     state = clockSlice.reducer(state, action)
   }
   const listeners: ((next: string) => void)[] = []
@@ -15,7 +17,7 @@ test('the clock slice pauses ticking while the app is backgrounded', () => {
     currentState: 'active',
     addEventListener(_type: 'change', listener: (next: string) => void) {
       listeners.push(listener)
-      return { remove: () => {} }
+      return { remove: (): void => {} }
     },
   }
 

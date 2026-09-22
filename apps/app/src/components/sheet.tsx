@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
  * Leaves a sheet route: back when it was pushed, home when it was opened by URL or reload (✕, the scrim, Escape, 「完了」).
  * @example <Button title="完了" onPress={dismissSheet} />
  */
-export function dismissSheet() {
+export function dismissSheet(): void {
   if (router.canGoBack()) router.back()
   else router.replace('/')
 }

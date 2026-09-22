@@ -39,7 +39,7 @@ export function useCorrection(dayParam: string | undefined) {
     rows: DaySnapshot
   } | null>(null)
   const edit = {
-    onSettled: async () =>
+    onSettled: async (): Promise<void> =>
       invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()]),
   }
   // The undo snapshot is taken when the button is pressed, when `list.data` is still the pre-edit answer (the buttons wait for
@@ -49,7 +49,7 @@ export function useCorrection(dayParam: string | undefined) {
   const withUndo = () => {
     const snapshot = list.data ? { day, rows: daySnapshot(list.data) } : null
     return {
-      onSuccess: () => {
+      onSuccess: (): void => {
         if (snapshot) setPrevious(snapshot)
       },
     }
@@ -91,14 +91,15 @@ export function useCorrection(dayParam: string | undefined) {
     rows: correctionRows(list.data, activities.data, bounds),
     pending: list.isFetching || writing,
     canUndo: previous?.day === day,
-    move: (id: string, deltaMinutes: 15 | -15) =>
+    move: (id: string, deltaMinutes: 15 | -15): void =>
       moveStart.mutate({ id, deltaMinutes }, withUndo()),
-    pick: (id: string, activityId: string | null) =>
+    pick: (id: string, activityId: string | null): void =>
       changeActivity.mutate({ id, activityId }, withUndo()),
-    mergePrevious: (id: string) => mergeIntoPrevious.mutate({ id }, withUndo()),
-    mergeNext: (id: string) => mergeIntoNext.mutate({ id }, withUndo()),
-    split: (id: string) => splitInHalf.mutate({ id }, withUndo()),
-    undo: () => {
+    mergePrevious: (id: string): void =>
+      mergeIntoPrevious.mutate({ id }, withUndo()),
+    mergeNext: (id: string): void => mergeIntoNext.mutate({ id }, withUndo()),
+    split: (id: string): void => splitInHalf.mutate({ id }, withUndo()),
+    undo: (): void => {
       if (previous) replaceDay.mutate(previous)
     },
   }

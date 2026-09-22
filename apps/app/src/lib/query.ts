@@ -25,7 +25,7 @@ if (Platform.OS !== 'web') {
     const subscription = AppState.addEventListener('change', (state) =>
       handleFocus(state === 'active'),
     )
-    return () => subscription.remove()
+    return (): void => subscription.remove()
   })
 }
 
@@ -36,7 +36,7 @@ if (Platform.OS !== 'web') {
 export async function invalidateKeys(
   client: QueryClient,
   queryKeys: QueryKey[],
-) {
+): Promise<void> {
   await Promise.all(
     queryKeys.map(async (queryKey) => client.invalidateQueries({ queryKey })),
   )

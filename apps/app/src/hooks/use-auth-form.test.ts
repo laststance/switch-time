@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { nextHref } from './use-auth-form'
 
 // The real client pulls in react-native, which Node cannot load; nextHref never touches it.
-vi.mock('@/lib/query', () => ({ queryClient: { clear: () => {} } }))
+vi.mock('@/lib/query', () => ({ queryClient: { clear: (): void => {} } }))
 
 describe('nextHref', () => {
   test('returns to the same-app URL that was opened, query included', () => {
