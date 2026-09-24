@@ -2,6 +2,19 @@ import { expect, test, vi } from 'vitest'
 
 import { clockSlice, startClock } from './clock'
 
+test('a reset at sign-in starts the clock at that moment, so the first screen after it never shows an earlier day', () => {
+  // Arrange
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-09-25T00:00:05+09:00'))
+
+  // Act
+  const state = clockSlice.reducer(undefined, { type: 'app/reset' })
+  vi.useRealTimers()
+
+  // Assert
+  expect(state.now).toBe(Date.parse('2026-09-25T00:00:05+09:00'))
+})
+
 test('the clock slice pauses ticking while the app is backgrounded', () => {
   // Arrange
   vi.useFakeTimers()

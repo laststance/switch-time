@@ -867,10 +867,13 @@ test('undoing a pick never overwrites a change made on another device', async ({
   // Act
   await page.getByRole('button', { name: '元に戻す' }).click()
 
-  // Assert: the undo is refused, the sheet shows 娯楽 and not 仕事, and 元に戻す is off.
+  // Assert: the undo is refused and says why, the sheet shows 娯楽 and not 仕事, and 元に戻す is off.
   await expect(
     dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
   ).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+  )
   await expect(carriedIn).toHaveCount(0)
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -1447,6 +1450,37 @@ test('a merge that lands after its sheet closed can still be undone from that da
   await expect(undo).toBeDisabled()
 })
 
+test('an undo that lands after its sheet closed leaves nothing to undo when that day is reopened', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事, then 元に戻す pressed with the replaceDay answer held back until the sheet has closed.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/replaceDay', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await undo.click()
+
+  // Act: close the sheet, let the undo's answer land, then open the same day again from History.
+  await page.getByRole('button', { name: '完了' }).click()
+  answer.resolve()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await page.locator(`a[href*="day=${yesterday}"]`).click()
+
+  // Assert: 休息 is back and 元に戻す is off, so the applied undo cannot be pressed again.
+  await expect(rest).toBeVisible()
+  await expect(undo).toBeDisabled()
+})
+
 test('a merge that lands after sign-out leaves no 元に戻す for the next account', async ({
   page,
 }) => {
@@ -1503,6 +1537,54 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
   await page.locator(`a[href*="day=${yesterday}"]`).click()
 
   // Assert: B's sheet for that date lists B's row and offers nothing to undo.
+  await expect(
+    dialog.getByRole('button', { name: '食事 9:00 – 24:00 15h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('signing in as someone else in another tab leaves no 元に戻す from the previous account', async ({
+  page,
+  context,
+}) => {
+  // Arrange: account A merges 休息 into 仕事 on yesterday's sheet, so that day holds an armed 元に戻す, and closes the sheet.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeEnabled()
+  await page.getByRole('button', { name: '完了' }).click()
+
+  // Act: a second tab signs A out and signs up as B, who records 食事 on the same date; the first tab follows the session.
+  const other = await context.newPage()
+  await other.goto('/')
+  await other.getByRole('tab', { name: '設定' }).click()
+  await other.getByRole('button', { name: 'サインアウト' }).click()
+  await expect(other.getByRole('button', { name: 'サインイン' })).toBeVisible()
+  await signUp(other)
+  const api = await apiAs(other)
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 9) }],
+  })
+  // Coming back to the first tab refetches its session (a sign-up does not broadcast to other tabs, a sign-out does).
+  await page.bringToFront()
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  )
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await page.locator(`a[href*="day=${yesterday}"]`).click()
+
+  // Assert: the first tab's sheet for that date lists B's row, not A's cached ones, and offers nothing to undo.
   await expect(
     dialog.getByRole('button', { name: '食事 9:00 – 24:00 15h 00m' }),
   ).toBeVisible()

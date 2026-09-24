@@ -40,13 +40,13 @@
 **Priority:** P3
 **Depends on:** None
 
-### Drop another account's cached data when a second tab signs in as someone else
+### Keep the zone sync from recording the previous account's zone when another tab signs in as someone else
 
-**What:** Clear the query cache, or key every query by the account, when the session's user id changes in a tab that did not sign in itself.
+**What:** Key the settings query (or the synced-zone check) by the account, or have `useTimeZoneSync` skip the render in which the session's user id changed, so it only compares the device's zone with the new account's stored one.
 
-**Why:** `queryClient.clear()` runs only in the tab that signs in or out. When another tab signs in as a different account, this tab's session turns to that account on focus while every cached query (the settings row, the timeline, the stats) still holds the first account's data until it refetches. Since 0.5.0.0 that matters for the zone: `useTimeZoneSync` can find the first account's zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
+**Why:** When another tab signs in as a different account, this tab's session turns to that account on focus. `AppLayout` then resets the query cache (the PR that bound 元に戻す to its account), but in the same commit `useTimeZoneSync`'s effect still reads the first account's settings: it can find that zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
 
-**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), `useSignOut` for where the cache is cleared today. Raised by the Claude adversarial pass during the 0.5.0.0 ship.
+**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), the account effect in `apps/app/src/app/(app)/_layout.tsx`. Raised by the Claude adversarial pass during the 0.5.0.0 ship; narrowed when the cache reset landed.
 
 **Effort:** S
 **Priority:** P3
@@ -73,6 +73,30 @@
 **Why:** The refusal text lives in the sheet's own state, so a sheet closed while its write was in flight drops it. The rows show the day as it is, but nothing says the edit did not happen (or may have landed, after a timeout).
 
 **Context:** `useEditLifecycle` in `apps/app/src/hooks/use-correction.ts` sets the refusal from the mutation's hook-level `onError`, with the day from `onMutate`; the undo slot already moved to the store (`correctionSlice`) for the same reason. A refusal could join it there, keyed by day like the slot, with the sign-out `epoch`. Related: "Say why a tap on ホーム was refused". Found by the eng review of the PR that moved the undo into the store (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Turn 元に戻す off once this device's own tap changed the day
+
+**What:** Offer a day's armed 元に戻す only while the listed day still matches it (a day slot's `expected` rows, an activity slot's revision), and drop it otherwise.
+
+**Why:** Since the slots moved to the store they outlive the sheet. Edit today in the sheet, close it, tap another activity on ホーム, and reopen the sheet: 元に戻す is still on, and pressing it is refused as day-changed with a text that names 別の端末, though this device made the change.
+
+**Context:** `correctionSlice` in `apps/app/src/store/correction.ts`, `useCorrectionUndo` in `apps/app/src/hooks/use-correction.ts`. Related: "Stop naming another device when this device's own late write changed the day". Found by the Claude adversarial pass of the PR that moved the undo into the store (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep an answer from another day's press off the viewed day's selection
+
+**What:** Apply an edit's selection, focus and archived notice (`landed`, `selectInserted`) only when the day it was pressed on is still the viewed day.
+
+**Why:** A split or a pick whose answer lands after the sheet moved to another day (today's sheet past midnight, a `?day=` change) selects a row the list no longer shows, or clears that day's notice.
+
+**Context:** `useCorrectionEdits` in `apps/app/src/hooks/use-correction.ts`; `onMutate` already takes the pressed day. Found by the Claude adversarial pass of the PR that moved the undo into the store (2026-09-25).
 
 **Effort:** S
 **Priority:** P3

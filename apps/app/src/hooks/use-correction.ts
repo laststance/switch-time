@@ -153,10 +153,11 @@ function useCorrectionState() {
 
 // The hook-level callbacks of every mutation here and in the undo. `onMutate` takes the day at the press (`mutate()` calls it
 // synchronously). `onError` sets the status line at once: TanStack runs it before `onSettled`, which waits for the re-read,
-// and when the connection drops during that re-read its retry waits for the network with no deadline. Every mutation refetches `switches.*` and `stats.*` once it settles. A
-// day-changed refusal also refetches `settings.*`, since the stored zone may be what changed on another device, and the next
-// edit would otherwise send the stale cached zone again. Never while a settings update is in flight: its answer could roll
-// back the optimistic value, and that update refetches settings itself once it settles.
+// and when the connection drops during that re-read its retry waits for the network with no deadline.
+// Every mutation refetches `switches.*` and `stats.*` once it settles. A day-changed refusal also refetches `settings.*`, since
+// the stored zone may be what changed on another device, and the next edit would otherwise send the stale cached zone again.
+// Never while a settings update is in flight: its answer could roll back the optimistic value, and that update refetches
+// settings itself once it settles.
 function useEditLifecycle(day: string, state: CorrectionState) {
   const queryClient = useQueryClient()
   return {
@@ -254,7 +255,7 @@ function useCorrectionEdits(
     return { baseline, landed, failed }
   }
   // 半分で分割 and 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
-  const reveal = (inserted: SwitchRow): void => {
+  const selectInserted = (inserted: SwitchRow): void => {
     state.reveal(inserted.id)
     state.setFocusId(inserted.id)
   }
@@ -287,7 +288,7 @@ function useCorrectionEdits(
       const { baseline, landed, failed } = press(row)
       splitInHalf.mutateAsync({ id: row.id, baseline }).then((inserted) => {
         landed('split')(inserted)
-        reveal(inserted)
+        selectInserted(inserted)
       }, failed)
     },
     cut: (row: CorrectionRow, at: number): void => {
@@ -295,14 +296,14 @@ function useCorrectionEdits(
       const input: SplitAtInput = { id: row.id, at: new Date(at), baseline }
       splitAt.mutateAsync(input).then((inserted) => {
         landed('cut')(inserted)
-        reveal(inserted)
+        selectInserted(inserted)
       }, failed)
     },
   }
 }
 
 // 「元に戻す」 for the day's armed slot. Undo is not itself undoable: pressing it twice would otherwise redo the edit. Both undo
-// mutations sit under `switches.key()`, so the sheet's `writing` holds the panel while they run.
+// mutations sit under `switches.key()`, so the sheet's `writesInFlight` (through `pending`) holds the panel while they run.
 function useCorrectionUndo(
   day: string,
   slot: UndoSlot | undefined,
@@ -310,6 +311,8 @@ function useCorrectionUndo(
 ) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
+  // The slots belong to this account (a new one starts them over), so the API can refuse an undo a stale tab sends as someone else.
+  const account = useAppSelector((s) => s.correction.account) ?? undefined
   const edit = useEditLifecycle(day, state)
   const replaceDay = useMutation({
     ...orpc.switches.replaceDay.mutationOptions(),
@@ -335,7 +338,7 @@ function useCorrectionUndo(
     const request = undoRequest(slot)
     // Dropped on success, not on mutate, so a passing failure leaves 元に戻す armed.
     if (request.procedure === 'replaceDay')
-      replaceDay.mutateAsync(request.input).then((written) => {
+      replaceDay.mutateAsync({ ...request.input, account }).then((written) => {
         dispatch(dropped({ epoch, day }))
         // A cut's or a split's undo brings back the row the edit was made on: select it again.
         const reselectId = reselectedRow(request.reselect, written)

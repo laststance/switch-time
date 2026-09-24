@@ -15,7 +15,8 @@ type AppStateLike = {
  */
 export const clockSlice = createSlice({
   name: 'clock',
-  initialState: { now: Date.now() },
+  // Lazy, so a reset (sign-in and sign-out both pass `undefined` state) reads the time then, not when this module loaded.
+  initialState: () => ({ now: Date.now() }),
   reducers: {
     tick(state, action: PayloadAction<number>) {
       state.now = action.payload

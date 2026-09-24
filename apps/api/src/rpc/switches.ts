@@ -656,6 +656,9 @@ export const switchesRouter = {
     .input(replaceDayInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
+      // Armed under another account (a stale tab): its rows were never this user's day.
+      if (input.account !== undefined && input.account !== userId)
+        throw dayChanged()
       // The window the client meant; the lock below refuses the call when the stored zone is no longer this one.
       const window = dayBounds(input.day, input.timeZone)
       assertRowsFitDay(input.rows, window)
