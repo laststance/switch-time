@@ -8,13 +8,13 @@ import {
 import { useState } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
-import { useExcludedDays } from '@/hooks/use-excluded-days'
 import { useLocalToday } from '@/hooks/use-local-today'
 import { useSettings } from '@/hooks/use-settings'
 import {
   afterUndoFailure,
   correctionRows,
   dayTitle,
+  isManuallyExcluded,
   pickRequest,
   undoRequest,
   undoSlotFor,
@@ -240,15 +240,15 @@ function useTotalsFacts(
   today: string,
   listed: ListedDay | undefined,
 ): TotalsFacts {
-  const { idleThresholdMinutes } = useLocalToday()
   const { settings } = useSettings()
-  const excluded = useExcludedDays()
+  // The viewed day alone: the 「除外中の日」 list stops a year back, and a correction can reach further.
+  const excluded = useQuery(
+    orpc.excludedDays.list.queryOptions({ input: { from: day, to: day } }),
+  )
   return {
-    idleThresholdMs: idleThresholdMinutes * 60_000,
+    idleThresholdMs: settings.idleThresholdMinutes * 60_000,
     autoExcludeUnusedDays: settings.autoExcludeUnusedDays,
-    manuallyExcluded: excluded.rows.some(
-      (row) => row.day === day && row.reason === 'manual',
-    ),
+    manuallyExcluded: isManuallyExcluded(excluded.data, day),
     hasOwnRows: (listed?.rows.length ?? 0) > 0,
     isToday: day === today,
   }

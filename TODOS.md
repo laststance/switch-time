@@ -46,7 +46,7 @@
 
 **Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
 
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice. Raised by the review during the 0.2.0.0 ship.
+**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`data: { reason: 'archived' }` from `assertLiveActivities`, read by `afterUndoFailure`); follow its shape. Raised by the review during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -155,6 +155,18 @@
 **Why:** In a zone with daylight saving the hour after the fall-back repeats, so two instants an hour apart read the same `H:MM`. A user can move a start or cut a record at the wrong one without seeing it.
 
 **Context:** `formatTime` (`apps/app/src/lib/format.ts`) prints `H:MM`; `timeZoneSchema` accepts any IANA zone; `dayBounds` already handles 23- and 25-hour days. The 区切る時刻 steps are elapsed time (±15 / ±60 min), so inside the repeated hour +1時間 can leave the readout unchanged. The owner's zone (Asia/Tokyo) never reaches it. Start with a helper that tells whether an instant's wall time occurs twice that day, tested on `America/New_York` 2026-11-01. Raised by Codex in the eng review of the carried-in row's panel (2026-09-24) (R10 kept `H:MM` for consistency with every other label).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Mention the carried-in panel's controls in the sheet hint
+
+**What:** Rewrite the correction sheet's hint (「行をタップ → 開始時刻を15分ずつ動かす／活動を変える」) so it also covers the carried-in row, whose panel cuts the record (区切る時刻 and 「ここで分割」) rather than moving its start. Change the text in the pen file first, then in `correction.tsx`.
+
+**Why:** On a day whose first row is carried in from an earlier day, the hint promises a 15-minute move that row does not have, and says nothing about cutting it.
+
+**Context:** The hint is the `hint` prop of `Sheet` in `apps/app/src/app/(app)/correction.tsx`, and the pen file's correction frame holds the same string. Raised by the design review during the carried-in panel's ship (2026-09-24).
 
 **Effort:** S
 **Priority:** P3

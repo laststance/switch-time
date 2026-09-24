@@ -338,6 +338,8 @@ function CarriedInActions({
         <View className="flex-row items-center justify-between">
           <Text className="text-sub text-xs font-medium">区切る時刻</Text>
           <Text
+            role="status"
+            aria-label="区切る時刻"
             aria-live="polite"
             className="text-ink text-lg font-semibold tabular"
           >
@@ -372,7 +374,7 @@ function CarriedInActions({
             ここで分割
           </Text>
         </Control>
-        {cutNotes(row, totalsFacts).map((note) => (
+        {cutNotes(row, totalsFacts, stepper.at).map((note) => (
           <Text key={note} className={NOTE}>
             {note}
           </Text>
@@ -397,8 +399,10 @@ function ArchivedBox({ kind }: { kind: 'warning' | 'notice' | null }) {
   if (!kind) return null
   return (
     <View className="bg-sheet-bg border-line rounded-chip border px-3 py-2">
-      {/* Only the notice after a pick or a refused undo is announced; the warning before a pick is plain text. */}
+      {/* Only the notice after a pick or a refused undo is announced; the warning before a pick is plain text. The key
+          mounts a fresh node when the warning turns into the notice, so the alert is announced rather than updated in place. */}
       <Text
+        key={kind}
         role={kind === 'notice' ? 'alert' : undefined}
         className="text-ink text-xs leading-4.5"
       >
@@ -476,6 +480,8 @@ export default function CorrectionSheet() {
   const correction = useCorrection(params.day)
   const scroll = useRef<ScrollView>(null)
   const viewport = useRef({ scrollY: 0, viewportHeight: 0 })
+  // The row last revealed: a card lays out again on every tick and edit, and only a new selection should scroll.
+  const revealed = useRef<string | null>(null)
   // Scrolls just enough to show the whole selected card once it has laid out with its panel; reduced motion jumps.
   const reveal = (card: { top: number; height: number }): void => {
     const y = revealOffset(card, viewport.current)
@@ -518,14 +524,21 @@ export default function CorrectionSheet() {
               style={frame(selected, row.color)}
               onLayout={(event) => {
                 const { y, height } = event.nativeEvent.layout
-                if (selected) reveal({ top: y, height })
+                if (selected && revealed.current !== row.id) {
+                  revealed.current = row.id
+                  reveal({ top: y, height })
+                }
               }}
             >
               <RowHeader
                 row={row}
                 selected={selected}
                 focused={row.id === correction.focusId}
-                onPress={() => correction.select(selected ? null : row.id)}
+                onPress={() => {
+                  // A tap always reveals, even on the row that was selected before.
+                  revealed.current = null
+                  correction.select(selected ? null : row.id)
+                }}
               />
               {selected && <RowPanel row={row} correction={correction} />}
             </View>

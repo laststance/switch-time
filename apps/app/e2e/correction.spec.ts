@@ -592,11 +592,12 @@ test('区切る時刻 opens at 3:15, cuts the carried-in record at 3:00 into a s
   // Arrange
   const { dialog, carriedIn } = await openCarriedInWork(page)
   await carriedIn.click()
-  await expect(dialog.getByText('3:15', { exact: true })).toBeVisible()
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  await expect(readout).toHaveText('3:15')
 
   // Act
   await dialog.getByRole('button', { name: '区切る時刻を15分早める' }).click()
-  await expect(dialog.getByText('3:00', { exact: true })).toBeVisible()
+  await expect(readout).toHaveText('3:00')
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
 
   // Assert: the new row 3:00 – 7:00 is the selected, focused one, above the shortened carried-in record.
@@ -653,7 +654,8 @@ test('a cut at 0:00 leaves the whole day to a new row, and undo selects the carr
   await hourEarlier.click()
   await hourEarlier.click()
   await dialog.getByRole('button', { name: '区切る時刻を15分早める' }).click()
-  await expect(dialog.getByText('0:00', { exact: true })).toBeVisible()
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  await expect(readout).toHaveText('0:00')
   await expect(hourEarlier).toBeDisabled()
 
   // Act
@@ -661,14 +663,14 @@ test('a cut at 0:00 leaves the whole day to a new row, and undo selects the carr
 
   // Assert: the carried-in record has nothing left in the day; 仕事 0:00 – 7:00 is now the day's own row, open with its panel.
   await expect(dialog.getByRole('button', { name: '半分で分割' })).toBeVisible()
-  await expect(dialog.getByText('区切る時刻')).toHaveCount(0)
+  await expect(readout).toHaveCount(0)
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
 
   // Act
   await page.getByRole('button', { name: '元に戻す' }).click()
 
-  // Assert: the carried-in record is back, selected with its own panel.
-  await expect(dialog.getByText('区切る時刻')).toBeVisible()
+  // Assert: the carried-in record is back, selected with its own panel, and 区切る時刻 opens at the middle again.
+  await expect(readout).toHaveText('3:15')
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
   await expect(dialog.getByRole('button', { name: '半分で分割' })).toHaveCount(
     0,
@@ -793,7 +795,7 @@ test('on a phone-width screen 区切る時刻 shares a line with its readout and
   const [label, readout, first, second, third, fourth, cutBox] =
     await Promise.all([
       dialog.getByText('区切る時刻', { exact: true }).boundingBox(),
-      dialog.getByText('3:15', { exact: true }).boundingBox(),
+      dialog.getByRole('status', { name: '区切る時刻' }).boundingBox(),
       dialog
         .getByRole('button', { name: '区切る時刻を1時間早める' })
         .boundingBox(),
@@ -826,4 +828,112 @@ test('on a phone-width screen 区切る時刻 shares a line with its readout and
     width: 320,
     height: 44,
   })
+})
+
+test('the lines under ここで分割 follow the cut time and the day’s exclusion', async ({
+  page,
+}) => {
+  // Arrange: D−3 仕事 20:00 runs until D−1 食事 0:00 (28 h, over the 12 h idle threshold), so D−2 has no row of its own.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const recordStart = shift(today(), -3)
+  const day = shift(today(), -2)
+  const recordEnd = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: recordStart,
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(recordStart, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: recordEnd,
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(recordEnd, 0) }],
+  })
+  await page.goto(`/correction?day=${day}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const carriedIn = dialog.getByRole('button', {
+    name: '仕事 0:00 – 24:00 24h 00m',
+  })
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  const idleNote = dialog.getByText(
+    '区切ると、無操作扱い（12時間超）だった時間が集計に入ります',
+  )
+  const measuredNote = dialog.getByText(
+    '区切ると、この日は計測できた日になります',
+  )
+
+  // Act
+  await carriedIn.click()
+
+  // Assert: 11:45 leaves 15h45 and 12h15, both still idle; the untapped day would become measured.
+  await expect(readout).toHaveText('11:45')
+  await expect(measuredNote).toBeVisible()
+  await expect(idleNote).toHaveCount(0)
+
+  // Act
+  await dialog
+    .getByRole('button', { name: '区切る時刻を1時間遅らせる' })
+    .click()
+
+  // Assert: 12:45 leaves 11h15 after the cut, which joins the totals.
+  await expect(readout).toHaveText('12:45')
+  await expect(idleNote).toBeVisible()
+
+  // Act: the day is excluded by hand from another device.
+  await api.excludedDays.exclude({ day })
+  await page.reload()
+  await carriedIn.click()
+
+  // Assert: a manual exclusion outranks a switch, so the 計測 line is gone.
+  await expect(readout).toHaveText('11:45')
+  await expect(measuredNote).toHaveCount(0)
+})
+
+test('a carried-in record with no quarter hour to cut at disables every step and ここで分割 and says why', async ({
+  page,
+}) => {
+  // Arrange: 仕事 from 30 s before D−1's midnight until 食事 at 0:14.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const dayBefore = shift(today(), -2)
+  const day = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    rows: [
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: new Date(`${dayBefore}T23:59:30+09:00`),
+      },
+    ],
+  })
+  await api.switches.replaceDay({
+    day,
+    rows: [
+      {
+        activityId: idOf(list, '食事'),
+        startedAt: new Date(`${day}T00:14:00+09:00`),
+      },
+    ],
+  })
+  await page.goto(`/correction?day=${day}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+
+  // Act
+  await dialog.getByRole('button', { name: '仕事 0:00 – 0:14 14m' }).click()
+
+  // Assert
+  await expect(dialog.getByRole('status', { name: '区切る時刻' })).toHaveText(
+    '—',
+  )
+  for (const name of [
+    '区切る時刻を1時間早める',
+    '区切る時刻を15分早める',
+    '区切る時刻を15分遅らせる',
+    '区切る時刻を1時間遅らせる',
+    'ここで分割',
+  ])
+    await expect(dialog.getByRole('button', { name })).toBeDisabled()
+  await expect(
+    dialog.getByText('15分単位で区切れる時刻がありません'),
+  ).toBeVisible()
 })

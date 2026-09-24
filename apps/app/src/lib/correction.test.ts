@@ -11,6 +11,7 @@ import {
   cutTotalsEffects,
   daySnapshot,
   dayTitle,
+  isManuallyExcluded,
   pickRequest,
   revealOffset,
   undoRequest,
@@ -298,7 +299,7 @@ test('区切る時刻 on a record that covers the whole past day ends at 23:45, 
   })
 })
 
-test('区切る時刻 on today’s current record never passes a minute before now', () => {
+test('区切る時刻 on today’s current record stays a quarter hour and a minute short of now, for a device clock running fast', () => {
   // Arrange: 睡眠 since last night is still running at 10:07 today.
   const day = '2026-09-09'
   const list: ListedDay = {
@@ -315,12 +316,12 @@ test('区切る時刻 on today’s current record never passes a minute before n
   // Act
   const carriedIn = correctionRows(list, activities, bounds)[0]
 
-  // Assert: 10:06 rounds down to 10:00.
+  // Assert: 10:07 less 15 min and a minute is 9:51, which rounds down to 9:45; 0:00 – 9:45 has 39 quarters, so it opens at 4:45.
   expect(carriedIn?.range).toBe('0:00 – いま')
   expect(carriedIn?.cut).toEqual({
     min: at(day, 0).getTime(),
-    max: at(day, 10).getTime(),
-    initial: at(day, 5).getTime(),
+    max: at(day, 9, 45).getTime(),
+    initial: at(day, 4, 45).getTime(),
   })
 })
 
@@ -447,7 +448,7 @@ test('the cut stepper starts from the middle again when another row was chosen b
 })
 
 test('the cut stepper keeps a chosen time on today’s current record as the clock moves on', () => {
-  // Arrange: 睡眠 since last night; 10:00 was chosen at 10:07, and the clock now reads 10:21.
+  // Arrange: 睡眠 since last night; 10:00 was chosen at 10:22, and the clock now reads 10:36 (the range ends a quarter and a minute before now).
   const day = '2026-09-09'
   const list: ListedDay = {
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
@@ -456,7 +457,7 @@ test('the cut stepper keeps a chosen time on today’s current record as the clo
   }
   const bounds = {
     ...dayBounds(day, TZ),
-    now: at(day, 10, 21).getTime(),
+    now: at(day, 10, 36).getTime(),
     timeZone: TZ,
   }
   const carriedIn = correctionRows(list, activities, bounds)[0]
@@ -702,10 +703,14 @@ test('a refused activity undo turns 元に戻す off, and a passing failure keep
   const answers = [
     new ORPCError('CONFLICT', { message: 'activity changed elsewhere' }),
     new ORPCError('NOT_FOUND', { message: 'switch not found' }),
-    new ORPCError('BAD_REQUEST', { message: 'activity is archived' }),
+    new ORPCError('BAD_REQUEST', {
+      message: 'activity is archived',
+      data: { reason: 'archived' },
+    }),
     new TypeError('Failed to fetch'),
     new ORPCError('INTERNAL_SERVER_ERROR'),
     new ORPCError('UNAUTHORIZED'),
+    new ORPCError('BAD_REQUEST', { message: 'input is invalid' }),
   ]
 
   // Act
@@ -716,6 +721,7 @@ test('a refused activity undo turns 元に戻す off, and a passing failure keep
     'clear',
     'clear',
     'archived',
+    'keep',
     'keep',
     'keep',
     'keep',
@@ -807,9 +813,10 @@ const wholeDayWork = () => {
   return carriedIn
 }
 
-test('the cut warns that an idle record joins the totals and that an untapped past day becomes measured', () => {
-  // Arrange: 26 h against a 12 h threshold, on a past day with no row, auto-exclusion on.
+test('the idle line appears only for a cut that leaves a part within the threshold, and an untapped past day becomes measured', () => {
+  // Arrange: 26 h (9/7 22:00 – 9/9 0:00) against a 12 h threshold, on a past day with no row, auto-exclusion on.
   const carriedIn = wholeDayWork()
+  const day = '2026-09-08'
   const facts = {
     idleThresholdMs: 12 * 3_600_000,
     autoExcludeUnusedDays: true,
@@ -819,14 +826,124 @@ test('the cut warns that an idle record joins the totals and that an untapped pa
   }
 
   // Act & Assert
-  expect(cutTotalsEffects(carriedIn, facts)).toEqual(['idle', 'unmeasured'])
-  // A threshold past the record's 26 h (above the settings' 24 h cap) isolates the 計測 line.
+  // The opening 11:45 leaves 13h45 and 12h15, both still idle.
+  expect(carriedIn.cut?.initial).toBe(at(day, 11, 45).getTime())
+  expect(cutTotalsEffects(carriedIn, facts, at(day, 11, 45).getTime())).toEqual(
+    ['unmeasured'],
+  )
+  // 12:45 leaves 11h15 after the cut, which counts.
+  expect(cutTotalsEffects(carriedIn, facts, at(day, 12, 45).getTime())).toEqual(
+    ['idle', 'unmeasured'],
+  )
+  // 9:45 leaves 11h45 before the cut, which counts.
   expect(
-    cutTotalsEffects(carriedIn, { ...facts, idleThresholdMs: 48 * 3_600_000 }),
-  ).toEqual(['unmeasured'])
-  expect(cutTotalsEffects(carriedIn, { ...facts, hasOwnRows: true })).toEqual([
-    'idle',
-  ])
+    cutTotalsEffects(
+      carriedIn,
+      { ...facts, hasOwnRows: true },
+      at(day, 9, 45).getTime(),
+    ),
+  ).toEqual(['idle'])
+})
+
+test('a cut of a record longer than twice the threshold never frees idle time', () => {
+  // Arrange: 睡眠 from 9/6 22:00 until 9/9 22:00 is 72 h, against a 12 h threshold, viewed on 9/8.
+  const day = '2026-09-08'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('s', 'sleep', at('2026-09-06', 22)),
+      rows: [],
+      carriedOut: row('h', 'home', at('2026-09-09', 22)),
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-10', 10).getTime(),
+      timeZone: TZ,
+    },
+  )[0]
+  if (!carriedIn) throw new Error('no carried-in row')
+  const facts = {
+    idleThresholdMs: 12 * 3_600_000,
+    autoExcludeUnusedDays: true,
+    manuallyExcluded: false,
+    hasOwnRows: true,
+    isToday: false,
+  }
+
+  // Act & Assert: both parts stay over 12 h at the day's first and last quarter.
+  expect(cutTotalsEffects(carriedIn, facts, at(day, 0).getTime())).toEqual([])
+  expect(cutTotalsEffects(carriedIn, facts, at(day, 23, 45).getTime())).toEqual(
+    [],
+  )
+})
+
+test('a carried-in detox record never reports idle time, since detox is never idle', () => {
+  // Arrange: detox from 9/7 22:00 until 9/9 0:00, 26 h against a 12 h threshold.
+  const day = '2026-09-08'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('d', null, at('2026-09-07', 22)),
+      rows: [],
+      carriedOut: row('h', 'home', at('2026-09-09', 0)),
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  )[0]
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const effects = cutTotalsEffects(
+    carriedIn,
+    {
+      idleThresholdMs: 12 * 3_600_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: false,
+      hasOwnRows: true,
+      isToday: false,
+    },
+    at(day, 12, 45).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual([])
+})
+
+test('the 計測 line waits while the excluded-day list is still loading', () => {
+  // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
+  const carriedIn = wholeDayWork()
+
+  // Act
+  const effects = cutTotalsEffects(
+    carriedIn,
+    {
+      idleThresholdMs: 48 * 3_600_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: null,
+      hasOwnRows: false,
+      isToday: false,
+    },
+    at('2026-09-08', 11, 45).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual([])
+})
+
+test('a manual exclusion of the viewed day is found, and is unknown until the list loads', () => {
+  // Arrange
+  const rows = [
+    { day: '2026-09-07', reason: 'manual' },
+    { day: '2026-09-08', reason: 'auto' },
+  ]
+
+  // Act & Assert
+  expect(isManuallyExcluded(undefined, '2026-09-08')).toBeNull()
+  expect(isManuallyExcluded(rows, '2026-09-08')).toBe(false)
+  expect(isManuallyExcluded(rows, '2026-09-07')).toBe(true)
 })
 
 test('the cut says nothing about 計測 on today, on a manually excluded day or without auto-exclusion', () => {
@@ -840,13 +957,21 @@ test('the cut says nothing about 計測 on today, on a manually excluded day or 
     isToday: false,
   }
 
+  const cutAt = at('2026-09-08', 11, 45).getTime()
+
   // Act & Assert
-  expect(cutTotalsEffects(carriedIn, { ...facts, isToday: true })).toEqual([])
   expect(
-    cutTotalsEffects(carriedIn, { ...facts, manuallyExcluded: true }),
+    cutTotalsEffects(carriedIn, { ...facts, isToday: true }, cutAt),
   ).toEqual([])
   expect(
-    cutTotalsEffects(carriedIn, { ...facts, autoExcludeUnusedDays: false }),
+    cutTotalsEffects(carriedIn, { ...facts, manuallyExcluded: true }, cutAt),
+  ).toEqual([])
+  expect(
+    cutTotalsEffects(
+      carriedIn,
+      { ...facts, autoExcludeUnusedDays: false },
+      cutAt,
+    ),
   ).toEqual([])
 })
 
@@ -855,13 +980,17 @@ test('a short carried-in record on a day with its own rows changes nothing in th
   const { carriedIn } = carriedWork()
 
   // Act
-  const effects = cutTotalsEffects(carriedIn, {
-    idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: true,
-    isToday: false,
-  })
+  const effects = cutTotalsEffects(
+    carriedIn,
+    {
+      idleThresholdMs: 12 * 3_600_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: false,
+      hasOwnRows: true,
+      isToday: false,
+    },
+    carriedIn.cut?.initial ?? null,
+  )
 
   // Assert
   expect(effects).toEqual([])
@@ -908,12 +1037,236 @@ test('the lines under ここで分割 spell each totals effect, or why no cut is
     isToday: false,
   }
 
-  // Act & Assert
-  expect(cutNotes(wholeDay, facts)).toEqual([
+  // Act & Assert: at 12:45 the 11h15 after the cut counts.
+  expect(cutNotes(wholeDay, facts, at(day, 12, 45).getTime())).toEqual([
     '区切ると、無操作扱い（12時間超）だった時間が集計に入ります',
     '区切ると、この日は計測できた日になります',
   ])
-  expect(cutNotes(tooShort, facts)).toEqual([
+  expect(cutNotes(tooShort, facts, null)).toEqual([
     '15分単位で区切れる時刻がありません',
   ])
+})
+
+test('a day that has not begun yet lists nothing, so the running record offers no cut in the future', () => {
+  // Arrange: 仕事 has run since 9/9 9:00; the sheet is opened for 9/10 while the clock reads 9/9 10:00.
+  const list: ListedDay = {
+    carriedIn: row('w', 'work', at('2026-09-09', 9)),
+    rows: [],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds('2026-09-10', TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+
+  // Assert
+  expect(rows).toEqual([])
+})
+
+test('区切る時刻 lands on the wall clock’s quarter hours in a zone offset by 5:45', () => {
+  // Arrange: in Asia/Kathmandu, 仕事 from 9/7 22:00 runs into 9/8 until 家事 at 7:00.
+  const zone = 'Asia/Kathmandu'
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: row('w', 'work', new Date('2026-09-07T22:00:00+05:45')),
+    rows: [row('h', 'home', new Date('2026-09-08T07:00:00+05:45'))],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, zone),
+    now: new Date('2026-09-09T10:00:00+05:45').getTime(),
+    timeZone: zone,
+  }
+  const carriedIn = correctionRows(list, activities, bounds).at(-1)
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const stepper = cutStepper(carriedIn, null, zone)
+
+  // Assert: 0:00 – 6:45 local, opening at 3:15 local, exactly as in Tokyo.
+  expect(carriedIn.cut).toEqual({
+    min: new Date('2026-09-08T00:00:00+05:45').getTime(),
+    max: new Date('2026-09-08T06:45:00+05:45').getTime(),
+    initial: new Date('2026-09-08T03:15:00+05:45').getTime(),
+  })
+  expect(stepper.label).toBe('3:15')
+})
+
+test('区切る時刻 stays on quarter hours across the spring-forward gap of a 23-hour day', () => {
+  // Arrange: in America/New_York on 2026-03-08 (2:00 jumps to 3:00), 仕事 from 3/7 22:00 runs until 家事 at 7:00.
+  const zone = 'America/New_York'
+  const day = '2026-03-08'
+  const list: ListedDay = {
+    carriedIn: row('w', 'work', new Date('2026-03-07T22:00:00-05:00')),
+    rows: [row('h', 'home', new Date('2026-03-08T07:00:00-04:00'))],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, zone),
+    now: new Date('2026-03-09T10:00:00-04:00').getTime(),
+    timeZone: zone,
+  }
+  const carriedIn = correctionRows(list, activities, bounds).at(-1)
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const stepper = cutStepper(carriedIn, null, zone)
+
+  // Assert: 6 elapsed hours in the day, so 0:00 – 6:45 has 23 quarters; the 11th past 0:00 reads 3:45 after the jump.
+  expect(carriedIn.cut).toEqual({
+    min: new Date('2026-03-08T00:00:00-05:00').getTime(),
+    max: new Date('2026-03-08T06:45:00-04:00').getTime(),
+    initial: new Date('2026-03-08T03:45:00-04:00').getTime(),
+  })
+  expect(stepper.label).toBe('3:45')
+})
+
+test('the idle line appears only once the running record is longer than the threshold, as the totals judge idle', () => {
+  // Arrange: 睡眠 since 9/8 23:00 is still running on 9/9, which already has no row of its own.
+  const day = '2026-09-09'
+  const list: ListedDay = {
+    carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
+    rows: [],
+    carriedOut: null,
+  }
+  const boundsAt = (now: number) => ({
+    ...dayBounds(day, TZ),
+    now,
+    timeZone: TZ,
+  })
+  const facts = {
+    idleThresholdMs: 12 * 3_600_000,
+    autoExcludeUnusedDays: true,
+    manuallyExcluded: false,
+    hasOwnRows: false,
+    isToday: true,
+  }
+  const exactly = correctionRows(
+    list,
+    activities,
+    boundsAt(at(day, 11).getTime()),
+  )[0]
+  const over = correctionRows(
+    list,
+    activities,
+    boundsAt(at(day, 11).getTime() + 1),
+  )[0]
+  if (!exactly || !over) throw new Error('no carried-in row')
+
+  // Act & Assert: exactly 12 h is not idle (segmentsInRange uses a strict "longer than"); a millisecond more is.
+  expect(cutTotalsEffects(exactly, facts, at(day, 5).getTime())).toEqual([])
+  expect(cutTotalsEffects(over, facts, at(day, 5).getTime())).toEqual(['idle'])
+})
+
+test('the idle line names a threshold that is not whole hours in minutes', () => {
+  // Arrange: the 26 h whole-day record against a 90-minute threshold on a day with its own rows, cut at 23:45.
+  const carriedIn = wholeDayWork()
+
+  // Act: the 15 min after the cut is within 90 minutes.
+  const notes = cutNotes(
+    carriedIn,
+    {
+      idleThresholdMs: 90 * 60_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: false,
+      hasOwnRows: true,
+      isToday: false,
+    },
+    at('2026-09-08', 23, 45).getTime(),
+  )
+
+  // Assert
+  expect(notes).toEqual([
+    '区切ると、無操作扱い（90分超）だった時間が集計に入ります',
+  ])
+})
+
+test('the day’s own rows never report a totals effect of a cut', () => {
+  // Arrange: 9/8's own 家事 row, with facts under which a carried-in record would report both effects.
+  const { rows } = carriedWork()
+  const ownRow = rows[0]
+  if (!ownRow) throw new Error('no own row')
+
+  // Act
+  const effects = cutTotalsEffects(
+    ownRow,
+    {
+      idleThresholdMs: 60_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: false,
+      hasOwnRows: false,
+      isToday: false,
+    },
+    at('2026-09-08', 8).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual([])
+})
+
+test('a pick on a carried-in detox record only writes while the record is still detox', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('d', null, at('2026-09-07', 22)),
+      rows: [row('h', 'home', at(day, 7))],
+      carriedOut: null,
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  ).at(-1)
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const request = pickRequest(carriedIn, 'work')
+
+  // Assert
+  expect(request).toEqual({ id: 'd', activityId: 'work', from: null })
+})
+
+test('a carried-in record whose activity the cached list does not know yet shows no archived warning', () => {
+  // Arrange: the record holds an activity created on another device after `activities.list` was cached.
+  const day = '2026-09-08'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('n', 'new-elsewhere', at('2026-09-07', 22)),
+      rows: [row('h', 'home', at(day, 7))],
+      carriedOut: null,
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  ).at(-1)
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const box = archivedBox(carriedIn, null)
+
+  // Assert: it lists nameless until the refetch, and still offers the cut.
+  expect([carriedIn.name, carriedIn.archived, box]).toEqual(['…', false, null])
+  expect(carriedIn.cut).not.toBeNull()
+})
+
+test('a card that exactly fills the view, or touches its edges, does not scroll', () => {
+  // Arrange: a 600 px viewport scrolled to 200.
+  const viewport = { scrollY: 200, viewportHeight: 600 }
+
+  // Act & Assert
+  expect(revealOffset({ top: 200, height: 600 }, viewport)).toBeNull()
+  expect(revealOffset({ top: 200, height: 100 }, viewport)).toBeNull()
+  expect(revealOffset({ top: 700, height: 100 }, viewport)).toBeNull()
+  // One pixel past the bottom edge scrolls by exactly one pixel.
+  expect(revealOffset({ top: 701, height: 100 }, viewport)).toBe(201)
 })

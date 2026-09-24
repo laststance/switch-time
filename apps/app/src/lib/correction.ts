@@ -43,14 +43,15 @@ export type CorrectionRow = {
   duration: string
   /** The record started before the day (listed last): its panel cuts it or changes its activity, and never moves or merges it. */
   carriedIn: boolean
-  /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes). */
+  /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes); empty on the day's own rows. */
   trueStartDate: string
-  /** `9月23日 23:00`, the record's real start with its date (the carried-in panel's origin note). */
+  /** `9月23日 23:00`, the record's real start with its date (the carried-in panel's origin note); empty on the day's own rows. */
   trueStartLabel: string
   /** The row's activity was archived since: the picker cannot offer it back (the carried-in panel's warning). */
   archived: boolean
-  /** The whole record's length, the part before the day included, as the idle rule measures it. */
-  recordMs: number
+  /** The whole record, the part before the day included, as the idle rule measures it: its real start, and the next switch or now. */
+  trueStart: number
+  trueEnd: number
   /** 区切る時刻's range on a carried-in row; null on the day's own rows and when no quarter hour fits. */
   cut: CutRange | null
   canMoveEarlier: boolean
@@ -148,7 +149,8 @@ const QUARTER_MS = 15 * 60_000
 
 /**
  * 区切る時刻's range for a record from `startedAt` to `trueEnd`: quarter hours of the viewed day (counted from its 0:00, so any
- * zone offset works) that keep a minute from the record's true start and from its end or now, as `switches.splitAt` checks.
+ * zone offset works) that keep a minute from the record's true start and from its end, as `switches.splitAt` checks, and stay
+ * a quarter short of now so a device clock running fast cannot offer a cut the server refuses.
  * 0:00 itself is allowed, since midnight is not a switch. The opening value is the middle quarter, a tie rounding down.
  * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15 }
  */
@@ -158,7 +160,9 @@ function cutRange(
   bounds: DayBounds,
 ): CutRange | null {
   const floor = Math.max(startedAt + MIN_SEGMENT_MS, bounds.start)
-  const ceiling = Math.min(trueEnd, bounds.end, bounds.now) - MIN_SEGMENT_MS
+  // A quarter short of now: a device clock running a little fast must not offer a cut the server's now refuses.
+  const ceiling =
+    Math.min(trueEnd, bounds.end, bounds.now - QUARTER_MS) - MIN_SEGMENT_MS
   const min =
     bounds.start + Math.ceil((floor - bounds.start) / QUARTER_MS) * QUARTER_MS
   const max =
@@ -168,6 +172,20 @@ function cutRange(
   if (min > max) return null
   const quarters = (max - min) / QUARTER_MS
   return { min, max, initial: min + Math.floor(quarters / 2) * QUARTER_MS }
+}
+
+const NO_TRUE_START = { trueStartDate: '', trueStartLabel: '' }
+
+// The earlier day a carried-in row really started on; only carried-in rows pay for these two formats per tick.
+function trueStartLabels(
+  startedAt: Date,
+  bounds: DayBounds,
+): Pick<CorrectionRow, 'trueStartDate' | 'trueStartLabel'> {
+  const trueStartDate = formatMonthDay(localDay(startedAt, bounds.timeZone))
+  return {
+    trueStartDate,
+    trueStartLabel: `${trueStartDate} ${formatTime(startedAt, bounds.timeZone)}`,
+  }
 }
 
 // One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included).
@@ -185,7 +203,6 @@ function describeRow(
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
   const end = Math.min(trueEnd, bounds.end)
   const startLabel = formatTime(new Date(start), bounds.timeZone)
-  const trueStartDate = formatMonthDay(localDay(row.startedAt, bounds.timeZone))
   return {
     id: row.id,
     activityId: row.activityId,
@@ -198,10 +215,10 @@ function describeRow(
     range: `${startLabel} – ${endLabel(end, next, bounds)}`,
     duration: formatDuration(end - start),
     carriedIn,
-    trueStartDate,
-    trueStartLabel: `${trueStartDate} ${formatTime(row.startedAt, bounds.timeZone)}`,
+    ...(carriedIn ? trueStartLabels(row.startedAt, bounds) : NO_TRUE_START),
     archived: Boolean(activity.archivedAt),
-    recordMs: trueEnd - startedAt,
+    trueStart: startedAt,
+    trueEnd,
     cut: carriedIn ? cutRange(startedAt, trueEnd, bounds) : null,
     ...(carriedIn ? LOCKED : ownRowFlags(row, prev, next, bounds)),
   }
@@ -324,38 +341,77 @@ export function cutStepper(
 export type TotalsFacts = {
   idleThresholdMs: number
   autoExcludeUnusedDays: boolean
-  manuallyExcluded: boolean
+  /** Null while the excluded-day list is loading: the 計測 note waits rather than guess. */
+  manuallyExcluded: boolean | null
   hasOwnRows: boolean
   isToday: boolean
 }
-/** 'idle': the record is over the idle threshold, so its cut parts join the totals; 'unmeasured': the day becomes 計測できた日. */
+/** 'idle': the cut turns idle time into counted time; 'unmeasured': the day becomes 計測できた日. */
 export type TotalsEffect = 'idle' | 'unmeasured'
 
 /**
+ * Whether a cut at `at` takes time out of the idle count: the whole record is over the threshold, and at least one of
+ * the two parts is not (`segmentsInRange` measures each part by its own length). Detox is never idle, so it has no effect.
+ * @param row - The carried-in row, with the whole record's true start and end.
+ * @param idleThresholdMs - The user's idle threshold.
+ * @param at - The cut time, or null when the day has no quarter hour to cut at.
+ * @returns True when the note 「無操作扱い…が集計に入ります」 is accurate for this cut.
+ * @example cutFreesIdle(row26h, 43_200_000, at1245) // true: the later part is 11h15
+ */
+function cutFreesIdle(
+  row: CorrectionRow,
+  idleThresholdMs: number,
+  at: number | null,
+): boolean {
+  if (row.activityId === null || at === null) return false
+  if (row.trueEnd - row.trueStart <= idleThresholdMs) return false
+  return (
+    at - row.trueStart <= idleThresholdMs || row.trueEnd - at <= idleThresholdMs
+  )
+}
+
+/**
  * How a cut of the carried-in record would change the totals, one line each under 「ここで分割」: a record over the idle
- * threshold counts nowhere until cut (`segmentsInRange`), and a past day without a switch of its own is 計測なし under
- * auto-exclusion until the cut adds one (`classifyDay`).
+ * threshold counts nowhere until a cut leaves a part under it ({@link cutFreesIdle}), and a past day without a switch
+ * of its own is 計測なし under auto-exclusion until the cut adds one (`classifyDay`).
  * @param row - The selected row; the day's own rows have no cut and no effect.
  * @param facts - The settings and day facts the two rules read.
+ * @param at - The stepper's cut time, or null when there is none.
  * @returns The effects in display order; empty when the cut changes nothing in the totals.
- * @example cutTotalsEffects(carriedIn, { idleThresholdMs: 43_200_000, autoExcludeUnusedDays: true, manuallyExcluded: false, hasOwnRows: false, isToday: false }) // ['idle', 'unmeasured']
+ * @example cutTotalsEffects(carriedIn, { idleThresholdMs: 43_200_000, autoExcludeUnusedDays: true, manuallyExcluded: false, hasOwnRows: false, isToday: false }, at) // ['idle', 'unmeasured']
  */
 export function cutTotalsEffects(
   row: CorrectionRow,
   facts: TotalsFacts,
+  at: number | null,
 ): TotalsEffect[] {
   if (!row.carriedIn) return []
   const effects: TotalsEffect[] = []
-  if (row.recordMs > facts.idleThresholdMs) effects.push('idle')
-  // Today is never 計測なし yet, and a manual exclusion outranks a switch.
+  if (cutFreesIdle(row, facts.idleThresholdMs, at)) effects.push('idle')
+  // Today is never 計測なし yet, a manual exclusion outranks a switch, and an unloaded list says nothing.
   if (
     !facts.isToday &&
     !facts.hasOwnRows &&
     facts.autoExcludeUnusedDays &&
-    !facts.manuallyExcluded
+    facts.manuallyExcluded === false
   )
     effects.push('unmeasured')
   return effects
+}
+
+/**
+ * Whether the user excluded `day` by hand, from the excluded-day query for that one day; feeds {@link TotalsFacts}.
+ * @param rows - The query's rows, undefined while it loads.
+ * @param day - The viewed day, `YYYY-MM-DD`.
+ * @returns Null while loading, then whether a manual exclusion covers the day.
+ * @example isManuallyExcluded([{ day: '2026-09-08', reason: 'manual' }], '2026-09-08') // true
+ */
+export function isManuallyExcluded(
+  rows: readonly { day: string; reason: string }[] | undefined,
+  day: string,
+): boolean | null {
+  if (rows === undefined) return null
+  return rows.some((row) => row.day === day && row.reason === 'manual')
 }
 
 /**
@@ -363,12 +419,17 @@ export function cutTotalsEffects(
  * disabled when no quarter hour fits.
  * @param row - The selected carried-in row.
  * @param facts - The settings and day facts the totals rules read.
+ * @param at - The stepper's cut time, which decides whether a part leaves the idle count.
  * @returns The lines in display order; empty when there is nothing to say.
- * @example cutNotes(carriedIn, facts) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']
+ * @example cutNotes(carriedIn, facts, at) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']
  */
-export function cutNotes(row: CorrectionRow, facts: TotalsFacts): string[] {
+export function cutNotes(
+  row: CorrectionRow,
+  facts: TotalsFacts,
+  at: number | null,
+): string[] {
   if (!row.cut) return ['15分単位で区切れる時刻がありません']
-  return cutTotalsEffects(row, facts).map((effect) =>
+  return cutTotalsEffects(row, facts, at).map((effect) =>
     effect === 'idle'
       ? `区切ると、無操作扱い（${idleLabel(facts.idleThresholdMs / 60_000)}超）だった時間が集計に入ります`
       : '区切ると、この日は計測できた日になります',
@@ -471,8 +532,8 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
  * @param error - The error the undo's mutation failed with.
  * @returns
  * - 'clear': CONFLICT or NOT_FOUND
- * - 'archived': BAD_REQUEST (`changeActivity` refuses an archived target)
- * - 'keep': anything else
+ * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target)
+ * - 'keep': anything else, another BAD_REQUEST included
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
  */
 export function afterUndoFailure(
@@ -480,7 +541,19 @@ export function afterUndoFailure(
 ): 'keep' | 'clear' | 'archived' {
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
-  return error.code === 'BAD_REQUEST' ? 'archived' : 'keep'
+  return error.code === 'BAD_REQUEST' && isArchivedRefusal(error.data)
+    ? 'archived'
+    : 'keep'
+}
+
+// The archived refusal's marker from `switches.changeActivity`; any other BAD_REQUEST is a plain failure.
+function isArchivedRefusal(data: unknown): boolean {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'reason' in data &&
+    data.reason === 'archived'
+  )
 }
 
 /**

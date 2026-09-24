@@ -69,7 +69,11 @@ async function assertLiveActivities(
 ): Promise<void> {
   const rows = await ownActivities(userId, ids)
   if (rows.some((row) => row.archivedAt !== null))
-    throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
+    // `reason` lets the correction sheet tell this refusal from any other BAD_REQUEST.
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'activity is archived',
+      data: { reason: 'archived' },
+    })
 }
 
 // A correction-sheet edit: the row keeps its id, its source becomes 'correction'.

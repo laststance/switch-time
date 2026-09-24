@@ -801,10 +801,13 @@ test('a corrected segment cannot be moved onto an archived activity', async () =
   const row = await api.switches.switchTo({ activityId: work })
   await api.activities.archive({ id: rest })
 
-  // Act + Assert
+  // Act + Assert: the reason tells the sheet's undo this refusal apart from any other BAD_REQUEST
   await expect(
     api.switches.changeActivity({ id: row.id, activityId: rest }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  ).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    data: { reason: 'archived' },
+  })
 })
 
 test('splitting keeps both halves at least a minute long', async () => {
