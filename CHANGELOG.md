@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.7.0.0] - 2026-09-25
+
+### Added
+
+- An edit that lands after its correction sheet closed still arms
+  「元に戻す」, and reopening that day's sheet (from 記録 or 訂正) offers
+  it. The undo now belongs to the day, not to the open sheet, so a second
+  tap before the controls dim arms it too. An undo that lands after its
+  sheet closed leaves nothing to undo when the day is reopened.
+
+### Fixed
+
+- Signing in, or signing up, clears the previous account's cached data
+  and 「元に戻す」, as signing out already did: a session that expired or
+  was revoked elsewhere reaches sign-in without signing out. An edit of
+  the old session that lands later is ignored.
+- When another tab signs in as someone else, this tab drops the previous
+  account's cached rows and 「元に戻す」 as soon as it sees the new
+  session. The API also refuses a 「元に戻す」 that was armed under
+  another account, so a tab that has not caught up yet cannot write the
+  previous account's day into the new one's.
+- A 「元に戻す」 of a pick on the carried-in record, refused because
+  another device changed that record, says so on the status line.
+
+### Changed
+
+- `switches.replaceDay` takes an optional `account`, the user the undo
+  was armed under. The app always sends it; left out, it is not compared.
+
 ## [0.6.0.0] - 2026-09-25
 
 ### Added

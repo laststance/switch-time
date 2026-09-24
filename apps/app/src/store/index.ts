@@ -7,8 +7,12 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 
 import { clockSlice } from './clock'
+import { correctionSlice } from './correction'
 
-const appReducer = combineReducers({ clock: clockSlice.reducer })
+const appReducer = combineReducers({
+  clock: clockSlice.reducer,
+  correction: correctionSlice.reducer,
+})
 
 /**
  * Wipes every slice back to its initial state; dispatched by {@link useSignOut} so the next user never inherits client state.
@@ -17,7 +21,8 @@ const appReducer = combineReducers({ clock: clockSlice.reducer })
 export const resetApp = createAction('app/reset')
 
 /**
- * Client-only state (the clock). Server data, the user's settings included, lives in TanStack Query via {@link orpc}, never here.
+ * Client-only state (the clock, the correction sheet's 「元に戻す」). Server data, the user's settings included, lives in
+ * TanStack Query via {@link orpc}, never here.
  * @example <ReduxProvider store={store}>
  */
 export const store = configureStore({
@@ -26,6 +31,14 @@ export const store = configureStore({
     state: ReturnType<typeof appReducer> | undefined,
     action: UnknownAction,
   ) => appReducer(resetApp.match(action) ? undefined : state, action),
+  // An undo slot holds the `Date`s `switches.replaceDay` takes; it never leaves memory, so the dev-only check skips it.
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredPaths: ['correction.undo'],
+        ignoredActionPaths: ['payload.slot'],
+      },
+    }),
 })
 
 type RootState = ReturnType<typeof store.getState>

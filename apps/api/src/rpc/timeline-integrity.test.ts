@@ -9,10 +9,11 @@ import {
 } from '@switch-time/shared'
 import type { PoolClient } from 'pg'
 import { afterEach, expect, test, vi } from 'vitest'
+import { z } from 'zod'
 
 import { db, pool } from '../db/client'
 import { switches } from '../db/schema/app'
-import { signedIn } from '../test/client'
+import { cookieJar, rpc, signedIn, signUp } from '../test/client'
 
 const TZ = 'Asia/Tokyo'
 const H = 3_600_000
@@ -653,6 +654,35 @@ test('元に戻す that empties the account’s only day leaves no running state
   // Assert
   expect(written).toEqual([])
   expect(await api.switches.current()).toBeNull()
+})
+
+test('元に戻す armed under another account is refused and writes nothing, even detox-only rows on an empty day, while the account’s own lands', async () => {
+  // Arrange: B has no switches at all, so a detox-only snapshot with nothing expected passes every row check.
+  const response = await signUp('replace-other-account@example.com')
+  const { user } = z
+    .object({ user: z.object({ id: z.string() }) })
+    .parse(await response.clone().json())
+  const api = rpc(cookieJar(response))
+  const snapshot = {
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    carriedOutId: null,
+    rows: [{ activityId: null, startedAt: at(yesterday, 9) }],
+  }
+
+  // Act
+  const stale = api.switches.replaceDay({ ...snapshot, account: 'account-a' })
+  await expect(stale).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  const nothingWritten = await api.switches.current()
+  const own = await api.switches.replaceDay({ ...snapshot, account: user.id })
+
+  // Assert
+  expect(nothingWritten).toBeNull()
+  expect(own.map((row) => row.activityId)).toEqual([null])
 })
 
 // The unique-start migration's data step, the statement that spreads tied starts before the unique index is built.

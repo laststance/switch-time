@@ -5,13 +5,14 @@ import { useState } from 'react'
 import type { ZodType } from 'zod'
 
 import { queryClient } from '@/lib/query'
+import { resetApp, useAppDispatch } from '@/store'
 
 type AuthResult = { error: { message?: string } | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, the request as a mutation (the button waits on
- * `isPending`, Better Auth's message is its error). Success only clears the cache: the (auth) layout redirects once the session has
- * landed, so the (app) guard never sees the gap in between.
+ * `isPending`, Better Auth's message is its error). Success only clears the cache and the store: the (auth) layout redirects once the
+ * session has landed, so the (app) guard never sees the gap in between.
  * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v))
  */
 export function useAuthForm<T extends Record<string, string>>(
@@ -19,6 +20,7 @@ export function useAuthForm<T extends Record<string, string>>(
   initial: T,
   submit: (values: T) => Promise<AuthResult>,
 ) {
+  const dispatch = useAppDispatch()
   const [values, setValues] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const request = useMutation({
@@ -29,8 +31,13 @@ export function useAuthForm<T extends Record<string, string>>(
       }))
       if (error) throw new Error(error.message ?? 'もう一度お試しください')
     },
-    // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes).
-    onSuccess: () => queryClient.clear(),
+    // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes), nor its undo slots:
+    // a session that expired or was revoked elsewhere reaches sign-in without sign-out's reset. The reset also draws a new epoch,
+    // so an edit of the old session that lands late is ignored.
+    onSuccess: () => {
+      queryClient.clear()
+      dispatch(resetApp())
+    },
   })
 
   const set =

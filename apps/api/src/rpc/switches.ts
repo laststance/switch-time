@@ -101,7 +101,8 @@ async function assertLiveActivities(
 
 /**
  * A CONFLICT the correction sheet can name: the English message is for logs, and `data` (one of {@link REFUSAL}) is what the
- * app maps to Japanese. Every refusal of a timeline edit throws one.
+ * app maps to Japanese. Every CONFLICT refusal of a timeline edit throws one; the archived refusal is a BAD_REQUEST (the
+ * archived checks above) and the busy one a TOO_MANY_REQUESTS (`withUserLock`), with the same kind of `data`.
  * @example throw conflict('no next state', REFUSAL.noNeighbour)
  */
 const conflict = (
@@ -655,6 +656,9 @@ export const switchesRouter = {
     .input(replaceDayInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
+      // Armed under another account (a stale tab): its rows were never this user's day.
+      if (input.account !== undefined && input.account !== userId)
+        throw dayChanged()
       // The window the client meant; the lock below refuses the call when the stored zone is no longer this one.
       const window = dayBounds(input.day, input.timeZone)
       assertRowsFitDay(input.rows, window)
