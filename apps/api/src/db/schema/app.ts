@@ -83,6 +83,9 @@ export const switches = pgTable(
     // No end time: a segment lasts until the next row (or now); the latest row is the current state.
     startedAt: timestamptz('started_at').notNull(),
     source: switchSource('source').default('tap').notNull(),
+    // Bumped by every write that changes the row's activity or its span (its start, or where the next row starts), so a
+    // write that names the revision it saw is refused once another write reshaped the record (changeActivity's `revision`).
+    revision: integer('revision').default(0).notNull(),
     createdAt: timestamptz('created_at').defaultNow().notNull(),
   },
   (table) => [

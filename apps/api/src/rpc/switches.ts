@@ -1,5 +1,6 @@
 import { ORPCError } from '@orpc/server'
 import {
+  ARCHIVED_REFUSAL,
   clampStart,
   MIN_SEGMENT_MS,
   dayBounds,
@@ -7,8 +8,9 @@ import {
   localDay,
   moveStartInputSchema,
   replaceDayInputSchema,
+  splitAtInputSchema,
 } from '@switch-time/shared'
-import { and, asc, desc, eq, gt, gte, inArray, lt } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '../db/client'
@@ -58,7 +60,7 @@ async function ownActivities(
 
 /**
  * Rejects an archived activity (the user can no longer pick it) or one that is not the user's, for the writes that pick an
- * activity: switchTo and changeActivity. splitInHalf copies its row's own activity and the merges only move time, so neither
+ * activity: switchTo and changeActivity. The splits copy their row's own activity and the merges only move time, so none
  * calls it; replaceDay stops at {@link ownActivities}.
  * @example await assertLiveActivities(userId, [input.activityId])
  */
@@ -68,18 +70,89 @@ async function assertLiveActivities(
 ): Promise<void> {
   const rows = await ownActivities(userId, ids)
   if (rows.some((row) => row.archivedAt !== null))
-    throw new ORPCError('BAD_REQUEST', { message: 'activity is archived' })
+    // The data lets the correction sheet tell this refusal from any other BAD_REQUEST.
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'activity is archived',
+      data: ARCHIVED_REFUSAL,
+    })
 }
 
-// A correction-sheet edit: the row keeps its id, its source becomes 'correction'.
-const correct = async (id: string, values: Partial<SwitchRow>) =>
+/** `db` or a transaction: the writes below run in whichever the procedure opened. */
+type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// The `revision` a write leaves on a row whose activity or span it changed.
+const nextRevision = sql`${switches.revision} + 1`
+
+/**
+ * Marks a row whose span another row's write changed (its end moved: a tap after it, a split or merge next to it, a moved
+ * neighbour), so a {@link changeActivityAt} that saw the old span is refused. Called inside the write's transaction.
+ * @example await bumpRevision(tx, prev.id)
+ */
+async function bumpRevision(executor: Executor, id: string): Promise<void> {
+  await executor
+    .update(switches)
+    .set({ revision: nextRevision })
+    .where(eq(switches.id, id))
+}
+
+// A correction-sheet edit: the row keeps its id, its source becomes 'correction', and its revision moves on.
+const correct = async (
+  id: string,
+  values: Partial<SwitchRow>,
+  executor: Executor = db,
+) =>
   one(
-    await db
+    await executor
       .update(switches)
-      .set({ ...values, source: 'correction' })
+      .set({ ...values, source: 'correction', revision: nextRevision })
       .where(eq(switches.id, id))
       .returning(),
   )
+
+/**
+ * Writes an activity change only while the row is still at `revision`, in the statement that writes: any write since (an
+ * activity change, a merge or split that moved its end, a moved start) has moved the revision on, so a stale sheet or undo
+ * never overwrites it, even when the activity reads the same again. Called by changeActivity when the client names the
+ * revision it saw (the pick on a carried-in row, and the undo it arms).
+ * @returns the changed row; CONFLICT when the record changed since, NOT_FOUND when it is gone
+ * @example await changeActivityAt(userId, row.id, sleepId, 3) // 睡眠, unless another write reshaped the record after revision 3
+ */
+async function changeActivityAt(
+  userId: string,
+  id: string,
+  activityId: string | null,
+  revision: number,
+): Promise<SwitchRow> {
+  const [changed] = await db
+    .update(switches)
+    .set({ activityId, source: 'correction', revision: nextRevision })
+    .where(
+      and(own(userId), eq(switches.id, id), eq(switches.revision, revision)),
+    )
+    .returning()
+  if (changed) return changed
+  // Nothing matched: the row is gone (ownSwitch answers NOT_FOUND) or another write moved its revision on.
+  await ownSwitch(userId, id)
+  throw new ORPCError('CONFLICT', { message: 'record changed elsewhere' })
+}
+
+// A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitInHalf and
+// splitAt both insert it.
+const insertSplit = async (row: SwitchRow, startedAt: Date) =>
+  db.transaction(async (tx) => {
+    await bumpRevision(tx, row.id)
+    return one(
+      await tx
+        .insert(switches)
+        .values({
+          userId: row.userId,
+          activityId: row.activityId,
+          startedAt,
+          source: 'split',
+        })
+        .returning(),
+    )
+  })
 
 /**
  * Deletes a row and marks the neighbour that takes over its span as merged, in one transaction, or NOT_FOUND if either row is
@@ -103,7 +176,7 @@ const mergeInto = async (
     return one(
       await tx
         .update(switches)
-        .set({ ...values, source: 'merge' })
+        .set({ ...values, source: 'merge', revision: nextRevision })
         .where(eq(switches.id, keptId))
         .returning(),
     )
@@ -182,16 +255,20 @@ export const switchesRouter = {
       // ponytail: read-then-insert without a per-user lock; two simultaneous taps from one account can both land.
       // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
       if (current?.activityId === input.activityId) return current
-      return one(
-        await db
-          .insert(switches)
-          .values({
-            userId,
-            activityId: input.activityId,
-            startedAt: new Date(),
-          })
-          .returning(),
-      )
+      return db.transaction(async (tx) => {
+        // The running record now ends here.
+        if (current) await bumpRevision(tx, current.id)
+        return one(
+          await tx
+            .insert(switches)
+            .values({
+              userId,
+              activityId: input.activityId,
+              startedAt: new Date(),
+            })
+            .returning(),
+        )
+      })
     }),
 
   listByDay: authed
@@ -217,17 +294,35 @@ export const switchesRouter = {
       )
       if (startedAt === null)
         throw new ORPCError('CONFLICT', { message: 'no room to move' })
-      return correct(row.id, { startedAt: new Date(startedAt) })
+      return db.transaction(async (tx) => {
+        // The previous record now ends where this one starts.
+        if (prev) await bumpRevision(tx, prev.id)
+        return correct(row.id, { startedAt: new Date(startedAt) }, tx)
+      })
     }),
 
   changeActivity: authed
-    .input(z.object({ id: z.uuid(), activityId: z.uuid().nullable() }))
+    .input(
+      z.object({
+        id: z.uuid(),
+        activityId: z.uuid().nullable(),
+        // The row's revision the caller saw: when given, the write happens only while the record is unchanged since.
+        revision: z.number().int().nonnegative().optional(),
+      }),
+    )
     .handler(async ({ context, input }) => {
       const [row] = await Promise.all([
         ownSwitch(context.user.id, input.id),
         assertLiveActivities(context.user.id, [input.activityId]),
       ])
-      return correct(row.id, { activityId: input.activityId })
+      if (input.revision === undefined)
+        return correct(row.id, { activityId: input.activityId })
+      return changeActivityAt(
+        context.user.id,
+        row.id,
+        input.activityId,
+        input.revision,
+      )
     }),
 
   mergeIntoPrevious: authed.input(byId).handler(async ({ context, input }) => {
@@ -261,18 +356,24 @@ export const switchesRouter = {
     if (end - row.startedAt.getTime() < 2 * MIN_SEGMENT_MS)
       throw new ORPCError('CONFLICT', { message: 'segment too short to split' })
     const midpoint = new Date(Math.floor((row.startedAt.getTime() + end) / 2))
-    return one(
-      await db
-        .insert(switches)
-        .values({
-          userId: row.userId,
-          activityId: row.activityId,
-          startedAt: midpoint,
-          source: 'split',
-        })
-        .returning(),
-    )
+    return insertSplit(row, midpoint)
   }),
+
+  // 「ここで分割」 on the carried-in row: the cut lands at the chosen time, which may be far from the record's middle. It needs no
+  // day: the client offers only times inside the viewed day, so the new row is that day's own and its 元に戻す removes it.
+  splitAt: authed
+    .input(splitAtInputSchema)
+    .handler(async ({ context, input }) => {
+      // gstack-shortcut(dec-7253328b): no per-user lock, upgrade when TODOS P1 "Serialize a user's switch writes" lands
+      const { row, next } = await withNeighbours(context.user.id, input.id)
+      const at = input.at.getTime()
+      // Both parts keep the 1-minute floor that moveStart enforces through clampStart; the current state ends at now.
+      const earliest = row.startedAt.getTime() + MIN_SEGMENT_MS
+      const latest = (next?.startedAt.getTime() ?? Date.now()) - MIN_SEGMENT_MS
+      if (at < earliest || at > latest)
+        throw new ORPCError('CONFLICT', { message: 'no room to split there' })
+      return insertSplit(row, input.at)
+    }),
 
   // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction. Rows on an archived
   // activity are accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good.
@@ -310,6 +411,14 @@ export const switchesRouter = {
         input.rows.map((row) => row.activityId),
       )
       return db.transaction(async (tx) => {
+        // The record carried into the day ends at the day's first row, which this write may move.
+        const [carriedIn] = await tx
+          .select({ id: switches.id })
+          .from(switches)
+          .where(and(own(userId), lt(switches.startedAt, new Date(start))))
+          .orderBy(desc(switches.startedAt))
+          .limit(1)
+        if (carriedIn) await bumpRevision(tx, carriedIn.id)
         await tx
           .delete(switches)
           .where(

@@ -4,7 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
-## [Unreleased]
+## [0.3.0.0] - 2026-09-24
+
+### Added
+
+- The record that runs into a day from the day before (sleep past midnight,
+  say) can now be corrected on that day's sheet. Its panel says when it
+  really started, and 区切る時刻 picks a quarter hour to cut it at with
+  「ここで分割」: the part after the cut becomes a new record of its own,
+  selected so the next pick changes only that part. The lines under the
+  button say how the cut changes the totals (idle time that comes back,
+  a day that becomes 計測できた日).
+- 活動を変える on that record changes the whole record, the earlier day
+  included, and 「元に戻す」 puts the previous activity back. The panel
+  warns before a pick away from an archived activity, since that pick
+  cannot be undone.
+
+### Fixed
+
+- A pick on a record that reaches an earlier day, and its undo, never
+  overwrite a change made on another device: a record that was changed,
+  merged, split or moved elsewhere since the sheet listed it is refused and
+  「元に戻す」 turns off, instead of rewriting time the sheet never saw.
+- An undo refused because the previous activity was archived meanwhile
+  says so on the row.
 
 ### Changed
 

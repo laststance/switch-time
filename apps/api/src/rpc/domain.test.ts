@@ -801,10 +801,13 @@ test('a corrected segment cannot be moved onto an archived activity', async () =
   const row = await api.switches.switchTo({ activityId: work })
   await api.activities.archive({ id: rest })
 
-  // Act + Assert
+  // Act + Assert: the reason tells the sheet's undo this refusal apart from any other BAD_REQUEST
   await expect(
     api.switches.changeActivity({ id: row.id, activityId: rest }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  ).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    data: { reason: 'archived' },
+  })
 })
 
 test('splitting keeps both halves at least a minute long', async () => {
@@ -1213,4 +1216,391 @@ test('another account cannot move a switch onto detox or switch to a foreign act
     stranger.switches.switchTo({ activityId: work }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   expect((await owner.switches.current())?.activityId).toBe(work)
+})
+
+const twoDaysAgo = addDays(today, -2)
+
+test('cutting the record carried into a day inserts a row at the chosen time with the record’s activity', async () => {
+  // Arrange: 仕事 from 22:00 two days ago runs into yesterday until 食事 at 7:00
+  const api = await signedIn('split-at@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  await api.switches.replaceDay({
+    day: twoDaysAgo,
+    rows: [{ activityId: 仕事, startedAt: at(twoDaysAgo, 22) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+  })
+  const { carriedIn } = await api.switches.listByDay({ day: yesterday })
+  if (!carriedIn) throw new Error('fixture carries nothing into yesterday')
+
+  // Act
+  const created = await api.switches.splitAt({
+    id: carriedIn.id,
+    at: at(yesterday, 3),
+  })
+
+  // Assert: yesterday now opens with its own 仕事 row at 3:00, and the carried-in record still starts two days ago
+  expect(created).toMatchObject({
+    activityId: 仕事,
+    startedAt: at(yesterday, 3),
+    source: 'split',
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.carriedIn).toMatchObject({
+    id: carriedIn.id,
+    startedAt: at(twoDaysAgo, 22),
+  })
+  expect(after.rows.map((row) => [row.id, row.startedAt])).toEqual([
+    [created.id, at(yesterday, 3)],
+    [after.rows[1]?.id, at(yesterday, 7)],
+  ])
+})
+
+test('a cut keeps a minute from both ends of the record: exactly a minute is accepted, a millisecond less is refused', async () => {
+  // Arrange: yesterday 仕事 9:00 then 休息 13:00
+  const api = await signedIn('split-at-margins@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+    ],
+  })
+  const work = (await api.switches.listByDay({ day: yesterday })).rows[0]
+  if (!work) throw new Error('fixture has no first row')
+  const earliest = at(yesterday, 9).getTime() + MIN
+  const latest = at(yesterday, 13).getTime() - MIN
+
+  // Act + Assert: a millisecond inside either margin is refused and writes nothing
+  await expect(
+    api.switches.splitAt({ id: work.id, at: new Date(earliest - 1) }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(
+    api.switches.splitAt({ id: work.id, at: new Date(latest + 1) }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect((await api.switches.listByDay({ day: yesterday })).rows).toHaveLength(
+    2,
+  )
+
+  // Act + Assert: exactly a minute from the next record, then exactly a minute from the record's own start
+  await api.switches.splitAt({ id: work.id, at: new Date(latest) })
+  await api.switches.splitAt({ id: work.id, at: new Date(earliest) })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    new Date(earliest),
+    new Date(latest),
+    at(yesterday, 13),
+  ])
+})
+
+test('the current state cannot be cut within the last minute before now', async () => {
+  // Arrange: 仕事 has been the current state for two hours
+  const api = await signedIn('split-at-now@example.com')
+  const { id: userId } = await api.me()
+  const 仕事 = idOf(await api.activities.list(), '仕事')
+  const [current] = await db
+    .insert(switches)
+    .values({
+      userId,
+      activityId: 仕事,
+      startedAt: new Date(Date.now() - 2 * H),
+    })
+    .returning()
+  if (!current) throw new Error('seed failed')
+
+  // Act + Assert: half a minute ago is too close to now; an hour ago is fine
+  await expect(
+    api.switches.splitAt({
+      id: current.id,
+      at: new Date(Date.now() - 30_000),
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  const anHourAgo = new Date(Date.now() - H)
+  const created = await api.switches.splitAt({ id: current.id, at: anHourAgo })
+  expect(created).toMatchObject({ activityId: 仕事, startedAt: anHourAgo })
+  expect((await api.switches.current())?.id).toBe(created.id)
+})
+
+test('another account cannot cut a record: the id reads as missing and the owner’s rows stay as they were', async () => {
+  // Arrange: the owner has yesterday 仕事 9:00 then 休息 13:00
+  const owner = await signedIn('split-at-owner@example.com')
+  const stranger = await signedIn('split-at-stranger@example.com')
+  const list = await owner.activities.list()
+  await owner.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+    ],
+  })
+  const work = (await owner.switches.listByDay({ day: yesterday })).rows[0]
+  if (!work) throw new Error('fixture has no first row')
+
+  // Act + Assert: 11:00 is a valid cut for the owner, so only the ownership check can refuse the stranger
+  await expect(
+    stranger.switches.splitAt({ id: work.id, at: at(yesterday, 11) }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const after = await owner.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    at(yesterday, 13),
+  ])
+})
+
+test('an activity change that names the revision it saw writes once, and a second change at that revision is refused', async () => {
+  // Arrange: a 仕事 record at revision 0
+  const api = await signedIn('change-revision@example.com')
+  const list = await api.activities.list()
+  const 睡眠 = idOf(list, '睡眠')
+  const row = await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+
+  // Act: 仕事 → 睡眠 at revision 0, then a second change that still names revision 0
+  const changed = await api.switches.changeActivity({
+    id: row.id,
+    activityId: 睡眠,
+    revision: 0,
+  })
+  const stale = api.switches.changeActivity({
+    id: row.id,
+    activityId: idOf(list, '休息'),
+    revision: 0,
+  })
+
+  // Assert: the first writes and moves the revision on, the stale one is refused and leaves 睡眠 in place
+  expect(changed).toMatchObject({
+    id: row.id,
+    activityId: 睡眠,
+    source: 'correction',
+    revision: 1,
+  })
+  await expect(stale).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect((await api.switches.current())?.activityId).toBe(睡眠)
+})
+
+test('an activity change that names a revision reads as missing once the record is gone', async () => {
+  // Arrange: yesterday 仕事 9:00 then 休息 13:00, and 休息 merged away into 仕事
+  const api = await signedIn('change-revision-gone@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+    ],
+  })
+  const rest = (await api.switches.listByDay({ day: yesterday })).rows[1]
+  if (!rest) throw new Error('fixture has no second row')
+  await api.switches.mergeIntoPrevious({ id: rest.id })
+
+  // Act
+  const change = api.switches.changeActivity({
+    id: rest.id,
+    activityId: idOf(list, '睡眠'),
+    revision: rest.revision,
+  })
+
+  // Assert
+  await expect(change).rejects.toMatchObject({ code: 'NOT_FOUND' })
+})
+
+test('a stale activity undo is refused after another device merged the next record into it, so the merged time keeps its activity', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 13:00, 食事 15:00; device A changes 仕事 to 睡眠, arming an undo at the new revision
+  const api = await signedIn('undo-after-merge@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  const 睡眠 = idOf(list, '睡眠')
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: 仕事, startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+      { activityId: idOf(list, '食事'), startedAt: at(yesterday, 15) },
+    ],
+  })
+  const [work, rest] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work || !rest) throw new Error('fixture has no rows')
+  const picked = await api.switches.changeActivity({
+    id: work.id,
+    activityId: 睡眠,
+    revision: work.revision,
+  })
+  // Device B merges 休息 into the record, which now runs 9:00 – 15:00 with the same id and activity
+  await api.switches.mergeIntoPrevious({ id: rest.id })
+
+  // Act: device A's undo, at the revision its pick left
+  const undo = api.switches.changeActivity({
+    id: work.id,
+    activityId: 仕事,
+    revision: picked.revision,
+  })
+
+  // Assert: refused, and 9:00 – 15:00 stays 睡眠
+  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.startedAt, row.activityId])).toEqual([
+    [at(yesterday, 9), 睡眠],
+    [at(yesterday, 15), idOf(list, '食事')],
+  ])
+})
+
+test('a stale activity undo is refused after another device changed the activity away and back again', async () => {
+  // Arrange: device A changes a 仕事 record to 睡眠; device B changes it to 娯楽 and back to 睡眠
+  const api = await signedIn('undo-after-aba@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  const 睡眠 = idOf(list, '睡眠')
+  const row = await api.switches.switchTo({ activityId: 仕事 })
+  const picked = await api.switches.changeActivity({
+    id: row.id,
+    activityId: 睡眠,
+    revision: row.revision,
+  })
+  const away = await api.switches.changeActivity({
+    id: row.id,
+    activityId: idOf(list, '娯楽'),
+    revision: picked.revision,
+  })
+  await api.switches.changeActivity({
+    id: row.id,
+    activityId: 睡眠,
+    revision: away.revision,
+  })
+
+  // Act: device A's undo still names the revision its pick left, though the activity reads 睡眠 again
+  const undo = api.switches.changeActivity({
+    id: row.id,
+    activityId: 仕事,
+    revision: picked.revision,
+  })
+
+  // Assert
+  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect((await api.switches.current())?.activityId).toBe(睡眠)
+})
+
+test('a stale carried-in undo is refused after the record was picked again on its own day’s sheet, which names no revision', async () => {
+  // Arrange: device A changes a 仕事 record to 睡眠 as carried-in; device B, on the record's own day, picks 娯楽 then 睡眠 without a revision
+  const api = await signedIn('undo-after-own-day-picks@example.com')
+  const list = await api.activities.list()
+  const 睡眠 = idOf(list, '睡眠')
+  const row = await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  const picked = await api.switches.changeActivity({
+    id: row.id,
+    activityId: 睡眠,
+    revision: row.revision,
+  })
+  await api.switches.changeActivity({
+    id: row.id,
+    activityId: idOf(list, '娯楽'),
+  })
+  await api.switches.changeActivity({ id: row.id, activityId: 睡眠 })
+
+  // Act
+  const undo = api.switches.changeActivity({
+    id: row.id,
+    activityId: idOf(list, '仕事'),
+    revision: picked.revision,
+  })
+
+  // Assert
+  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect(await api.switches.current()).toMatchObject({
+    activityId: 睡眠,
+    revision: 3,
+  })
+})
+
+test('an activity change naming a negative or fractional revision is refused as bad input and writes nothing', async () => {
+  // Arrange
+  const api = await signedIn('change-bad-revision@example.com')
+  const list = await api.activities.list()
+  const 仕事 = idOf(list, '仕事')
+  const row = await api.switches.switchTo({ activityId: 仕事 })
+
+  // Act
+  const negative = await api.switches
+    .changeActivity({
+      id: row.id,
+      activityId: idOf(list, '睡眠'),
+      revision: -1,
+    })
+    .catch((error: unknown) => error)
+  const fractional = await api.switches
+    .changeActivity({
+      id: row.id,
+      activityId: idOf(list, '睡眠'),
+      revision: 0.5,
+    })
+    .catch((error: unknown) => error)
+
+  // Assert
+  expect([negative, fractional]).toMatchObject([
+    { code: 'BAD_REQUEST' },
+    { code: 'BAD_REQUEST' },
+  ])
+  expect(await api.switches.current()).toMatchObject({
+    activityId: 仕事,
+    revision: 0,
+  })
+})
+
+test('every write that moves where a record ends moves that record’s revision on', async () => {
+  // Arrange: yesterday 仕事 9:00 then 休息 13:00
+  const api = await signedIn('revision-bumps@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
+    ],
+  })
+  const [work] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work) throw new Error('fixture has no first row')
+  const revisionOf = async (id: string) =>
+    (await api.switches.listByDay({ day: yesterday })).rows.find(
+      (row) => row.id === id,
+    )?.revision
+
+  // Act + Assert: each write that moves 仕事's end moves its revision on by one
+  const half = await api.switches.splitInHalf({ id: work.id })
+  expect(await revisionOf(work.id)).toBe(1)
+  await api.switches.moveStart({ id: half.id, deltaMinutes: 15 })
+  expect([await revisionOf(work.id), await revisionOf(half.id)]).toEqual([2, 1])
+  await api.switches.mergeIntoPrevious({ id: half.id })
+  expect(await revisionOf(work.id)).toBe(3)
+  await api.switches.splitAt({ id: work.id, at: at(yesterday, 10) })
+  expect(await revisionOf(work.id)).toBe(4)
+})
+
+test('a tap ends the running record and a rewritten day moves the record carried into it, and both move its revision on', async () => {
+  // Arrange: yesterday 睡眠 from 22:00 runs into today
+  const api = await signedIn('revision-tap-replace@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 22) }],
+  })
+  const sleep = await api.switches.current()
+  if (!sleep) throw new Error('fixture has no current state')
+
+  // Act: a tap ends 睡眠, then today's rows are rewritten, which moves where 睡眠 ends
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  const afterTap = (await api.switches.listByDay({ day: yesterday })).rows[0]
+  await api.switches.replaceDay({
+    day: today,
+    rows: [{ activityId: idOf(list, '家事'), startedAt: at(today, 0) }],
+  })
+  const afterReplace = (await api.switches.listByDay({ day: yesterday }))
+    .rows[0]
+
+  // Assert
+  expect([sleep.revision, afterTap?.revision, afterReplace?.revision]).toEqual([
+    0, 1, 2,
+  ])
 })

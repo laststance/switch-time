@@ -192,7 +192,7 @@ pen は「ルート同士を重ねるな」という制約がある。高さが 
 jq -r '.children[] | "\(.name)  x=\(.x)..\(.x+.width)  y=\(.y)..\(.y+.height)"' switch-time.pen
 ```
 
-現在: 電話7枚が `y=0`（x を 462 刻み）、Menubar と Web が `y=1558`。
+現在: 電話7枚と訂正シートの持ち越し行2枚が `y=0`（x を 462 刻み）、Menubar と Web 2枚（ST Web・ST Web / 訂正シート）が `y=1558`。
 
 ## `.dc.html` 資産の扱い — 決定済み
 
