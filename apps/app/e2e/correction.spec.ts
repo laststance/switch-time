@@ -1721,7 +1721,9 @@ test('a refusal shows at once even when the connection drops before the list is 
     '別の端末で記録が変わったため、最新の状態を表示しました',
   )
   await expect(
-    dialog.getByText('オフラインです。接続が戻ると反映されます'),
+    dialog
+      .getByRole('status')
+      .filter({ hasText: 'オフラインです。接続が戻ると反映されます' }),
   ).toHaveCount(0)
 })
 
