@@ -252,12 +252,81 @@ test('a failure or notice that lands after sign-out, or after another account si
       text: 'これ以上動かせません',
     }),
   )
+  store.dispatch(
+    noticed({
+      epoch: store.getState().correction.epoch,
+      day: '2026-09-24',
+      id: 'carried-in',
+    }),
+  )
   store.dispatch(resetApp())
 
   // Assert
   expect(sheet.getState().refusal).toEqual({})
   expect(sheet.getState().notice).toEqual({})
   expect(store.getState().correction.refusal).toEqual({})
+  expect(store.getState().correction.notice).toEqual({})
+})
+
+test('a press from before sign-out cannot clear the next account’s line or notice', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const before = sheet.getState().epoch
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
+  const after = sheet.getState().epoch
+  sheet.dispatch(
+    refused({ epoch: after, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+  sheet.dispatch(noticed({ epoch: after, day: '2026-09-24', id: 'carried-in' }))
+
+  // Act
+  sheet.dispatch(hushed({ epoch: before, day: '2026-09-24', notice: true }))
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': 'これ以上動かせません',
+  })
+  expect(sheet.getState().notice).toEqual({ '2026-09-24': 'carried-in' })
+})
+
+test('a session refetch for the same account keeps each day’s line and notice', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const { epoch } = sheet.getState()
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+  sheet.dispatch(noticed({ epoch, day: '2026-09-24', id: 'carried-in' }))
+
+  // Act
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': 'これ以上動かせません',
+  })
+  expect(sheet.getState().notice).toEqual({ '2026-09-24': 'carried-in' })
+})
+
+test('a second failure on the same day replaces its line, so the line names the latest failure', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  const { epoch } = sheet.getState()
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+
+  // Act
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: '統合できる記録がありません' }),
+  )
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': '統合できる記録がありません',
+  })
 })
 
 test('a sign-in as someone else in another tab drops the cached queries too, while the first account after a reset only claims the slots', () => {

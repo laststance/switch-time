@@ -2071,6 +2071,199 @@ test('an answer to a press selects its row while the sheet shows the day it was 
   })
 })
 
+test('a day with nothing armed offers no 元に戻す, even once its list has arrived', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const listed = { rows: [work], carriedIn: null, carriedOut: null }
+
+  // Act
+  const offered = offeredUndo(undefined, listed, 'Asia/Tokyo')
+
+  // Assert
+  expect(offered).toBeUndefined()
+})
+
+test('元に戻す turns off once another device changed a row’s activity, even though every row keeps its id and start', () => {
+  // Arrange: the merge left 仕事 9:00; another device then picked 休息 on it.
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [{ id: 'w', activityId: 'work', startedAt: work.startedAt }],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const repicked = row('w', 'rest', new Date('2026-09-08T09:00:00+09:00'))
+
+  // Act
+  const offered = offeredUndo(
+    slot,
+    { rows: [repicked], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(offered).toBeUndefined()
+})
+
+test('元に戻す turns off once the day’s rows were written back under new ids, even with the same activities and starts', () => {
+  // Arrange: another device's 元に戻す rewrote the day through replaceDay, which gives every row a new id.
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [{ id: 'w', activityId: 'work', startedAt: work.startedAt }],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const rewritten = row('w2', 'work', new Date('2026-09-08T09:00:00+09:00'))
+
+  // Act
+  const offered = offeredUndo(
+    slot,
+    { rows: [rewritten], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(offered).toBeUndefined()
+})
+
+test('today’s 元に戻す stays on while no switch follows the day, and turns off once one does', () => {
+  // Arrange: today's edit left 仕事 9:00 running, with nothing after it.
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [{ id: 'w', activityId: 'work', startedAt: work.startedAt }],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const nextMorning = row('n', 'sleep', new Date('2026-09-09T07:00:00+09:00'))
+
+  // Act
+  const whileRunning = offeredUndo(
+    slot,
+    { rows: [work], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+  const onceFollowed = offeredUndo(
+    slot,
+    { rows: [work], carriedIn: null, carriedOut: nextMorning },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(whileRunning).toBe(slot)
+  expect(onceFollowed).toBeUndefined()
+})
+
+test('a day’s 元に戻す stays on when only the carried-in record changed, since replaceDay never rewrites it', () => {
+  // Arrange: the day's own rows are as the edit left them; the record carried in from 9/7 was picked again elsewhere.
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const carried = row('c', 'sleep', new Date('2026-09-07T22:00:00+09:00'))
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [{ id: 'w', activityId: 'work', startedAt: work.startedAt }],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+
+  // Act
+  const offered = offeredUndo(
+    slot,
+    {
+      rows: [work],
+      carriedIn: { ...carried, activityId: 'rest', revision: 7 },
+      carriedOut: null,
+    },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(offered).toBe(slot)
+})
+
+test('a carried-in pick’s 元に戻す turns off once the day no longer lists that record as carried in', () => {
+  // Arrange: the pick left record 'c' at revision 4.
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'rest',
+    revision: 4,
+  }
+  const other = row('d', 'work', new Date('2026-09-07T23:00:00+09:00'))
+
+  // Act
+  const noneCarried = offeredUndo(
+    slot,
+    { rows: [], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+  const anotherCarried = offeredUndo(
+    slot,
+    { rows: [], carriedIn: { ...other, revision: 4 }, carriedOut: null },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(noneCarried).toBeUndefined()
+  expect(anotherCarried).toBeUndefined()
+})
+
+test('on the same day the user’s own selection outranks the row a kept notice was raised for', () => {
+  // Arrange: the user selected 'r' after the notice for the carried-in record was kept.
+  const sheet: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'r',
+    focusId: null,
+  }
+
+  // Act
+  const view = sheetView(sheet, '2026-09-08', { notice: 'carried-in' })
+
+  // Assert
+  expect(view).toEqual({
+    sheet: { day: '2026-09-08', selectedId: 'r', focusId: null },
+    selectedId: 'r',
+    noticeId: 'carried-in',
+    refusal: null,
+  })
+})
+
+test('an undo’s reselect on the day it was pressed on selects the row and keeps the focused row', () => {
+  // Arrange
+  const sheet: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: null,
+    focusId: 'inserted',
+  }
+
+  // Act
+  const revealed = onPressedDay(sheet, '2026-09-08', { selectedId: 'r' })
+
+  // Assert
+  expect(revealed).toEqual({
+    day: '2026-09-08',
+    selectedId: 'r',
+    focusId: 'inserted',
+  })
+})
+
 test('a landed edit arms its undo, drops the older one when it has none, and raises the archived notice for an archived pick', () => {
   // Arrange
   const slot: UndoSlot = {
