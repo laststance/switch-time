@@ -1,9 +1,16 @@
 {
   "mcpServers": {
-    "wallaby": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["${userHome}/.wallaby/mcp"]
+    "pen": {
+      "command": "/Applications/Pen.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
+      "args": ["--app", "desktop", "--agent", "cursorIDE"],
+      "env": {},
+      "type": "stdio"
+    },
+    "pencil-cursor": {
+      "command": "/Users/ryotamurakami/.pencil/mcp/cursor/out/mcp-server-darwin-arm64",
+      "args": ["--app", "cursor", "--agent", "cursorIDE"],
+      "env": {},
+      "type": "stdio"
     }
   }
 }
