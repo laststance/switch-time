@@ -101,7 +101,8 @@ async function assertLiveActivities(
 
 /**
  * A CONFLICT the correction sheet can name: the English message is for logs, and `data` (one of {@link REFUSAL}) is what the
- * app maps to Japanese. Every refusal of a timeline edit throws one.
+ * app maps to Japanese. Every CONFLICT refusal of a timeline edit throws one; the archived refusal is a BAD_REQUEST (the
+ * archived checks above) and the busy one a TOO_MANY_REQUESTS (`withUserLock`), with the same kind of `data`.
  * @example throw conflict('no next state', REFUSAL.noNeighbour)
  */
 const conflict = (

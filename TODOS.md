@@ -66,13 +66,13 @@
 **Priority:** P3
 **Depends on:** None
 
-### Arm 「元に戻す」 from the mutation, not from the tap
+### Say an edit failed after its sheet closed
 
-**What:** Take the undo snapshot in a hook-level `onMutate` (returned as the mutation's context), arm the slot in the hook-level `onSuccess`, and keep the slot outside the sheet (Redux, keyed by day) so a reopened sheet for that day can still offer 元に戻す.
+**What:** When an edit or undo started from the correction sheet is refused or times out after the sheet closed, say so somewhere the user is: a line on ホーム, or the status line of the sheet reopened for that day.
 
-**Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND, or the day-changed refusal) leaves 元に戻す unarmed, or armed with an older edit, which the day undo's `expected` rows now refuse rather than reverting two edits. A merge that lands after 完了 can never be undone, and neither can one whose answer the app gave up on after 30 s (the status line asks the user to check the rows, and any older 元に戻す turns off).
+**Why:** The refusal text lives in the sheet's own state, so a sheet closed while its write was in flight drops it. The rows show the day as it is, but nothing says the edit did not happen (or may have landed, after a timeout).
 
-**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list; it would take over `press` in `use-correction.ts`, which takes the day's baseline at the press and arms from it and the returned row (`rowsAfterEdit`). `correction.spec.ts` already presses 元に戻す after a held answer lands with the sheet open ("undo after a merge restores the day the merge was pressed on…"); add the closed-sheet and double-tap cases. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
+**Context:** `useEditLifecycle` in `apps/app/src/hooks/use-correction.ts` sets the refusal from the mutation's hook-level `onError`, with the day from `onMutate`; the undo slot already moved to the store (`correctionSlice`) for the same reason. A refusal could join it there, keyed by day like the slot, with the sign-out `epoch`. Related: "Say why a tap on ホーム was refused". Found by the eng review of the PR that moved the undo into the store (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -82,9 +82,9 @@
 
 **What:** Give the user a way to bring back a record of an archived activity once 「元に戻す」 is gone. Either `changeActivity` accepts the user's archived activity on a past row (and 活動を変える offers it there), or an `activities.unarchive` route with a control in 設定 brings the activity back so the usual edits can rebuild the row.
 
-**Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, but only while the sheet that made the edit is open. After 完了, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
+**Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, and since the undo moved into the store it survives closing the sheet, but not a reload or sign-out. After that, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
 
-**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one: "not the latest row", checked under the user's timeline lock, as `replaceDay` and `mergeIntoPrevious` have done since 0.5.0.0 (`assertLiveActivities` on the row that becomes the latest switch, in `apps/api/src/rpc/switches.ts`); a later merge or undo that makes the edited row the latest is then refused by those checks. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
+**Context:** The undo slot lives in the Redux store per day (`correctionSlice`), so it outlives the sheet but not the page or the session. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one: "not the latest row", checked under the user's timeline lock, as `replaceDay` and `mergeIntoPrevious` have done since 0.5.0.0 (`assertLiveActivities` on the row that becomes the latest switch, in `apps/api/src/rpc/switches.ts`); a later merge or undo that makes the edited row the latest is then refused by those checks. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
 
 **Effort:** M
 **Priority:** P3
@@ -97,18 +97,6 @@
 **Why:** 「半分で分割」 always cuts at the midpoint, so splitting a row at the time something really changed still takes a split followed by several ±15 moves, each a round trip. The carried-in record already cuts at a chosen quarter hour in one write.
 
 **Context:** `cutRange` in `lib/correction.ts` computes the range for carried-in rows only (`cut` is null on the day's own rows), and `switches.splitAt` accepts any row. The day's own rows need the same margins as `clampStart` from both neighbours. Out of scope for the carried-in row's panel (2026-09-24); raised as an open question in its design.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Select the new row after 半分で分割, as 「ここで分割」 does
-
-**What:** After 「半分で分割」 lands, select (and focus) the later half, which `splitInHalf` already returns.
-
-**Why:** After 「ここで分割」 on the carried-in record the sheet selects the new row, so the next pick changes only the later part. 「半分で分割」 keeps the old row selected, so the same next pick changes the earlier half, and the two cuts behave differently.
-
-**Context:** `useCorrection`'s `cut` calls `select` and `setFocusId` with the row `splitAt` returns; `split` could do the same with `splitInHalf`'s answer, and `undoSlotFor` could remember the halved row to reselect on undo as it does for a cut. Raised by the design review of the carried-in row's panel (2026-09-24) (D12).
 
 **Effort:** S
 **Priority:** P3
@@ -168,7 +156,7 @@
 
 **Why:** Against a hung API the re-read hits the same 30 s deadline plus the one query retry (about 61 s). The panel is dim that whole time, but the line already asks the user to check rows that still show the day before the edit. If the read fails, the panel is released on those stale rows, and redoing the edit is refused with the day-changed text, which blames another device for this device's late write. Nothing is lost there (the API's baseline check holds), but the line points at the wrong rows. On a day over `DAY_ROWS_MAX` (300 rows) the baseline carries no row list, so redoing a ±15分 move or a split that did land late passes the check and applies twice.
 
-**Context:** `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts` no longer awaits the refetch after a `RequestTimeoutError`, so the timeout line shows at 30 s; `statusLine` in `apps/app/src/lib/correction.ts` puts a refusal ahead of any waiting text, and `waiting` follows writes only, not `list.isFetching`. New text needs the pen file's 訂正シート・状態行 board first. Left over from the PR that added the status line (2026-09-25).
+**Context:** `useEditLifecycle` in `apps/app/src/hooks/use-correction.ts` does not await the refetch after a `RequestTimeoutError`, so the timeout line shows at 30 s; `statusLine` in `apps/app/src/lib/correction.ts` puts a refusal ahead of any waiting text, and `waiting` follows writes only, not `list.isFetching`. New text needs the pen file's 訂正シート・状態行 board first. Left over from the PR that added the status line (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -192,7 +180,7 @@
 
 **Why:** A connection that drops after the server committed tells the user the edit was not saved. The refetch then shows it landed, and pressing ±15分 again moves the record twice, because the new baseline matches. A request refused for its input fails the same way on every press while the text asks for another try.
 
-**Context:** `fail` and `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+**Context:** `failed` and `useEditLifecycle` (its `onError`) in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -202,45 +190,9 @@
 
 **What:** Remember that the last write on the sheet timed out, and until the next success show a neutral day-changed or record-changed text (for example 「記録が変わっていたため、最新の状態を表示しました」) instead of one that names 別の端末.
 
-**Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch.
+**Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch, and to the second press of a double tap (two presses before the controls dim), which the first press's edit refuses.
 
-**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `fail` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Show a refusal even while the re-read after it waits for the network
-
-**What:** Set the refusal text in the hook-level `onError` of each correction mutation, before `onSettled` awaits the re-read, and keep the re-read only as the gate for enabling the panel again.
-
-**Why:** TanStack calls the per-call `mutate(..., { onError })` only after the hook-level `onSettled` resolves. If the connection drops between the refusal and its re-read, the re-read pauses offline with no deadline, the mutation stays pending, and the sheet says the edit will apply once back online although the server already refused it.
-
-**Context:** `useRefetchAfterEdit` and the edit callbacks in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Tie a refusal to the day it was said on
-
-**What:** Keep the refusal as `{ day, text }` and show it only while the sheet shows that day, as `canUndo` already checks `slot.day`.
-
-**Why:** With no `?day=` the sheet follows today, so after midnight, or after a `?day=` change that keeps the screen mounted, the day before's 「これ以上動かせません」 stays under the new day's rows.
-
-**Context:** `useCorrectionState` and the `status` wiring in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Cover a refused day undo's archived line end to end
-
-**What:** Add an e2e that merges into today's running record so the day slot would restore an archived activity as the current state, archives that activity through the API, presses 元に戻す, and checks the one `role="alert"` reads 「アーカイブ済みの活動になるため、変更できません」 with 元に戻す off.
-
-**Why:** A day undo refused as archived has no row id, so it shows the line under the rows rather than the row notice. The only archived-undo e2e takes the row path, so a regression back to a silent refusal, or to both alerts at once, would pass every test.
-
-**Context:** the `&& id` branch of the undo's `onError` in `apps/app/src/hooks/use-correction.ts`; 'undoing a pick whose previous activity was archived meanwhile' in `apps/app/e2e/correction.spec.ts`. Also narrow `conflict`'s JSDoc in `apps/api/src/rpc/switches.ts`: the archived and busy refusals are a `BAD_REQUEST` and a `TOO_MANY_REQUESTS`, not a `CONFLICT`. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `useEditLifecycle` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
 
 **Effort:** S
 **Priority:** P3

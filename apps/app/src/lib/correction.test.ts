@@ -14,15 +14,18 @@ import {
   dayTitle,
   isDayChangedRefusal,
   isManuallyExcluded,
+  landedUndo,
   openedCut,
   pickRequest,
   refusalMessage,
+  reselectedRow,
   revealOffset,
   rowsAfterEdit,
   statusLine,
   undoRequest,
   undoSlotFor,
   type ListedDay,
+  type UndoSlot,
 } from './correction'
 import { RequestTimeoutError } from './deadline'
 
@@ -905,7 +908,7 @@ test('a cut arms the day undo, which expects the new row, writes back the day wi
       { id: 'h', activityId: 'home', startedAt: at(day, 7) },
     ],
     carriedOutId: null,
-    reselectId: 'w',
+    reselect: { id: 'w' },
   })
 })
 
@@ -932,8 +935,65 @@ test('a move of the day’s own row arms the day undo that expects the moved sta
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [{ id: 'h', activityId: 'home', startedAt: at(day, 7, 15) }],
     carriedOutId: null,
-    reselectId: null,
+    reselect: null,
   })
+})
+
+test('a split arms the day undo that selects the halved row again by its start, since the undo writes new ids', () => {
+  // Arrange
+  const { day, list, bounds, rows } = carriedWork()
+  const ownRow = rows[0]
+  if (!ownRow) throw new Error('no own row')
+  const laterHalf = row('h2', 'home', at(day, 15, 30))
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'split', returned: laterHalf },
+    ownRow,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toEqual({
+    kind: 'day',
+    day,
+    timeZone: TZ,
+    rows: [{ activityId: 'home', startedAt: at(day, 7) }],
+    expected: [
+      { id: 'h', activityId: 'home', startedAt: at(day, 7) },
+      { id: 'h2', activityId: 'home', startedAt: at(day, 15, 30) },
+    ],
+    carriedOutId: null,
+    reselect: { startedAt: at(day, 7).getTime() },
+  })
+})
+
+test('after an undo the sheet selects the cut’s carried-in row by id and the split’s halved row by its rewritten start', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const written = [
+    { id: 'new-work', startedAt: at(day, 9) },
+    { id: 'new-home', startedAt: at(day, 18) },
+  ]
+
+  // Act
+  const afterCut = reselectedRow({ id: 'carried-in' }, written)
+  const afterSplit = reselectedRow(
+    { startedAt: at(day, 18).getTime() },
+    written,
+  )
+  const afterSplitOfAGoneRow = reselectedRow(
+    { startedAt: at(day, 12).getTime() },
+    written,
+  )
+  const afterMove = reselectedRow(null, written)
+
+  // Assert
+  expect(afterCut).toBe('carried-in')
+  expect(afterSplit).toBe('new-home')
+  expect(afterSplitOfAGoneRow).toBeNull()
+  expect(afterMove).toBeNull()
 })
 
 test('a pick on the day’s own row goes through the day undo, which expects the picked activity', () => {
@@ -959,7 +1019,7 @@ test('a pick on the day’s own row goes through the day undo, which expects the
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [{ id: 'h', activityId: 'sleep', startedAt: at(day, 7) }],
     carriedOutId: null,
-    reselectId: null,
+    reselect: null,
   })
 })
 
@@ -1073,7 +1133,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
       { id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) },
     ],
     carriedOutId: 't',
-    reselectId: 'w',
+    reselect: { id: 'w' },
   }
   const activitySlot = {
     kind: 'activity' as const,
@@ -1103,7 +1163,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
       carriedOutId: 't',
       rows: [{ activityId: 'home', startedAt: at('2026-09-08', 7) }],
     },
-    reselectId: 'w',
+    reselect: { id: 'w' },
   })
   expect(undoRequest(activitySlot)).toEqual({
     procedure: 'changeActivity',
@@ -1811,14 +1871,15 @@ test('a record gone from the server reads as changed elsewhere, a timeout asks t
 
 test('the status line puts a refusal first, then says why the panel waits, online or offline, and is empty when idle', () => {
   // Arrange
-  const refusal = 'これ以上動かせません'
+  const day = '2026-09-08'
+  const refusal = { day, text: 'これ以上動かせません' }
 
   // Act
   const lines = [
-    statusLine({ refusal, waiting: true, online: false }),
-    statusLine({ refusal: null, waiting: true, online: true }),
-    statusLine({ refusal: null, waiting: true, online: false }),
-    statusLine({ refusal: null, waiting: false, online: false }),
+    statusLine({ refusal, day, waiting: true, online: false }),
+    statusLine({ refusal: null, day, waiting: true, online: true }),
+    statusLine({ refusal: null, day, waiting: true, online: false }),
+    statusLine({ refusal: null, day, waiting: false, online: false }),
   ]
 
   // Assert
@@ -1828,4 +1889,60 @@ test('the status line puts a refusal first, then says why the panel waits, onlin
     { tone: 'quiet', text: 'オフラインです。接続が戻ると反映されます' },
     null,
   ])
+})
+
+test('a refusal said on one day stays off the status line once the sheet shows another day', () => {
+  // Arrange: the refusal came on 9/8, and the sheet now shows 9/9 (midnight passed, or ?day= changed).
+  const refusal = { day: '2026-09-08', text: 'これ以上動かせません' }
+
+  // Act
+  const onAnotherDay = statusLine({
+    refusal,
+    day: '2026-09-09',
+    waiting: false,
+    online: true,
+  })
+  const onAnotherDayWhileWriting = statusLine({
+    refusal,
+    day: '2026-09-09',
+    waiting: true,
+    online: true,
+  })
+
+  // Assert
+  expect(onAnotherDay).toBeNull()
+  expect(onAnotherDayWhileWriting).toEqual({
+    tone: 'quiet',
+    text: '反映しています…',
+  })
+})
+
+test('a landed edit arms its undo, drops the older one when it has none, and raises the archived notice for an archived pick', () => {
+  // Arrange
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'o',
+    to: 'work',
+    revision: 4,
+  }
+
+  // Act
+  const armedEdit = landedUndo(slot)
+  const noUndo = landedUndo(null)
+  const archivedPick = landedUndo({ blocked: 'archived' })
+
+  // Assert
+  expect(armedEdit).toEqual({
+    slot: {
+      kind: 'activity',
+      day: '2026-09-08',
+      id: 'o',
+      to: 'work',
+      revision: 4,
+    },
+    archived: false,
+  })
+  expect(noUndo).toEqual({ slot: null, archived: false })
+  expect(archivedPick).toEqual({ slot: null, archived: true })
 })

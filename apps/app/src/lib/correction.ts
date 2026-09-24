@@ -547,8 +547,8 @@ export function cutNotes(
 /**
  * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay` only while the
  * stored zone is still `timeZone`, the day still holds exactly `expected`, the rows the edit left, and its last row still
- * runs into `carriedOutId` (an edit on the day never changes it, so it is the baseline's); `reselectId` is the
- * carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put back
+ * runs into `carriedOutId` (an edit on the day never changes it, so it is the baseline's); `reselect` is the row to
+ * select again once the undo lands ({@link Reselect}). `activity`: a pick on the carried-in record, put back
  * through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
  * reaches another day (a record's revision does not depend on any day's window, so it carries no zone).
  */
@@ -560,7 +560,7 @@ export type UndoSlot =
       rows: DaySnapshot
       expected: DayRow[]
       carriedOutId: DayBaseline['carriedOutId']
-      reselectId: string | null
+      reselect: Reselect
     }
   | {
       kind: 'activity'
@@ -569,6 +569,13 @@ export type UndoSlot =
       to: string | null
       revision: number
     }
+/**
+ * The row a day undo selects once it lands. A cut names the carried-in row it came from by id: that record starts before
+ * the day, so `switches.replaceDay` leaves it alone. A split names the halved row by its start (epoch ms): `replaceDay`
+ * deletes the day's rows and writes them back under new ids, so only the start finds it again. null: nothing to select.
+ */
+export type Reselect = { id: string } | { startedAt: number } | null
+
 /**
  * The sheet's edits, as far as the undo cares, with the row the procedure returned: `cut` is 「ここで分割」 on a carried-in
  * row, `split` is 半分で分割. A pick's returned row carries the revision its write left.
@@ -590,7 +597,7 @@ export type CorrectionEdit = {
  * @param window - The day's [start, end) in epoch ms.
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
- * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, remembering the carried-in row after a cut
+ * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, and the row to select after the undo
  * - null with no baseline or a busy day's: no undo, and the caller drops any older one
  * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, baseline, bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
@@ -619,20 +626,71 @@ export function undoSlotFor(
     rows: daySnapshot(baseline.rows),
     expected: rowsAfterEdit(baseline.rows, edit, row.id, window),
     carriedOutId: baseline.carriedOutId,
-    reselectId: edit.kind === 'cut' ? row.id : null,
+    reselect: reselectAfterUndo(edit.kind, row),
   }
+}
+
+/**
+ * What a landed edit does to 「元に戻す」, from {@link undoSlotFor}'s answer. Called by the sheet's edits once they land.
+ * @param next - {@link undoSlotFor}'s answer for the edit.
+ * @returns
+ * - `{ slot, archived: false }`: arm the slot
+ * - `{ slot: null, archived: false }` for null: drop any older slot, which no longer matches the day
+ * - `{ slot: null, archived: true }` for an archived pick: drop any older slot and raise the archived notice
+ * @example landedUndo({ blocked: 'archived' }) // { slot: null, archived: true }
+ */
+export function landedUndo(next: ReturnType<typeof undoSlotFor>): {
+  slot: UndoSlot | null
+  archived: boolean
+} {
+  if (next === null) return { slot: null, archived: false }
+  if ('blocked' in next) return { slot: null, archived: true }
+  return { slot: next, archived: false }
+}
+
+// What a day undo selects again: the carried-in row after a cut, the halved row after a split, nothing after any other edit.
+function reselectAfterUndo(
+  kind: CorrectionEdit['kind'],
+  row: CorrectionRow,
+): Reselect {
+  if (kind === 'cut') return { id: row.id }
+  if (kind === 'split') return { startedAt: row.start }
+  return null
+}
+
+/**
+ * The row to select once a day undo has landed, from the slot's {@link Reselect} and the rows `switches.replaceDay` wrote.
+ * Called by the sheet's undo, so the row the edit was made on is selected again.
+ * @param reselect - The slot's reselect.
+ * @param written - The day's rows as the undo wrote them back, with their new ids.
+ * @returns
+ * - the named id for a cut (the carried-in row keeps its id)
+ * - the id of the written row that starts at `startedAt` for a split
+ * - null when there is nothing to select, or no written row starts there
+ * @example reselectedRow({ startedAt: Date.parse('2026-09-08T09:00:00+09:00') }, written) // 'new-id-of-the-9:00-row'
+ */
+export function reselectedRow(
+  reselect: Reselect,
+  written: readonly Pick<SwitchRow, 'id' | 'startedAt'>[],
+): string | null {
+  if (reselect === null) return null
+  if ('id' in reselect) return reselect.id
+  return (
+    written.find((row) => row.startedAt.getTime() === reselect.startedAt)?.id ??
+    null
+  )
 }
 
 /** `switches.changeActivity`'s input; `revision` makes the write conditional on no other write having reached the record. */
 export type ChangeActivityInput = Parameters<
   AppRouterClient['switches']['changeActivity']
 >[0]
-/** The call 「元に戻す」 makes for a slot; `reselectId` is the row to select once the day undo lands. */
+/** The call 「元に戻す」 makes for a slot; `reselect` is the row to select once the day undo lands ({@link reselectedRow}). */
 export type UndoRequest =
   | {
       procedure: 'replaceDay'
       input: ReplaceDayInput
-      reselectId: string | null
+      reselect: Reselect
     }
   | { procedure: 'changeActivity'; input: ChangeActivityInput }
 
@@ -641,7 +699,7 @@ export type UndoRequest =
  * holding the rows the edit left under the same zone, or the carried-in record's previous activity through `changeActivity`,
  * conditional on the record still being at the revision the pick left.
  * @param slot - The armed undo.
- * @returns The procedure and its input; a day undo also names the row to select after it (the carried-in row a cut came from).
+ * @returns The procedure and its input; a day undo also names the row to select after it (after a cut or a split).
  * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
  */
 export function undoRequest(slot: UndoSlot): UndoRequest {
@@ -655,7 +713,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
         carriedOutId: slot.carriedOutId,
         rows: slot.rows,
       },
-      reselectId: slot.reselectId,
+      reselect: slot.reselect,
     }
   return {
     procedure: 'changeActivity',
@@ -766,24 +824,31 @@ export const WRITING_LINE_DELAY_MS = 400
 /** The status line while a write waits for the connection (web only: native never reports offline). */
 const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映されます'
 
+/** The last failure's message for the status line ({@link refusalMessage}), with the day it was pressed on. */
+export type Refusal = { day: string; text: string }
+
 /**
- * What the sheet's status line says: the last refusal wins, then why the panel is dim, else nothing (the line takes no
- * height). Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope
+ * What the sheet's status line says: the last refusal on the viewed day wins, then why the panel is dim, else nothing (the
+ * line takes no height). A refusal speaks about the day it was pressed on only: after midnight or a `?day=` change it stays
+ * behind. Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope
  * is paused while online, and a refetch after a landed write pauses offline while its mutation reads as running.
- * @param facts.refusal - The last failure's message ({@link refusalMessage}), until the next press, selection or undo.
+ * @param facts.refusal - The last failure, until the next press, selection or undo.
+ * @param facts.day - The day the sheet shows.
  * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
  * (its refetch included, since `onSettled` awaits it, except after a timeout, whose refetch runs on its own). A refetch alone
  * dims the panel without a line.
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
- * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
+ * @example statusLine({ refusal: null, day: '2026-09-08', waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
  */
 export function statusLine(facts: {
-  refusal: string | null
+  refusal: Refusal | null
+  day: string
   waiting: boolean
   online: boolean
 }): SheetStatus | null {
-  if (facts.refusal) return { tone: 'alert', text: facts.refusal }
+  if (facts.refusal?.day === facts.day)
+    return { tone: 'alert', text: facts.refusal.text }
   if (!facts.waiting) return null
   return {
     tone: 'quiet',
