@@ -1,14 +1,13 @@
 import { ORPCError } from '@orpc/server'
 import {
-  ARCHIVED_REFUSAL,
   changeActivityInputSchema,
   clampStart,
-  DAY_CHANGED_REFUSAL,
   MIN_SEGMENT_MS,
   dayBounds,
   daySchema,
   localDay,
   moveStartInputSchema,
+  REFUSAL,
   replaceDayInputSchema,
   rowEditInputSchema,
   splitAtInputSchema,
@@ -96,9 +95,19 @@ async function assertLiveActivities(
     // The data lets the correction sheet tell this refusal from any other BAD_REQUEST.
     throw new ORPCError('BAD_REQUEST', {
       message: 'activity is archived',
-      data: ARCHIVED_REFUSAL,
+      data: REFUSAL.archived,
     })
 }
+
+/**
+ * A CONFLICT the correction sheet can name: the English message is for logs, and `data` (one of {@link REFUSAL}) is what the
+ * app maps to Japanese. Every refusal of a timeline edit throws one.
+ * @example throw conflict('no next state', REFUSAL.noNeighbour)
+ */
+const conflict = (
+  message: string,
+  data: (typeof REFUSAL)[keyof typeof REFUSAL],
+) => new ORPCError('CONFLICT', { message, data })
 
 // The `revision` a write leaves on a row whose activity or span it changed.
 const nextRevision = sql`${switches.revision} + 1`
@@ -150,7 +159,7 @@ async function changeActivityAt(
   if (changed) return changed
   // Nothing matched: the row is gone (ownSwitch answers NOT_FOUND) or another write moved its revision on.
   await ownSwitch(userId, id, tx)
-  throw new ORPCError('CONFLICT', { message: 'record changed elsewhere' })
+  throw conflict('record changed elsewhere', REFUSAL.recordChanged)
 }
 
 // A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitInHalf and
@@ -358,11 +367,7 @@ async function sameCarriedIn(
 }
 
 // The refusal for a day that no longer reads as the sheet saw it; the data names the reason for the sheet.
-const dayChanged = () =>
-  new ORPCError('CONFLICT', {
-    message: 'day changed elsewhere',
-    data: DAY_CHANGED_REFUSAL,
-  })
+const dayChanged = () => conflict('day changed elsewhere', REFUSAL.dayChanged)
 
 /**
  * Checks, under the user's lock, that the day an edit was made on still reads as the sheet listed it: the stored zone is
@@ -533,7 +538,7 @@ export const switchesRouter = {
           Date.now(),
         )
         if (startedAt === null || outsideWindow(window, startedAt))
-          throw new ORPCError('CONFLICT', { message: 'no room to move' })
+          throw conflict('no room to move', REFUSAL.noRoom)
         // The previous record now ends where this one starts.
         if (prev) await bumpRevision(tx, prev.id)
         return correct(tx, row.id, { startedAt: new Date(startedAt) })
@@ -568,8 +573,7 @@ export const switchesRouter = {
         await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
         const { row, prev, next } = await withNeighbours(tx, userId, input.id)
         // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
-        if (!prev)
-          throw new ORPCError('CONFLICT', { message: 'no previous state' })
+        if (!prev) throw conflict('no previous state', REFUSAL.noNeighbour)
         // Merging the running record makes the previous one the current state, which an archived activity can never be.
         if (!next) await assertLiveActivities(tx, userId, [prev.activityId])
         return mergeInto(tx, row.id, prev.id)
@@ -590,14 +594,12 @@ export const switchesRouter = {
         )
         const { row, next } = await withNeighbours(tx, userId, input.id)
         // The current state has no later state to hand its time to.
-        if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
+        if (!next) throw conflict('no next state', REFUSAL.noNeighbour)
         // 元に戻す rewrites the row's day only: a next state pulled back from a later day would be deleted with it, for good.
         // The baseline's day is the row's (the sheet lists it there); without one, the row's day is read from the stored zone.
         const end = window?.end ?? (await rowDayEnd(tx, userId, row.startedAt))
         if (next.startedAt.getTime() >= end)
-          throw new ORPCError('CONFLICT', {
-            message: 'next state is on a later day',
-          })
+          throw conflict('next state is on a later day', REFUSAL.nextOnLaterDay)
         return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt })
       })
     }),
@@ -618,13 +620,9 @@ export const switchesRouter = {
         const midpoint = Math.floor((row.startedAt.getTime() + end) / 2)
         // Both halves must keep the 1-minute floor that moveStart enforces through clampStart.
         if (end - row.startedAt.getTime() < 2 * MIN_SEGMENT_MS)
-          throw new ORPCError('CONFLICT', {
-            message: 'segment too short to split',
-          })
+          throw conflict('segment too short to split', REFUSAL.cannotSplit)
         if (outsideWindow(window, midpoint))
-          throw new ORPCError('CONFLICT', {
-            message: 'midpoint is on another day',
-          })
+          throw conflict('midpoint is on another day', REFUSAL.cannotSplit)
         return insertSplit(tx, row, new Date(midpoint))
       })
     }),
@@ -644,7 +642,7 @@ export const switchesRouter = {
         const latest =
           (next?.startedAt.getTime() ?? Date.now()) - MIN_SEGMENT_MS
         if (at < earliest || at > latest || outsideWindow(window, at))
-          throw new ORPCError('CONFLICT', { message: 'no room to split there' })
+          throw conflict('no room to split there', REFUSAL.cannotSplit)
         return insertSplit(tx, row, input.at)
       })
     }),

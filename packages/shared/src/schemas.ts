@@ -139,7 +139,7 @@ const carriedInSchema = z
 /**
  * The day a correction-sheet edit was made on, as the sheet saw it: the stored zone, the day's own rows, oldest first, the
  * record carried into it and the switch its last row runs into. The router refuses the edit (CONFLICT,
- * {@link DAY_CHANGED_REFUSAL}) unless the day still reads exactly so, which makes the sheet's snapshot the day's true state
+ * `REFUSAL.dayChanged`) unless the day still reads exactly so, which makes the sheet's snapshot the day's true state
  * before the edit and lets 「元に戻す」 know the state the edit left. `rows` is left out on a day busier than
  * {@link DAY_ROWS_MAX}: the router then checks the rest, and that the edited row is inside the day.
  */
@@ -187,21 +187,49 @@ export const splitAtInputSchema = z.object({
 export type SplitAtInput = z.infer<typeof splitAtInputSchema>
 
 /**
- * The `data` of the BAD_REQUEST that `switchTo` and `changeActivity` answer for an archived activity, and `replaceDay` and
- * `mergeIntoPrevious` for a write that would make a record of one the current state. The API throws it and
- * the correction sheet's undo reads it, so the two sides share one value rather than two string literals.
- * @example new ORPCError('BAD_REQUEST', { message: 'activity is archived', data: ARCHIVED_REFUSAL })
+ * Why the API refused a timeline write, sent as the error's `data` (`{ reason }`) so the correction sheet can say it in
+ * Japanese: the English `message` is for logs, and one error code (CONFLICT) covers most of these.
  */
-export const ARCHIVED_REFUSAL = Object.freeze({ reason: 'archived' } as const)
+export const refusalReasonSchema = z.enum([
+  'day-changed',
+  'record-changed',
+  'archived',
+  'no-room',
+  'no-neighbour',
+  'next-on-later-day',
+  'cannot-split',
+  'busy',
+])
+export type RefusalReason = z.infer<typeof refusalReasonSchema>
+
+/** The shape of a refusal's `data`; the app parses an error's `data` with it. */
+export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
 
 /**
- * The `data` of the CONFLICT a correction answers when the day no longer reads as the sheet saw it (another device or tab
- * wrote since, or the stored zone moved the day's window): an edit's {@link dayBaselineSchema} or 「元に戻す」's `expected`.
- * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: DAY_CHANGED_REFUSAL })
+ * The `data` of every refusal a timeline write can answer, one per {@link RefusalReason}. The API throws them and the app
+ * reads them, so the two sides share one value rather than two string literals.
+ * - `dayChanged`: CONFLICT, the day no longer reads as the sheet saw it (another device or tab wrote since, or the stored
+ *   zone moved the day's window): an edit's {@link dayBaselineSchema} or 「元に戻す」's `expected`.
+ * - `recordChanged`: CONFLICT, a pick names a revision another write has moved on from.
+ * - `archived`: BAD_REQUEST, `switchTo` and `changeActivity` name an archived activity, or `replaceDay` and
+ *   `mergeIntoPrevious` would make a record of one the current state.
+ * - `noRoom`: CONFLICT, `moveStart` has no room left, or would leave the baseline's day.
+ * - `noNeighbour`: CONFLICT, a merge has no previous or next record to merge into.
+ * - `nextOnLaterDay`: CONFLICT, 「次の記録に統合」 would pull back a record from a later day.
+ * - `cannotSplit`: CONFLICT, a split would leave a part under a minute, or fall outside its record or the baseline's day.
+ * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of timeline writes in flight.
+ * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
-export const DAY_CHANGED_REFUSAL = Object.freeze({
-  reason: 'day-changed',
-} as const)
+export const REFUSAL = Object.freeze({
+  dayChanged: { reason: 'day-changed' },
+  recordChanged: { reason: 'record-changed' },
+  archived: { reason: 'archived' },
+  noRoom: { reason: 'no-room' },
+  noNeighbour: { reason: 'no-neighbour' },
+  nextOnLaterDay: { reason: 'next-on-later-day' },
+  cannotSplit: { reason: 'cannot-split' },
+  busy: { reason: 'busy' },
+} as const satisfies Record<string, z.infer<typeof refusalDataSchema>>)
 
 /**
  * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only

@@ -1,17 +1,19 @@
 import { ORPCError } from '@orpc/client'
 import type { AppRouterClient } from '@switch-time/api'
 import {
-  ARCHIVED_REFUSAL,
-  DAY_CHANGED_REFUSAL,
   DAY_ROWS_MAX,
   clampStart,
   localDay,
   MIN_SEGMENT_MS,
+  REFUSAL,
+  refusalDataSchema,
   type DayBaseline,
   type DayRow,
+  type RefusalReason,
   type ReplaceDayInput,
 } from '@switch-time/shared'
 
+import { RequestTimeoutError } from './deadline'
 import { DETOX } from './detox'
 import { formatDay, formatDuration, formatMonthDay, formatTime } from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
@@ -679,35 +681,102 @@ export function afterUndoFailure(
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
   return error.code === 'BAD_REQUEST' &&
-    hasRefusalReason(error.data, ARCHIVED_REFUSAL.reason)
+    refusalReason(error) === REFUSAL.archived.reason
     ? 'archived'
     : 'keep'
 }
 
 /**
- * Whether an edit or undo was refused because its day no longer reads as the sheet listed it ({@link DAY_CHANGED_REFUSAL}).
+ * Whether an edit or undo was refused because its day no longer reads as the sheet listed it (`REFUSAL.dayChanged`).
  * The sheet's edits read it when they settle: the stored zone may be what changed, so the cached settings are refetched
  * with the day, and the next edit sends the new zone.
  * @param error - The error the mutation failed with, or null when it succeeded.
  * @returns true only for a CONFLICT carrying `data.reason === 'day-changed'`
- * @example isDayChangedRefusal(new ORPCError('CONFLICT', { data: DAY_CHANGED_REFUSAL })) // true
+ * @example isDayChangedRefusal(new ORPCError('CONFLICT', { data: REFUSAL.dayChanged })) // true
  */
 export function isDayChangedRefusal(error: unknown): boolean {
   return (
     error instanceof ORPCError &&
     error.code === 'CONFLICT' &&
-    hasRefusalReason(error.data, DAY_CHANGED_REFUSAL.reason)
+    refusalReason(error) === REFUSAL.dayChanged.reason
   )
 }
 
-// A refusal's machine-readable marker (`data.reason`, as {@link ARCHIVED_REFUSAL} and {@link DAY_CHANGED_REFUSAL} carry it).
-function hasRefusalReason(data: unknown, reason: string): boolean {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'reason' in data &&
-    data.reason === reason
-  )
+// A refusal's machine-readable reason (its `data`, one of {@link REFUSAL}), or null for any other error.
+function refusalReason(error: unknown): RefusalReason | null {
+  if (!(error instanceof ORPCError)) return null
+  return refusalDataSchema.safeParse(error.data).data?.reason ?? null
+}
+
+/** What the correction sheet's status line says for each refusal reason the API sends; the pen file's 状態行 board lists them. */
+const REFUSAL_MESSAGES = {
+  'day-changed': '別の端末で記録が変わったため、最新の状態を表示しました',
+  'record-changed':
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+  archived: 'アーカイブ済みの活動になるため、変更できません',
+  'no-room': 'これ以上動かせません',
+  'no-neighbour': '統合できる記録がありません',
+  'next-on-later-day': '次の記録は翌日なので統合できません',
+  'cannot-split': 'ここでは分割できません',
+  busy: '処理が混み合っています。少し待ってからもう一度お試しください',
+} as const satisfies Record<RefusalReason, string>
+
+/** The status line after a call that gave no answer in time: the write may still have landed, and the list was read again. */
+const TIMEOUT_MESSAGE = '応答がありませんでした。最新の状態を読み込み直しました'
+
+/** The status line after any other failure (offline mid-request, a server error). */
+const FAILED_MESSAGE = '保存できませんでした。もう一度お試しください'
+
+/**
+ * The status line's text for a failed edit or 「元に戻す」. Every mutation of the sheet calls it from its `onError`, so no
+ * failure is silent: before, the buttons re-enabled and nothing said why.
+ * @param error - The error the mutation failed with.
+ * @returns
+ * - the reason's message ({@link REFUSAL_MESSAGES}) when the API sent one
+ * - the record-changed message for NOT_FOUND (the record is gone, merged away on another device)
+ * - {@link TIMEOUT_MESSAGE} for a {@link RequestTimeoutError}
+ * - {@link FAILED_MESSAGE} for anything else
+ * @example refusalMessage(new ORPCError('CONFLICT', { data: REFUSAL.nextOnLaterDay })) // '次の記録は翌日なので統合できません'
+ */
+export function refusalMessage(error: unknown): string {
+  if (error instanceof RequestTimeoutError) return TIMEOUT_MESSAGE
+  const reason = refusalReason(error)
+  if (reason) return REFUSAL_MESSAGES[reason]
+  if (error instanceof ORPCError && error.code === 'NOT_FOUND')
+    return REFUSAL_MESSAGES['record-changed']
+  return FAILED_MESSAGE
+}
+
+/** The status line shown under the sheet's rows: a refusal to read (`alert`), or why the panel waits (`quiet`). */
+export type SheetStatus = { tone: 'alert' | 'quiet'; text: string }
+
+/** The status line while the panel waits for a write that has not landed. */
+const WRITING_MESSAGE = '反映しています…'
+
+/** The status line while a write waits for the connection (web only: native never reports offline). */
+const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映されます'
+
+/**
+ * What the sheet's status line says: the last refusal wins, then why the panel is dim, else nothing (the line takes no
+ * height). Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope
+ * is paused while online, and a refetch after a landed write pauses offline while its mutation reads as running.
+ * @param facts.refusal - The last failure's message ({@link refusalMessage}), until the next press, selection or undo.
+ * @param facts.waiting - Whether the panel waits (a write in flight, or the list refetching).
+ * @param facts.online - TanStack's `onlineManager` state.
+ * @returns the line to show, or null when there is nothing to say
+ * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
+ */
+export function statusLine(facts: {
+  refusal: string | null
+  waiting: boolean
+  online: boolean
+}): SheetStatus | null {
+  if (facts.refusal) return { tone: 'alert', text: facts.refusal }
+  if (!facts.waiting) return null
+  return {
+    tone: 'quiet',
+    text: facts.online ? WRITING_MESSAGE : OFFLINE_MESSAGE,
+  }
 }
 
 /**

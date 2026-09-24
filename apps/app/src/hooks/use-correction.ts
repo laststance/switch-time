@@ -1,11 +1,12 @@
 import { dayBounds, daySchema, type SplitAtInput } from '@switch-time/shared'
 import {
+  onlineManager,
   useIsMutating,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
 import { useLocalToday } from '@/hooks/use-local-today'
@@ -18,6 +19,8 @@ import {
   isDayChangedRefusal,
   isManuallyExcluded,
   pickRequest,
+  refusalMessage,
+  statusLine,
   undoRequest,
   undoSlotFor,
   type CorrectionEdit,
@@ -45,6 +48,9 @@ import { useAppSelector } from '@/store'
  * another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing and drops any older
  * slot, and raises the archived notice instead ({@link undoSlotFor}). A failed undo of either kind is sorted by
  * {@link afterUndoFailure}.
+ *
+ * `status` is the line under the rows ({@link statusLine}): why the last edit or undo failed ({@link refusalMessage}), until
+ * the next press, selection or undo, else why the panel waits (a write landing, or queued offline).
  * @example const correction = useCorrection(params.day)
  */
 export function useCorrection(dayParam: string | undefined) {
@@ -65,12 +71,21 @@ export function useCorrection(dayParam: string | undefined) {
   const writesInFlight =
     useIsMutating({ mutationKey: orpc.switches.key() }) +
     useIsMutating({ mutationKey: orpc.settings.key() })
+  const online = useSyncExternalStore(onlineManager.subscribe, () =>
+    onlineManager.isOnline(),
+  )
   return {
     day,
     title: dayTitle(day, today),
     bounds,
     rows: correctionRows(list.data, activities.data, bounds),
     pending: list.isFetching || writesInFlight > 0,
+    // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both.
+    status: statusLine({
+      refusal: state.refusal,
+      waiting: writesInFlight > 0,
+      online,
+    }),
     canUndo: state.slot?.day === day,
     selectedId: state.selectedId,
     noticeId: state.noticeId,
@@ -85,23 +100,28 @@ export function useCorrection(dayParam: string | undefined) {
 type CorrectionState = ReturnType<typeof useCorrectionState>
 
 // The sheet's own state: the undo slot, the selected row, the row the archived notice was raised for (until the next edit or
-// selection), and the row a cut just created (the sheet focuses its header, since the pressed button left with its panel).
+// selection), the row a cut just created (the sheet focuses its header, since the pressed button left with its panel), and
+// the last failure's message for the status line (until the next edit, selection or undo).
 function useCorrectionState() {
   const [slot, setSlot] = useState<UndoSlot | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [noticeId, setNoticeId] = useState<string | null>(null)
   const [focusId, setFocusId] = useState<string | null>(null)
+  const [refusal, setRefusal] = useState<string | null>(null)
   return {
     slot,
     selectedId,
     noticeId,
     focusId,
+    refusal,
     setSlot,
     setNoticeId,
     setFocusId,
+    setRefusal,
     select: (id: string | null): void => {
       setSelectedId(id)
       setNoticeId(null)
+      setRefusal(null)
     },
     // A refused undo on the archived activity: select its row, so the notice is seen.
     showNotice: (id: string): void => {
@@ -168,9 +188,11 @@ function useCorrectionEdits(
   // The API refuses the edit unless the day still reads as this baseline, so a slot armed from it and the returned row is
   // exactly the day before and after the edit. It is armed only once the edit succeeded: a failed one (stale list, offline)
   // must not leave rows that would overwrite someone else's change. The day and zone travel with it so a slot never replays
-  // into another day's window.
+  // into another day's window. A failed edit says why in the status line; a timed-out one arms nothing either, though it may
+  // have landed: the refetch shows what the day now holds.
   const press = (row: CorrectionRow) => {
     state.setNoticeId(null)
+    state.setRefusal(null)
     const baseline = listed
       ? dayBaseline(day, bounds.timeZone, listed)
       : undefined
@@ -183,43 +205,49 @@ function useCorrectionEdits(
         state.setSlot(blocked ? null : next)
         state.setNoticeId(blocked ? row.id : null)
       }
-    return { baseline, arm }
+    const fail = (error: unknown): void =>
+      state.setRefusal(refusalMessage(error))
+    return { baseline, arm, fail }
   }
   return {
     move: (row: CorrectionRow, deltaMinutes: 15 | -15): void => {
-      const { baseline, arm } = press(row)
+      const { baseline, arm, fail } = press(row)
       moveStart.mutate(
         { id: row.id, deltaMinutes, baseline },
-        { onSuccess: arm('move') },
+        { onSuccess: arm('move'), onError: fail },
       )
     },
     pick: (row: CorrectionRow, activityId: string | null): void => {
-      const { baseline, arm } = press(row)
+      const { baseline, arm, fail } = press(row)
       changeActivity.mutate(pickRequest(row, activityId, baseline), {
         onSuccess: arm('pick'),
+        onError: fail,
       })
     },
     mergePrevious: (row: CorrectionRow): void => {
-      const { baseline, arm } = press(row)
+      const { baseline, arm, fail } = press(row)
       mergeIntoPrevious.mutate(
         { id: row.id, baseline },
-        { onSuccess: arm('merge') },
+        { onSuccess: arm('merge'), onError: fail },
       )
     },
     mergeNext: (row: CorrectionRow): void => {
-      const { baseline, arm } = press(row)
+      const { baseline, arm, fail } = press(row)
       mergeIntoNext.mutate(
         { id: row.id, baseline },
-        { onSuccess: arm('merge') },
+        { onSuccess: arm('merge'), onError: fail },
       )
     },
     split: (row: CorrectionRow): void => {
-      const { baseline, arm } = press(row)
-      splitInHalf.mutate({ id: row.id, baseline }, { onSuccess: arm('split') })
+      const { baseline, arm, fail } = press(row)
+      splitInHalf.mutate(
+        { id: row.id, baseline },
+        { onSuccess: arm('split'), onError: fail },
+      )
     },
     // 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
     cut: (row: CorrectionRow, at: number): void => {
-      const { baseline, arm } = press(row)
+      const { baseline, arm, fail } = press(row)
       const input: SplitAtInput = { id: row.id, at: new Date(at), baseline }
       splitAt.mutate(input, {
         onSuccess: (inserted) => {
@@ -227,6 +255,7 @@ function useCorrectionEdits(
           state.select(inserted.id)
           state.setFocusId(inserted.id)
         },
+        onError: fail,
       })
     },
   }
@@ -244,16 +273,18 @@ function useCorrectionUndo(state: CorrectionState) {
     ...orpc.switches.changeActivity.mutationOptions(),
     ...edit,
   })
-  // A refused undo that can never succeed (the day or record changed elsewhere) turns 元に戻す off; an archived refusal of the
-  // carried-in pick's undo also says why on its row, while a day undo has no row id and turns off silently (TODOS.md "Say why a
-  // correction was refused"). A passing failure (offline, server error) keeps it armed for another try.
+  // A refused undo that can never succeed (the day or record changed elsewhere) turns 元に戻す off; a passing failure (offline,
+  // server error) keeps it armed for another try. Either way the status line says why, except for an archived refusal of the
+  // carried-in pick's undo, which its row's notice already explains.
   const refuseUndo = (error: unknown, id: string | null): void => {
     const outcome = afterUndoFailure(error)
     if (outcome !== 'keep') state.setSlot(null)
     if (outcome === 'archived' && id) state.showNotice(id)
+    else state.setRefusal(refusalMessage(error))
   }
   return (): void => {
     if (!state.slot) return
+    state.setRefusal(null)
     const request = undoRequest(state.slot)
     // Dropped on success, not on mutate, so a passing failure leaves 元に戻す armed.
     if (request.procedure === 'replaceDay')

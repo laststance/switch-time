@@ -770,7 +770,10 @@ test('半分で分割 is refused when the half-way point falls on the next day, 
   })
 
   // Assert: refused, and yesterday still holds only 休息
-  await expect(split).rejects.toThrow('midpoint is on another day')
+  await expect(split).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'cannot-split' },
+  })
   expect(
     (await api.switches.listByDay({ day: yesterday })).rows.map(
       (row) => row.activityId,
@@ -1171,7 +1174,10 @@ test('one account’s fifth timeline write in flight is refused at once, while a
 
   // Assert: the fifth is refused without queueing, and the queued taps land in the order they arrived
   expect(fifthSettledAtOnce).toBe(true)
-  await expect(fifth).rejects.toMatchObject({ code: 'TOO_MANY_REQUESTS' })
+  await expect(fifth).rejects.toMatchObject({
+    code: 'TOO_MANY_REQUESTS',
+    data: { reason: 'busy' },
+  })
   expect(otherLandedWhileLocked).toBe(true)
   await expect(work).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
   await expect(rest).resolves.toMatchObject({ activityId: idOf(list, '休息') })
