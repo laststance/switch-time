@@ -6,7 +6,7 @@ export const REQUEST_TIMEOUT_MS = 30_000
 
 /**
  * What a call rejects with once its deadline passed without a whole answer. The write it carried may still have landed, so
- * {@link refusalMessage} says the list was read again rather than asking for a retry.
+ * {@link refusalMessage} asks the user to check the rows rather than asking for a retry.
  */
 export class RequestTimeoutError extends Error {
   override name = 'RequestTimeoutError'
@@ -18,7 +18,8 @@ export class RequestTimeoutError extends Error {
 
 /**
  * Runs `request` until it settles or `ms` passes, whichever comes first: the RPC link's `fetch` wraps every call in it, so a
- * request that never answers fails and releases the correction panel instead of holding it until the page reloads. Built on
+ * request that never answers fails, and the correction panel is released once the refetch after it settles (each call of which
+ * has its own deadline), instead of being held until the page reloads. Built on
  * one AbortController because Hermes may lack `AbortSignal.any` and `AbortSignal.timeout`.
  * @param signal - The caller's signal (oRPC puts TanStack's cancellation on the Request); its abort aborts the request too.
  * @param ms - The deadline, {@link REQUEST_TIMEOUT_MS} in the app.

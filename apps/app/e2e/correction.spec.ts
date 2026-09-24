@@ -1186,10 +1186,10 @@ test('an edit made offline says it waits for the connection, and lands once it i
   ).toHaveCount(0)
 })
 
-test('an edit whose answer never arrives gives up after 30 seconds, releases the panel and shows what landed', async ({
+test('an edit whose answer never arrives gives up after 30 seconds, turns off the older undo, releases the panel and shows what landed', async ({
   page,
 }) => {
-  // Arrange: the API applies the merge, but its answer never reaches the app.
+  // Arrange: a split arms 元に戻す; then the API applies a merge, but its answer never reaches the app.
   const { yesterday } = await seedYesterday(page)
   await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
     await route.fetch()
@@ -1198,6 +1198,10 @@ test('an edit whose answer never arrives gives up after 30 seconds, releases the
   await page.clock.install()
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
   await dialog
     .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
     .click()
@@ -1207,10 +1211,11 @@ test('an edit whose answer never arrives gives up after 30 seconds, releases the
   // Act
   await page.clock.fastForward('00:30')
 
-  // Assert: the line says the list was read again, the merged day shows, and the panel answers again.
+  // Assert: the line asks to check the rows, the split's undo is off, the merged day shows, and the panel answers again.
   await expect(dialog.getByRole('alert')).toHaveText(
-    '応答がありませんでした。最新の状態を読み込み直しました',
+    '応答がありませんでした。反映されたか一覧で確かめてください',
   )
+  await expect(undo).toBeDisabled()
   const leisure = dialog.getByRole('button', {
     name: '娯楽 12:00 – 24:00 12h 00m',
   })

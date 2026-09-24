@@ -1158,6 +1158,17 @@ test('an undo refused because the account has too many timeline writes in flight
   expect(outcome).toBe('keep')
 })
 
+test('an undo that timed out turns 元に戻す off, since it may have landed and a second press would be refused as another device’s change', () => {
+  // Arrange
+  const timedOut = new RequestTimeoutError()
+
+  // Act
+  const outcome = afterUndoFailure(timedOut)
+
+  // Assert
+  expect(outcome).toBe('clear')
+})
+
 test('only a day-changed refusal makes the sheet refetch the stored zone, so a settings update in flight is never overwritten otherwise', () => {
   // Arrange
   const answers = [
@@ -1779,7 +1790,7 @@ test('each refusal the API names reads as its own Japanese message in the status
   ])
 })
 
-test('a record gone from the server reads as changed elsewhere, a timeout says the list was read again, and anything else says it was not saved', () => {
+test('a record gone from the server reads as changed elsewhere, a timeout asks the user to check the rows, and anything else says it was not saved', () => {
   // Arrange
   const gone = new ORPCError('NOT_FOUND')
   const timedOut = new RequestTimeoutError()
@@ -1792,7 +1803,7 @@ test('a record gone from the server reads as changed elsewhere, a timeout says t
   // Assert
   expect(messages).toEqual([
     '別の端末でこの記録が変わったため、最新の状態を表示しました',
-    '応答がありませんでした。最新の状態を読み込み直しました',
+    '応答がありませんでした。反映されたか一覧で確かめてください',
     '保存できませんでした。もう一度お試しください',
     '保存できませんでした。もう一度お試しください',
   ])

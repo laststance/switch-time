@@ -18,7 +18,6 @@ export {
   passwordSchema,
   REFUSAL,
   refusalDataSchema,
-  refusalReasonSchema,
   reorderInputSchema,
   replaceDayInputSchema,
   rowEditInputSchema,

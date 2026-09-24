@@ -190,7 +190,7 @@ export type SplitAtInput = z.infer<typeof splitAtInputSchema>
  * Why the API refused a timeline write, sent as the error's `data` (`{ reason }`) so the correction sheet can say it in
  * Japanese: the English `message` is for logs, and one error code (CONFLICT) covers most of these.
  */
-export const refusalReasonSchema = z.enum([
+const refusalReasonSchema = z.enum([
   'day-changed',
   'record-changed',
   'archived',

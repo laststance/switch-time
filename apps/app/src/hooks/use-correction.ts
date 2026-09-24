@@ -9,6 +9,7 @@ import {
 import { useState, useSyncExternalStore } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
+import { useDelayedFlag } from '@/hooks/use-delayed-flag'
 import { useLocalToday } from '@/hooks/use-local-today'
 import { useSettings } from '@/hooks/use-settings'
 import {
@@ -23,6 +24,7 @@ import {
   statusLine,
   undoRequest,
   undoSlotFor,
+  WRITING_LINE_DELAY_MS,
   type CorrectionEdit,
   type CorrectionRow,
   type DayBounds,
@@ -30,6 +32,7 @@ import {
   type TotalsFacts,
   type UndoSlot,
 } from '@/lib/correction'
+import { RequestTimeoutError } from '@/lib/deadline'
 import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 import { useAppSelector } from '@/store'
@@ -74,18 +77,15 @@ export function useCorrection(dayParam: string | undefined) {
   const online = useSyncExternalStore(onlineManager.subscribe, () =>
     onlineManager.isOnline(),
   )
+  const waiting = useDelayedFlag(writesInFlight > 0, WRITING_LINE_DELAY_MS)
   return {
     day,
     title: dayTitle(day, today),
     bounds,
     rows: correctionRows(list.data, activities.data, bounds),
     pending: list.isFetching || writesInFlight > 0,
-    // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both.
-    status: statusLine({
-      refusal: state.refusal,
-      waiting: writesInFlight > 0,
-      online,
-    }),
+    // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both; a quick one says nothing.
+    status: statusLine({ refusal: state.refusal, waiting, online }),
     canUndo: state.slot?.day === day,
     selectedId: state.selectedId,
     noticeId: state.noticeId,
@@ -142,11 +142,15 @@ function useRefetchAfterEdit() {
       const refetchZone =
         isDayChangedRefusal(error) &&
         queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
-      await invalidateKeys(queryClient, [
+      const refetch = invalidateKeys(queryClient, [
         orpc.switches.key(),
         orpc.stats.key(),
         ...(refetchZone ? [orpc.settings.key()] : []),
       ])
+      // TanStack awaits this before the mutation's own onError, so a timeout's line would wait for a refetch that a hung API
+      // stalls too (another 30 s and a retry). A timeout arms nothing, so its refetch runs on its own; the list's fetch still
+      // holds the panel until it settles.
+      if (!(error instanceof RequestTimeoutError)) await refetch
     },
   }
 }
@@ -205,8 +209,11 @@ function useCorrectionEdits(
         state.setSlot(blocked ? null : next)
         state.setNoticeId(blocked ? row.id : null)
       }
-    const fail = (error: unknown): void =>
+    const fail = (error: unknown): void => {
+      // A timed-out edit may have landed, so no older undo knows what the day now holds.
+      if (error instanceof RequestTimeoutError) state.setSlot(null)
       state.setRefusal(refusalMessage(error))
+    }
     return { baseline, arm, fail }
   }
   return {

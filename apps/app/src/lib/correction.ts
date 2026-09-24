@@ -665,11 +665,12 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
 
 /**
  * What a failed undo of either kind does to 「元に戻す」: an answer that can never succeed turns it off (the day or the record
- * changed elsewhere, or is gone, silently; the previous activity was archived, with the notice), and a passing failure
- * (network, server error, an expired sign-in) keeps it for another try.
+ * changed elsewhere, or is gone, silently; the previous activity was archived, with the notice), and so does a timeout, which
+ * may have landed (a second press would then be refused as another device's change). A passing failure (network, server
+ * error, an expired sign-in) keeps it for another try.
  * @param error - The error the undo's mutation failed with.
  * @returns
- * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision) or NOT_FOUND
+ * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision), NOT_FOUND, or a {@link RequestTimeoutError}
  * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target; `replaceDay` refuses
  *   a day whose current state would name one)
  * - 'keep': anything else, another BAD_REQUEST included
@@ -678,6 +679,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
 export function afterUndoFailure(
   error: unknown,
 ): 'keep' | 'clear' | 'archived' {
+  if (error instanceof RequestTimeoutError) return 'clear'
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
   return error.code === 'BAD_REQUEST' &&
@@ -721,8 +723,13 @@ const REFUSAL_MESSAGES = {
   busy: '処理が混み合っています。少し待ってからもう一度お試しください',
 } as const satisfies Record<RefusalReason, string>
 
-/** The status line after a call that gave no answer in time: the write may still have landed, and the list was read again. */
-const TIMEOUT_MESSAGE = '応答がありませんでした。最新の状態を読み込み直しました'
+/**
+ * The status line after a call that gave no answer in time. The write may still have landed, even after the list was read
+ * again (its transaction can commit late, and a hung API fails the refetch too), so the line asks the user to check the rows
+ * rather than claiming they are current.
+ */
+const TIMEOUT_MESSAGE =
+  '応答がありませんでした。反映されたか一覧で確かめてください'
 
 /** The status line after any other failure (offline mid-request, a server error). */
 const FAILED_MESSAGE = '保存できませんでした。もう一度お試しください'
@@ -753,6 +760,9 @@ export type SheetStatus = { tone: 'alert' | 'quiet'; text: string }
 /** The status line while the panel waits for a write that has not landed. */
 const WRITING_MESSAGE = '反映しています…'
 
+/** How long a write must be in flight before the status line says so: one that lands at once shows nothing. */
+export const WRITING_LINE_DELAY_MS = 400
+
 /** The status line while a write waits for the connection (web only: native never reports offline). */
 const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映されます'
 
@@ -761,7 +771,8 @@ const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映され�
  * height). Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope
  * is paused while online, and a refetch after a landed write pauses offline while its mutation reads as running.
  * @param facts.refusal - The last failure's message ({@link refusalMessage}), until the next press, selection or undo.
- * @param facts.waiting - Whether the panel waits (a write in flight, or the list refetching).
+ * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
+ * (its refetch included, since `onSettled` awaits it). A refetch alone dims the panel without a line.
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
  * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
