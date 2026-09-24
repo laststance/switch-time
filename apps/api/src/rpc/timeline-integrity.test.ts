@@ -655,7 +655,7 @@ test('元に戻す that empties the account’s only day leaves no running state
   expect(await api.switches.current()).toBeNull()
 })
 
-// The unique-start migration's first statement: the data step that spreads tied starts before the unique index is built.
+// The unique-start migration's data step, the statement that spreads tied starts before the unique index is built.
 const spreadTiesStatement =
   readFileSync(
     new URL(
@@ -663,7 +663,9 @@ const spreadTiesStatement =
       import.meta.url,
     ),
     'utf8',
-  ).split('--> statement-breakpoint')[0] ?? ''
+  )
+    .split('--> statement-breakpoint')
+    .find((statement) => statement.includes('UPDATE')) ?? ''
 
 /**
  * Runs `work` on one pool connection inside a transaction that holds a temporary `switches` without the unique index,

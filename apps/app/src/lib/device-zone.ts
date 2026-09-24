@@ -6,22 +6,29 @@ import { Platform } from 'react-native'
 const keyFor = (accountId: string): string =>
   `switch-time.synced-zone.${accountId.replace(/[^\w.-]/g, '_')}`
 
+// This session's copy, per account id: where storage fails (a private window, a locked keychain) the device still knows what
+// it synced until the app restarts, instead of writing its zone again on every settings refetch.
+const syncedThisSession = new Map<string, string>()
+
 /**
  * The zone this device last wrote (or found) in the account's settings, kept on the device: `localStorage` on the web,
  * SecureStore on native. Read by {@link useTimeZoneSync} on every settings change.
  * @param accountId - The signed-in account, undefined while signed out.
- * @returns The zone, or null when the device never synced this account (or its storage cannot be read)
+ * @returns The zone, or null when the device never synced this account (in storage, or this session when storage fails)
  * @example readSyncedZone(session?.user.id) // 'Asia/Tokyo'
  */
 export function readSyncedZone(accountId: string | undefined): string | null {
   if (!accountId) return null
+  const sessionZone = syncedThisSession.get(accountId) ?? null
   try {
-    return Platform.OS === 'web'
-      ? localStorage.getItem(keyFor(accountId))
-      : SecureStore.getItem(keyFor(accountId))
+    const storedZone =
+      Platform.OS === 'web'
+        ? localStorage.getItem(keyFor(accountId))
+        : SecureStore.getItem(keyFor(accountId))
+    return storedZone ?? sessionZone
   } catch {
-    // Storage off (a private window, a locked keychain): the device syncs as if it never had.
-    return null
+    // Storage off: only this session's copy is known.
+    return sessionZone
   }
 }
 
@@ -37,10 +44,11 @@ export function rememberSyncedZone(
   zone: string,
 ): void {
   if (!accountId) return
+  syncedThisSession.set(accountId, zone)
   try {
     if (Platform.OS === 'web') localStorage.setItem(keyFor(accountId), zone)
     else SecureStore.setItem(keyFor(accountId), zone)
   } catch {
-    // Not kept: the next launch writes the zone once more, as before this record existed.
+    // Kept for this session only: the next launch writes the zone once more.
   }
 }

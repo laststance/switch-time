@@ -67,7 +67,7 @@ test('on native the synced zone is kept in SecureStore under a key it accepts, e
   expect(zone).toBe('Europe/London')
 })
 
-test('a browser whose storage refuses access reads as never synced and keeps nothing, instead of crashing the app', () => {
+test('a browser whose storage refuses access still remembers the zone it synced for the rest of the session, instead of crashing the app', () => {
   // Arrange: a private window, where every storage call throws
   vi.stubGlobal('localStorage', {
     getItem: (): string | null => {
@@ -79,12 +79,16 @@ test('a browser whose storage refuses access reads as never synced and keeps not
   })
 
   // Act
-  const remember = (): void => rememberSyncedZone('account-1', 'Asia/Tokyo')
-  const zone = readSyncedZone('account-1')
+  const neverSyncedZone = readSyncedZone('private-window-account')
+  const remember = (): void =>
+    rememberSyncedZone('private-window-account', 'Asia/Tokyo')
+  const syncedZone = (): string | null =>
+    readSyncedZone('private-window-account')
 
   // Assert
+  expect(neverSyncedZone).toBeNull()
   expect(remember).not.toThrow()
-  expect(zone).toBeNull()
+  expect(syncedZone()).toBe('Asia/Tokyo')
 })
 
 test('while signed out no zone is read or kept, so the next account to sign in starts unsynced', () => {
