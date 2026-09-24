@@ -655,6 +655,117 @@ export function landedUndo(next: ReturnType<typeof undoSlotFor>): {
   return { slot: next, archived: false }
 }
 
+/**
+ * The day's armed 「元に戻す」 while the day as the sheet lists it still reads as the slot left it, which is what the undo's own
+ * write checks: a day slot's rows the edit left (`expected`), the switch the day runs into and the stored zone, or the
+ * carried-in record at the revision the pick left. The slot outlives the sheet, so this device's own tap on ホーム, or another
+ * device's edit the list has since read, can change the day under it; {@link useCorrection} offers only what this returns.
+ * @param slot - The day's armed undo, if any.
+ * @param listed - The day's current `switches.listByDay` answer; undefined before it arrived.
+ * @param timeZone - The stored zone the list was windowed in.
+ * @returns
+ * - `slot` while the listed day matches it, so its write would be accepted
+ * - undefined once the day differs, before the list arrived, or with no slot
+ * @example offeredUndo({ kind: 'activity', day, id: 'c', to: 'work', revision: 4 }, { ...listed, carriedIn: { ...c, revision: 5 } }, 'Asia/Tokyo') // undefined
+ */
+export function offeredUndo(
+  slot: UndoSlot | undefined,
+  listed: ListedDay | undefined,
+  timeZone: string,
+): UndoSlot | undefined {
+  if (!slot || !listed) return undefined
+  return slotMatchesDay(slot, listed, timeZone) ? slot : undefined
+}
+
+// Whether the listed day reads as the slot left it (see {@link offeredUndo}).
+function slotMatchesDay(
+  slot: UndoSlot,
+  listed: ListedDay,
+  timeZone: string,
+): boolean {
+  if (slot.kind === 'activity')
+    return (
+      listed.carriedIn?.id === slot.id &&
+      listed.carriedIn.revision === slot.revision
+    )
+  // The carried-in record is left out, as `replaceDay` leaves it out: the undo never rewrites it.
+  if (slot.timeZone !== timeZone) return false
+  if ((listed.carriedOut?.id ?? null) !== slot.carriedOutId) return false
+  if (listed.rows.length !== slot.expected.length) return false
+  return listed.rows.every((row, index) => {
+    const expected = slot.expected[index]
+    return (
+      expected !== undefined &&
+      row.id === expected.id &&
+      row.activityId === expected.activityId &&
+      row.startedAt.getTime() === expected.startedAt.getTime()
+    )
+  })
+}
+
+/** The correction sheet's own state, for the day it shows: the selected row, and the row a cut or split just created (focused). */
+export type CorrectionSheet = {
+  day: string
+  selectedId: string | null
+  focusId: string | null
+}
+
+/**
+ * What the sheet shows for `day`, from its own state and what the store keeps about the day. Its own state belongs to the day
+ * it was made on, so a new day (midnight on today's sheet, a `?day=` change) starts it over; the row the archived notice was
+ * raised for is selected when nothing else is, so a notice kept after the sheet closed is seen when it reopens. Called by
+ * {@link useCorrection} on every render, which stores `sheet` back when it started over.
+ * @param sheet - The sheet's own state.
+ * @param day - The day the sheet shows.
+ * @param said - The day's line and notice from the store, if any.
+ * @returns
+ * - `sheet`: the same object on the same day, else a fresh state for `day`
+ * - `selectedId`: the selected row, else the notice's row, else null
+ * - `noticeId`, `refusal`: the store's, null when absent
+ * @example sheetView({ day: '2026-09-08', selectedId: 'r', focusId: null }, '2026-09-09', {}) // { sheet: { day: '2026-09-09', selectedId: null, focusId: null }, selectedId: null, … }
+ */
+export function sheetView(
+  sheet: CorrectionSheet,
+  day: string,
+  said: { refusal?: string; notice?: string },
+): {
+  sheet: CorrectionSheet
+  selectedId: string | null
+  noticeId: string | null
+  refusal: string | null
+} {
+  const current =
+    sheet.day === day ? sheet : { day, selectedId: null, focusId: null }
+  const noticeId = said.notice ?? null
+  return {
+    sheet: current,
+    selectedId: current.selectedId ?? noticeId,
+    noticeId,
+    refusal: said.refusal ?? null,
+  }
+}
+
+/**
+ * The sheet's own state after an answer to a press: the patch applies only while the sheet still shows the day the press
+ * was made on, so a split or an undo that lands after midnight or a `?day=` change selects nothing on the day now shown.
+ * Called by {@link useCorrection}'s answers through a functional state update, whose `current.day` is the viewed day.
+ * @param current - The sheet's state, whose `day` is the day it shows.
+ * @param pressedDay - The day the press was made on.
+ * @param patch - What the answer sets.
+ * @returns
+ * - `current` with `patch` applied when `current.day` is `pressedDay`
+ * - `current` unchanged otherwise
+ * @example onPressedDay({ day: '2026-09-09', selectedId: null, focusId: null }, '2026-09-08', { selectedId: 'r' }) // unchanged
+ */
+export function onPressedDay(
+  current: CorrectionSheet,
+  pressedDay: string,
+  patch: Partial<Omit<CorrectionSheet, 'day'>>,
+): CorrectionSheet {
+  if (current.day !== pressedDay) return current
+  return { ...current, ...patch }
+}
+
 // What a day undo selects again: the carried-in row after a cut, the halved row after a split, nothing after any other edit.
 function reselectAfterUndo(
   kind: CorrectionEdit['kind'],
@@ -832,31 +943,26 @@ export const WRITING_LINE_DELAY_MS = 400
 /** The status line while a write waits for the connection (web only: native never reports offline). */
 const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映されます'
 
-/** The last failure's message for the status line ({@link refusalMessage}), with the day it was pressed on. */
-export type Refusal = { day: string; text: string }
-
 /**
- * What the sheet's status line says: the last refusal on the viewed day wins, then why the panel is dim, else nothing (the
- * line takes no height). A refusal speaks about the day it was pressed on only: after midnight or a `?day=` change it stays
- * behind. Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope
- * is paused while online, and a refetch after a landed write pauses offline while its mutation reads as running.
- * @param facts.refusal - The last failure, until the next press, selection or undo.
- * @param facts.day - The day the sheet shows.
+ * What the sheet's status line says: the viewed day's last refusal wins, then why the panel is dim, else nothing (the line
+ * takes no height). Refusals are kept per day in the store ({@link correctionSlice}), so one said about another day, after
+ * midnight or a `?day=` change, never reaches this line. Offline is read from the connection, not from a mutation's
+ * `isPaused`: a tap queued behind another in its scope is paused while online, and a refetch after a landed write pauses
+ * offline while its mutation reads as running.
+ * @param facts.refusal - The viewed day's last failure ({@link refusalMessage}), until the next press, selection or undo on it.
  * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
  * (its refetch included, since `onSettled` awaits it, except after a timeout, whose refetch runs on its own). A refetch alone
  * dims the panel without a line.
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
- * @example statusLine({ refusal: null, day: '2026-09-08', waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
+ * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
  */
 export function statusLine(facts: {
-  refusal: Refusal | null
-  day: string
+  refusal: string | null
   waiting: boolean
   online: boolean
 }): SheetStatus | null {
-  if (facts.refusal?.day === facts.day)
-    return { tone: 'alert', text: facts.refusal.text }
+  if (facts.refusal !== null) return { tone: 'alert', text: facts.refusal }
   if (!facts.waiting) return null
   return {
     tone: 'quiet',

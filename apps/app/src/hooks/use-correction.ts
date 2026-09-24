@@ -20,18 +20,21 @@ import {
   isDayChangedRefusal,
   isManuallyExcluded,
   landedUndo,
+  offeredUndo,
+  onPressedDay,
   pickRequest,
   refusalMessage,
   reselectedRow,
+  sheetView,
   statusLine,
   undoRequest,
   undoSlotFor,
   WRITING_LINE_DELAY_MS,
   type CorrectionEdit,
   type CorrectionRow,
+  type CorrectionSheet,
   type DayBounds,
   type ListedDay,
-  type Refusal,
   type TotalsFacts,
   type UndoSlot,
 } from '@/lib/correction'
@@ -57,11 +60,11 @@ const { armed, dropped } = correctionSlice.actions
  * activity back through `switches.changeActivity` only while the record is still at the revision the pick left (that record
  * reaches another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing and drops any
  * older slot, and raises the archived notice instead ({@link undoSlotFor}). A failed undo of either kind is sorted by
- * {@link afterUndoFailure}.
+ * {@link afterUndoFailure}. A slot is offered only while the listed day still reads as it left it ({@link offeredUndo}).
  *
  * `status` is the line under the rows ({@link statusLine}): why the last edit or undo on this day failed ({@link refusalMessage}),
- * shown as soon as the answer arrives and until the next press, selection or undo, else why the panel waits (a write
- * landing, or queued offline).
+ * shown as soon as the answer arrives, even to a sheet reopened after it closed, and until the next press, selection or undo,
+ * else why the panel waits (a write landing, or queued offline).
  * @example const correction = useCorrection(params.day)
  */
 export function useCorrection(dayParam: string | undefined) {
@@ -72,8 +75,14 @@ export function useCorrection(dayParam: string | undefined) {
     orpc.switches.listByDay.queryOptions({ input: { day }, enabled: ready }),
   )
   const activities = useAllActivities()
-  const state = useCorrectionState()
-  const slot = useAppSelector((s) => s.correction.undo[day])
+  const state = useCorrectionState(day)
+  // Offered only while the listed day still reads as the slot left it: this device's own tap on ホーム, or another device's
+  // edit the list has read, turns it off rather than leaving a press that can only be refused.
+  const slot = offeredUndo(
+    useAppSelector((s) => s.correction.undo[day]),
+    list.data,
+    timeZone,
+  )
   const bounds = { ...dayBounds(day, timeZone), now, timeZone }
   const edits = useCorrectionEdits(day, bounds, list.data, state)
   const undo = useCorrectionUndo(day, slot, state)
@@ -95,12 +104,7 @@ export function useCorrection(dayParam: string | undefined) {
     pending: list.isFetching || writesInFlight > 0,
     // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both; a quick one says nothing.
     // After a timeout the refetch runs on its own: it dims the panel through `pending`, without a line.
-    status: statusLine({
-      refusal: state.refusal,
-      day,
-      waiting,
-      online,
-    }),
+    status: statusLine({ refusal: state.refusal, waiting, online }),
     canUndo: slot !== undefined,
     selectedId: state.selectedId,
     noticeId: state.noticeId,
@@ -115,60 +119,88 @@ export function useCorrection(dayParam: string | undefined) {
 type CorrectionState = ReturnType<typeof useCorrectionState>
 
 /** What an edit or undo keeps from its press for the hook-level callbacks (TanStack hands `onMutate`'s result to `onError`). */
-type Pressed = { day: string }
+type Pressed = { day: string; epoch: string }
 
-// The sheet's own state: the selected row, the row the archived notice was raised for (until the next edit or selection),
-// the row a cut or split just created (the sheet focuses its header, since the pressed button left with its panel), and the
-// last failure for the status line (until the next edit, selection or undo). The undo slot lives in the store.
-function useCorrectionState() {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [noticeId, setNoticeId] = useState<string | null>(null)
-  const [focusId, setFocusId] = useState<string | null>(null)
-  const [refusal, setRefusal] = useState<Refusal | null>(null)
+// The sheet's own state ({@link CorrectionSheet}): the selected row and the row a cut or split just created (the sheet focuses
+// its header, since the pressed button left with its panel). It belongs to the day shown: a new day (midnight on today's sheet,
+// a `?day=` change) starts it over during render ({@link sheetView}), so an answer from a press on the day before, which
+// applies only while `day` is still its own ({@link onPressedDay}), selects nothing there. What the sheet said about a day
+// (the last failure's line, the archived notice) lives in the store with the undo slot, so a press whose answer lands after
+// the sheet closed still says it when that day's sheet reopens; the notice's row is selected then, so its panel shows it.
+function useCorrectionState(day: string) {
+  const dispatch = useAppDispatch()
+  const epoch = useAppSelector((s) => s.correction.epoch)
+  const refusal = useAppSelector((s) => s.correction.refusal[day])
+  const notice = useAppSelector((s) => s.correction.notice[day])
+  const [sheet, setSheet] = useState<CorrectionSheet>({
+    day,
+    selectedId: null,
+    focusId: null,
+  })
+  const view = sheetView(sheet, day, { refusal, notice })
+  const current = view.sheet
+  // A new day started the sheet over ("adjusting state when a prop changes"); `current` already covers this render.
+  if (current !== sheet) setSheet(current)
+  // An answer to a press: kept off the sheet once it shows another day.
+  const answer = (pressedDay: string, patch: Partial<CorrectionSheet>): void =>
+    setSheet((latest) => onPressedDay(latest, pressedDay, patch))
   return {
-    selectedId,
-    noticeId,
-    focusId,
-    refusal,
-    setNoticeId,
-    setFocusId,
-    setRefusal,
+    selectedId: view.selectedId,
+    noticeId: view.noticeId,
+    focusId: current.focusId,
+    refusal: view.refusal,
+    // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice.
+    hush: (notice: boolean): void => {
+      dispatch(correctionSlice.actions.hushed({ epoch, day, notice }))
+    },
     // A tap on a row: what the line or the notice said was about another moment.
     select: (id: string | null): void => {
-      setSelectedId(id)
-      setNoticeId(null)
-      setRefusal(null)
+      setSheet({ ...current, selectedId: id })
+      dispatch(correctionSlice.actions.hushed({ epoch, day, notice: true }))
     },
-    // A row the sheet selects by itself (a landed cut or split, an undo's reselect): a refusal a concurrent write raised stays.
-    reveal: (id: string): void => {
-      setSelectedId(id)
+    // A row the sheet selects by itself (an undo's reselect): a refusal a concurrent write raised stays.
+    reveal: (pressedDay: string, id: string): void => {
+      answer(pressedDay, { selectedId: id })
     },
-    // A refused undo on the archived activity: select its row, so the notice is seen.
-    showNotice: (id: string): void => {
-      setSelectedId(id)
-      setNoticeId(id)
+    // 半分で分割 and 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
+    selectInserted: (pressedDay: string, id: string): void => {
+      answer(pressedDay, { selectedId: id, focusId: id })
+    },
+    // An archived pick, or an undo refused as archived: the notice on the press's day, whose row is then selected.
+    showNotice: (pressed: Pressed, id: string): void => {
+      dispatch(correctionSlice.actions.noticed({ ...pressed, id }))
+      answer(pressed.day, { selectedId: id })
     },
   }
 }
 
-// The hook-level callbacks of every mutation here and in the undo. `onMutate` takes the day at the press (`mutate()` calls it
-// synchronously). `onError` sets the status line at once: TanStack runs it before `onSettled`, which waits for the re-read,
-// and when the connection drops during that re-read its retry waits for the network with no deadline.
+// The hook-level callbacks of every mutation here and in the undo. `onMutate` takes the day and the store's epoch at the press
+// (`mutate()` calls it synchronously). `onError` sets the day's status line at once: TanStack runs it before `onSettled`,
+// which waits for the re-read, and when the connection drops during that re-read its retry waits for the network with no
+// deadline. It runs even once the sheet has closed (the options stay on the mutation when its observer unsubscribes), and the
+// line lives in the store, so reopening that day's sheet says why.
 // Every mutation refetches `switches.*` and `stats.*` once it settles. A day-changed refusal also refetches `settings.*`, since
 // the stored zone may be what changed on another device, and the next edit would otherwise send the stale cached zone again.
 // Never while a settings update is in flight: its answer could roll back the optimistic value, and that update refetches
 // settings itself once it settles.
-function useEditLifecycle(day: string, state: CorrectionState) {
+function useEditLifecycle(day: string) {
   const queryClient = useQueryClient()
+  const dispatch = useAppDispatch()
+  const epoch = useAppSelector((s) => s.correction.epoch)
   return {
-    onMutate: (): Pressed => ({ day }),
+    onMutate: (): Pressed => ({ day, epoch }),
     onError: (
       error: unknown,
       _variables: unknown,
       pressed: Pressed | undefined,
     ): void => {
       if (pressed)
-        state.setRefusal({ day: pressed.day, text: refusalMessage(error) })
+        dispatch(
+          correctionSlice.actions.refused({
+            ...pressed,
+            text: refusalMessage(error),
+          }),
+        )
     },
     onSettled: async (_data: unknown, error: unknown): Promise<void> => {
       const refetchZone =
@@ -196,7 +228,7 @@ function useCorrectionEdits(
 ) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
-  const edit = useEditLifecycle(day, state)
+  const edit = useEditLifecycle(day)
   const moveStart = useMutation({
     ...orpc.switches.moveStart.mutationOptions(),
     ...edit,
@@ -229,10 +261,10 @@ function useCorrectionEdits(
   // edit's answer counts, a second tap's included, and so does one that lands after the sheet closed (per-call `mutate()`
   // callbacks fire for the latest call only, and only while mounted). The store's `epoch` at the press keeps an answer that
   // lands after sign-out away from the next account. A timed-out edit arms nothing, though it may have landed: the refetch
-  // shows what the day now holds. The failure's line comes from `onError` ({@link useEditLifecycle}).
+  // shows what the day now holds. The failure's line comes from `onError` ({@link useEditLifecycle}). `day` here is the day
+  // pressed on: an answer that lands once the sheet shows another day selects nothing there ({@link useCorrectionState}).
   const press = (row: CorrectionRow) => {
-    state.setNoticeId(null)
-    state.setRefusal(null)
+    state.hush(true)
     const baseline = listed
       ? dayBaseline(day, bounds.timeZone, listed)
       : undefined
@@ -245,7 +277,7 @@ function useCorrectionEdits(
           undoSlotFor({ kind, returned }, row, baseline, bounds),
         )
         dispatch(slot ? armed({ epoch, slot }) : dropped({ epoch, day }))
-        state.setNoticeId(archived ? row.id : null)
+        if (archived) state.showNotice({ day, epoch }, row.id)
       }
     const failed = (error: unknown): void => {
       // A timed-out edit may have landed, so no older undo knows what the day now holds.
@@ -254,10 +286,8 @@ function useCorrectionEdits(
     }
     return { baseline, landed, failed }
   }
-  // 半分で分割 and 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
   const selectInserted = (inserted: SwitchRow): void => {
-    state.reveal(inserted.id)
-    state.setFocusId(inserted.id)
+    state.selectInserted(day, inserted.id)
   }
   return {
     move: (row: CorrectionRow, deltaMinutes: 15 | -15): void => {
@@ -311,7 +341,7 @@ function useCorrectionUndo(
 ) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
-  const edit = useEditLifecycle(day, state)
+  const edit = useEditLifecycle(day)
   const replaceDay = useMutation({
     ...orpc.switches.replaceDay.mutationOptions(),
     ...edit,
@@ -319,9 +349,11 @@ function useCorrectionUndo(
   const restoreActivity = useMutation({
     ...orpc.switches.changeActivity.mutationOptions(),
     ...edit,
-    // An archived refusal of the carried-in pick's undo: its row's notice explains it, not the line.
+    // An archived refusal of the carried-in pick's undo: its row's notice explains it, not the line. Kept in the store like
+    // the line, so it is shown on reopening that day's sheet when the answer came after it closed.
     onError: (error, variables, pressed) => {
-      if (afterUndoFailure(error) === 'archived') state.showNotice(variables.id)
+      if (afterUndoFailure(error) === 'archived' && pressed)
+        state.showNotice(pressed, variables.id)
       else edit.onError(error, variables, pressed)
     },
   })
@@ -332,15 +364,15 @@ function useCorrectionUndo(
   }
   return (): void => {
     if (!slot) return
-    state.setRefusal(null)
+    state.hush(false)
     const request = undoRequest(slot)
     // Dropped on success, not on mutate, so a passing failure leaves 元に戻す armed.
     if (request.procedure === 'replaceDay')
       replaceDay.mutateAsync(request.input).then((written) => {
         dispatch(dropped({ epoch, day }))
-        // A cut's or a split's undo brings back the row the edit was made on: select it again.
+        // A cut's or a split's undo brings back the row the edit was made on: select it again, on that day only.
         const reselectId = reselectedRow(request.reselect, written)
-        if (reselectId) state.reveal(reselectId)
+        if (reselectId) state.reveal(day, reselectId)
       }, failed)
     else
       restoreActivity

@@ -1799,3 +1799,161 @@ test('an undo refused because it would make an archived activity the current sta
   )
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
+
+// Today 仕事 from 0:00, in place of the first-launch tap, then today's sheet opened from Home. Splitting or tapping the running
+// record needs it at least two minutes old, so the tests that use this skip the first two minutes of the Tokyo day.
+async function openTodayWorkSinceMidnight(page: Page) {
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  // replaceDay rewrites today only while it still holds the rows it names: the first-launch tap.
+  const { rows: firstLaunch } = await api.switches.listByDay({ day: today() })
+  await api.switches.replaceDay({
+    day: today(),
+    timeZone: 'Asia/Tokyo',
+    expected: firstLaunch.map(({ id, activityId, startedAt }) => ({
+      id,
+      activityId,
+      startedAt,
+    })),
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(today(), 0) }],
+  })
+  return { api, list }
+}
+
+test('元に戻す turns off once a tap on ホーム changed the day after the edit', async ({
+  page,
+}) => {
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 2 * 60_000,
+    'the Tokyo day is under two minutes old, so the running record is too short to change',
+  )
+  // Arrange: today's 仕事 picked as 睡眠 in the sheet, which arms 元に戻す; then the sheet closes.
+  await openTodayWorkSinceMidnight(page)
+  await page.goto('/correction')
+  const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
+  await dialog.getByRole('button', { name: /^仕事 0:00 – / }).click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  await expect(
+    dialog.getByRole('button', { name: /^睡眠 0:00 – / }),
+  ).toBeVisible()
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  await page.getByRole('button', { name: '完了' }).click()
+
+  // Act: a tap on ホーム starts 休息, then today's sheet opens again.
+  await page.getByRole('button', { name: '休息' }).click()
+  await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
+  await page.getByRole('link', { name: '訂正' }).click()
+
+  // Assert: the sheet lists the tap, and offers no undo that could only be refused as another device's change.
+  await expect(dialog.getByRole('button', { name: /^休息 / })).toBeVisible()
+  await expect(undo).toBeDisabled()
+})
+
+test('an edit refused after its sheet closed says why when that day’s sheet opens again', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事, the request held back while the sheet closes and another device moves 娯楽 to 17:45.
+  const { api, yesterday } = await seedYesterday(page)
+  const sent = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/mergeIntoPrevious', async (route) => {
+    await sent.promise
+    await route.continue()
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await page.getByRole('button', { name: '完了' }).click()
+  const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!leisure) throw new Error('no 娯楽 row')
+  await api.switches.moveStart({ id: leisure.id, deltaMinutes: -15 })
+
+  // Act: the merge reaches the API, which refuses it, then the same day opens again from History.
+  sent.resolve()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, yesterday).click()
+
+  // Assert: the line says the merge did not happen, over the rows another device left.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+  ).toBeVisible()
+})
+
+test('an undo refused as archived after its sheet closed shows the notice on the record when that day’s sheet opens again', async ({
+  page,
+}) => {
+  // Arrange: 睡眠 picked on the carried-in record, 仕事 archived from another device, then 元に戻す pressed with its answer
+  // held back until the sheet has closed.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  await expect(slept).toBeVisible()
+  await api.activities.archive({ id: idOf(list, '仕事') })
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/changeActivity', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Act: close the sheet, let the refusal land, then open the same day again from History.
+  await page.getByRole('button', { name: '完了' }).click()
+  answer.resolve()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, day).click()
+
+  // Assert: the record's panel is open on the notice, and 元に戻す is off.
+  await expect(slept).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '前の活動はアーカイブ済みのため、元に戻せません',
+  )
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('a split whose answer lands after midnight selects nothing on the new day, even the half that runs into it', async ({
+  page,
+}) => {
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 2 * 60_000,
+    'the Tokyo day is under two minutes old, so no current state is long enough to split',
+  )
+  // Arrange: today's sheet splits the running 仕事, and the answer is held back past midnight. The later half runs on, so
+  // the new day lists it as the record carried in, under the id the split's answer names.
+  await openTodayWorkSinceMidnight(page)
+  await page.clock.install()
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/splitInHalf', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.goto('/correction')
+  const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
+  await dialog.getByRole('button', { name: /^仕事 0:00 – / }).click()
+  await dialog.getByRole('button', { name: '半分で分割' }).click()
+
+  // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick, and then the split's answer
+  // lands. Setting the time fires no timer, so the split's 30 s deadline does not run out on the way.
+  await page.clock.setSystemTime(
+    new Date(`${shift(today(), 1)}T00:00:30+09:00`),
+  )
+  const carriedIn = dialog.getByRole('button', { name: /^仕事 0:00 – / })
+  await expect(carriedIn).toBeVisible()
+  // The split settles once the list is read again after its answer; its selection runs right after that read.
+  const reread = page.waitForResponse('**/api/rpc/switches/listByDay**')
+  answer.resolve()
+  await reread
+
+  // Assert: the carried-in half is listed but not opened by an answer about yesterday.
+  await expect(carriedIn).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
