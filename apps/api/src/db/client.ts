@@ -9,9 +9,13 @@ import { relations } from './relations'
 const url = new URL(dbEnv.DATABASE_URL)
 url.searchParams.delete('sslmode')
 
+/** How long a request waits for a free pool connection before it fails, rather than queueing without bound. */
+const POOL_CONNECTION_TIMEOUT_MS = 10_000
+
 export const pool = new Pool({
   connectionString: url.href,
   ssl: dbEnv.DATABASE_CA_CERT ? { ca: dbEnv.DATABASE_CA_CERT } : false,
+  connectionTimeoutMillis: POOL_CONNECTION_TIMEOUT_MS,
 })
 
 export const db = drizzle({ client: pool, relations })

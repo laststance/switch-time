@@ -52,32 +52,56 @@ const TIMELINE_LOCK_NAMESPACE = 1
 const TIMELINE_LOCK_TIMEOUT = '10s'
 
 /**
+ * How many timeline writes one account may have in flight in this process: each holds a pool connection while it waits for
+ * the account's lock, so a burst above this is refused before it takes one, and the pool stays open to other accounts.
+ */
+const TIMELINE_WRITES_PER_USER = 4
+
+// The timeline writes each account has in flight in this process (an account with none has no entry).
+const writesInFlight = new Map<string, number>()
+
+/**
  * Runs `work` in one transaction that first takes the user's timeline lock (`pg_advisory_xact_lock`, released at commit or
  * rollback). Every write to a user's switches, `activities.archive` and a stored-zone change take it, and read what they
  * decide on inside it, so two devices' writes run one after the other: a merge sees the neighbours the other merge left,
  * two 「元に戻す」 never both delete and insert, a tap cannot slip between archive's check and its write. A write that waits
- * longer than {@link TIMELINE_LOCK_TIMEOUT} fails (a server error, which the client treats as a passing failure).
+ * longer than {@link TIMELINE_LOCK_TIMEOUT} fails (a server error, which the client treats as a passing failure), and one
+ * beyond {@link TIMELINE_WRITES_PER_USER} in flight is refused before it takes a pool connection.
  * @param userId - Whose timeline; other users never wait on it (a `hashtext` collision only makes two users take turns).
  * @param work - The reads and writes, all through the transaction it is handed.
- * @returns whatever `work` returns, once committed
+ * @returns whatever `work` returns, once committed; TOO_MANY_REQUESTS when the account already has the cap in flight
  * @example return withUserLock(userId, async (tx) => mergeInto(tx, row.id, prev.id))
  */
 export async function withUserLock<T>(
   userId: string,
   work: (tx: LockedTx) => Promise<T>,
 ): Promise<T> {
-  // READ COMMITTED on purpose: each statement after the lock reads what the writer before it committed. Under REPEATABLE
-  // READ the snapshot would be taken before the wait, and the lock would serialize nothing.
-  return db.transaction(
-    async (tx) => {
-      await tx.execute(
-        sql`select set_config('lock_timeout', ${TIMELINE_LOCK_TIMEOUT}, true)`,
-      )
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
-      )
-      return work(tx)
-    },
-    { isolationLevel: 'read committed' },
-  )
+  const inFlight = writesInFlight.get(userId) ?? 0
+  // Counted before db.transaction, which takes the pool connection the write would then hold while it waits.
+  if (inFlight >= TIMELINE_WRITES_PER_USER)
+    throw new ORPCError('TOO_MANY_REQUESTS', {
+      message: 'too many timeline writes in flight',
+    })
+  writesInFlight.set(userId, inFlight + 1)
+  try {
+    // READ COMMITTED on purpose: each statement after the lock reads what the writer before it committed. Under REPEATABLE
+    // READ the snapshot would be taken before the wait, and the lock would serialize nothing.
+    return await db.transaction(
+      async (tx) => {
+        await tx.execute(
+          sql`select set_config('lock_timeout', ${TIMELINE_LOCK_TIMEOUT}, true)`,
+        )
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
+        )
+        return work(tx)
+      },
+      { isolationLevel: 'read committed' },
+    )
+  } finally {
+    // Read again: other writes of the account may have started or finished meanwhile.
+    const remaining = (writesInFlight.get(userId) ?? 1) - 1
+    if (remaining === 0) writesInFlight.delete(userId)
+    else writesInFlight.set(userId, remaining)
+  }
 }

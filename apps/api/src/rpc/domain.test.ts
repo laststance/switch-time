@@ -908,12 +908,45 @@ test('an empty settings update is rejected as input, not as a database error', a
   })
 })
 
-test('a replaced day can end on an archived activity, which then runs on as the current state', async () => {
+test('a replaced day that would end on an archived activity with nothing after it is refused, so an archived activity never runs', async () => {
   // Arrange: no switches yet, so nothing keeps 休息 from being archived
   const api = await signedIn('replace-archived@example.com')
   const list = await api.activities.list()
   const work = idOf(list, '仕事')
   const rest = idOf(list, '休息')
+  await api.activities.archive({ id: rest })
+  const yesterday = addDays(today, -1)
+
+  // Act
+  const replacement = api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(yesterday, 9) },
+      { activityId: rest, startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert: nothing was recorded after 12:00, so 休息 would have become the current state; nothing was written
+  await expect(replacement).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    data: { reason: 'archived' },
+  })
+  expect(await api.switches.current()).toBeNull()
+})
+
+test('a replaced day may end on an archived activity when a later switch follows, since that record is past time', async () => {
+  // Arrange: 家事 runs from today 0:00, so yesterday's last row is not the current state
+  const api = await signedIn('replace-archived-past@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const home = idOf(list, '家事')
+  await db
+    .insert(switches)
+    .values({ userId, activityId: home, startedAt: at(today, 0) })
   await api.activities.archive({ id: rest })
   const yesterday = addDays(today, -1)
 
@@ -928,29 +961,24 @@ test('a replaced day can end on an archived activity, which then runs on as the 
     ],
   })
 
-  // Assert: nothing was recorded after 12:00, so the archived 休息 is what runs now
+  // Assert
   expect(written.map((row) => [row.activityId, row.startedAt])).toEqual([
     [work, at(yesterday, 9)],
     [rest, at(yesterday, 12)],
   ])
-  expect(await api.switches.current()).toMatchObject({
-    activityId: rest,
-    startedAt: at(yesterday, 12),
-  })
+  expect(await api.switches.current()).toMatchObject({ activityId: home })
 })
 
 test('tapping an archived activity that is still the current state is refused, and that state keeps running', async () => {
-  // Arrange: 休息 archived before any switch, then a replaced day ends on it, so the archived 休息 is the current state
+  // Arrange: an archived 休息 as the current state, which only data from before the latest-row check can hold
   const api = await signedIn('retap-archived@example.com')
+  const { id: userId } = await api.me()
   const rest = idOf(await api.activities.list(), '休息')
   await api.activities.archive({ id: rest })
   const yesterday = addDays(today, -1)
-  await api.switches.replaceDay({
-    day: yesterday,
-    timeZone: TZ,
-    expected: [],
-    rows: [{ activityId: rest, startedAt: at(yesterday, 12) }],
-  })
+  await db
+    .insert(switches)
+    .values({ userId, activityId: rest, startedAt: at(yesterday, 12) })
 
   // Act: the archived check runs before the same-state shortcut, so the re-tap is refused, not answered
   const retap = api.switches.switchTo({ activityId: rest })
@@ -1130,7 +1158,7 @@ test('splitting a record of an archived activity keeps both halves on that activ
   ])
 })
 
-test('merging the current state into the record of an archived activity makes that activity the current state', async () => {
+test('merging the current state into the record of an archived activity is refused, and the current state keeps running', async () => {
   // Arrange: yesterday 休息 10:00 then 仕事 12:00; 仕事 is the current state, so 休息 can be archived
   const api = await signedIn('merge-onto-archived@example.com')
   const list = await api.activities.list()
@@ -1150,14 +1178,47 @@ test('merging the current state into the record of an archived activity makes th
   await api.activities.archive({ id: rest })
 
   // Act
-  await api.switches.mergeIntoPrevious({ id: workRow.id })
+  const merge = api.switches.mergeIntoPrevious({ id: workRow.id })
 
-  // Assert: 「前の記録に統合」 checks no activity, so the archived 休息 now runs on from 10:00
-  expect(await api.switches.current()).toMatchObject({
-    activityId: rest,
-    startedAt: at(yesterday, 10),
-    source: 'merge',
+  // Assert: the merge would have made the archived 休息 run on from 10:00
+  await expect(merge).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    data: { reason: 'archived' },
   })
+  expect(await api.switches.current()).toMatchObject({
+    id: workRow.id,
+    activityId: work,
+    startedAt: at(yesterday, 12),
+  })
+})
+
+test('merging a past record into the record of an archived activity still lands, since the current state stays as it was', async () => {
+  // Arrange: yesterday 休息 10:00, 仕事 12:00, 家事 15:00; 家事 runs, so 休息 can be archived
+  const api = await signedIn('merge-past-onto-archived@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const work = idOf(list, '仕事')
+  const home = idOf(list, '家事')
+  const yesterday = addDays(today, -1)
+  const [restRow, workRow] = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: rest, startedAt: at(yesterday, 10) },
+      { activityId: work, startedAt: at(yesterday, 12) },
+      { activityId: home, startedAt: at(yesterday, 15) },
+    ],
+  })
+  if (!restRow || !workRow) throw new Error('seed failed')
+  await api.activities.archive({ id: rest })
+
+  // Act
+  const kept = await api.switches.mergeIntoPrevious({ id: workRow.id })
+
+  // Assert
+  expect(kept).toMatchObject({ id: restRow.id, activityId: rest })
+  expect(await api.switches.current()).toMatchObject({ activityId: home })
 })
 
 test('a replaced day rejects two segments that start at the same moment', async () => {

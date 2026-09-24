@@ -14,6 +14,32 @@
 **Priority:** P3
 **Depends on:** None
 
+## Settings
+
+### Let the main device take the account's zone back
+
+**What:** Give the user a way back when another device's zone replaced the account's: a zone row in 設定 (designed in the pen file first) or a prompt when the stored zone differs from both the device's zone and the one it last synced.
+
+**Why:** Since 0.5.0.0 a device writes its zone only when its own zone changed since it last synced (`zoneSyncAction` in `apps/app/src/lib/settings.ts`), which stopped two devices from flipping the zone on every focus. A single sign-in from another zone (a friend's laptop abroad, a browser that reports UTC to resist fingerprinting, a test run against the real account) now writes once, and the main device, whose own zone has not changed, never writes again. Every day boundary, the stats and the correction windows stay shifted, and the app has no zone control to undo it.
+
+**Context:** `apps/app/src/lib/device-zone.ts` keeps the last synced zone per account (localStorage on the web, `expo-secure-store` on native). On iOS the keychain can keep that entry across a reinstall, so reinstalling does not reclaim the zone either. A prompt keeps the automatic path; a 設定 row is simpler and also covers a user who wants a zone other than the device's. Raised by the red-team pass during the 0.5.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Drop another account's cached data when a second tab signs in as someone else
+
+**What:** Clear the query cache, or key every query by the account, when the session's user id changes in a tab that did not sign in itself.
+
+**Why:** `queryClient.clear()` runs only in the tab that signs in or out. When another tab signs in as a different account, this tab's session turns to that account on focus while every cached query (the settings row, the timeline, the stats) still holds the first account's data until it refetches. Since 0.5.0.0 that matters for the zone: `useTimeZoneSync` can find the first account's zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
+
+**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), `useSignOut` for where the cache is cleared today. Raised by the Claude adversarial pass during the 0.5.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Correction
 
 ### Say why a correction was refused
@@ -22,7 +48,7 @@
 
 **Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
 
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Since the day baseline (2026-09-25), every edit of the sheet and the day's 「元に戻す」 can also be refused because the day changed elsewhere (another device's switch or edit, or a stored-zone change): that refusal already carries `DAY_CHANGED_REFUSAL` (`{ reason: 'day-changed' }`, thrown by `checkBaseline` and `replaceDay` in `apps/api/src/rpc/switches.ts`), so it can map to a message such as 「別の端末で記録が変わったため、最新の状態を表示しました」. `moveStart`, `splitInHalf` and `splitAt` also refuse a result that would land on another day. Raised by the review during the 0.2.0.0 ship.
+**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Since the day baseline (2026-09-25), every edit of the sheet and the day's 「元に戻す」 can also be refused because the day changed elsewhere (another device's switch or edit, or a stored-zone change): that refusal already carries `DAY_CHANGED_REFUSAL` (`{ reason: 'day-changed' }`, thrown by `checkBaseline` and `replaceDay` in `apps/api/src/rpc/switches.ts`), so it can map to a message such as 「別の端末で記録が変わったため、最新の状態を表示しました」. `moveStart`, `splitInHalf` and `splitAt` also refuse a result that would land on another day. Since 0.5.0.0, 「前の記録に統合」 on the running record is refused with `ARCHIVED_REFUSAL` when the previous record's activity is archived (the sheet disables the button then, but a list another device has since changed can still reach it, and the refusal is silent: the edit is not an undo, so `afterUndoFailure` never sees it), and any timeline write is refused with TOO_MANY_REQUESTS when the account already has `TIMELINE_WRITES_PER_USER` (4) in flight (`withUserLock` in `apps/api/src/rpc/base.ts`): a tap on ホーム refused that way only rolls back its optimistic state, and the refusal carries no reason yet. A day 「元に戻す」 that `replaceDay` refuses with `ARCHIVED_REFUSAL` (the row that would become the current state is archived) turns 元に戻す off with no notice, since `refuseUndo` gets no row id for the day slot. Raised by the review during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -82,7 +108,7 @@
 
 **Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, but only while the sheet that made the edit is open. After 完了, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
 
-**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the user's timeline lock (`withUserLock` in `apps/api/src/rpc/base.ts`), since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
+**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one: "not the latest row", checked under the user's timeline lock, as `replaceDay` and `mergeIntoPrevious` have done since 0.5.0.0 (`assertLiveActivities` on the row that becomes the latest switch, in `apps/api/src/rpc/switches.ts`); a later merge or undo that makes the edited row the latest is then refused by those checks. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
 
 **Effort:** M
 **Priority:** P3
@@ -148,52 +174,16 @@
 **Priority:** P3
 **Depends on:** None
 
-### Stop the stored time zone flipping between two devices
+### Notice another device's edit on a day busier than a baseline can list
 
-**What:** Make `use-time-zone-sync.ts` write the device's zone only when that device's own zone changes (compare it with the last zone this device synced, kept on the device), or ask before overwriting the stored one. While a `settings.update` that carries `timeZone` is in flight, hold the correction sheet's buttons.
+**What:** Let the sheet detect a change another device made to the day's own rows when the day lists more than `DAY_ROWS_MAX` (300) rows, and offer 「元に戻す」 there, for example by comparing a hash or a revision of the day instead of every row.
 
-**Why:** The hook writes the focused device's zone whenever it differs from the stored one, so two devices in different zones flip it back and forth on every focus. A browser with `resistFingerprinting` reports UTC, so one laptop and one phone are enough. Since the day baseline (2026-09-25), every edit and every day 「元に戻す」 carries the zone, so each flip makes the other device's open sheet refuse its next edit and turns its 元に戻す off (`DAY_CHANGED_REFUSAL`, which the client does not read yet). The same write runs at app start, where the settings cache takes the device zone at once while `listByDay` may still hold rows windowed in the old one, so edits are refused silently until the zone write settles.
+**Why:** Since 0.5.0.0, such a day sends a baseline without `rows`: its zone and the records carried in and out are still checked, and an edit on a row of another day is refused, but an edit another device made to one of the day's own rows is not noticed, and no day 「元に戻す」 is offered. `DAY_ROWS_MAX` comes from the 100 KB body limit on `/api/*`: 300 rows twice (`expected` and `rows`) serialize to about 87 KB.
 
-**Context:** Left open when the day baseline closed "Refetch the day's switches after the time zone changes" (`useUpdateSettings` now refetches `switches.*` too, and a replay under another zone is refused). Raised by the Red Team during the day baseline's ship (2026-09-25).
+**Context:** `dayBaseline` and `undoSlotFor` in `apps/app/src/lib/correction.ts`, `checkBaseline` and `checkOwnRowBaseline` in `apps/api/src/rpc/switches.ts`, `DAY_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit test in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 300 switches in a day. The API also accepts a baseline without `rows` on a day that holds 300 rows or fewer (the app never sends one, but a busy day another device has since thinned out still passes); refusing that as a changed day, by counting the day's rows, belongs with the same fix. Left over from "Let a day with more than 500 switches still be corrected", which 0.5.0.0 closed.
 
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
-### Refuse an edit that makes a record of an archived activity the current state
-
-**What:** Under the per-user lock, refuse `replaceDay` and `mergeIntoPrevious` with `ARCHIVED_REFUSAL` when the row that becomes the user's latest switch names an archived activity.
-
-**Why:** `activities.archive` refuses the activity of the current state, and the lock keeps a tap or a pick from racing that check, but two locked writes still get around it. (1) Device A's sheet changes today's running record from X to Y, device B archives X (allowed: X is no longer current), then A presses 「元に戻す」: the day still reads as the edit left it (archiving writes no switch), and `replaceDay` checks ownership only, so the running record goes back to X. (2) 「前の記録に統合」 on the latest record makes the previous record the current state without looking at its activity.
-
-**Context:** The owner accepted archived ids in `replaceDay` for past time (0.2.1.0, PR #49), not for the running state. `apps/api/src/rpc/switches.ts`. The rule matches the "not the latest row" rule that "Rebuild a merged-away record of an archived activity" needs. Raised by the Red Team during the day baseline's ship (2026-09-25).
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
-### Refuse a merge into a carried-in record that changed elsewhere
-
-**What:** Put the carried-in record's id and `revision` into the day baseline (the sheet's row already holds both), and refuse 「前の記録に統合」 with `DAY_CHANGED_REFUSAL` when the record it merges into is that record and its id or revision no longer match.
-
-**Why:** The baseline covers the day's own rows only. When another device changes the carried-in record first (a pick on the previous day's sheet, or a merge that leaves an earlier row in its place), the day's baseline still matches, so merging the day's first row into it hands that time to an activity the sheet never showed. The day's 「元に戻す」 can still reverse it, but the edit is not refused, which is what the baseline is for.
-
-**Context:** `checkBaseline` and `mergeIntoPrevious` in `apps/api/src/rpc/switches.ts`, `dayBaseline` in `apps/app/src/lib/correction.ts`, `dayBaselineSchema` in `packages/shared/src/schemas.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Let a day with more than 500 switches still be corrected
-
-**What:** Send no baseline and arm no day 「元に戻す」 when the listed day holds more rows than the baseline schema allows, or raise the cap to an explicit server limit on switches per day.
-
-**Why:** Since the day baseline (2026-09-25), every sheet edit sends all the day's rows, capped at 500 by `dayRowsSchema` in `packages/shared/src/schemas.ts`. On a day with more (a script, a hotkey burst), every edit fails validation with BAD_REQUEST and nothing is shown, so the day cannot be corrected at all. Before, only 「元に戻す」 hit the cap. The sheet can also cross it itself: 半分で分割 on a day of exactly 500 rows lands (its baseline holds 500), and then its own 「元に戻す」 is refused, since `expected` would hold 501; keep the cap on the rows written back apart from the one on the rows compared, and test 500 → 501.
-
-**Context:** The API already accepts an edit without a baseline. `dayBaseline` in `apps/app/src/lib/correction.ts` builds it. Raised by the Red Team during the day baseline's ship (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
+**Effort:** M
+**Priority:** P4
 **Depends on:** None
 
 ## Stats
@@ -238,40 +228,16 @@
 
 ## Database
 
-### Keep two switches of one account from starting at the same instant
+### Keep several accounts' queued writes from filling the connection pool together
 
-**What:** In `switchTo`, under the per-user lock, start the new switch at `max(now, current.startedAt + 1 ms)` (or take the time from the database with `greatest()`), and add `id` as a second sort key in `dayRows`, `switchesBetween` and `rowsAfterEdit`.
+**What:** Queue each user's timeline writes in the API process (a per-user mutex in front of `withUserLock`) so only one connection per user waits on the advisory lock, or take the lock with `pg_try_advisory_xact_lock` and a short backoff.
 
-**Why:** Two taps from two devices, serialized by the lock, can land in the same millisecond, and a clock step or a second API instance can even start the new row before the current one. Nothing orders tied rows: the list and the locked re-read can then read them in different orders, which refuses edits as day-changed for no reason, and `replaceDay` rejects tied rows with BAD_REQUEST, which `afterUndoFailure` keeps armed, so 「元に戻す」 fails on every press.
+**Why:** Since 0.5.0.0, one account can hold at most 4 timeline writes in flight per API process (TOO_MANY_REQUESTS above that, `TIMELINE_WRITES_PER_USER` in `apps/api/src/rpc/base.ts`), and a request waits at most 10 s for a pool connection (`connectionTimeoutMillis` in `apps/api/src/db/client.ts`). The pool still holds 10 connections, so three accounts with bursts in flight at once can fill it with writes queued on their own locks, and every other request then waits up to those 10 s and fails. The cap is also per process: with a second API instance, one account can hold twice as many. Reads are not capped at all: `switches.listByDay` takes three pool connections at once (`switchesBetween`'s `Promise.all`), so one account refetching fast can fill the pool on its own; running those three queries on one connection would take one per request.
 
-**Context:** No unique index covers `(user_id, started_at)`. `apps/api/src/rpc/switches.ts`, `apps/app/src/lib/correction.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep one account's queued writes from filling the connection pool
-
-**What:** Queue a user's timeline writes in the API process (a per-user mutex in front of `withUserLock`) so only one connection per user waits on the advisory lock, cap how many writes one user can have in flight (TOO_MANY_REQUESTS above a small number), and set `connectionTimeoutMillis` on the `Pool` in `apps/api/src/db/client.ts`.
-
-**Why:** Every write that waits in `withUserLock` holds a pool connection for up to the 10 s `lock_timeout`. The `Pool` keeps the default 10 connections and no acquire timeout, and nothing rate-limits RPC writes, so one signed-in account with about ten writes in flight (taps, edits, zone updates) fills the pool with requests queued on its own lock; every other account's reads and writes then wait on the pool with no bound. Before the lock, the same burst ran in parallel and drained about ten times faster.
-
-**Context:** The advisory lock stays for correctness across API instances; the in-process queue only stops waiters from holding connections. `pg_try_advisory_xact_lock` with a short backoff, or a shorter timeout, are the cheaper alternatives. Raised by the security pass during the day baseline's ship (2026-09-25).
+**Context:** The advisory lock stays for correctness across API instances; the in-process queue only stops waiters from holding connections. Left over from "Keep one account's queued writes from filling the connection pool", raised by the security pass during the day baseline's ship (2026-09-25).
 
 **Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Let the switches index serve the timeline queries in order
-
-**What:** Declare `switches_user_started_idx` with `startedAt.desc().nullsFirst()` and generate the migration.
-
-**Why:** Drizzle's `.desc()` writes `started_at DESC NULLS LAST`, while the queries' `desc()` and `asc()` sort with Postgres' default null order, which that index serves in neither direction. Every `latestSwitch`, `withNeighbours` and `switchesBetween` lookup sorts all of the user's rows instead of reading one index entry, and the cost grows with every tap.
-
-**Context:** `apps/api/src/db/schema/app.ts`. Confirm with `EXPLAIN` on a seeded account that the Sort node is gone. Pre-existing, raised by the review during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
+**Priority:** P4
 **Depends on:** None
 
 ### Make the database refuse a switch that names another account's activity
@@ -343,6 +309,18 @@
 **Why:** A merge deletes the selected row, which unmounts its card together with the focused button. On the web, focus falls to `<body>`: a keyboard or screen-reader user loses their place, and nothing announces the merge.
 
 **Context:** `correction.tsx` keys the cards by `row.id`. Applies to both merge buttons (「前の記録に統合」 since 0.1.0.0). 「ここで分割」 already does this since the carried-in row's panel (2026-09-24): `useCorrection` sets `focusId` to the row `splitAt` returns, and `RowHeader` takes focus when its `focused` prop turns on, so a merge can set the same id. Raised by the design pass during the 0.2.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Bound how long a stuck database call keeps an account's write places
+
+**What:** Give pool queries a deadline (`query_timeout` or `statement_timeout` on `apps/api/src/db/client.ts`'s pool, with `keepAlive`), and an `idle_in_transaction_session_timeout` on the database, sized above `TIMELINE_LOCK_TIMEOUT` (10 s) and kept away from the migration runner, which shares the pool.
+
+**Why:** Since 0.5.0.0, `withUserLock` counts each account's timeline writes in flight and frees a place in `finally`. Only `lock_timeout` bounds a write today: when the connection to the database goes half-open (a managed-database failover), `db.transaction` does not settle until the OS gives up on the socket, minutes later, and after 4 such writes every tap, archive and zone change of that account is refused with TOO_MANY_REQUESTS until then.
+
+**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Raised by the Claude adversarial pass during the 0.5.0.0 ship.
 
 **Effort:** S
 **Priority:** P3

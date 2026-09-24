@@ -116,6 +116,59 @@ test('a past day lists the carried-in record last, selectable but without move, 
   expect(rows.slice(0, 3).map((r) => r.cut)).toEqual([null, null, null])
 })
 
+test('the running record cannot merge into a previous record whose activity is archived, since that would make it run again', () => {
+  // Arrange: today 旧仕事 (archived) at 9:00, then 仕事 at 12:00, which runs
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: [row('o', 'old', at(day, 9)), row('w', 'work', at(day, 12))],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at(day, 15).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+
+  // Assert
+  expect(rows.map((r) => [r.name, r.canMergePrevious])).toEqual([
+    ['仕事', false],
+    ['旧仕事', false],
+  ])
+})
+
+test('a past record may still merge into a previous record whose activity is archived, since the running state stays as it was', () => {
+  // Arrange: today 旧仕事 (archived) at 9:00, 仕事 at 12:00, then 休息 at 14:00, which runs
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: [
+      row('o', 'old', at(day, 9)),
+      row('w', 'work', at(day, 12)),
+      row('r', 'rest', at(day, 14)),
+    ],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at(day, 15).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+
+  // Assert
+  expect(rows.map((r) => [r.name, r.canMergePrevious])).toEqual([
+    ['休息', true],
+    ['仕事', true],
+    ['旧仕事', false],
+  ])
+})
+
 test('the last row cannot merge into the next day’s switch even when that switch sits exactly on midnight', () => {
   // Arrange: 仕事 9:00 and 娯楽 18:00 on 9/8 (the first states ever); 家事 at 9/9 0:00 sharp closes 娯楽 on the day's very end.
   const day = '2026-09-08'
@@ -213,10 +266,10 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
   expect(correctionRows(list, undefined, bounds)).toEqual([])
 })
 
-test('the title names the day unless it is today, and the baseline an edit sends holds the day’s own rows with their ids and the switch its last row runs into', () => {
+test('the title names the day unless it is today, and the baseline an edit sends holds the day’s own rows with their ids, the carried-in record at its revision and the switch its last row runs into', () => {
   // Arrange
   const list: ListedDay = {
-    carriedIn: row('s', 'sleep', at('2026-09-07', 23)),
+    carriedIn: { ...row('s', 'sleep', at('2026-09-07', 23)), revision: 3 },
     rows: [row('w', 'work', at('2026-09-08', 9))],
     carriedOut: row('t', 'home', at('2026-09-09', 8)),
   }
@@ -228,7 +281,154 @@ test('the title names the day unless it is today, and the baseline an edit sends
     day: '2026-09-08',
     timeZone: TZ,
     rows: [{ id: 'w', activityId: 'work', startedAt: at('2026-09-08', 9) }],
+    carriedIn: { id: 's', revision: 3 },
     carriedOutId: 't',
+  })
+})
+
+test('a day with no switch before it sends a baseline that says so, so a record appearing before the day is caught', () => {
+  // Arrange
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: [row('w', 'work', at('2026-09-08', 9))],
+    carriedOut: null,
+  }
+
+  // Act
+  const baseline = dayBaseline('2026-09-08', TZ, list)
+
+  // Assert
+  expect(baseline.carriedIn).toBeNull()
+  expect(baseline.carriedOutId).toBeNull()
+})
+
+// A day of 301 one-minute switches from 9:00: one more than a baseline lists.
+const busyDay = (): ListedDay => ({
+  carriedIn: row('c', 'sleep', at('2026-09-07', 23)),
+  rows: Array.from({ length: 301 }, (_, index) =>
+    row(`r${index}`, 'work', at('2026-09-08', 9, index)),
+  ),
+  carriedOut: row('t', 'home', at('2026-09-09', 8)),
+})
+
+test('a day busier than a baseline can list is still corrected: the edit sends the zone and the records on either side, without the rows', () => {
+  // Arrange
+  const list = busyDay()
+
+  // Act
+  const baseline = dayBaseline('2026-09-08', TZ, list)
+
+  // Assert
+  expect(baseline).toEqual({
+    day: '2026-09-08',
+    timeZone: TZ,
+    carriedIn: { id: 'c', revision: 0 },
+    carriedOutId: 't',
+  })
+})
+
+test('a day of exactly 300 switches, the most a baseline lists, still sends its rows, so its edits keep 元に戻す', () => {
+  // Arrange: 300 one-minute switches from 9:00
+  const list: ListedDay = {
+    carriedIn: null,
+    rows: Array.from({ length: 300 }, (_, index) =>
+      row(`r${index}`, 'work', at('2026-09-08', 9, index)),
+    ),
+    carriedOut: null,
+  }
+
+  // Act
+  const baseline = dayBaseline('2026-09-08', TZ, list)
+
+  // Assert
+  expect(baseline.rows).toHaveLength(300)
+  expect(baseline.rows?.at(-1)).toEqual({
+    id: 'r299',
+    activityId: 'work',
+    startedAt: at('2026-09-08', 13, 59),
+  })
+})
+
+test('an edit on a day busier than a baseline can list arms no 元に戻す, since there are no listed rows to write back', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const list = busyDay()
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+  const edited = correctionRows(list, activities, bounds)[0]
+  if (!edited) throw new Error('no row')
+  const baseline = dayBaseline(day, TZ, list)
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'move', returned: row(edited.id, 'work', at(day, 9, 10)) },
+    edited,
+    baseline,
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toBeNull()
+})
+
+test('an edit sent before the day’s list arrived arms no 元に戻す, since the sheet never saw the rows it would write back', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const list = busyDay()
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+  const edited = correctionRows(list, activities, bounds)[0]
+  if (!edited) throw new Error('no row')
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'move', returned: row(edited.id, 'work', at(day, 9, 10)) },
+    edited,
+    undefined,
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toBeNull()
+})
+
+test('a pick on the carried-in record of a busy day still arms its own 元に戻す, which needs no listed rows', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const list = busyDay()
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+  const carriedIn = correctionRows(list, activities, bounds).at(-1)
+  if (!carriedIn?.carriedIn) throw new Error('no carried-in row')
+  const baseline = dayBaseline(day, TZ, list)
+
+  // Act
+  const slot = undoSlotFor(
+    {
+      kind: 'pick',
+      returned: { ...row('c', 'work', at('2026-09-07', 23)), revision: 1 },
+    },
+    carriedIn,
+    baseline,
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toEqual({
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'sleep',
+    revision: 1,
   })
 })
 
@@ -942,6 +1142,19 @@ test('a refused activity undo turns 元に戻す off, and a passing failure keep
   ])
 })
 
+test('an undo refused because the account has too many timeline writes in flight keeps 元に戻す armed for another try', () => {
+  // Arrange: the API's per-account cap on writes waiting for the timeline lock
+  const refusal = new ORPCError('TOO_MANY_REQUESTS', {
+    message: 'too many timeline writes in flight',
+  })
+
+  // Act
+  const outcome = afterUndoFailure(refusal)
+
+  // Assert
+  expect(outcome).toBe('keep')
+})
+
 test('only a day-changed refusal makes the sheet refetch the stored zone, so a settings update in flight is never overwritten otherwise', () => {
   // Arrange
   const answers = [
@@ -1034,6 +1247,7 @@ test('a pick on the carried-in record only writes if no other write reached the 
       day: '2026-09-08',
       timeZone: TZ,
       rows: [{ id: 'h', activityId: 'home', startedAt: at(day, 7) }],
+      carriedIn: { id: 'w', revision: 0 },
       carriedOutId: null,
     },
   })
