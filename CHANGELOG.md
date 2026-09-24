@@ -33,11 +33,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
-- Every refusal of a timeline write from the API now carries a reason in
-  its error `data` (day changed, record changed, archived, no room, no
-  record to merge into, next record on a later day, cannot split, busy),
-  shared by the API and the app, so the app no longer guesses from the
-  error's text.
+- The refusals the correction sheet can name now carry a reason in their
+  error `data` (day changed, record changed, archived, no room, no record
+  to merge into, next record on a later day, cannot split, busy), shared
+  by the API and the app, so the app no longer guesses from the error's
+  text. Input errors and a record that is gone carry none.
 
 ## [0.5.0.0] - 2026-09-25
 
