@@ -1,6 +1,14 @@
 import { useLocalSearchParams } from 'expo-router'
-import { useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
 import { ActivityPill } from '@/components/activity-pill'
@@ -8,11 +16,36 @@ import { Control } from '@/components/control'
 import { dismissSheet, Sheet } from '@/components/sheet'
 import { useActivities } from '@/hooks/use-activities'
 import { useCorrection } from '@/hooks/use-correction'
-import type { CorrectionRow, DayBounds } from '@/lib/correction'
+import {
+  archivedBox,
+  CUT_STEPS,
+  cutStepper,
+  cutNotes,
+  revealOffset,
+  type ChosenCut,
+  type CorrectionRow,
+  type CutStepMinutes,
+  type DayBounds,
+  type TotalsFacts,
+} from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
+// gstack-shortcut(dec-f15d7e22): notes stay text-sub below AA, upgrade when the sub token contrast TODO lands
+const NOTE = 'text-sub text-xs leading-4.5'
+// The four 区切る時刻 steps: the glyph text on the button, and the action a screen reader speaks instead.
+const STEP_TEXT: Record<CutStepMinutes, { title: string; label: string }> = {
+  [-60]: { title: '−1時間', label: '区切る時刻を1時間早める' },
+  [-15]: { title: '−15分', label: '区切る時刻を15分早める' },
+  [15]: { title: '+15分', label: '区切る時刻を15分遅らせる' },
+  [60]: { title: '+1時間', label: '区切る時刻を1時間遅らせる' },
+}
+const ARCHIVED_TEXT = {
+  warning:
+    'この記録の活動はアーカイブ済みです。別の活動に変えると元に戻せません',
+  notice: '前の活動はアーカイブ済みのため、元に戻せません',
+}
 
 // The selected card takes its row's colour on the border; detox has none and keeps the `line` hairline.
 const frame = (selected: boolean, color: string | null) =>
@@ -53,19 +86,35 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
   )
 }
 
+// Keyboard focus on web, screen-reader focus on native.
+function takeFocus(node: View): void {
+  if (Platform.OS === 'web') return node.focus()
+  const tag = findNodeHandle(node)
+  if (tag !== null) AccessibilityInfo.setAccessibilityFocus(tag)
+}
+
 type RowHeaderProps = {
   row: CorrectionRow
   selected: boolean
+  focused: boolean
   onPress: () => void
 }
 
-// The tappable part of a row: chip, name, span and length. The carried-in state is plain text (nothing to correct).
-function RowHeader({ row, selected, onPress }: RowHeaderProps) {
+// The tappable part of a row: chip, name, span and length. `focused` takes keyboard and screen-reader focus, for the row a
+// cut just created (the pressed 「ここで分割」 left the screen with its panel).
+function RowHeader({ row, selected, focused, onPress }: RowHeaderProps) {
+  // A new callback when `focused` turns on, so React attaches it again and the header takes focus once.
+  const header = useCallback(
+    (node: View | null) => {
+      if (focused && node) takeFocus(node)
+    },
+    [focused],
+  )
   return (
     <Pressable
+      ref={header}
       role="button"
       aria-expanded={selected}
-      disabled={!row.editable}
       onPress={onPress}
       className="h-14.5 flex-row items-center gap-3 px-3.5"
     >
@@ -108,6 +157,7 @@ function StepButton({ glyph, label, disabled, onPress }: StepProps) {
 
 type ActionButtonProps = {
   title: string
+  label?: string
   disabled: boolean
   onPress: () => void
   className?: string
@@ -116,12 +166,14 @@ type ActionButtonProps = {
 // Full width in a column; pass `flex-1` only inside a row (in a column it collapses the button to its text height).
 function ActionButton({
   title,
+  label,
   disabled,
   onPress,
   className,
 }: ActionButtonProps) {
   return (
     <Control
+      label={label}
       disabled={disabled}
       onPress={onPress}
       className={cn('border-line h-11 rounded-chip border', className)}
@@ -135,7 +187,8 @@ type ActionsProps = {
   row: CorrectionRow
   pending: boolean
   onMove: (deltaMinutes: 15 | -15) => void
-  onPick: (activityId: string | null) => void
+  /** The activity picker, built by the caller. */
+  picker: ReactNode
   onMergePrevious: () => void
   onMergeNext: () => void
   onSplit: () => void
@@ -146,12 +199,11 @@ function Actions({
   row,
   pending,
   onMove,
-  onPick,
+  picker,
   onMergePrevious,
   onMergeNext,
   onSplit,
 }: ActionsProps) {
-  const live = useActivities().data ?? []
   // One gate for every control: nothing is pressable while a fetch or an edit is in flight.
   const can = (flag: boolean) => !pending && flag
   return (
@@ -176,37 +228,7 @@ function Actions({
       </View>
       <View className="gap-1.75">
         <Text className="text-sub text-xs font-medium">活動を変える</Text>
-        <View
-          role="radiogroup"
-          aria-label="活動を変える"
-          className="flex-row flex-wrap gap-1.75"
-        >
-          {live.map((activity) => (
-            <ActivityPill
-              key={activity.id}
-              name={activity.name}
-              color={activity.color}
-              iconKey={activity.iconKey}
-              selected={activity.id === row.activityId}
-              disabled={pending}
-              // Re-picking the current activity would be a pointless write (source → correction) that also arms undo.
-              onPress={() => {
-                if (activity.id !== row.activityId) onPick(activity.id)
-              }}
-            />
-          ))}
-          <ActivityPill
-            name={DETOX.name}
-            color={DETOX.color}
-            iconKey={DETOX.iconKey}
-            selected={row.activityId === null}
-            disabled={pending}
-            // Same guard as the activity pills: re-picking detox on a detox row would be a pointless write.
-            onPress={() => {
-              if (row.activityId !== null) onPick(null)
-            }}
-          />
-        </View>
+        {picker}
       </View>
       <View className="gap-2">
         <View className="flex-row gap-2">
@@ -230,6 +252,198 @@ function Actions({
         />
       </View>
     </View>
+  )
+}
+
+type PickerProps = {
+  row: CorrectionRow
+  pending: boolean
+  onPick: (activityId: string | null) => void
+}
+
+// The live activities and detox as pills; the row's own activity is the selected one.
+function ActivityPicker({ row, pending, onPick }: PickerProps) {
+  const live = useActivities().data ?? []
+  return (
+    <View
+      role="radiogroup"
+      aria-label="活動を変える"
+      className="flex-row flex-wrap gap-1.75"
+    >
+      {live.map((activity) => (
+        <ActivityPill
+          key={activity.id}
+          name={activity.name}
+          color={activity.color}
+          iconKey={activity.iconKey}
+          selected={activity.id === row.activityId}
+          disabled={pending}
+          // Re-picking the current activity would be a pointless write (source → correction) that also arms undo.
+          onPress={() => {
+            if (activity.id !== row.activityId) onPick(activity.id)
+          }}
+        />
+      ))}
+      <ActivityPill
+        name={DETOX.name}
+        color={DETOX.color}
+        iconKey={DETOX.iconKey}
+        selected={row.activityId === null}
+        disabled={pending}
+        // Same guard as the activity pills: re-picking detox on a detox row would be a pointless write.
+        onPress={() => {
+          if (row.activityId !== null) onPick(null)
+        }}
+      />
+    </View>
+  )
+}
+
+type CarriedInActionsProps = {
+  row: CorrectionRow
+  pending: boolean
+  timeZone: string
+  totalsFacts: TotalsFacts
+  noticeId: string | null
+  /** The activity picker, built by the caller. */
+  picker: ReactNode
+  onCut: (at: number) => void
+}
+
+// The panel under the carried-in record (layout B2): where it really started, 区切る時刻 with 「ここで分割」, and the picker,
+// which changes the whole record. It never moves or merges the record: that would rewrite the earlier day.
+function CarriedInActions({
+  row,
+  pending,
+  timeZone,
+  totalsFacts,
+  noticeId,
+  picker,
+  onCut,
+}: CarriedInActionsProps) {
+  const [chosen, setChosen] = useState<ChosenCut | null>(null)
+  const stepper = cutStepper(row, chosen, timeZone)
+  const step = (target: number): void => {
+    setChosen({ id: row.id, at: target })
+    // Android and web read the readout's live region; iOS needs the announcement.
+    if (Platform.OS === 'ios')
+      AccessibilityInfo.announceForAccessibility(
+        cutStepper(row, { id: row.id, at: target }, timeZone).label,
+      )
+  }
+  return (
+    <View className="gap-3 px-3.5 pt-0.5 pb-3.5">
+      <Text className={NOTE}>{`${row.trueStartLabel} から続く記録です`}</Text>
+      <View className="gap-2">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-sub text-xs font-medium">区切る時刻</Text>
+          <Text
+            aria-live="polite"
+            className="text-ink text-lg font-semibold tabular"
+          >
+            {stepper.label}
+          </Text>
+        </View>
+        <View className="flex-row gap-2">
+          {CUT_STEPS.map((minutes) => {
+            const target = stepper.targets[minutes]
+            return (
+              <ActionButton
+                key={minutes}
+                title={STEP_TEXT[minutes].title}
+                label={STEP_TEXT[minutes].label}
+                disabled={pending || target === null}
+                onPress={() => {
+                  if (target !== null) step(target)
+                }}
+                className="flex-1"
+              />
+            )
+          })}
+        </View>
+        <Control
+          disabled={pending || stepper.at === null}
+          onPress={() => {
+            if (stepper.at !== null) onCut(stepper.at)
+          }}
+          className="bg-ink h-11 rounded-chip"
+        >
+          <Text className="text-sheet-bg text-xs font-semibold">
+            ここで分割
+          </Text>
+        </Control>
+        {cutNotes(row, totalsFacts).map((note) => (
+          <Text key={note} className={NOTE}>
+            {note}
+          </Text>
+        ))}
+      </View>
+      <View className="gap-1.75">
+        <View className="gap-1">
+          <Text className="text-sub text-xs font-medium">活動を変える</Text>
+          <Text className={NOTE}>
+            {`記録全体（${row.trueStartLabel}〜）が変わり、${row.trueStartDate}の集計にも反映されます`}
+          </Text>
+        </View>
+        <ArchivedBox kind={archivedBox(row, noticeId)} />
+        {picker}
+      </View>
+    </View>
+  )
+}
+
+// The bordered box above the pills (on the selected card's chip fill): the archived warning before a pick, the notice after it.
+function ArchivedBox({ kind }: { kind: 'warning' | 'notice' | null }) {
+  if (!kind) return null
+  return (
+    <View className="bg-sheet-bg border-line rounded-chip border px-3 py-2">
+      {/* Only the notice after a pick or a refused undo is announced; the warning before a pick is plain text. */}
+      <Text
+        role={kind === 'notice' ? 'alert' : undefined}
+        className="text-ink text-xs leading-4.5"
+      >
+        {ARCHIVED_TEXT[kind]}
+      </Text>
+    </View>
+  )
+}
+
+type RowPanelProps = {
+  row: CorrectionRow
+  correction: ReturnType<typeof useCorrection>
+}
+
+// The selected row's panel: the carried-in record cuts or changes its activity, the day's own rows get every edit.
+function RowPanel({ row, correction }: RowPanelProps) {
+  const picker = (
+    <ActivityPicker
+      row={row}
+      pending={correction.pending}
+      onPick={(activityId) => correction.pick(row, activityId)}
+    />
+  )
+  if (row.carriedIn)
+    return (
+      <CarriedInActions
+        row={row}
+        pending={correction.pending}
+        timeZone={correction.bounds.timeZone}
+        totalsFacts={correction.totalsFacts}
+        noticeId={correction.noticeId}
+        picker={picker}
+        onCut={(at) => correction.cut(row, at)}
+      />
+    )
+  return (
+    <Actions
+      row={row}
+      pending={correction.pending}
+      onMove={(deltaMinutes) => correction.move(row, deltaMinutes)}
+      picker={picker}
+      onMergePrevious={() => correction.mergePrevious(row)}
+      onMergeNext={() => correction.mergeNext(row)}
+      onSplit={() => correction.split(row)}
+    />
   )
 }
 
@@ -260,7 +474,16 @@ function Footer({ canUndo, onUndo }: FooterProps) {
 export default function CorrectionSheet() {
   const params = useLocalSearchParams<{ day?: string }>()
   const correction = useCorrection(params.day)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const scroll = useRef<ScrollView>(null)
+  const viewport = useRef({ scrollY: 0, viewportHeight: 0 })
+  // Scrolls just enough to show the whole selected card once it has laid out with its panel; reduced motion jumps.
+  const reveal = (card: { top: number; height: number }): void => {
+    const y = revealOffset(card, viewport.current)
+    if (y === null) return
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduced) =>
+      scroll.current?.scrollTo({ y, animated: !reduced }),
+    )
+  }
   return (
     <Sheet
       title={correction.title}
@@ -269,11 +492,22 @@ export default function CorrectionSheet() {
       <DayBar
         rows={correction.rows}
         bounds={correction.bounds}
-        selectedId={selectedId}
+        selectedId={correction.selectedId}
       />
-      <ScrollView className="shrink" contentContainerClassName="gap-2">
+      <ScrollView
+        ref={scroll}
+        className="shrink"
+        contentContainerClassName="gap-2"
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          viewport.current.scrollY = event.nativeEvent.contentOffset.y
+        }}
+        onLayout={(event) => {
+          viewport.current.viewportHeight = event.nativeEvent.layout.height
+        }}
+      >
         {correction.rows.map((row) => {
-          const selected = row.id === selectedId
+          const selected = row.id === correction.selectedId
           return (
             <View
               key={row.id}
@@ -282,25 +516,18 @@ export default function CorrectionSheet() {
                 selected && 'bg-chip',
               )}
               style={frame(selected, row.color)}
+              onLayout={(event) => {
+                const { y, height } = event.nativeEvent.layout
+                if (selected) reveal({ top: y, height })
+              }}
             >
               <RowHeader
                 row={row}
                 selected={selected}
-                onPress={() => setSelectedId(selected ? null : row.id)}
+                focused={row.id === correction.focusId}
+                onPress={() => correction.select(selected ? null : row.id)}
               />
-              {selected && (
-                <Actions
-                  row={row}
-                  pending={correction.pending}
-                  onMove={(deltaMinutes) =>
-                    correction.move(row.id, deltaMinutes)
-                  }
-                  onPick={(activityId) => correction.pick(row.id, activityId)}
-                  onMergePrevious={() => correction.mergePrevious(row.id)}
-                  onMergeNext={() => correction.mergeNext(row.id)}
-                  onSplit={() => correction.split(row.id)}
-                />
-              )}
+              {selected && <RowPanel row={row} correction={correction} />}
             </View>
           )
         })}

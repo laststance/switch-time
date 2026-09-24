@@ -1,27 +1,30 @@
+import { ORPCError } from '@orpc/client'
 import type { AppRouterClient } from '@switch-time/api'
 import {
   clampStart,
+  localDay,
   MIN_SEGMENT_MS,
   type ReplaceDayInput,
 } from '@switch-time/shared'
 
 import { DETOX } from './detox'
-import { formatDay, formatDuration, formatTime } from './format'
+import { formatDay, formatDuration, formatMonthDay, formatTime } from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
+import { idleLabel } from './settings'
 
 /** One `switches.listByDay` answer: the day's rows plus the states carried in from before and out to after. */
 export type ListedDay = Awaited<
   ReturnType<AppRouterClient['switches']['listByDay']>
 >
 /** What a row is drawn with; `color` null is detox, which has no colour of its own (outlined, never filled). */
-export type CorrectionActivity = Pick<
-  ActivityRow,
-  'id' | 'name' | 'iconKey'
-> & {
-  color: ActivityRow['color'] | null
-}
+export type CorrectionActivity = Pick<ActivityRow, 'id' | 'name' | 'iconKey'> &
+  Partial<Pick<ActivityRow, 'archivedAt'>> & {
+    color: ActivityRow['color'] | null
+  }
 /** What 「元に戻す」 keeps: the day's own rows as `switches.replaceDay` takes them. */
 export type DaySnapshot = ReplaceDayInput['rows']
+/** Where 「ここで分割」 may cut the carried-in record, in epoch ms on the stored zone's quarter hours; `initial` is where 区切る時刻 opens. */
+export type CutRange = { min: number; max: number; initial: number }
 
 export type CorrectionRow = {
   id: string
@@ -38,8 +41,18 @@ export type CorrectionRow = {
   /** `7:15 – 7:45`; the current state reads `– いま`, a past day's last state `– 24:00`. */
   range: string
   duration: string
-  /** The carried-in state belongs to the day before: it is listed last and is never selectable. */
-  editable: boolean
+  /** The record started before the day (listed last): its panel cuts it or changes its activity, and never moves or merges it. */
+  carriedIn: boolean
+  /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes). */
+  trueStartDate: string
+  /** `9月23日 23:00`, the record's real start with its date (the carried-in panel's origin note). */
+  trueStartLabel: string
+  /** The row's activity was archived since: the picker cannot offer it back (the carried-in panel's warning). */
+  archived: boolean
+  /** The whole record's length, the part before the day included, as the idle rule measures it. */
+  recordMs: number
+  /** 区切る時刻's range on a carried-in row; null on the day's own rows and when no quarter hour fits. */
+  cut: CutRange | null
   canMoveEarlier: boolean
   canMoveLater: boolean
   canMergePrevious: boolean
@@ -126,9 +139,35 @@ export function correctionRows(
       // The carried-out state only closes the last segment (it is the next day's row), and a day whose
       // first row starts at 0:00 leaves the carried-in state no span to show.
       .filter((row) => row.id !== list.carriedOut?.id)
-      .filter((row) => row.editable || row.end > row.start)
+      .filter((row) => !row.carriedIn || row.end > row.start)
       .reverse()
   )
+}
+
+const QUARTER_MS = 15 * 60_000
+
+/**
+ * 区切る時刻's range for a record from `startedAt` to `trueEnd`: quarter hours of the viewed day (counted from its 0:00, so any
+ * zone offset works) that keep a minute from the record's true start and from its end or now, as `switches.splitAt` checks.
+ * 0:00 itself is allowed, since midnight is not a switch. The opening value is the middle quarter, a tie rounding down.
+ * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15 }
+ */
+function cutRange(
+  startedAt: number,
+  trueEnd: number,
+  bounds: DayBounds,
+): CutRange | null {
+  const floor = Math.max(startedAt + MIN_SEGMENT_MS, bounds.start)
+  const ceiling = Math.min(trueEnd, bounds.end, bounds.now) - MIN_SEGMENT_MS
+  const min =
+    bounds.start + Math.ceil((floor - bounds.start) / QUARTER_MS) * QUARTER_MS
+  const max =
+    bounds.start +
+    Math.floor((ceiling - bounds.start) / QUARTER_MS) * QUARTER_MS
+  // No quarter hour keeps a minute from both ends: 「ここで分割」 is disabled.
+  if (min > max) return null
+  const quarters = (max - min) / QUARTER_MS
+  return { min, max, initial: min + Math.floor(quarters / 2) * QUARTER_MS }
 }
 
 // One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included).
@@ -140,13 +179,13 @@ function describeRow(
   bounds: DayBounds,
 ): CorrectionRow {
   const startedAt = row.startedAt.getTime()
-  const editable = startedAt >= bounds.start
+  const carriedIn = startedAt < bounds.start
   const start = Math.max(startedAt, bounds.start)
   // The segment really ends at the next switch (or now); the row only shows the part inside the day.
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
   const end = Math.min(trueEnd, bounds.end)
-  const midpoint = Math.floor((startedAt + trueEnd) / 2)
   const startLabel = formatTime(new Date(start), bounds.timeZone)
+  const trueStartDate = formatMonthDay(localDay(row.startedAt, bounds.timeZone))
   return {
     id: row.id,
     activityId: row.activityId,
@@ -158,19 +197,52 @@ function describeRow(
     startLabel,
     range: `${startLabel} – ${endLabel(end, next, bounds)}`,
     duration: formatDuration(end - start),
-    editable,
-    canMoveEarlier:
-      editable && moveTarget(row, prev, next, bounds, -15) !== null,
-    canMoveLater: editable && moveTarget(row, prev, next, bounds, 15) !== null,
-    canMergePrevious: editable && prev !== null,
+    carriedIn,
+    trueStartDate,
+    trueStartLabel: `${trueStartDate} ${formatTime(row.startedAt, bounds.timeZone)}`,
+    archived: Boolean(activity.archivedAt),
+    recordMs: trueEnd - startedAt,
+    cut: carriedIn ? cutRange(startedAt, trueEnd, bounds) : null,
+    ...(carriedIn ? LOCKED : ownRowFlags(row, prev, next, bounds)),
+  }
+}
+
+type RowFlags = Pick<
+  CorrectionRow,
+  | 'canMoveEarlier'
+  | 'canMoveLater'
+  | 'canMergePrevious'
+  | 'canMergeNext'
+  | 'canSplit'
+>
+// Moving, merging or halving the carried-in record would rewrite the earlier day, which 「元に戻す」 cannot restore.
+const LOCKED: RowFlags = {
+  canMoveEarlier: false,
+  canMoveLater: false,
+  canMergePrevious: false,
+  canMergeNext: false,
+  canSplit: false,
+}
+
+// The action panel's flags for one of the day's own rows, with the clamp the API applies and the day's floor and ceiling.
+function ownRowFlags(
+  row: SwitchRow,
+  prev: SwitchRow | null,
+  next: SwitchRow | null,
+  bounds: DayBounds,
+): RowFlags {
+  const startedAt = row.startedAt.getTime()
+  const trueEnd = next?.startedAt.getTime() ?? bounds.now
+  const midpoint = Math.floor((startedAt + trueEnd) / 2)
+  return {
+    canMoveEarlier: moveTarget(row, prev, next, bounds, -15) !== null,
+    canMoveLater: moveTarget(row, prev, next, bounds, 15) !== null,
+    canMergePrevious: prev !== null,
     // Merging moves the next row back to this row's start, so that row must be the day's own: 「元に戻す」 rewrites this day
     // only, and would drop the next day's first switch for good.
-    canMergeNext: editable && next !== null && trueEnd < bounds.end,
+    canMergeNext: next !== null && trueEnd < bounds.end,
     // Both halves keep the clamp's margin and the new row stays inside the day.
-    canSplit:
-      editable &&
-      midpoint - startedAt >= MIN_SEGMENT_MS &&
-      midpoint < bounds.end,
+    canSplit: midpoint - startedAt >= MIN_SEGMENT_MS && midpoint < bounds.end,
   }
 }
 
@@ -191,4 +263,278 @@ export function daySnapshot(list: ListedDay): DaySnapshot {
  */
 export function dayTitle(day: string, today: string): string {
   return day === today ? '今日の記録を訂正' : `${formatDay(day)}の記録を訂正`
+}
+
+/** The four 区切る時刻 steps in minutes of elapsed time (like 開始時刻's ±15), in button order. */
+export const CUT_STEPS = [-60, -15, 15, 60] as const
+export type CutStepMinutes = (typeof CUT_STEPS)[number]
+/** The time the user stepped 区切る時刻 to, and on which row; the panel keeps it in local state. */
+export type ChosenCut = { id: string; at: number }
+/** What the 区切る時刻 row draws: the cut time (null = no cut), its readout, and where each step lands (null = disabled). */
+export type CutStepper = {
+  at: number | null
+  label: string
+  targets: Record<CutStepMinutes, number | null>
+}
+
+/**
+ * The 区切る時刻 stepper of the selected carried-in row: a chosen time stays while it is inside the row's current range (so
+ * today's clock never moves it), and anything else (another row's choice, a time a cut or an undo left outside) opens at
+ * `initial`. Steps clamp to the range; a step that cannot move is disabled. Read by the carried-in panel at every render.
+ * @param row - The selected row; only a carried-in one has a range.
+ * @param chosen - The last stepped time, or null before any step.
+ * @param timeZone - The stored zone the readout is written in.
+ * @returns
+ * - With a range: the time to cut at, its `H:MM`, and each step's landing time or null at the range's edge
+ * - Without one: at null, the readout `—`, every step null
+ * @example cutStepper(carriedIn, null, 'Asia/Tokyo') // { at: 3:15, label: '3:15', targets: { -60: 2:15, …, 60: 4:15 } }
+ */
+export function cutStepper(
+  row: CorrectionRow,
+  chosen: ChosenCut | null,
+  timeZone: string,
+): CutStepper {
+  const { cut } = row
+  if (!cut)
+    return {
+      at: null,
+      label: '—',
+      targets: { [-60]: null, [-15]: null, [15]: null, [60]: null },
+    }
+  const kept =
+    chosen?.id === row.id && chosen.at >= cut.min && chosen.at <= cut.max
+  const at = kept ? chosen.at : cut.initial
+  const step = (minutes: CutStepMinutes): number | null => {
+    const target = Math.min(Math.max(at + minutes * 60_000, cut.min), cut.max)
+    return target === at ? null : target
+  }
+  return {
+    at,
+    label: formatTime(new Date(at), timeZone),
+    targets: {
+      [-60]: step(-60),
+      [-15]: step(-15),
+      [15]: step(15),
+      [60]: step(60),
+    },
+  }
+}
+
+/** The day facts the cut's effect on the totals depends on; the hook reads them from settings and the excluded-day list. */
+export type TotalsFacts = {
+  idleThresholdMs: number
+  autoExcludeUnusedDays: boolean
+  manuallyExcluded: boolean
+  hasOwnRows: boolean
+  isToday: boolean
+}
+/** 'idle': the record is over the idle threshold, so its cut parts join the totals; 'unmeasured': the day becomes 計測できた日. */
+export type TotalsEffect = 'idle' | 'unmeasured'
+
+/**
+ * How a cut of the carried-in record would change the totals, one line each under 「ここで分割」: a record over the idle
+ * threshold counts nowhere until cut (`segmentsInRange`), and a past day without a switch of its own is 計測なし under
+ * auto-exclusion until the cut adds one (`classifyDay`).
+ * @param row - The selected row; the day's own rows have no cut and no effect.
+ * @param facts - The settings and day facts the two rules read.
+ * @returns The effects in display order; empty when the cut changes nothing in the totals.
+ * @example cutTotalsEffects(carriedIn, { idleThresholdMs: 43_200_000, autoExcludeUnusedDays: true, manuallyExcluded: false, hasOwnRows: false, isToday: false }) // ['idle', 'unmeasured']
+ */
+export function cutTotalsEffects(
+  row: CorrectionRow,
+  facts: TotalsFacts,
+): TotalsEffect[] {
+  if (!row.carriedIn) return []
+  const effects: TotalsEffect[] = []
+  if (row.recordMs > facts.idleThresholdMs) effects.push('idle')
+  // Today is never 計測なし yet, and a manual exclusion outranks a switch.
+  if (
+    !facts.isToday &&
+    !facts.hasOwnRows &&
+    facts.autoExcludeUnusedDays &&
+    !facts.manuallyExcluded
+  )
+    effects.push('unmeasured')
+  return effects
+}
+
+/**
+ * The lines under 「ここで分割」: one per way the cut changes the totals ({@link cutTotalsEffects}), or the reason the cut is
+ * disabled when no quarter hour fits.
+ * @param row - The selected carried-in row.
+ * @param facts - The settings and day facts the totals rules read.
+ * @returns The lines in display order; empty when there is nothing to say.
+ * @example cutNotes(carriedIn, facts) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']
+ */
+export function cutNotes(row: CorrectionRow, facts: TotalsFacts): string[] {
+  if (!row.cut) return ['15分単位で区切れる時刻がありません']
+  return cutTotalsEffects(row, facts).map((effect) =>
+    effect === 'idle'
+      ? `区切ると、無操作扱い（${idleLabel(facts.idleThresholdMs / 60_000)}超）だった時間が集計に入ります`
+      : '区切ると、この日は計測できた日になります',
+  )
+}
+
+/**
+ * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay`; `reselectId` is
+ * the carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put
+ * back through `switches.changeActivity` only while the record still holds `from`, since that record reaches another day.
+ */
+export type UndoSlot =
+  | { kind: 'day'; day: string; rows: DaySnapshot; reselectId: string | null }
+  | {
+      kind: 'activity'
+      day: string
+      id: string
+      from: string | null
+      to: string | null
+    }
+/** The sheet's edits, as far as the undo cares: `cut` is 「ここで分割」 on a carried-in row, `split` is 半分で分割. */
+export type CorrectionEdit =
+  | { kind: 'move' | 'merge' | 'split' | 'cut' }
+  | { kind: 'pick'; activityId: string | null }
+
+/**
+ * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed. A pick on the carried-in
+ * record arms an activity undo, or nothing when its activity is archived (the picker cannot offer it back, and an older undo
+ * must not replay either); every other edit arms the day undo.
+ * @param edit - The edit just made.
+ * @param row - The row it was made on, before the edit.
+ * @param day - The sheet's day.
+ * @param list - The `switches.listByDay` answer before the edit.
+ * @returns
+ * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
+ * - Anything else: `{ kind: 'day', … }`, remembering the carried-in row after a cut
+ * @example undoSlotFor({ kind: 'pick', activityId: 'sleep' }, carriedIn, '2026-09-08', list) // { kind: 'activity', id, from: 'sleep', to: 'work', … }
+ */
+export function undoSlotFor(
+  edit: CorrectionEdit,
+  row: CorrectionRow,
+  day: string,
+  list: ListedDay,
+): UndoSlot | { blocked: 'archived' } {
+  if (edit.kind === 'pick' && row.carriedIn) {
+    if (row.archived) return { blocked: 'archived' }
+    return {
+      kind: 'activity',
+      day,
+      id: row.id,
+      from: edit.activityId,
+      to: row.activityId,
+    }
+  }
+  return {
+    kind: 'day',
+    day,
+    rows: daySnapshot(list),
+    reselectId: edit.kind === 'cut' ? row.id : null,
+  }
+}
+
+/** `switches.changeActivity`'s input; `from` makes the write conditional on what the record holds. */
+export type ChangeActivityInput = Parameters<
+  AppRouterClient['switches']['changeActivity']
+>[0]
+/** The call 「元に戻す」 makes for a slot; `reselectId` is the row to select once the day undo lands. */
+export type UndoRequest =
+  | {
+      procedure: 'replaceDay'
+      input: ReplaceDayInput
+      reselectId: string | null
+    }
+  | { procedure: 'changeActivity'; input: ChangeActivityInput }
+
+/**
+ * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, or the carried-in record's
+ * previous activity through `changeActivity`, conditional on the record still holding the pick.
+ * @param slot - The armed undo.
+ * @returns The procedure and its input; a day undo also names the row to select after it (the carried-in row a cut came from).
+ * @example undoRequest({ kind: 'activity', day, id: 'w', from: 'sleep', to: 'work' }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', from: 'sleep' } }
+ */
+export function undoRequest(slot: UndoSlot): UndoRequest {
+  if (slot.kind === 'day')
+    return {
+      procedure: 'replaceDay',
+      input: { day: slot.day, rows: slot.rows },
+      reselectId: slot.reselectId,
+    }
+  return {
+    procedure: 'changeActivity',
+    input: { id: slot.id, activityId: slot.to, from: slot.from },
+  }
+}
+
+/**
+ * What a failed activity undo does to 「元に戻す」: an answer that can never succeed turns it off (the record changed
+ * elsewhere or is gone, silently; the previous activity was archived, with the notice), and a passing failure (network,
+ * server error, an expired sign-in) keeps it for another try, as the day undo does.
+ * @param error - The error the undo's mutation failed with.
+ * @returns
+ * - 'clear': CONFLICT or NOT_FOUND
+ * - 'archived': BAD_REQUEST (`changeActivity` refuses an archived target)
+ * - 'keep': anything else
+ * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
+ */
+export function afterUndoFailure(
+  error: unknown,
+): 'keep' | 'clear' | 'archived' {
+  if (!(error instanceof ORPCError)) return 'keep'
+  if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
+  return error.code === 'BAD_REQUEST' ? 'archived' : 'keep'
+}
+
+/**
+ * Which archived-activity box the carried-in panel shows above the picker: the warning while the record holds an archived
+ * activity (a pick cannot be undone), the notice after such a pick or a refused undo, until the next edit or selection.
+ * @param row - The selected row.
+ * @param noticeId - The row the notice was raised for, or null once cleared.
+ * @returns 'notice', 'warning', or null on the day's own rows and when neither applies.
+ * @example archivedBox(carriedIn, carriedIn.id) // 'notice'
+ */
+export function archivedBox(
+  row: CorrectionRow,
+  noticeId: string | null,
+): 'warning' | 'notice' | null {
+  if (!row.carriedIn) return null
+  if (noticeId === row.id) return 'notice'
+  return row.archived ? 'warning' : null
+}
+
+/**
+ * The `changeActivity` input for a pick: on the carried-in record it carries `from`, the activity the sheet shows, so a
+ * stale sheet is refused rather than overwriting another device's change on an earlier day; the day's own rows keep the
+ * unconditional write their day undo relies on.
+ * @param row - The row picked on.
+ * @param activityId - The picked activity, null for detox.
+ * @returns The input, with `from` only on a carried-in row.
+ * @example pickRequest(carriedIn, 'sleep') // { id: 'w', activityId: 'sleep', from: 'work' }
+ */
+export function pickRequest(
+  row: CorrectionRow,
+  activityId: string | null,
+): ChangeActivityInput {
+  return row.carriedIn
+    ? { id: row.id, activityId, from: row.activityId }
+    : { id: row.id, activityId }
+}
+
+/**
+ * The scroll offset that brings a selected card fully into the sheet's view with the least movement (a card taller than the
+ * view shows its header at the top); the sheet calls it after the card lays out.
+ * @param card - The card's top and height inside the scroll content.
+ * @param viewport - The current offset and the visible height.
+ * @returns The new offset, or null when the card is already fully visible.
+ * @example revealOffset({ top: 700, height: 300 }, { scrollY: 200, viewportHeight: 600 }) // 400
+ */
+export function revealOffset(
+  card: { top: number; height: number },
+  viewport: { scrollY: number; viewportHeight: number },
+): number | null {
+  const bottom = card.top + card.height
+  const viewBottom = viewport.scrollY + viewport.viewportHeight
+  if (card.top >= viewport.scrollY && bottom <= viewBottom) return null
+  // Above the view, or too tall to fit: the header goes to the top.
+  if (card.top < viewport.scrollY || card.height > viewport.viewportHeight)
+    return card.top
+  return bottom - viewport.viewportHeight
 }
