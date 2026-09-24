@@ -25,6 +25,7 @@ export function useSwitchTo() {
             createdAt: new Date(),
             ...previous,
             id: 'optimistic',
+            revision: 0,
             activityId,
             startedAt: new Date(),
           }

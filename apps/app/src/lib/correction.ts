@@ -31,6 +31,9 @@ export type CorrectionRow = {
   id: string
   /** null = detox. */
   activityId: string | null
+  /** The record's revision as listed: every write that changes its activity or where it ends moves it on. A carried-in
+   * pick names it, so a record reshaped elsewhere since is refused. */
+  revision: number
   name: string
   color: string | null
   iconKey: string
@@ -209,6 +212,7 @@ function describeRow(
   return {
     id: row.id,
     activityId: row.activityId,
+    revision: row.revision,
     name: activity.name,
     color: activity.color,
     iconKey: activity.iconKey,
@@ -290,6 +294,17 @@ export const CUT_STEPS = [-60, -15, 15, 60] as const
 export type CutStepMinutes = (typeof CUT_STEPS)[number]
 /** The time the user stepped 区切る時刻 to, and on which row; the panel keeps it in local state. */
 export type ChosenCut = { id: string; at: number }
+/**
+ * The cut time the carried-in panel opens with: the range's middle as it is when the panel mounts, kept as a choice so
+ * today's clock, which moves the range's end and so its middle, never shifts the time under the user's finger.
+ * @param row - The carried-in row the panel opens on.
+ * @returns The row's `initial` as a {@link ChosenCut}, or null when the row has no cut range.
+ * @example openedCut(carriedIn) // { id: 'w', at: 3:15 }
+ */
+export function openedCut(row: CorrectionRow): ChosenCut | null {
+  return row.cut ? { id: row.id, at: row.cut.initial } : null
+}
+
 /** What the 区切る時刻 row draws: the cut time (null = no cut), its readout, and where each step lands (null = disabled). */
 export type CutStepper = {
   at: number | null
@@ -442,7 +457,8 @@ export function cutNotes(
 /**
  * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay`; `reselectId` is
  * the carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put
- * back through `switches.changeActivity` only while the record still holds `from`, since that record reaches another day.
+ * back through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
+ * reaches another day.
  */
 export type UndoSlot =
   | { kind: 'day'; day: string; rows: DaySnapshot; reselectId: string | null }
@@ -450,13 +466,16 @@ export type UndoSlot =
       kind: 'activity'
       day: string
       id: string
-      from: string | null
       to: string | null
+      revision: number
     }
-/** The sheet's edits, as far as the undo cares: `cut` is 「ここで分割」 on a carried-in row, `split` is 半分で分割. */
+/**
+ * The sheet's edits, as far as the undo cares: `cut` is 「ここで分割」 on a carried-in row, `split` is 半分で分割. A pick
+ * carries the revision its write left, from the `changeActivity` answer.
+ */
 export type CorrectionEdit =
   | { kind: 'move' | 'merge' | 'split' | 'cut' }
-  | { kind: 'pick'; activityId: string | null }
+  | { kind: 'pick'; revision: number }
 
 /**
  * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed. A pick on the carried-in
@@ -469,7 +488,7 @@ export type CorrectionEdit =
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
  * - Anything else: `{ kind: 'day', … }`, remembering the carried-in row after a cut
- * @example undoSlotFor({ kind: 'pick', activityId: 'sleep' }, carriedIn, '2026-09-08', list) // { kind: 'activity', id, from: 'sleep', to: 'work', … }
+ * @example undoSlotFor({ kind: 'pick', revision: 4 }, carriedIn, '2026-09-08', list) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
 export function undoSlotFor(
   edit: CorrectionEdit,
@@ -483,8 +502,8 @@ export function undoSlotFor(
       kind: 'activity',
       day,
       id: row.id,
-      from: edit.activityId,
       to: row.activityId,
+      revision: edit.revision,
     }
   }
   return {
@@ -495,7 +514,7 @@ export function undoSlotFor(
   }
 }
 
-/** `switches.changeActivity`'s input; `from` makes the write conditional on what the record holds. */
+/** `switches.changeActivity`'s input; `revision` makes the write conditional on no other write having reached the record. */
 export type ChangeActivityInput = Parameters<
   AppRouterClient['switches']['changeActivity']
 >[0]
@@ -510,10 +529,10 @@ export type UndoRequest =
 
 /**
  * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, or the carried-in record's
- * previous activity through `changeActivity`, conditional on the record still holding the pick.
+ * previous activity through `changeActivity`, conditional on the record still being at the revision the pick left.
  * @param slot - The armed undo.
  * @returns The procedure and its input; a day undo also names the row to select after it (the carried-in row a cut came from).
- * @example undoRequest({ kind: 'activity', day, id: 'w', from: 'sleep', to: 'work' }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', from: 'sleep' } }
+ * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
  */
 export function undoRequest(slot: UndoSlot): UndoRequest {
   if (slot.kind === 'day')
@@ -524,7 +543,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
     }
   return {
     procedure: 'changeActivity',
-    input: { id: slot.id, activityId: slot.to, from: slot.from },
+    input: { id: slot.id, activityId: slot.to, revision: slot.revision },
   }
 }
 
@@ -577,20 +596,20 @@ export function archivedBox(
 }
 
 /**
- * The `changeActivity` input for a pick: on the carried-in record it carries `from`, the activity the sheet shows, so a
- * stale sheet is refused rather than overwriting another device's change on an earlier day; the day's own rows keep the
+ * The `changeActivity` input for a pick: on the carried-in record it carries the `revision` the sheet listed, so a stale
+ * sheet is refused rather than overwriting another device's change on an earlier day; the day's own rows keep the
  * unconditional write their day undo relies on.
  * @param row - The row picked on.
  * @param activityId - The picked activity, null for detox.
- * @returns The input, with `from` only on a carried-in row.
- * @example pickRequest(carriedIn, 'sleep') // { id: 'w', activityId: 'sleep', from: 'work' }
+ * @returns The input, with `revision` only on a carried-in row.
+ * @example pickRequest(carriedIn, 'sleep') // { id: 'w', activityId: 'sleep', revision: 3 }
  */
 export function pickRequest(
   row: CorrectionRow,
   activityId: string | null,
 ): ChangeActivityInput {
   return row.carriedIn
-    ? { id: row.id, activityId, from: row.activityId }
+    ? { id: row.id, activityId, revision: row.revision }
     : { id: row.id, activityId }
 }
 

@@ -21,8 +21,8 @@ import {
   CUT_STEPS,
   cutStepper,
   cutNotes,
+  openedCut,
   revealOffset,
-  type ChosenCut,
   type CorrectionRow,
   type CutStepMinutes,
   type DayBounds,
@@ -321,7 +321,7 @@ function CarriedInActions({
   picker,
   onCut,
 }: CarriedInActionsProps) {
-  const [chosen, setChosen] = useState<ChosenCut | null>(null)
+  const [chosen, setChosen] = useState(() => openedCut(row))
   const stepper = cutStepper(row, chosen, timeZone)
   const step = (target: number): void => {
     setChosen({ id: row.id, at: target })

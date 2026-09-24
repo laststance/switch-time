@@ -35,8 +35,8 @@ import { useAppSelector } from '@/store'
  *
  * The undo slot ({@link UndoSlot}) is one of two kinds. A `day` slot holds the day's rows before the last edit and writes them
  * back through `switches.replaceDay`; every edit arms it, except a pick on the carried-in record, which arms an `activity`
- * slot that puts the previous activity back through `switches.changeActivity` only while the record still holds the pick
- * (that record reaches another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing
+ * slot that puts the previous activity back through `switches.changeActivity` only while the record is still at the revision
+ * the pick left (that record reaches another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing
  * and drops any older slot, and raises the archived notice instead ({@link undoSlotFor}). A failed activity undo is sorted by
  * {@link afterUndoFailure}; a failed day undo keeps its slot.
  * @example const correction = useCorrection(params.day)
@@ -144,50 +144,62 @@ function useCorrectionEdits(
   // The slot is decided when the button is pressed, when `listed` is still the pre-edit answer (the buttons wait for
   // fetches and writes); hook-level options are re-read at every render, so they would snapshot whatever arrived meanwhile.
   // It is armed only once the edit succeeded: a failed one (stale row, offline) must not leave rows that would overwrite
-  // someone else's change. The day travels with it so a slot never replays into the next day.
-  const arm = (kind: CorrectionEdit, row: CorrectionRow) => {
+  // someone else's change. The day travels with it so a slot never replays into the next day. The returned arming takes the
+  // edit once it succeeded, since a pick's slot needs the revision the write left.
+  const arm = (row: CorrectionRow) => {
     state.setNoticeId(null)
     const pressed = listed
-    return (): void => {
+    return (edit: CorrectionEdit): void => {
       if (!pressed) return
-      const next = undoSlotFor(kind, row, day, pressed)
+      const next = undoSlotFor(edit, row, day, pressed)
       const blocked = 'blocked' in next
       state.setSlot(blocked ? null : next)
       state.setNoticeId(blocked ? row.id : null)
     }
   }
   return {
-    move: (row: CorrectionRow, deltaMinutes: 15 | -15): void =>
+    move: (row: CorrectionRow, deltaMinutes: 15 | -15): void => {
+      const armed = arm(row)
       moveStart.mutate(
         { id: row.id, deltaMinutes },
-        { onSuccess: arm({ kind: 'move' }, row) },
-      ),
-    pick: (row: CorrectionRow, activityId: string | null): void =>
+        { onSuccess: () => armed({ kind: 'move' }) },
+      )
+    },
+    pick: (row: CorrectionRow, activityId: string | null): void => {
+      const armed = arm(row)
       changeActivity.mutate(pickRequest(row, activityId), {
-        onSuccess: arm({ kind: 'pick', activityId }, row),
-      }),
-    mergePrevious: (row: CorrectionRow): void =>
+        onSuccess: (changed) =>
+          armed({ kind: 'pick', revision: changed.revision }),
+      })
+    },
+    mergePrevious: (row: CorrectionRow): void => {
+      const armed = arm(row)
       mergeIntoPrevious.mutate(
         { id: row.id },
-        { onSuccess: arm({ kind: 'merge' }, row) },
-      ),
-    mergeNext: (row: CorrectionRow): void =>
+        { onSuccess: () => armed({ kind: 'merge' }) },
+      )
+    },
+    mergeNext: (row: CorrectionRow): void => {
+      const armed = arm(row)
       mergeIntoNext.mutate(
         { id: row.id },
-        { onSuccess: arm({ kind: 'merge' }, row) },
-      ),
-    split: (row: CorrectionRow): void =>
+        { onSuccess: () => armed({ kind: 'merge' }) },
+      )
+    },
+    split: (row: CorrectionRow): void => {
+      const armed = arm(row)
       splitInHalf.mutate(
         { id: row.id },
-        { onSuccess: arm({ kind: 'split' }, row) },
-      ),
+        { onSuccess: () => armed({ kind: 'split' }) },
+      )
+    },
     // 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
     cut: (row: CorrectionRow, at: number): void => {
-      const armCut = arm({ kind: 'cut' }, row)
+      const armed = arm(row)
       const input: SplitAtInput = { id: row.id, at: new Date(at) }
       splitAt.mutate(input, {
         onSuccess: (inserted) => {
-          armCut()
+          armed({ kind: 'cut' })
           state.select(inserted.id)
           state.setFocusId(inserted.id)
         },

@@ -123,7 +123,7 @@ export type SplitAtInput = z.infer<typeof splitAtInputSchema>
  * the correction sheet's undo reads it, so the two sides share one value rather than two string literals.
  * @example new ORPCError('BAD_REQUEST', { message: 'activity is archived', data: ARCHIVED_REFUSAL })
  */
-export const ARCHIVED_REFUSAL = { reason: 'archived' } as const
+export const ARCHIVED_REFUSAL = Object.freeze({ reason: 'archived' } as const)
 
 /** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first; `activityId` null is a detox row. */
 export const replaceDayInputSchema = z.object({

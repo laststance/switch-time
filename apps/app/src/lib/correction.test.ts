@@ -12,6 +12,7 @@ import {
   daySnapshot,
   dayTitle,
   isManuallyExcluded,
+  openedCut,
   pickRequest,
   revealOffset,
   undoRequest,
@@ -29,6 +30,7 @@ const row = (id: string, activityId: string | null, startedAt: Date) => ({
   activityId,
   startedAt,
   source: 'tap' as const,
+  revision: 0,
   createdAt: startedAt,
 })
 const activities = [
@@ -476,6 +478,54 @@ test('the cut stepper keeps a chosen time on today’s current record as the clo
   expect(stepper.targets[60]).toBe(at(day, 10, 15).getTime())
 })
 
+test('the cut time the panel opened with stays put on today’s current record as the clock moves the range’s middle', () => {
+  // Arrange: 睡眠 since last night; the panel opened at 10:36 (range 0:00 – 10:15) and the clock now reads 12:36 (0:00 – 12:15).
+  const day = '2026-09-09'
+  const list: ListedDay = {
+    carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
+    rows: [],
+    carriedOut: null,
+  }
+  const rowAt = (now: Date) =>
+    correctionRows(list, activities, {
+      ...dayBounds(day, TZ),
+      now: now.getTime(),
+      timeZone: TZ,
+    })[0]
+  const whenOpened = rowAt(at(day, 10, 36))
+  const later = rowAt(at(day, 12, 36))
+  if (!whenOpened || !later) throw new Error('no carried-in row')
+
+  // Act
+  const stepper = cutStepper(later, openedCut(whenOpened), TZ)
+
+  // Assert: the panel still reads 5:00, the middle it opened with, not 6:00, today's middle by now.
+  expect(stepper.label).toBe('5:00')
+  expect(cutStepper(later, null, TZ).label).toBe('6:00')
+})
+
+test('a carried-in panel with no quarter hour to cut at opens with no cut time', () => {
+  // Arrange: 睡眠 from 30 s before midnight, and the clock at 0:14 leaves no quarter hour.
+  const day = '2026-09-09'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('s', 'sleep', new Date(at(day, 0).getTime() - 30_000)),
+      rows: [],
+      carriedOut: null,
+    },
+    activities,
+    { ...dayBounds(day, TZ), now: at(day, 0, 14).getTime(), timeZone: TZ },
+  )[0]
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const stepper = cutStepper(carriedIn, openedCut(carriedIn), TZ)
+
+  // Assert
+  expect(openedCut(carriedIn)).toBeNull()
+  expect(stepper.label).toBe('—')
+})
+
 test('a cut step stops at the range’s edge and the buttons pointing past it are disabled', () => {
   // Arrange
   const { day, carriedIn } = carriedWork()
@@ -535,25 +585,20 @@ test('without a cut range the stepper shows a dash and every step is disabled', 
   })
 })
 
-test('a pick on the carried-in record arms an undo that puts only its previous activity back', () => {
+test('a pick on the carried-in record arms an undo that puts only its previous activity back, at the revision the pick left', () => {
   // Arrange
   const { day, list, carriedIn } = carriedWork()
 
   // Act
-  const slot = undoSlotFor(
-    { kind: 'pick', activityId: 'sleep' },
-    carriedIn,
-    day,
-    list,
-  )
+  const slot = undoSlotFor({ kind: 'pick', revision: 4 }, carriedIn, day, list)
 
   // Assert
   expect(slot).toEqual({
     kind: 'activity',
     day: '2026-09-08',
     id: 'w',
-    from: 'sleep',
     to: 'work',
+    revision: 4,
   })
 })
 
@@ -574,20 +619,15 @@ test('a pick on a carried-in detox record arms an undo back to detox', () => {
   if (!carriedIn) throw new Error('no carried-in row')
 
   // Act
-  const slot = undoSlotFor(
-    { kind: 'pick', activityId: 'work' },
-    carriedIn,
-    day,
-    list,
-  )
+  const slot = undoSlotFor({ kind: 'pick', revision: 1 }, carriedIn, day, list)
 
   // Assert
   expect(slot).toEqual({
     kind: 'activity',
     day,
     id: 'd',
-    from: 'work',
     to: null,
+    revision: 1,
   })
 })
 
@@ -608,12 +648,7 @@ test('a pick away from an archived activity on the carried-in record arms no und
   if (!carriedIn) throw new Error('no carried-in row')
 
   // Act
-  const slot = undoSlotFor(
-    { kind: 'pick', activityId: 'sleep' },
-    carriedIn,
-    day,
-    list,
-  )
+  const slot = undoSlotFor({ kind: 'pick', revision: 1 }, carriedIn, day, list)
 
   // Assert
   expect(slot).toEqual({ blocked: 'archived' })
@@ -651,12 +686,12 @@ test('edits of the day’s own rows arm the day undo without a reselection', () 
   expect(undoSlotFor({ kind: 'move' }, ownRow, day, list)).toEqual(expected)
   expect(undoSlotFor({ kind: 'merge' }, ownRow, day, list)).toEqual(expected)
   expect(undoSlotFor({ kind: 'split' }, ownRow, day, list)).toEqual(expected)
-  expect(
-    undoSlotFor({ kind: 'pick', activityId: 'sleep' }, ownRow, day, list),
-  ).toEqual(expected)
+  expect(undoSlotFor({ kind: 'pick', revision: 1 }, ownRow, day, list)).toEqual(
+    expected,
+  )
 })
 
-test('undo rewrites the day for a day slot and puts the activity back only if the record still holds the pick', () => {
+test('undo rewrites the day for a day slot and puts the activity back only if no other write reached the record since the pick', () => {
   // Arrange
   const daySlot = {
     kind: 'day' as const,
@@ -668,15 +703,15 @@ test('undo rewrites the day for a day slot and puts the activity back only if th
     kind: 'activity' as const,
     day: '2026-09-08',
     id: 'w',
-    from: 'sleep',
     to: 'work',
+    revision: 4,
   }
   const detoxSlot = {
     kind: 'activity' as const,
     day: '2026-09-08',
     id: 'd',
-    from: null,
     to: null,
+    revision: 1,
   }
 
   // Act & Assert
@@ -690,18 +725,18 @@ test('undo rewrites the day for a day slot and puts the activity back only if th
   })
   expect(undoRequest(activitySlot)).toEqual({
     procedure: 'changeActivity',
-    input: { id: 'w', activityId: 'work', from: 'sleep' },
+    input: { id: 'w', activityId: 'work', revision: 4 },
   })
   expect(undoRequest(detoxSlot)).toEqual({
     procedure: 'changeActivity',
-    input: { id: 'd', activityId: null, from: null },
+    input: { id: 'd', activityId: null, revision: 1 },
   })
 })
 
 test('a refused activity undo turns 元に戻す off, and a passing failure keeps it for another try', () => {
   // Arrange
   const answers = [
-    new ORPCError('CONFLICT', { message: 'activity changed elsewhere' }),
+    new ORPCError('CONFLICT', { message: 'record changed elsewhere' }),
     new ORPCError('NOT_FOUND', { message: 'switch not found' }),
     new ORPCError('BAD_REQUEST', {
       message: 'activity is archived',
@@ -777,7 +812,7 @@ test('a live activity on the carried-in record shows no archived box', () => {
   expect(archivedBox(carriedIn, null)).toBeNull()
 })
 
-test('a pick on the carried-in record only writes if the record still holds the shown activity', () => {
+test('a pick on the carried-in record only writes if no other write reached the record since the sheet listed it', () => {
   // Arrange
   const { rows, carriedIn } = carriedWork()
   const ownRow = rows[0]
@@ -787,7 +822,7 @@ test('a pick on the carried-in record only writes if the record still holds the 
   expect(pickRequest(carriedIn, 'sleep')).toEqual({
     id: 'w',
     activityId: 'sleep',
-    from: 'work',
+    revision: 0,
   })
   expect(pickRequest(ownRow, 'sleep')).toEqual({
     id: 'h',
@@ -1226,12 +1261,12 @@ test('the day’s own rows never report a totals effect of a cut', () => {
   expect(effects).toEqual([])
 })
 
-test('a pick on a carried-in detox record only writes while the record is still detox', () => {
-  // Arrange
+test('a pick on a carried-in record names the revision the day list reported for it', () => {
+  // Arrange: the carried-in detox record was written twice since it was created.
   const day = '2026-09-08'
   const carriedIn = correctionRows(
     {
-      carriedIn: row('d', null, at('2026-09-07', 22)),
+      carriedIn: { ...row('d', null, at('2026-09-07', 22)), revision: 2 },
       rows: [row('h', 'home', at(day, 7))],
       carriedOut: null,
     },
@@ -1248,7 +1283,7 @@ test('a pick on a carried-in detox record only writes while the record is still 
   const request = pickRequest(carriedIn, 'work')
 
   // Assert
-  expect(request).toEqual({ id: 'd', activityId: 'work', from: null })
+  expect(request).toEqual({ id: 'd', activityId: 'work', revision: 2 })
 })
 
 test('a carried-in record whose activity the cached list does not know yet shows no archived warning', () => {
