@@ -22,7 +22,7 @@
 
 **Why:** `mergeIntoNext` reads the row and its next state before its transaction, then writes the row's start onto the next state by id. Two devices merging neighbouring records at once both succeed, and a span moves to the wrong activity for good: from 仕事 9:00, 休息 12:00, 娯楽 18:00, merging 仕事 into 休息 and 休息 into 娯楽 together leaves 娯楽 starting at 12:00 instead of 9:00, and 9:00–12:00 goes to whatever came before 仕事. A split racing a merge does the same, and `mergeIntoNext` on one row racing `mergeIntoPrevious` on the next can deadlock (a silent 500). Two 「元に戻す」 of one day at once (two tabs or devices) keep both inserts: under READ COMMITTED the second delete cannot see the first one's new rows, so every row appears twice, and the next undo on that day fails the order check. A tap, or a 活動を変える on the latest record, can also land between `archive`'s current-state check and its write, leaving an archived activity running, and two archives at once can pass the last-live-activity count together.
 
-**Context:** New in 0.2.0.0 for `mergeIntoNext`; `mergeIntoPrevious` writes no time, and its update fails (rolling back the delete) when the kept row is already gone. Two merges of the same record no longer both succeed: `mergeInto` requires its delete to remove the row. `moveStart` and `splitInHalf` have computed their new time from a read outside the transaction since 0.1.0.0, and `switchTo` already names the missing per-user lock in a `ponytail:` comment. Needs a concurrency test against the real Postgres; the same-record test in `domain.test.ts` shows how to hold one transaction open and wait on `pg_stat_activity` until the other blocks. Raised by Codex's adversarial pass (as P1) and the Claude adversarial pass during the 0.2.0.0 ship; left to the owner before merging.
+**Context:** New in 0.2.0.0 for `mergeIntoNext`; `mergeIntoPrevious` writes no time, and its update fails (rolling back the delete) when the kept row is already gone. Two merges of the same record no longer both succeed: `mergeInto` requires its delete to remove the row. `moveStart` and `splitInHalf` have computed their new time from a read outside the transaction since 0.1.0.0, and `switchTo` already names the missing per-user lock in a `ponytail:` comment. `splitAt` (「ここで分割」, since the carried-in row's panel (2026-09-24)) is another unlocked read-then-insert path: it reads the row and its next state, checks the cut against them, then inserts, so a merge or move landing in between can leave the cut outside its record; it is marked `gstack-shortcut(dec-7253328b)`. Needs a concurrency test against the real Postgres; the same-record test in `domain.test.ts` shows how to hold one transaction open and wait on `pg_stat_activity` until the other blocks. Raised by Codex's adversarial pass (as P1) and the Claude adversarial pass during the 0.2.0.0 ship; left to the owner before merging.
 
 **Effort:** M
 **Priority:** P1
@@ -34,7 +34,7 @@
 
 **Why:** 「元に戻す」 deletes the day's whole window and writes the snapshot back without looking. A switch made on another device after the snapshot's data was fetched (up to the 30 s `staleTime`), or after the edit while 元に戻す is still armed, is deleted for good, and the current state silently reverts. An edit made on another device in the meantime (±15 min, 活動を変える) is silently undone as well. It happens on one device too: when the refetch after an edit fails, the sheet unlocks on the pre-edit list, so the next edit snapshots that list and 元に戻す reverts both edits; and a merge paused offline arms 元に戻す with rows from before the connection dropped.
 
-**Context:** The snapshot is `list.data` when the button is pressed (`use-correction.ts`), and Home's today view shares the `listByDay` key. Once the edit's invalidation has refetched, `queryClient.getQueryData` holds the rows the edit left. A client-only stopgap is `staleTime: 0` on the sheet's list plus holding the panel after a failed refetch (`list.isRefetchError`); it does not cover the offline case, which the row check does. Compare whole rows, not only ids: `moveStart` and `changeActivity` edit a row in place through `correct`, which keeps its id, so an id-only check would still let 元に戻す overwrite such an edit. Compare in the statement that deletes (`delete … returning id, started_at, activity_id` against the rows sent), or run the comparison under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them". A separate select before the delete is not enough under READ COMMITTED: a switch committed between the two statements is still deleted. Since 0.2.1.0 (the archived-day undo fix, PR #49) this also reaches days that hold a record of an archived activity, today included once an activity used earlier today is archived: `replaceDay` used to refuse those days outright. A sheet left open across that deploy with a failed undo still armed replays its old snapshot on the next press. Raised by the red team during the 0.2.0.0 ship; Codex and the Claude adversarial pass added the one-device paths. The owner raised it from P2 to P1 on 2026-09-17.
+**Context:** The snapshot is `list.data` when the button is pressed (`use-correction.ts`), and Home's today view shares the `listByDay` key. Once the edit's invalidation has refetched, `queryClient.getQueryData` holds the rows the edit left. A client-only stopgap is `staleTime: 0` on the sheet's list plus holding the panel after a failed refetch (`list.isRefetchError`); it does not cover the offline case, which the row check does. Compare whole rows, not only ids: `moveStart` and `changeActivity` edit a row in place through `correct`, which keeps its id, so an id-only check would still let 元に戻す overwrite such an edit. Compare in the statement that deletes (`delete … returning id, started_at, activity_id` against the rows sent), or run the comparison under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them". A separate select before the delete is not enough under READ COMMITTED: a switch committed between the two statements is still deleted. Since 0.2.1.0 (the archived-day undo fix, PR #49) this also reaches days that hold a record of an archived activity, today included once an activity used earlier today is archived: `replaceDay` used to refuse those days outright. A sheet left open across that deploy with a failed undo still armed replays its old snapshot on the next press. Raised by the red team during the 0.2.0.0 ship; Codex and the Claude adversarial pass added the one-device paths. The owner raised it from P2 to P1 on 2026-09-17. Since the carried-in row's panel (2026-09-24), a pick on the carried-in record arms an `activity` undo instead, and both that pick and its undo already compare in the statement that writes (`changeActivity`'s optional `from`); the `day` undo, which every other edit and 「ここで分割」 arm, is still unconditional.
 
 **Effort:** M
 **Priority:** P1
@@ -46,7 +46,7 @@
 
 **Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
 
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Raised by the review during the 0.2.0.0 ship.
+**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice. Raised by the review during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -58,7 +58,7 @@
 
 **Why:** `listByDay` is keyed by the day string, but the server windows it with the stored time zone. After a change, a cached answer (30 s `staleTime`) still holds the old window while the sheet computes `dayBounds` with the new one, so the row flags and the undo snapshot disagree with the day `replaceDay` rewrites: 「元に戻す」 then fails, or deletes rows the snapshot never had. For someone with two devices in different time zones this is routine rather than a rare settings change: `use-time-zone-sync.ts` writes the focused device's zone whenever it differs, so the stored zone flips back and forth.
 
-**Context:** `useUpdateSettings` refetches `settings.*` and `stats.*` only. The server checks day bounds for 「次の記録に統合」 (0.2.0.0); `moveStart` and `splitInHalf` still trust the client's flags, so a mismatched window can also leave a stray row on the next day after 「元に戻す」. Since 0.2.1.0 the undo that deletes rows the snapshot never had also reaches days that hold a record of an archived activity, which `replaceDay` used to refuse before deleting anything. Pre-existing, raised by the review during the 0.2.0.0 ship; Codex and the Claude adversarial pass found it again, and the adversarial pass suggests the zone flipping may make it P1.
+**Context:** `useUpdateSettings` refetches `settings.*` and `stats.*` only. The server checks day bounds for 「次の記録に統合」 (0.2.0.0); `moveStart` and `splitInHalf` still trust the client's flags, so a mismatched window can also leave a stray row on the next day after 「元に戻す」. Since 0.2.1.0 the undo that deletes rows the snapshot never had also reaches days that hold a record of an archived activity, which `replaceDay` used to refuse before deleting anything. Since the carried-in row's panel (2026-09-24), the slot is a union (`UndoSlot` in `lib/correction.ts`), so the zone goes into both kinds; and `splitAt` checks the cut against the record's neighbours, not the day, so a cut offered under a stale window can land on another day, where the viewed day's 元に戻す does not remove it. Pre-existing, raised by the review during the 0.2.0.0 ship; Codex and the Claude adversarial pass found it again, and the adversarial pass suggests the zone flipping may make it P1.
 
 **Effort:** S
 **Priority:** P2
@@ -94,7 +94,7 @@
 
 **Why:** A segment longer than `idleThresholdMinutes` (12 h by default) counts as idle and leaves the totals. Merging a 7 h row into a 6 h one therefore removes 13 h from the day's totals with no explanation. A merge can also leave the same activity twice in a row (仕事, 読書, 仕事 → merge 読書), which Home counts as one switch too many.
 
-**Context:** `segmentsInRange` in `packages/shared/src/stats.ts` judges idle on the unclipped length. Both merge directions and the ±15 min steps can cross the threshold; the sheet does not know the threshold today (`useSettings` has it). `switchTo` never records the same activity twice in a row, but the merges can. Raised by the review during the 0.2.0.0 ship; the adversarial pass added the repeated activity.
+**Context:** `segmentsInRange` in `packages/shared/src/stats.ts` judges idle on the unclipped length. Both merge directions and the ±15 min steps can cross the threshold; the sheet reads the threshold since the carried-in row's panel (2026-09-24) (`totalsFacts` in `use-correction.ts`, used by `cutTotalsEffects` for 「ここで分割」's notes), so a merge or move could warn the same way. `switchTo` never records the same activity twice in a row, but the merges can. Raised by the review during the 0.2.0.0 ship; the adversarial pass added the repeated activity.
 
 **Effort:** S
 **Priority:** P3
@@ -106,7 +106,7 @@
 
 **Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND) leaves 元に戻す unarmed, or armed with an older edit, so undo then reverts two edits. A merge that lands after 完了 can never be undone.
 
-**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list. Extend the held-answer e2e to press 元に戻す after the answer lands. Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
+**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list. Extend the held-answer e2e to press 元に戻す after the answer lands. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
@@ -118,9 +118,45 @@
 
 **Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, but only while the sheet that made the edit is open. After 完了, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
 
-**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them", since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
+**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them", since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
 
 **Effort:** M
+**Priority:** P3
+**Depends on:** None
+
+### Offer 区切る時刻 on the day's own rows in place of 半分で分割
+
+**What:** Give every row's panel the 区切る時刻 stepper and 「ここで分割」, and retire 「半分で分割」.
+
+**Why:** 「半分で分割」 always cuts at the midpoint, so splitting a row at the time something really changed still takes a split followed by several ±15 moves, each a round trip. The carried-in record already cuts at a chosen quarter hour in one write.
+
+**Context:** `cutRange` in `lib/correction.ts` computes the range for carried-in rows only (`cut` is null on the day's own rows), and `switches.splitAt` accepts any row. The day's own rows need the same margins as `clampStart` from both neighbours. Out of scope for the carried-in row's panel (2026-09-24); raised as an open question in its design.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Select the new row after 半分で分割, as 「ここで分割」 does
+
+**What:** After 「半分で分割」 lands, select (and focus) the later half, which `splitInHalf` already returns.
+
+**Why:** After 「ここで分割」 on the carried-in record the sheet selects the new row, so the next pick changes only the later part. 「半分で分割」 keeps the old row selected, so the same next pick changes the earlier half, and the two cuts behave differently.
+
+**Context:** `useCorrection`'s `cut` calls `select` and `setFocusId` with the row `splitAt` returns; `split` could do the same with `splitInHalf`'s answer, and `undoSlotFor` could remember the halved row to reselect on undo as it does for a cut. Raised by the design review of the carried-in row's panel (2026-09-24) (D12).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Show which repeated wall-clock time is meant on a fall-back day
+
+**What:** On a daylight-saving fall-back day, show which occurrence a repeated wall-clock time means (for example the UTC offset) in the correction sheet's row labels, 開始時刻, 区切る時刻 and History.
+
+**Why:** In a zone with daylight saving the hour after the fall-back repeats, so two instants an hour apart read the same `H:MM`. A user can move a start or cut a record at the wrong one without seeing it.
+
+**Context:** `formatTime` (`apps/app/src/lib/format.ts`) prints `H:MM`; `timeZoneSchema` accepts any IANA zone; `dayBounds` already handles 23- and 25-hour days. The 区切る時刻 steps are elapsed time (±15 / ±60 min), so inside the repeated hour +1時間 can leave the readout unchanged. The owner's zone (Asia/Tokyo) never reaches it. Start with a helper that tells whether an instant's wall time occurs twice that day, tested on `America/New_York` 2026-11-01. Raised by Codex in the eng review of the carried-in row's panel (2026-09-24) (R10 kept `H:MM` for consistency with every other label).
+
+**Effort:** S
 **Priority:** P3
 **Depends on:** None
 
@@ -192,6 +228,30 @@
 
 ## Design
 
+### Raise the sub token's contrast to WCAG AA
+
+**What:** Darken `sub` in the light theme (and lighten it in dark) until 12 px notes reach 4.5:1 on `chip`, the selected card's fill, as well as on `sheetBg`; the pen file first, then `design-system/`, then the code copies.
+
+**Why:** The carried-in panel's notes (where the record started, what a pick also changes, how a cut changes the totals) are `text-sub` at 12 px on the selected card's `bg-chip`, about 3.7:1, below AA. They carry information the user needs before an edit to an earlier day.
+
+**Context:** `sub` is app-wide (hints, labels, durations), so the change is a token change, not a one-off class. The notes carry `gstack-shortcut(dec-f15d7e22)` in `apps/app/src/app/(app)/correction.tsx` (the `NOTE` class); the irreversible case (the archived box) is already `text-ink`. Accepted as a shortcut in the design review of the carried-in row's panel (2026-09-24) (D11).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Space the correction panels' groups 20 apart, as tokens.md asks
+
+**What:** Put 20 between the groups of both correction panels (the day's own rows: 開始時刻 / 活動を変える / the merge and split buttons; the carried-in record: origin note / 区切る時刻 / 活動を変える), in the pen file first.
+
+**Why:** `design/tokens.md` asks for at least 20 between groups; both panels use 12 (`gap-3` on the `Actions` container), so the groups read as one block.
+
+**Context:** The carried-in panel matched the existing panel on purpose so the two stay consistent (design review of the carried-in row's panel (2026-09-24), D9); change both together.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Check the 24-h bar's detox legend swatch at 1x
 
 **What:** Look at the wide legend's detox marker in both themes and decide whether an 8 px square with a 1 px dashed `line` border is legible.
@@ -222,7 +282,7 @@
 
 **Why:** A merge deletes the selected row, which unmounts its card together with the focused button. On the web, focus falls to `<body>`: a keyboard or screen-reader user loses their place, and nothing announces the merge.
 
-**Context:** `correction.tsx` keys the cards by `row.id`. Applies to both merge buttons (「前の記録に統合」 since 0.1.0.0). Raised by the design pass during the 0.2.0.0 ship.
+**Context:** `correction.tsx` keys the cards by `row.id`. Applies to both merge buttons (「前の記録に統合」 since 0.1.0.0). 「ここで分割」 already does this since the carried-in row's panel (2026-09-24): `useCorrection` sets `focusId` to the row `splitAt` returns, and `RowHeader` takes focus when its `focused` prop turns on, so a merge can set the same id. Raised by the design pass during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
