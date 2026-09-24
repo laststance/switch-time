@@ -2,6 +2,7 @@ import { ORPCError } from '@orpc/client'
 import type { AppRouterClient } from '@switch-time/api'
 import {
   ARCHIVED_REFUSAL,
+  DAY_CHANGED_REFUSAL,
   clampStart,
   localDay,
   MIN_SEGMENT_MS,
@@ -644,18 +645,35 @@ export function afterUndoFailure(
 ): 'keep' | 'clear' | 'archived' {
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
-  return error.code === 'BAD_REQUEST' && isArchivedRefusal(error.data)
+  return error.code === 'BAD_REQUEST' &&
+    hasRefusalReason(error.data, ARCHIVED_REFUSAL.reason)
     ? 'archived'
     : 'keep'
 }
 
-// The archived refusal's marker ({@link ARCHIVED_REFUSAL}) from `switches.changeActivity`; any other BAD_REQUEST is a plain failure.
-function isArchivedRefusal(data: unknown): boolean {
+/**
+ * Whether an edit or undo was refused because its day no longer reads as the sheet listed it ({@link DAY_CHANGED_REFUSAL}).
+ * The sheet's edits read it when they settle: the stored zone may be what changed, so the cached settings are refetched
+ * with the day, and the next edit sends the new zone.
+ * @param error - The error the mutation failed with, or null when it succeeded.
+ * @returns true only for a CONFLICT carrying `data.reason === 'day-changed'`
+ * @example isDayChangedRefusal(new ORPCError('CONFLICT', { data: DAY_CHANGED_REFUSAL })) // true
+ */
+export function isDayChangedRefusal(error: unknown): boolean {
+  return (
+    error instanceof ORPCError &&
+    error.code === 'CONFLICT' &&
+    hasRefusalReason(error.data, DAY_CHANGED_REFUSAL.reason)
+  )
+}
+
+// A refusal's machine-readable marker (`data.reason`, as {@link ARCHIVED_REFUSAL} and {@link DAY_CHANGED_REFUSAL} carry it).
+function hasRefusalReason(data: unknown, reason: string): boolean {
   return (
     typeof data === 'object' &&
     data !== null &&
     'reason' in data &&
-    data.reason === ARCHIVED_REFUSAL.reason
+    data.reason === reason
   )
 }
 

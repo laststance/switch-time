@@ -1,8 +1,6 @@
 import { DEFAULT_ACTIVITIES } from '@switch-time/shared'
 
-import type { Executor } from '../rpc/base'
-
-import { db } from './client'
+import { db, type Executor } from './client'
 import { activities, userSettings } from './schema/app'
 
 /**

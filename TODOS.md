@@ -172,6 +172,18 @@
 **Priority:** P2
 **Depends on:** None
 
+### Refuse a merge into a carried-in record that changed elsewhere
+
+**What:** Put the carried-in record's id and `revision` into the day baseline (the sheet's row already holds both), and refuse 「前の記録に統合」 with `DAY_CHANGED_REFUSAL` when the record it merges into is that record and its id or revision no longer match.
+
+**Why:** The baseline covers the day's own rows only. When another device changes the carried-in record first (a pick on the previous day's sheet, or a merge that leaves an earlier row in its place), the day's baseline still matches, so merging the day's first row into it hands that time to an activity the sheet never showed. The day's 「元に戻す」 can still reverse it, but the edit is not refused, which is what the baseline is for.
+
+**Context:** `checkBaseline` and `mergeIntoPrevious` in `apps/api/src/rpc/switches.ts`, `dayBaseline` in `apps/app/src/lib/correction.ts`, `dayBaselineSchema` in `packages/shared/src/schemas.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Let a day with more than 500 switches still be corrected
 
 **What:** Send no baseline and arm no day 「元に戻す」 when the listed day holds more rows than the baseline schema allows, or raise the cap to an explicit server limit on switches per day.
@@ -233,6 +245,18 @@
 **Why:** Two taps from two devices, serialized by the lock, can land in the same millisecond, and a clock step or a second API instance can even start the new row before the current one. Nothing orders tied rows: the list and the locked re-read can then read them in different orders, which refuses edits as day-changed for no reason, and `replaceDay` rejects tied rows with BAD_REQUEST, which `afterUndoFailure` keeps armed, so 「元に戻す」 fails on every press.
 
 **Context:** No unique index covers `(user_id, started_at)`. `apps/api/src/rpc/switches.ts`, `apps/app/src/lib/correction.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep one account's queued writes from filling the connection pool
+
+**What:** Queue a user's timeline writes in the API process (a per-user mutex in front of `withUserLock`) so only one connection per user waits on the advisory lock, cap how many writes one user can have in flight (TOO_MANY_REQUESTS above a small number), and set `connectionTimeoutMillis` on the `Pool` in `apps/api/src/db/client.ts`.
+
+**Why:** Every write that waits in `withUserLock` holds a pool connection for up to the 10 s `lock_timeout`. The `Pool` keeps the default 10 connections and no acquire timeout, and nothing rate-limits RPC writes, so one signed-in account with about ten writes in flight (taps, edits, zone updates) fills the pool with requests queued on its own lock; every other account's reads and writes then wait on the pool with no bound. Before the lock, the same burst ran in parallel and drained about ten times faster.
+
+**Context:** The advisory lock stays for correctness across API instances; the in-process queue only stops waiters from holding connections. `pg_try_advisory_xact_lock` with a short backoff, or a shorter timeout, are the cheaper alternatives. Raised by the security pass during the day baseline's ship (2026-09-25).
 
 **Effort:** S
 **Priority:** P3

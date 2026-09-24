@@ -15,6 +15,7 @@ import {
   correctionRows,
   dayBaseline,
   dayTitle,
+  isDayChangedRefusal,
   isManuallyExcluded,
   pickRequest,
   undoRequest,
@@ -32,7 +33,8 @@ import { useAppSelector } from '@/store'
 
 /**
  * Everything the correction sheet needs for one day: the row model, the selection, the `switches.*` edits and 「元に戻す」.
- * Every edit invalidates `switches.*` and `stats.*`, so Home and History pick it up at once. An invalid or missing `dayParam`
+ * Every edit invalidates `switches.*` and `stats.*` (and `settings.*` after a day-changed refusal), so Home and History pick it
+ * up at once. An invalid or missing `dayParam`
  * means today.
  *
  * Every edit sends the day as the sheet listed it ({@link dayBaseline}), and the API refuses it once the day reads otherwise.
@@ -105,12 +107,18 @@ function useCorrectionState() {
   }
 }
 
-// Every mutation here and in the undo refetches `switches.*` and `stats.*` once it settles.
+// Every mutation here and in the undo refetches `switches.*` and `stats.*` once it settles. A day-changed refusal also refetches
+// `settings.*`, since the stored zone may be what changed on another device, and the next edit would otherwise send the stale
+// cached zone again; only then, as a settings refetch at any other time can overwrite a settings update still in flight.
 function useRefetchAfterEdit() {
   const queryClient = useQueryClient()
   return {
-    onSettled: async (): Promise<void> =>
-      invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()]),
+    onSettled: async (_data: unknown, error: unknown): Promise<void> =>
+      invalidateKeys(queryClient, [
+        orpc.switches.key(),
+        orpc.stats.key(),
+        ...(isDayChangedRefusal(error) ? [orpc.settings.key()] : []),
+      ]),
   }
 }
 

@@ -63,7 +63,7 @@ async function waitForLockQueue(count: number): Promise<void> {
 }
 
 test('two devices merging neighbouring records at once hand every span to the record that finally takes it', async () => {
-  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, with a tap on 家事 today so 娯楽 is not the running state
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00
   const api = await signedIn('lock-merge@example.com')
   const list = await api.activities.list()
   await api.switches.replaceDay({
@@ -770,6 +770,77 @@ test('半分で分割 is refused when the half-way point falls on the next day, 
       (row) => row.activityId,
     ),
   ).toEqual([idOf(list, '休息')])
+})
+
+test('merging the day’s last row into the next day’s first switch is refused when the sheet names its day, and the next day keeps its row', async () => {
+  // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00
+  const api = await signedIn('baseline-merge-next-day@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(yesterday, 6) }],
+  })
+  const listed = await api.switches.listByDay({ day: dayBefore })
+  const [work] = listed.rows
+  if (!work) throw new Error('fixture has no row')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({
+    id: work.id,
+    baseline: { day: dayBefore, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: refused, and yesterday's 休息 still starts at 6:00
+  await expect(merge).rejects.toThrow('next state is on a later day')
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(yesterday, 6)])
+})
+
+test('merging the carried-in record from a day’s sheet is refused, because that day’s 元に戻す could never bring back its earlier start', async () => {
+  // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00
+  const api = await signedIn('baseline-carried-in-merge@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  if (!listed.carriedIn) throw new Error('fixture has no carried-in record')
+
+  // Act
+  const merge = api.switches.mergeIntoNext({
+    id: listed.carriedIn.id,
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: refused as bad input, and 食事 still starts at 7:00 yesterday
+  await expect(merge).rejects.toThrow("row is not one of the day's own rows")
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(yesterday, 7)])
 })
 
 test('ここで分割 at a time before the sheet’s day is refused, so the cut never lands on the earlier day', async () => {

@@ -2,7 +2,7 @@ import { ORPCError, os } from '@orpc/server'
 import { and, eq, sql } from 'drizzle-orm'
 
 import { auth } from '../auth'
-import { db } from '../db/client'
+import { db, type LockedTx } from '../db/client'
 import { switches } from '../db/schema/app'
 
 // Per-request context handed to every procedure; the session is read from these headers.
@@ -33,20 +33,10 @@ export function one<T>(rows: T[]): T {
   return row
 }
 
-/** A transaction opened by {@link withUserLock}: it holds the user's lock until it commits or rolls back. */
-export type LockedTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
-
-/** `db` or a transaction: the reads and writes below run in whichever the procedure opened. */
-export type Executor = typeof db | LockedTx
-
-/** The user's own switch row via {@link one}, read through `executor` (a locked transaction reads what it will write on). */
-export const ownSwitch = async (
-  userId: string,
-  id: string,
-  executor: Executor = db,
-) =>
+/** The user's own switch row via {@link one}, read in the locked transaction that will write on it. */
+export const ownSwitch = async (userId: string, id: string, tx: LockedTx) =>
   one(
-    await executor
+    await tx
       .select()
       .from(switches)
       .where(and(eq(switches.userId, userId), eq(switches.id, id))),

@@ -12,6 +12,7 @@ import {
   dayBaseline,
   daySnapshot,
   dayTitle,
+  isDayChangedRefusal,
   isManuallyExcluded,
   openedCut,
   pickRequest,
@@ -933,6 +934,29 @@ test('a refused activity undo turns 元に戻す off, and a passing failure keep
     'keep',
     'keep',
   ])
+})
+
+test('only a day-changed refusal makes the sheet refetch the stored zone, so a settings update in flight is never overwritten otherwise', () => {
+  // Arrange
+  const answers = [
+    new ORPCError('CONFLICT', {
+      message: 'day changed elsewhere',
+      data: { reason: 'day-changed' },
+    }),
+    new ORPCError('CONFLICT', { message: 'no room to move' }),
+    new ORPCError('BAD_REQUEST', {
+      message: 'activity is archived',
+      data: { reason: 'archived' },
+    }),
+    new TypeError('Failed to fetch'),
+    null,
+  ]
+
+  // Act
+  const refetchesZone = answers.map(isDayChangedRefusal)
+
+  // Assert
+  expect(refetchesZone).toEqual([true, false, false, false, false])
 })
 
 test('the carried-in panel warns before a pick away from an archived activity and says so after it', () => {

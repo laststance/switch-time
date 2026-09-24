@@ -18,17 +18,10 @@ import {
 import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { db } from '../db/client'
+import { db, type Executor, type LockedTx } from '../db/client'
 import { activities, switches } from '../db/schema/app'
 
-import {
-  authed,
-  one,
-  ownSwitch,
-  withUserLock,
-  type Executor,
-  type LockedTx,
-} from './base'
+import { authed, one, ownSwitch, withUserLock } from './base'
 import { getSettings } from './settings'
 
 type SwitchRow = typeof switches.$inferSelect
@@ -318,6 +311,27 @@ async function checkBaseline(
   return window
 }
 
+/**
+ * {@link checkBaseline} for an edit of one of the day's own rows (every edit but 「ここで分割」, which cuts the carried-in
+ * record): the edited row must be one of the baseline's rows, since 「元に戻す」 rewrites only those. An edit of the
+ * carried-in record would change time before the day, which the day's undo could never put back.
+ * @returns the day's window, or null when the call named no baseline
+ * @example const window = await checkOwnRowBaseline(tx, userId, input.baseline, input.id) // BAD_REQUEST for the carried-in id
+ */
+async function checkOwnRowBaseline(
+  tx: LockedTx,
+  userId: string,
+  baseline: DayBaseline | undefined,
+  id: string,
+): Promise<DayWindow | null> {
+  const window = await checkBaseline(tx, userId, baseline)
+  if (baseline && !baseline.rows.some((row) => row.id === id))
+    throw new ORPCError('BAD_REQUEST', {
+      message: "row is not one of the day's own rows",
+    })
+  return window
+}
+
 // The end of the day a switch starts on, in the stored zone.
 async function rowDayEnd(tx: LockedTx, userId: string, startedAt: Date) {
   const { timeZone } = await getSettings(userId, tx)
@@ -369,7 +383,12 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        const window = await checkBaseline(tx, userId, input.baseline)
+        const window = await checkOwnRowBaseline(
+          tx,
+          userId,
+          input.baseline,
+          input.id,
+        )
         const { row, prev, next } = await withNeighbours(tx, userId, input.id)
         const startedAt = clampStart(
           row.startedAt.getTime() + input.deltaMinutes * 60_000,
@@ -390,7 +409,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        await checkBaseline(tx, userId, input.baseline)
+        await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
         const row = await ownSwitch(userId, input.id, tx)
         await assertLiveActivities(tx, userId, [input.activityId])
         if (input.revision === undefined)
@@ -410,7 +429,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        await checkBaseline(tx, userId, input.baseline)
+        await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
         const { row, prev } = await withNeighbours(tx, userId, input.id)
         // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
         if (!prev)
@@ -425,7 +444,12 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        const window = await checkBaseline(tx, userId, input.baseline)
+        const window = await checkOwnRowBaseline(
+          tx,
+          userId,
+          input.baseline,
+          input.id,
+        )
         const { row, next } = await withNeighbours(tx, userId, input.id)
         // The current state has no later state to hand its time to.
         if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
@@ -445,7 +469,12 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        const window = await checkBaseline(tx, userId, input.baseline)
+        const window = await checkOwnRowBaseline(
+          tx,
+          userId,
+          input.baseline,
+          input.id,
+        )
         const { row, next } = await withNeighbours(tx, userId, input.id)
         const end = next?.startedAt.getTime() ?? Date.now()
         const midpoint = Math.floor((row.startedAt.getTime() + end) / 2)

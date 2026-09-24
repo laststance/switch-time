@@ -1,11 +1,11 @@
 import { settingsUpdateSchema, type SettingsUpdate } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 
-import { db } from '../db/client'
+import { db, type Executor } from '../db/client'
 import { userSettings } from '../db/schema/app'
 import { seedUser } from '../db/seed-user'
 
-import { authed, one, withUserLock, type Executor } from './base'
+import { authed, one, withUserLock } from './base'
 
 /**
  * The user's settings row (time zone, idle threshold…); seeded at sign-up, so a miss is a bug rather than a first-launch case.
