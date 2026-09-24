@@ -2,9 +2,12 @@ import { ORPCError } from '@orpc/client'
 import type { AppRouterClient } from '@switch-time/api'
 import {
   ARCHIVED_REFUSAL,
+  DAY_CHANGED_REFUSAL,
   clampStart,
   localDay,
   MIN_SEGMENT_MS,
+  type DayBaseline,
+  type DayRow,
   type ReplaceDayInput,
 } from '@switch-time/shared'
 
@@ -272,13 +275,80 @@ function ownRowFlags(
 
 /**
  * The rows 「元に戻す」 writes back through `switches.replaceDay`: the day's own rows only, never the carried-in state.
- * @example const previous = daySnapshot(list.data)
+ * @example const previous = daySnapshot(baseline.rows)
  */
-export function daySnapshot(list: ListedDay): DaySnapshot {
-  return list.rows.map(({ activityId, startedAt }) => ({
+export function daySnapshot(
+  rows: readonly Pick<DayRow, 'activityId' | 'startedAt'>[],
+): DaySnapshot {
+  return rows.map(({ activityId, startedAt }) => ({
     activityId,
     startedAt,
   }))
+}
+
+// A row as a baseline or 「元に戻す」's `expected` compares it: id, activity and start.
+const listedRow = ({
+  id,
+  activityId,
+  startedAt,
+}: Pick<SwitchRow, 'id' | 'activityId' | 'startedAt'>): DayRow => ({
+  id,
+  activityId,
+  startedAt,
+})
+
+/**
+ * The day as the sheet listed it, sent with every edit the day undo covers: the API refuses the edit unless the day still
+ * reads exactly so under the same stored zone, which makes the list the day's true state before the edit.
+ * @param day - The sheet's day.
+ * @param timeZone - The stored zone the list was windowed in.
+ * @param list - The `switches.listByDay` answer the button was pressed on.
+ * @returns The baseline: the day's own rows with their ids, oldest first, and the first switch after the day (null: none).
+ * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …], carriedOutId: 'n' }
+ */
+export function dayBaseline(
+  day: string,
+  timeZone: string,
+  list: ListedDay,
+): DayBaseline {
+  return {
+    day,
+    timeZone,
+    rows: list.rows.map(listedRow),
+    carriedOutId: list.carriedOut?.id ?? null,
+  }
+}
+
+/**
+ * The day's own rows once an edit has landed, from the baseline the API checked and the row the edit returned: the edit
+ * wrote nothing else, since the API ran it under the user's lock right after that check. A merge deletes the edited row;
+ * the returned row (moved, re-activitied, the merge's kept neighbour, a split's new part) replaces its id or joins; rows
+ * outside the day drop (a merge into the carried-in record keeps that record on its own day). 「元に戻す」 sends these as
+ * `expected`, so it is refused once anything else has touched the day.
+ * @param before - The baseline's rows.
+ * @param edit - The edit and the row it returned.
+ * @param editedId - The row the edit was made on.
+ * @param window - The day's [start, end) in epoch ms.
+ * @returns The day's rows after the edit, oldest first.
+ * @example rowsAfterEdit(before, { kind: 'merge', returned: work }, rest.id, bounds) // before without 休息, 仕事 as returned
+ */
+export function rowsAfterEdit(
+  before: readonly DayRow[],
+  edit: CorrectionEdit,
+  editedId: string,
+  window: Pick<DayBounds, 'start' | 'end'>,
+): DayRow[] {
+  const returned = listedRow(edit.returned)
+  const untouched = before.filter(
+    (row) =>
+      row.id !== returned.id && !(edit.kind === 'merge' && row.id === editedId),
+  )
+  return [...untouched, returned]
+    .filter((row) => {
+      const time = row.startedAt.getTime()
+      return time >= window.start && time < window.end
+    })
+    .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 }
 
 /**
@@ -455,13 +525,23 @@ export function cutNotes(
 }
 
 /**
- * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay`; `reselectId` is
- * the carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put
- * back through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
- * reaches another day.
+ * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay` only while the
+ * stored zone is still `timeZone`, the day still holds exactly `expected`, the rows the edit left, and its last row still
+ * runs into `carriedOutId` (an edit on the day never changes it, so it is the baseline's); `reselectId` is the
+ * carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put back
+ * through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
+ * reaches another day (a record's revision does not depend on any day's window, so it carries no zone).
  */
 export type UndoSlot =
-  | { kind: 'day'; day: string; rows: DaySnapshot; reselectId: string | null }
+  | {
+      kind: 'day'
+      day: string
+      timeZone: string
+      rows: DaySnapshot
+      expected: DayRow[]
+      carriedOutId: DayBaseline['carriedOutId']
+      reselectId: string | null
+    }
   | {
       kind: 'activity'
       day: string
@@ -470,46 +550,50 @@ export type UndoSlot =
       revision: number
     }
 /**
- * The sheet's edits, as far as the undo cares: `cut` is 「ここで分割」 on a carried-in row, `split` is 半分で分割. A pick
- * carries the revision its write left, from the `changeActivity` answer.
+ * The sheet's edits, as far as the undo cares, with the row the procedure returned: `cut` is 「ここで分割」 on a carried-in
+ * row, `split` is 半分で分割. A pick's returned row carries the revision its write left.
  */
-export type CorrectionEdit =
-  | { kind: 'move' | 'merge' | 'split' | 'cut' }
-  | { kind: 'pick'; revision: number }
+export type CorrectionEdit = {
+  kind: 'move' | 'pick' | 'merge' | 'split' | 'cut'
+  returned: Pick<SwitchRow, 'id' | 'activityId' | 'startedAt' | 'revision'>
+}
 
 /**
- * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed. A pick on the carried-in
- * record arms an activity undo, or nothing when its activity is archived (the picker cannot offer it back, and an older undo
- * must not replay either); every other edit arms the day undo.
- * @param edit - The edit just made.
+ * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed (the baseline the API
+ * checked). A pick on the carried-in record arms an activity undo, or nothing when its activity is archived (the picker
+ * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo.
+ * @param edit - The edit just made and the row it returned.
  * @param row - The row it was made on, before the edit.
- * @param day - The sheet's day.
- * @param list - The `switches.listByDay` answer before the edit.
+ * @param baseline - The day as the sheet listed it when the button was pressed.
+ * @param window - The day's [start, end) in epoch ms.
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
- * - Anything else: `{ kind: 'day', … }`, remembering the carried-in row after a cut
- * @example undoSlotFor({ kind: 'pick', revision: 4 }, carriedIn, '2026-09-08', list) // { kind: 'activity', id, to: 'work', revision: 4, … }
+ * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, remembering the carried-in row after a cut
+ * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, baseline, bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
 export function undoSlotFor(
   edit: CorrectionEdit,
   row: CorrectionRow,
-  day: string,
-  list: ListedDay,
+  baseline: DayBaseline,
+  window: Pick<DayBounds, 'start' | 'end'>,
 ): UndoSlot | { blocked: 'archived' } {
   if (edit.kind === 'pick' && row.carriedIn) {
     if (row.archived) return { blocked: 'archived' }
     return {
       kind: 'activity',
-      day,
+      day: baseline.day,
       id: row.id,
       to: row.activityId,
-      revision: edit.revision,
+      revision: edit.returned.revision,
     }
   }
   return {
     kind: 'day',
-    day,
-    rows: daySnapshot(list),
+    day: baseline.day,
+    timeZone: baseline.timeZone,
+    rows: daySnapshot(baseline.rows),
+    expected: rowsAfterEdit(baseline.rows, edit, row.id, window),
+    carriedOutId: baseline.carriedOutId,
     reselectId: edit.kind === 'cut' ? row.id : null,
   }
 }
@@ -528,8 +612,9 @@ export type UndoRequest =
   | { procedure: 'changeActivity'; input: ChangeActivityInput }
 
 /**
- * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, or the carried-in record's
- * previous activity through `changeActivity`, conditional on the record still being at the revision the pick left.
+ * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, conditional on the day still
+ * holding the rows the edit left under the same zone, or the carried-in record's previous activity through `changeActivity`,
+ * conditional on the record still being at the revision the pick left.
  * @param slot - The armed undo.
  * @returns The procedure and its input; a day undo also names the row to select after it (the carried-in row a cut came from).
  * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
@@ -538,7 +623,13 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
   if (slot.kind === 'day')
     return {
       procedure: 'replaceDay',
-      input: { day: slot.day, rows: slot.rows },
+      input: {
+        day: slot.day,
+        timeZone: slot.timeZone,
+        expected: slot.expected,
+        carriedOutId: slot.carriedOutId,
+        rows: slot.rows,
+      },
       reselectId: slot.reselectId,
     }
   return {
@@ -548,12 +639,12 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
 }
 
 /**
- * What a failed activity undo does to 「元に戻す」: an answer that can never succeed turns it off (the record changed
- * elsewhere or is gone, silently; the previous activity was archived, with the notice), and a passing failure (network,
- * server error, an expired sign-in) keeps it for another try, as the day undo does.
+ * What a failed undo of either kind does to 「元に戻す」: an answer that can never succeed turns it off (the day or the record
+ * changed elsewhere, or is gone, silently; the previous activity was archived, with the notice), and a passing failure
+ * (network, server error, an expired sign-in) keeps it for another try.
  * @param error - The error the undo's mutation failed with.
  * @returns
- * - 'clear': CONFLICT or NOT_FOUND
+ * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision) or NOT_FOUND
  * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target)
  * - 'keep': anything else, another BAD_REQUEST included
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
@@ -563,18 +654,35 @@ export function afterUndoFailure(
 ): 'keep' | 'clear' | 'archived' {
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
-  return error.code === 'BAD_REQUEST' && isArchivedRefusal(error.data)
+  return error.code === 'BAD_REQUEST' &&
+    hasRefusalReason(error.data, ARCHIVED_REFUSAL.reason)
     ? 'archived'
     : 'keep'
 }
 
-// The archived refusal's marker ({@link ARCHIVED_REFUSAL}) from `switches.changeActivity`; any other BAD_REQUEST is a plain failure.
-function isArchivedRefusal(data: unknown): boolean {
+/**
+ * Whether an edit or undo was refused because its day no longer reads as the sheet listed it ({@link DAY_CHANGED_REFUSAL}).
+ * The sheet's edits read it when they settle: the stored zone may be what changed, so the cached settings are refetched
+ * with the day, and the next edit sends the new zone.
+ * @param error - The error the mutation failed with, or null when it succeeded.
+ * @returns true only for a CONFLICT carrying `data.reason === 'day-changed'`
+ * @example isDayChangedRefusal(new ORPCError('CONFLICT', { data: DAY_CHANGED_REFUSAL })) // true
+ */
+export function isDayChangedRefusal(error: unknown): boolean {
+  return (
+    error instanceof ORPCError &&
+    error.code === 'CONFLICT' &&
+    hasRefusalReason(error.data, DAY_CHANGED_REFUSAL.reason)
+  )
+}
+
+// A refusal's machine-readable marker (`data.reason`, as {@link ARCHIVED_REFUSAL} and {@link DAY_CHANGED_REFUSAL} carry it).
+function hasRefusalReason(data: unknown, reason: string): boolean {
   return (
     typeof data === 'object' &&
     data !== null &&
     'reason' in data &&
-    data.reason === ARCHIVED_REFUSAL.reason
+    data.reason === reason
   )
 }
 
@@ -597,20 +705,22 @@ export function archivedBox(
 
 /**
  * The `changeActivity` input for a pick: on the carried-in record it carries the `revision` the sheet listed, so a stale
- * sheet is refused rather than overwriting another device's change on an earlier day; the day's own rows keep the
- * unconditional write their day undo relies on.
+ * sheet is refused rather than overwriting another device's change on an earlier day; the day's own rows carry the day's
+ * baseline instead, which their day undo relies on.
  * @param row - The row picked on.
  * @param activityId - The picked activity, null for detox.
- * @returns The input, with `revision` only on a carried-in row.
- * @example pickRequest(carriedIn, 'sleep') // { id: 'w', activityId: 'sleep', revision: 3 }
+ * @param baseline - The day as the sheet listed it ({@link dayBaseline}).
+ * @returns The input, with `revision` on a carried-in row and `baseline` on the day's own rows.
+ * @example pickRequest(carriedIn, 'sleep', baseline) // { id: 'w', activityId: 'sleep', revision: 3 }
  */
 export function pickRequest(
   row: CorrectionRow,
   activityId: string | null,
+  baseline: DayBaseline | undefined,
 ): ChangeActivityInput {
   return row.carriedIn
     ? { id: row.id, activityId, revision: row.revision }
-    : { id: row.id, activityId }
+    : { id: row.id, activityId, baseline }
 }
 
 /**

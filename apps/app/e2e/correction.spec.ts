@@ -27,6 +27,8 @@ test('undo restores the row that was merged away', async ({ page }) => {
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -67,6 +69,8 @@ test('merging into the next record hands the span to the next row, and undo brin
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -104,6 +108,8 @@ test('undo brings back a row merged into the record of an archived activity', as
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -141,6 +147,8 @@ test('undo after a merge and then a 15-minute move takes back only the move', as
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -178,6 +186,8 @@ test('undo turns a changed activity back', async ({ page }) => {
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -198,6 +208,90 @@ test('undo turns a changed activity back', async ({ page }) => {
   await expect(chore).toHaveCount(0)
 })
 
+test('undo is refused once another device added a switch to the day, and that switch survives', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, with 休息 merged into 仕事 through the sheet.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  await page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }).click()
+  await page.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    page.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  // Another device splits 仕事 at 10:00, behind the sheet's back.
+  const [work] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work) throw new Error('no 仕事 row')
+  await api.switches.splitAt({ id: work.id, at: at(yesterday, 10) })
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: the other device's row is still there, 休息 did not come back, and there is nothing left to undo.
+  await expect(
+    page.getByRole('button', { name: '仕事 10:00 – 18:00 8h 00m' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('an edit made on a list another device has since changed is refused, and the sheet shows that device’s change', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00, listed by the sheet.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const staleRest = page.getByRole('button', {
+    name: '休息 12:00 – 18:00 6h 00m',
+  })
+  await expect(staleRest).toBeVisible()
+  // Another device moves 娯楽 15 minutes earlier; the sheet still lists 18:00.
+  const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!leisure) throw new Error('no 娯楽 row')
+  await api.switches.moveStart({ id: leisure.id, deltaMinutes: -15 })
+
+  // Act: merge the stale 休息 into 仕事.
+  await staleRest.click()
+  await page.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert: the merge did not land, the sheet reads the moved 娯楽, and nothing was armed to undo.
+  await expect(
+    page.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
 test('undo joins a split row back into one', async ({ page }) => {
   // Arrange: yesterday 仕事 9:00, 休息 12:00, with 仕事 split at 10:30.
   await signUp(page)
@@ -206,6 +300,8 @@ test('undo joins a split row back into one', async ({ page }) => {
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -238,6 +334,8 @@ test('an edit still landing after its sheet closed holds the next sheet until it
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -279,6 +377,8 @@ test('the last row of a past day cannot merge into the next day’s first switch
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -313,6 +413,8 @@ test('the two merge buttons share a line and 半分で分割 spans the full widt
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
   })
   await page.goto(`/correction?day=${yesterday}`)
@@ -358,6 +460,8 @@ test('on a phone-width screen the two merge buttons still share a line at equal 
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
   })
   await page.goto(`/correction?day=${yesterday}`)
@@ -404,8 +508,16 @@ test('splitting the current state shows on Home without a reload', async ({
   await signUp(page)
   const api = await apiAs(page)
   const list = await api.activities.list()
+  // replaceDay rewrites today only while it still holds the rows it names: the first-launch tap.
+  const { rows: firstLaunch } = await api.switches.listByDay({ day: today() })
   await api.switches.replaceDay({
     day: today(),
+    timeZone: 'Asia/Tokyo',
+    expected: firstLaunch.map(({ id, activityId, startedAt }) => ({
+      id,
+      activityId,
+      startedAt,
+    })),
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(today(), 0) }],
   })
   await page.reload()
@@ -440,6 +552,8 @@ test('a detox row lists as detox and comes back through undo', async ({
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: null, startedAt: at(yesterday, 12) },
@@ -477,6 +591,8 @@ test('the picker turns a segment into detox', async ({ page }) => {
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -514,10 +630,14 @@ async function openCarriedInWork(page: Page) {
   const day = shift(today(), -1)
   await api.switches.replaceDay({
     day: dayBefore,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
   })
   await api.switches.replaceDay({
     day,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '食事'), startedAt: at(day, 7) }],
   })
   await page.goto(`/correction?day=${day}`)
@@ -842,10 +962,14 @@ test('the lines under ここで分割 follow the cut time and the day’s exclus
   const recordEnd = shift(today(), -1)
   await api.switches.replaceDay({
     day: recordStart,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(recordStart, 20) }],
   })
   await api.switches.replaceDay({
     day: recordEnd,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: idOf(list, '食事'), startedAt: at(recordEnd, 0) }],
   })
   await page.goto(`/correction?day=${day}`)
@@ -904,6 +1028,8 @@ test('a carried-in record with no quarter hour to cut at disables every step and
   const day = shift(today(), -1)
   await api.switches.replaceDay({
     day: dayBefore,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       {
         activityId: idOf(list, '仕事'),
@@ -913,6 +1039,8 @@ test('a carried-in record with no quarter hour to cut at disables every step and
   })
   await api.switches.replaceDay({
     day,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       {
         activityId: idOf(list, '食事'),

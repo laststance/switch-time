@@ -16,49 +16,13 @@
 
 ## Correction
 
-### Serialize a user's switch writes and re-read the neighbours inside them
-
-**What:** Take a per-user lock at the start of every `switches.*` write transaction (`pg_advisory_xact_lock` on the user id), and move `withNeighbours` and the merge's day check inside it. Take the same lock in `activities.archive`, and check for an archived activity inside it in `switchTo` and `changeActivity`.
-
-**Why:** `mergeIntoNext` reads the row and its next state before its transaction, then writes the row's start onto the next state by id. Two devices merging neighbouring records at once both succeed, and a span moves to the wrong activity for good: from 仕事 9:00, 休息 12:00, 娯楽 18:00, merging 仕事 into 休息 and 休息 into 娯楽 together leaves 娯楽 starting at 12:00 instead of 9:00, and 9:00–12:00 goes to whatever came before 仕事. A split racing a merge does the same, and `mergeIntoNext` on one row racing `mergeIntoPrevious` on the next can deadlock (a silent 500). Two 「元に戻す」 of one day at once (two tabs or devices) keep both inserts: under READ COMMITTED the second delete cannot see the first one's new rows, so every row appears twice, and the next undo on that day fails the order check. A tap, or a 活動を変える on the latest record, can also land between `archive`'s current-state check and its write, leaving an archived activity running, and two archives at once can pass the last-live-activity count together.
-
-**Context:** New in 0.2.0.0 for `mergeIntoNext`; `mergeIntoPrevious` writes no time, and its update fails (rolling back the delete) when the kept row is already gone. Two merges of the same record no longer both succeed: `mergeInto` requires its delete to remove the row. `moveStart` and `splitInHalf` have computed their new time from a read outside the transaction since 0.1.0.0, and `switchTo` already names the missing per-user lock in a `ponytail:` comment. `splitAt` (「ここで分割」, since the carried-in row's panel (2026-09-24)) is another unlocked read-then-insert path: it reads the row and its next state, checks the cut against them, then inserts, so a merge or move landing in between can leave the cut outside its record; it is marked `gstack-shortcut(dec-7253328b)`. Needs a concurrency test against the real Postgres; the same-record test in `domain.test.ts` shows how to hold one transaction open and wait on `pg_stat_activity` until the other blocks. Raised by Codex's adversarial pass (as P1) and the Claude adversarial pass during the 0.2.0.0 ship; left to the owner before merging. The `revision` bumps (2026-09-24) pick their row from the same unlocked reads: `moveStart` bumps the neighbour `withNeighbours` returned, `switchTo` the latest switch it read, and `replaceDay` the record it selects before the day without a lock, so a switch another device inserts in between can have its end moved while its revision stays put.
-
-**Effort:** M
-**Priority:** P1
-**Depends on:** None
-
-### Refuse an undo when the day changed after the edit
-
-**What:** Make `replaceDay` conditional: send the rows the edit left, each with its id, start and activity, and answer CONFLICT inside the transaction when the day's current rows differ from them in any of those.
-
-**Why:** 「元に戻す」 deletes the day's whole window and writes the snapshot back without looking. A switch made on another device after the snapshot's data was fetched (up to the 30 s `staleTime`), or after the edit while 元に戻す is still armed, is deleted for good, and the current state silently reverts. An edit made on another device in the meantime (±15 min, 活動を変える) is silently undone as well. It happens on one device too: when the refetch after an edit fails, the sheet unlocks on the pre-edit list, so the next edit snapshots that list and 元に戻す reverts both edits; and a merge paused offline arms 元に戻す with rows from before the connection dropped.
-
-**Context:** The snapshot is `list.data` when the button is pressed (`use-correction.ts`), and Home's today view shares the `listByDay` key. Once the edit's invalidation has refetched, `queryClient.getQueryData` holds the rows the edit left. A client-only stopgap is `staleTime: 0` on the sheet's list plus holding the panel after a failed refetch (`list.isRefetchError`); it does not cover the offline case, which the row check does. Compare whole rows, not only ids: `moveStart` and `changeActivity` edit a row in place through `correct`, which keeps its id, so an id-only check would still let 元に戻す overwrite such an edit. Compare in the statement that deletes (`delete … returning id, started_at, activity_id` against the rows sent), or run the comparison under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them". A separate select before the delete is not enough under READ COMMITTED: a switch committed between the two statements is still deleted. Since 0.2.1.0 (the archived-day undo fix, PR #49) this also reaches days that hold a record of an archived activity, today included once an activity used earlier today is archived: `replaceDay` used to refuse those days outright. A sheet left open across that deploy with a failed undo still armed replays its old snapshot on the next press. Raised by the red team during the 0.2.0.0 ship; Codex and the Claude adversarial pass added the one-device paths. The owner raised it from P2 to P1 on 2026-09-17. Since the carried-in row's panel (2026-09-24), a pick on the carried-in record arms an `activity` undo instead, and both that pick and its undo already compare in the statement that writes (`changeActivity`'s optional `revision`, which every write changing a row's activity or its end moves on); the `day` undo, which every other edit and 「ここで分割」 arm, is still unconditional.
-
-**Effort:** M
-**Priority:** P1
-**Depends on:** None
-
 ### Say why a correction was refused
 
 **What:** Show a short message in the correction sheet when an edit or 「元に戻す」 fails, e.g. 「次の記録は翌日なので統合できません」.
 
 **Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
 
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Raised by the review during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
-### Refetch the day's switches after the time zone changes
-
-**What:** Invalidate `switches.*` in `useUpdateSettings` when `timeZone` changes, and carry the time zone in the undo snapshot so a replay under another zone is refused.
-
-**Why:** `listByDay` is keyed by the day string, but the server windows it with the stored time zone. After a change, a cached answer (30 s `staleTime`) still holds the old window while the sheet computes `dayBounds` with the new one, so the row flags and the undo snapshot disagree with the day `replaceDay` rewrites: 「元に戻す」 then fails, or deletes rows the snapshot never had. For someone with two devices in different time zones this is routine rather than a rare settings change: `use-time-zone-sync.ts` writes the focused device's zone whenever it differs, so the stored zone flips back and forth.
-
-**Context:** `useUpdateSettings` refetches `settings.*` and `stats.*` only. The server checks day bounds for 「次の記録に統合」 (0.2.0.0); `moveStart` and `splitInHalf` still trust the client's flags, so a mismatched window can also leave a stray row on the next day after 「元に戻す」. Since 0.2.1.0 the undo that deletes rows the snapshot never had also reaches days that hold a record of an archived activity, which `replaceDay` used to refuse before deleting anything. Since the carried-in row's panel (2026-09-24), the slot is a union (`UndoSlot` in `lib/correction.ts`), so the zone goes into both kinds; and `splitAt` checks the cut against the record's neighbours, not the day, so a cut offered under a stale window can land on another day, where the viewed day's 元に戻す does not remove it. Pre-existing, raised by the review during the 0.2.0.0 ship; Codex and the Claude adversarial pass found it again, and the adversarial pass suggests the zone flipping may make it P1.
+**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Since the day baseline (2026-09-25), every edit of the sheet and the day's 「元に戻す」 can also be refused because the day changed elsewhere (another device's switch or edit, or a stored-zone change): that refusal already carries `DAY_CHANGED_REFUSAL` (`{ reason: 'day-changed' }`, thrown by `checkBaseline` and `replaceDay` in `apps/api/src/rpc/switches.ts`), so it can map to a message such as 「別の端末で記録が変わったため、最新の状態を表示しました」. `moveStart`, `splitInHalf` and `splitAt` also refuse a result that would land on another day. Raised by the review during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -78,11 +42,11 @@
 
 ### Pin the undo snapshot and a merge into the running state with tests
 
-**What:** Add three tests. (1) e2e: a merge the API refuses because the open sheet's list is stale (merge 娯楽 away through the API, then press 次の記録に統合 on 休息) leaves 元に戻す disabled. (2) e2e: hold the `mergeIntoNext` answer, force a refetch that shows the merged day (`page.clock` past the 30 s `staleTime`, then `visibilitychange`), release the answer, press 元に戻す and expect the merged row back. (3) API: merging the record before the running state moves `switches.current()` back to that record's start, with `source: 'merge'`.
+**What:** Add two tests. (1) e2e: hold the `mergeIntoNext` answer, force a refetch that shows the merged day (`page.clock` past the 30 s `staleTime`, then `visibilitychange`), release the answer, press 元に戻す and expect the merged row back. (2) API: merging the record before the running state moves `switches.current()` back to that record's start, with `source: 'merge'`.
 
-**Why:** No test fails if `withUndo` arms 元に戻す on press instead of on success, or if the snapshot goes back to being taken when the edit lands (the 0.2.0.0 fix has no regression test). Every `mergeIntoNext` test merges into a record that has a later switch, so the everyday case, a mis-tap just before what is running now, is untested.
+**Why:** No test fails if the undo snapshot goes back to being taken when the edit lands (the 0.2.0.0 fix has no regression test). Every `mergeIntoNext` test merges into a record that has a later switch, so the everyday case, a mis-tap just before what is running now, is untested.
 
-**Context:** `apps/app/src/hooks/use-correction.ts` (`withUndo`), `apps/app/e2e/correction.spec.ts` (the held-answer pattern is in "an edit still landing after its sheet closed…"), `apps/api/src/rpc/domain.test.ts`. Raised by the testing pass during the 0.2.0.0 ship.
+**Context:** `apps/app/src/hooks/use-correction.ts` (`press` and its `arm`), `apps/app/e2e/correction.spec.ts` (the held-answer pattern is in "an edit still landing after its sheet closed…"), `apps/api/src/rpc/domain.test.ts`. A refused edit on a stale list leaving 元に戻す disabled is covered since the day baseline (2026-09-25). Raised by the testing pass during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -104,9 +68,9 @@
 
 **What:** Take the undo snapshot in a hook-level `onMutate` (returned as the mutation's context), arm the slot in the hook-level `onSuccess`, and keep the slot outside the sheet (Redux, keyed by day) so a reopened sheet for that day can still offer 元に戻す.
 
-**Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND) leaves 元に戻す unarmed, or armed with an older edit, so undo then reverts two edits. A merge that lands after 完了 can never be undone.
+**Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND, or the day-changed refusal) leaves 元に戻す unarmed, or armed with an older edit, which the day undo's `expected` rows now refuse rather than reverting two edits. A merge that lands after 完了 can never be undone.
 
-**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list. Extend the held-answer e2e to press 元に戻す after the answer lands. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
+**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list; it would take over `press` in `use-correction.ts`, which takes the day's baseline at the press and arms from it and the returned row (`rowsAfterEdit`). Extend the held-answer e2e to press 元に戻す after the answer lands. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
@@ -118,7 +82,7 @@
 
 **Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, but only while the sheet that made the edit is open. After 完了, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
 
-**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the per-user lock from "Serialize a user's switch writes and re-read the neighbours inside them", since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
+**Context:** The undo snapshot lives in `useState` in `use-correction.ts`, so closing the sheet drops it. "Arm 「元に戻す」 from the mutation, not from the tap" would keep the slot outside the sheet, which narrows this gap without closing it. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one, such as "not the latest row", checked under the user's timeline lock (`withUserLock` in `apps/api/src/rpc/base.ts`), since a later merge or undo can make the edited row the latest. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
 
 **Effort:** M
 **Priority:** P3
@@ -184,6 +148,54 @@
 **Priority:** P3
 **Depends on:** None
 
+### Stop the stored time zone flipping between two devices
+
+**What:** Make `use-time-zone-sync.ts` write the device's zone only when that device's own zone changes (compare it with the last zone this device synced, kept on the device), or ask before overwriting the stored one. While a `settings.update` that carries `timeZone` is in flight, hold the correction sheet's buttons.
+
+**Why:** The hook writes the focused device's zone whenever it differs from the stored one, so two devices in different zones flip it back and forth on every focus. A browser with `resistFingerprinting` reports UTC, so one laptop and one phone are enough. Since the day baseline (2026-09-25), every edit and every day 「元に戻す」 carries the zone, so each flip makes the other device's open sheet refuse its next edit and turns its 元に戻す off (`DAY_CHANGED_REFUSAL`, which the client does not read yet). The same write runs at app start, where the settings cache takes the device zone at once while `listByDay` may still hold rows windowed in the old one, so edits are refused silently until the zone write settles.
+
+**Context:** Left open when the day baseline closed "Refetch the day's switches after the time zone changes" (`useUpdateSettings` now refetches `switches.*` too, and a replay under another zone is refused). Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Refuse an edit that makes a record of an archived activity the current state
+
+**What:** Under the per-user lock, refuse `replaceDay` and `mergeIntoPrevious` with `ARCHIVED_REFUSAL` when the row that becomes the user's latest switch names an archived activity.
+
+**Why:** `activities.archive` refuses the activity of the current state, and the lock keeps a tap or a pick from racing that check, but two locked writes still get around it. (1) Device A's sheet changes today's running record from X to Y, device B archives X (allowed: X is no longer current), then A presses 「元に戻す」: the day still reads as the edit left it (archiving writes no switch), and `replaceDay` checks ownership only, so the running record goes back to X. (2) 「前の記録に統合」 on the latest record makes the previous record the current state without looking at its activity.
+
+**Context:** The owner accepted archived ids in `replaceDay` for past time (0.2.1.0, PR #49), not for the running state. `apps/api/src/rpc/switches.ts`. The rule matches the "not the latest row" rule that "Rebuild a merged-away record of an archived activity" needs. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Refuse a merge into a carried-in record that changed elsewhere
+
+**What:** Put the carried-in record's id and `revision` into the day baseline (the sheet's row already holds both), and refuse 「前の記録に統合」 with `DAY_CHANGED_REFUSAL` when the record it merges into is that record and its id or revision no longer match.
+
+**Why:** The baseline covers the day's own rows only. When another device changes the carried-in record first (a pick on the previous day's sheet, or a merge that leaves an earlier row in its place), the day's baseline still matches, so merging the day's first row into it hands that time to an activity the sheet never showed. The day's 「元に戻す」 can still reverse it, but the edit is not refused, which is what the baseline is for.
+
+**Context:** `checkBaseline` and `mergeIntoPrevious` in `apps/api/src/rpc/switches.ts`, `dayBaseline` in `apps/app/src/lib/correction.ts`, `dayBaselineSchema` in `packages/shared/src/schemas.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Let a day with more than 500 switches still be corrected
+
+**What:** Send no baseline and arm no day 「元に戻す」 when the listed day holds more rows than the baseline schema allows, or raise the cap to an explicit server limit on switches per day.
+
+**Why:** Since the day baseline (2026-09-25), every sheet edit sends all the day's rows, capped at 500 by `dayRowsSchema` in `packages/shared/src/schemas.ts`. On a day with more (a script, a hotkey burst), every edit fails validation with BAD_REQUEST and nothing is shown, so the day cannot be corrected at all. Before, only 「元に戻す」 hit the cap. The sheet can also cross it itself: 半分で分割 on a day of exactly 500 rows lands (its baseline holds 500), and then its own 「元に戻す」 is refused, since `expected` would hold 501; keep the cap on the rows written back apart from the one on the rows compared, and test 500 → 501.
+
+**Context:** The API already accepts an edit without a baseline. `dayBaseline` in `apps/app/src/lib/correction.ts` builds it. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Stats
 
 ### Decide what a detox that runs past midnight does to 連続記録
@@ -225,6 +237,30 @@
 **Depends on:** None
 
 ## Database
+
+### Keep two switches of one account from starting at the same instant
+
+**What:** In `switchTo`, under the per-user lock, start the new switch at `max(now, current.startedAt + 1 ms)` (or take the time from the database with `greatest()`), and add `id` as a second sort key in `dayRows`, `switchesBetween` and `rowsAfterEdit`.
+
+**Why:** Two taps from two devices, serialized by the lock, can land in the same millisecond, and a clock step or a second API instance can even start the new row before the current one. Nothing orders tied rows: the list and the locked re-read can then read them in different orders, which refuses edits as day-changed for no reason, and `replaceDay` rejects tied rows with BAD_REQUEST, which `afterUndoFailure` keeps armed, so 「元に戻す」 fails on every press.
+
+**Context:** No unique index covers `(user_id, started_at)`. `apps/api/src/rpc/switches.ts`, `apps/app/src/lib/correction.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep one account's queued writes from filling the connection pool
+
+**What:** Queue a user's timeline writes in the API process (a per-user mutex in front of `withUserLock`) so only one connection per user waits on the advisory lock, cap how many writes one user can have in flight (TOO_MANY_REQUESTS above a small number), and set `connectionTimeoutMillis` on the `Pool` in `apps/api/src/db/client.ts`.
+
+**Why:** Every write that waits in `withUserLock` holds a pool connection for up to the 10 s `lock_timeout`. The `Pool` keeps the default 10 connections and no acquire timeout, and nothing rate-limits RPC writes, so one signed-in account with about ten writes in flight (taps, edits, zone updates) fills the pool with requests queued on its own lock; every other account's reads and writes then wait on the pool with no bound. Before the lock, the same burst ran in parallel and drained about ten times faster.
+
+**Context:** The advisory lock stays for correctness across API instances; the in-process queue only stops waiters from holding connections. `pg_try_advisory_xact_lock` with a short backoff, or a shorter timeout, are the cheaper alternatives. Raised by the security pass during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Let the switches index serve the timeline queries in order
 

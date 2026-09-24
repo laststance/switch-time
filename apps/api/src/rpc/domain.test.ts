@@ -1,4 +1,4 @@
-import { addDays, dayBounds, localDay } from '@switch-time/shared'
+import { addDays, dayBounds, localDay, type DayRow } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 import { expect, test } from 'vitest'
 
@@ -16,6 +16,9 @@ const idOf = (list: { id: string; name: string }[], name: string) => {
   if (!activity) throw new Error(`no activity named ${name}`)
   return activity.id
 }
+// A listed day's rows as a baseline or 「元に戻す」's `expected` names them, the way the correction sheet sends them.
+const listedRows = (rows: DayRow[]): DayRow[] =>
+  rows.map(({ id, activityId, startedAt }) => ({ id, activityId, startedAt }))
 
 test('sign-up seeds 6 activities and settings', async () => {
   // Arrange
@@ -79,10 +82,14 @@ test('a day without switches counts as unmeasured and breaks the streak', async 
   const twoDaysAgo = addDays(today, -2)
   await api.switches.replaceDay({
     day: twoDaysAgo,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: work, startedAt: at(twoDaysAgo, 9) }],
   })
   await api.switches.replaceDay({
     day: today,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: work, startedAt: at(today, 0) }],
   })
 
@@ -114,6 +121,8 @@ test('the week view gets totals over measured days only, with the unused day lis
   const yesterday = addDays(today, -1)
   await api.switches.replaceDay({
     day: threeDaysAgo,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(threeDaysAgo, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(threeDaysAgo, 18) },
@@ -121,6 +130,8 @@ test('the week view gets totals over measured days only, with the unused day lis
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 8) },
       { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
@@ -128,6 +139,8 @@ test('the week view gets totals over measured days only, with the unused day lis
   })
   await api.switches.replaceDay({
     day: today,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(today, 0) }],
   })
 
@@ -158,6 +171,8 @@ test('a segment longer than the idle threshold is excluded from the day total', 
   const yesterday = addDays(today, -1)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(day, 0) },
       { activityId: idOf(list, '休息'), startedAt: at(day, 13) },
@@ -166,6 +181,8 @@ test('a segment longer than the idle threshold is excluded from the day total', 
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
   })
 
@@ -210,6 +227,8 @@ test('detox time is left out of every total while the day stays measured', async
   const yesterday = addDays(today, -1)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
       { activityId: null, startedAt: at(day, 12) },
@@ -218,6 +237,8 @@ test('detox time is left out of every total while the day stays measured', async
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
   })
 
@@ -278,10 +299,14 @@ test('a day spent entirely in detox is measured and lists its tap, with nothing 
   const dayAfter = addDays(today, -1)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: null, startedAt: at(day, 9) }],
   })
   await api.switches.replaceDay({
     day: dayAfter,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(dayAfter, 0) }],
   })
 
@@ -353,6 +378,8 @@ test('merging into the previous record removes the row and the previous state no
   const 仕事 = idOf(list, '仕事')
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: 仕事, startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -384,6 +411,8 @@ test('merging into the next record removes the row and the next state now starts
   const 娯楽 = idOf(list, '娯楽')
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -436,6 +465,8 @@ test('another account cannot merge a switch into the next record: the id reads a
   const list = await owner.activities.list()
   await owner.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -463,6 +494,8 @@ test('merging into a detox next record keeps it detox: the merged time moves out
   const day = addDays(today, -2)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
       { activityId: null, startedAt: at(day, 12) },
@@ -471,6 +504,8 @@ test('merging into a detox next record keeps it detox: the merged time moves out
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
   })
   const [work, detox] = (await api.switches.listByDay({ day })).rows
@@ -505,6 +540,8 @@ test('the last record of a day cannot merge into the next day’s first switch, 
   const day = addDays(today, -2)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(day, 9) },
       { activityId: idOf(list, '娯楽'), startedAt: at(day, 18) },
@@ -512,6 +549,8 @@ test('the last record of a day cannot merge into the next day’s first switch, 
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '家事'), startedAt: at(yesterday, 0) }],
   })
   const [, fun] = (await api.switches.listByDay({ day })).rows
@@ -543,6 +582,8 @@ test('the day a merge may not leave is the account’s own: a record two hours b
   const zoneTwoDaysAgo = addDays(zoneYesterday, -1)
   await api.switches.replaceDay({
     day: zoneTwoDaysAgo,
+    timeZone: LA,
+    expected: [],
     rows: [
       {
         activityId: idOf(list, '仕事'),
@@ -552,6 +593,8 @@ test('the day a merge may not leave is the account’s own: a record two hours b
   })
   await api.switches.replaceDay({
     day: zoneYesterday,
+    timeZone: LA,
+    expected: [],
     rows: [
       {
         activityId: idOf(list, '休息'),
@@ -576,6 +619,8 @@ test('a merge of a record that another device has just merged away is refused, s
   const list = await api.activities.list()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
@@ -633,6 +678,8 @@ test('splitting in half creates a second row at the midpoint with the same activ
   const 仕事 = idOf(list, '仕事')
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: 仕事, startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -668,6 +715,8 @@ test('moving a start time cannot cross the neighbouring rows', async () => {
   const nine = at(yesterday, 9).getTime()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: new Date(nine) },
       { activityId: idOf(list, '休息'), startedAt: new Date(nine + 5 * MIN) },
@@ -689,8 +738,11 @@ test('moving a start time cannot cross the neighbouring rows', async () => {
   expect(earlier.startedAt).toEqual(new Date(nine + MIN))
   expect(later.startedAt).toEqual(new Date(nine + 9 * MIN))
   expect(earlier.source).toBe('correction')
+  const moved = await api.switches.listByDay({ day: yesterday })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: listedRows(moved.rows),
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: new Date(nine) },
       { activityId: idOf(list, '休息'), startedAt: new Date(nine + MIN) },
@@ -765,6 +817,8 @@ test('archiving an activity flags it without dropping its day rows or totals', a
   const day = addDays(today, -2)
   await api.switches.replaceDay({
     day,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: rest, startedAt: at(day, 9) },
       { activityId: work, startedAt: at(day, 15) },
@@ -772,6 +826,8 @@ test('archiving an activity flags it without dropping its day rows or totals', a
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 0) }],
   })
 
@@ -864,6 +920,8 @@ test('a replaced day can end on an archived activity, which then runs on as the 
   // Act
   const written = await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: work, startedAt: at(yesterday, 9) },
       { activityId: rest, startedAt: at(yesterday, 12) },
@@ -889,6 +947,8 @@ test('tapping an archived activity that is still the current state is refused, a
   const yesterday = addDays(today, -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: rest, startedAt: at(yesterday, 12) }],
   })
 
@@ -916,6 +976,8 @@ test('元に戻す restores a day whose rows include an archived activity', asyn
   ]
   const [first] = await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: snapshot,
   })
   if (!first) throw new Error('seed failed')
@@ -930,7 +992,12 @@ test('元に戻す restores a day whose rows include an archived activity', asyn
   ])
 
   // Act
-  await api.switches.replaceDay({ day: yesterday, rows: snapshot })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: listedRows(edited.rows),
+    rows: snapshot,
+  })
 
   // Assert
   const { rows } = await api.switches.listByDay({ day: yesterday })
@@ -950,6 +1017,8 @@ test('a replaced day cannot be written onto another account’s activity: it rea
   // Act
   const replacement = stranger.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: work, startedAt: at(yesterday, 9) }],
   })
 
@@ -971,6 +1040,8 @@ test('元に戻す writes back a day where one activity holds several rows', asy
   // Act
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: work, startedAt: at(yesterday, 9) },
       { activityId: rest, startedAt: at(yesterday, 12) },
@@ -998,12 +1069,16 @@ test('a replaced day that slips in another account’s activity beside the user�
   const yesterday = addDays(today, -1)
   await stranger.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: strangersWork, startedAt: at(yesterday, 9) }],
   })
 
   // Act
   const replacement = stranger.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: strangersRest, startedAt: at(yesterday, 10) },
       { activityId: ownersWork, startedAt: at(yesterday, 12) },
@@ -1027,6 +1102,8 @@ test('splitting a record of an archived activity keeps both halves on that activ
   const yesterday = addDays(today, -1)
   const [restRow] = await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: rest, startedAt: at(yesterday, 10) },
       { activityId: work, startedAt: at(yesterday, 12) },
@@ -1062,6 +1139,8 @@ test('merging the current state into the record of an archived activity makes th
   const yesterday = addDays(today, -1)
   const [, workRow] = await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: rest, startedAt: at(yesterday, 10) },
       { activityId: work, startedAt: at(yesterday, 12) },
@@ -1093,6 +1172,8 @@ test('a replaced day rejects two segments that start at the same moment', async 
   await expect(
     api.switches.replaceDay({
       day: yesterday,
+      timeZone: TZ,
+      expected: [],
       rows: [
         { activityId: work, startedAt: at(yesterday, 9) },
         { activityId: rest, startedAt: at(yesterday, 9) },
@@ -1161,6 +1242,8 @@ test('splitting a detox span keeps both halves detox', async () => {
   const yesterday = addDays(today, -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: null, startedAt: at(yesterday, 12) },
@@ -1227,10 +1310,14 @@ test('cutting the record carried into a day inserts a row at the chosen time wit
   const 仕事 = idOf(list, '仕事')
   await api.switches.replaceDay({
     day: twoDaysAgo,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: 仕事, startedAt: at(twoDaysAgo, 22) }],
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
   })
   const { carriedIn } = await api.switches.listByDay({ day: yesterday })
@@ -1265,6 +1352,8 @@ test('a cut keeps a minute from both ends of the record: exactly a minute is acc
   const list = await api.activities.list()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -1333,6 +1422,8 @@ test('another account cannot cut a record: the id reads as missing and the owner
   const list = await owner.activities.list()
   await owner.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -1388,6 +1479,8 @@ test('an activity change that names a revision reads as missing once the record 
   const list = await api.activities.list()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -1416,6 +1509,8 @@ test('a stale activity undo is refused after another device merged the next reco
   const 睡眠 = idOf(list, '睡眠')
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: 仕事, startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -1555,6 +1650,8 @@ test('every write that moves where a record ends moves that record’s revision 
   const list = await api.activities.list()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
@@ -1584,6 +1681,8 @@ test('a tap ends the running record and a rewritten day moves the record carried
   const list = await api.activities.list()
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: TZ,
+    expected: [],
     rows: [{ activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 22) }],
   })
   const sleep = await api.switches.current()
@@ -1592,8 +1691,11 @@ test('a tap ends the running record and a rewritten day moves the record carried
   // Act: a tap ends 睡眠, then today's rows are rewritten, which moves where 睡眠 ends
   await api.switches.switchTo({ activityId: idOf(list, '仕事') })
   const afterTap = (await api.switches.listByDay({ day: yesterday })).rows[0]
+  const tapped = await api.switches.listByDay({ day: today })
   await api.switches.replaceDay({
     day: today,
+    timeZone: TZ,
+    expected: listedRows(tapped.rows),
     rows: [{ activityId: idOf(list, '家事'), startedAt: at(today, 0) }],
   })
   const afterReplace = (await api.switches.listByDay({ day: yesterday }))

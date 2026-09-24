@@ -15,3 +15,9 @@ export const pool = new Pool({
 })
 
 export const db = drizzle({ client: pool, relations })
+
+/** A transaction opened by {@link withUserLock}: it holds the user's lock until it commits or rolls back. */
+export type LockedTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+/** `db` or a transaction: the reads and writes below run in whichever the procedure opened. */
+export type Executor = typeof db | LockedTx

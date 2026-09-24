@@ -28,7 +28,7 @@ export async function signUp(page: Page): Promise<void> {
 
 /**
  * A typed API client for the account the page is signed in as, to seed fixtures (backdated days) the UI cannot create yet.
- * @example const api = await apiAs(page); await api.switches.replaceDay({ day, rows })
+ * @example const api = await apiAs(page); await api.switches.replaceDay({ day, timeZone: 'Asia/Tokyo', expected: [], rows })
  */
 export async function apiAs(page: Page): Promise<AppRouterClient> {
   const cookies = await page.context().cookies(API_ORIGIN)

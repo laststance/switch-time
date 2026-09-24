@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '@/lib/auth-client'
 import { orpc } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
-import { SETTINGS_DEFAULTS } from '@/lib/settings'
+import { SETTINGS_DEFAULTS, SETTINGS_REFETCH_ROUTERS } from '@/lib/settings'
 
 /**
  * The user's `settings.get` row (theme, second hand, idle threshold, unused-day rule, time zone): one query definition for the whole app,
@@ -25,8 +25,9 @@ export function useSettings() {
 }
 
 /**
- * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error; `settings.*`
- * and `stats.*` refetch once the server has answered, since the idle threshold and the unused-day rule change every total.
+ * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error; `settings.*`,
+ * `stats.*` and `switches.*` refetch once the server has answered, since the idle threshold and the unused-day rule change every total
+ * and a stored-zone change moves every day's window.
  * @example const update = useUpdateSettings(); update.mutate({ theme: 'dark' })
  */
 export function useUpdateSettings() {
@@ -52,15 +53,17 @@ export function useUpdateSettings() {
           )
       },
       // Only the last in-flight update refetches: an earlier settle would replay stale server values over a newer optimistic one.
+      // That last one may be a theme tap after a zone change, so it always refetches `switches.*` too: the day lists must be
+      // re-windowed, or a correction sends a baseline in the old zone and is refused.
       onSettled: async () => {
         const inFlight = queryClient.isMutating({
           mutationKey: orpc.settings.update.mutationKey(),
         })
         if (inFlight === 1)
-          await invalidateKeys(queryClient, [
-            orpc.settings.key(),
-            orpc.stats.key(),
-          ])
+          await invalidateKeys(
+            queryClient,
+            SETTINGS_REFETCH_ROUTERS.map((router) => orpc[router].key()),
+          )
       },
     }),
   })

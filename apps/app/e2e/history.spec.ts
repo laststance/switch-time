@@ -30,6 +30,8 @@ test('the week view shows the excluded day dashed and out of the average', async
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: threeDaysAgo,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(threeDaysAgo, 9) },
       { activityId: idOf(list, '休息'), startedAt: at(threeDaysAgo, 18) },
@@ -37,6 +39,8 @@ test('the week view shows the excluded day dashed and out of the average', async
   })
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 8) },
       { activityId: idOf(list, '睡眠'), startedAt: at(yesterday, 18) },
@@ -75,6 +79,8 @@ test('a day spent in detox is outlined in sub, named detox, and opens its correc
   const yesterday = shift(today(), -1)
   await api.switches.replaceDay({
     day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
     rows: [{ activityId: null, startedAt: at(yesterday, 9) }],
   })
 

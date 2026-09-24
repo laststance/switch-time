@@ -6,6 +6,7 @@ import {
   exclusionSummary,
   idleLabel,
   reorderIds,
+  SETTINGS_REFETCH_ROUTERS,
   spareColor,
   targetHoursFromText,
 } from './settings'
@@ -142,4 +143,12 @@ test('a blank target field means no target and the excluded-days window is the l
   expect(blank).toBeNull()
   expect(parsed).toBe(1.5)
   expect(range).toEqual({ from: '2025-09-09', to: '2026-09-09' })
+})
+
+test('the routers a settings update refetches include the day lists, so a zone change followed by a theme tap still re-windows every day', () => {
+  // Arrange: the last update of a batch is the one that refetches, and it may carry no time zone.
+  const refetched = SETTINGS_REFETCH_ROUTERS
+
+  // Act & Assert
+  expect(refetched).toEqual(['settings', 'stats', 'switches'])
 })
