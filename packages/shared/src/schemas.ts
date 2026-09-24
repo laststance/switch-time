@@ -207,7 +207,8 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
 
 /**
  * The `data` of every refusal a timeline write can answer, one per {@link RefusalReason}. The API throws them and the app
- * reads them, so the two sides share one value rather than two string literals.
+ * reads them, so the two sides share one value rather than two string literals. Each entry is frozen too, because every
+ * error thrown with it carries the same object.
  * - `dayChanged`: CONFLICT, the day no longer reads as the sheet saw it (another device or tab wrote since, or the stored
  *   zone moved the day's window): an edit's {@link dayBaselineSchema} or 「元に戻す」's `expected`.
  * - `recordChanged`: CONFLICT, a pick names a revision another write has moved on from.
@@ -221,14 +222,14 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
 export const REFUSAL = Object.freeze({
-  dayChanged: { reason: 'day-changed' },
-  recordChanged: { reason: 'record-changed' },
-  archived: { reason: 'archived' },
-  noRoom: { reason: 'no-room' },
-  noNeighbour: { reason: 'no-neighbour' },
-  nextOnLaterDay: { reason: 'next-on-later-day' },
-  cannotSplit: { reason: 'cannot-split' },
-  busy: { reason: 'busy' },
+  dayChanged: Object.freeze({ reason: 'day-changed' }),
+  recordChanged: Object.freeze({ reason: 'record-changed' }),
+  archived: Object.freeze({ reason: 'archived' }),
+  noRoom: Object.freeze({ reason: 'no-room' }),
+  noNeighbour: Object.freeze({ reason: 'no-neighbour' }),
+  nextOnLaterDay: Object.freeze({ reason: 'next-on-later-day' }),
+  cannotSplit: Object.freeze({ reason: 'cannot-split' }),
+  busy: Object.freeze({ reason: 'busy' }),
 } as const satisfies Record<string, z.infer<typeof refusalDataSchema>>)
 
 /**

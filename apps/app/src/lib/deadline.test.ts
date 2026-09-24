@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { Response as PolyfillResponse } from 'whatwg-fetch'
 
-import { RequestTimeoutError, withDeadline } from './deadline'
+import { readWholeAnswer, RequestTimeoutError, withDeadline } from './deadline'
+
+// Node's own Response, kept before a test swaps the global for native's polyfill.
+const NodeResponse = globalThis.Response
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -128,4 +132,52 @@ test('a caller that already gave up hands the request an aborted signal', async 
 
   // Assert
   expect(startedAborted).toBe(true)
+})
+
+test('a Japanese answer reads back intact on native, whose Response is the whatwg-fetch polyfill', async () => {
+  // Arrange
+  vi.useRealTimers()
+  vi.stubGlobal('Response', PolyfillResponse)
+  const answer = new PolyfillResponse('{"name":"仕事"}', {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+
+  // Act
+  const whole = await readWholeAnswer(answer)
+
+  // Assert
+  expect(await whole.text()).toBe('{"name":"仕事"}')
+  expect(whole.status).toBe(200)
+  expect(whole.headers.get('content-type')).toBe('application/json')
+  vi.unstubAllGlobals()
+})
+
+test('a bodiless answer (204) goes back as it is', async () => {
+  // Arrange
+  vi.useRealTimers()
+  const answer = new NodeResponse(null, { status: 204 })
+
+  // Act
+  const whole = await readWholeAnswer(answer)
+
+  // Assert
+  expect(whole).toBe(answer)
+})
+
+test('an answer whose body stalls after its headers still fails with a timeout at the deadline', async () => {
+  // Arrange
+  const stalled = new NodeResponse(
+    new ReadableStream({ start: () => undefined }),
+  )
+  const answer = withDeadline(undefined, 30_000, async () =>
+    readWholeAnswer(stalled),
+  )
+  const settled = answer.catch((error: unknown) => error)
+
+  // Act
+  await vi.advanceTimersByTimeAsync(30_000)
+
+  // Assert
+  expect(await settled).toBeInstanceOf(RequestTimeoutError)
 })

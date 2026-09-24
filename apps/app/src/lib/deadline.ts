@@ -17,6 +17,22 @@ export class RequestTimeoutError extends Error {
 }
 
 /**
+ * The answer with its whole body already read: the RPC link's `fetch` calls it inside {@link withDeadline}, because oRPC reads
+ * the body only after `fetch` resolves, so an answer that stalls after its headers would otherwise outlive the deadline. The
+ * body is read as text (every RPC answer is JSON): native's `Response` is React Native's whatwg-fetch polyfill, which decodes
+ * an ArrayBuffer body one byte per character and turned 仕事 into mojibake.
+ * @param response - The answer `fetch` resolved with.
+ * @returns
+ * - the same answer, when it has no body (204, a manual redirect)
+ * - a new answer with the same status and headers whose body is the text already read
+ * @example await readWholeAnswer(await fetch(request)) // a Response whose body is already in memory
+ */
+export async function readWholeAnswer(response: Response): Promise<Response> {
+  if (response.body === null) return response
+  return new Response(await response.text(), response)
+}
+
+/**
  * Runs `request` until it settles or `ms` passes, whichever comes first: the RPC link's `fetch` wraps every call in it, so a
  * request that never answers fails, and the correction panel is released once the refetch after it settles (each call of which
  * has its own deadline), instead of being held until the page reloads. Built on

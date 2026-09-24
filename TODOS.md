@@ -166,7 +166,7 @@
 
 **What:** While the correction sheet re-reads the day after an edit timed out, say so under the rows (for example 「一覧を読み直しています…」), and show 「応答がありませんでした。反映されたか一覧で確かめてください」 only once that read settles. If the read fails as well, say the rows may be out of date rather than asking the user to check them.
 
-**Why:** Against a hung API the re-read hits the same 30 s deadline plus the one query retry (about 61 s). The panel is dim that whole time, but the line already asks the user to check rows that still show the day before the edit. If the read fails, the panel is released on those stale rows, and redoing the edit is refused with the day-changed text, which blames another device for this device's late write. Nothing is lost (the API's baseline check holds), but the line points at the wrong rows.
+**Why:** Against a hung API the re-read hits the same 30 s deadline plus the one query retry (about 61 s). The panel is dim that whole time, but the line already asks the user to check rows that still show the day before the edit. If the read fails, the panel is released on those stale rows, and redoing the edit is refused with the day-changed text, which blames another device for this device's late write. Nothing is lost there (the API's baseline check holds), but the line points at the wrong rows. On a day over `DAY_ROWS_MAX` (300 rows) the baseline carries no row list, so redoing a ±15分 move or a split that did land late passes the check and applies twice.
 
 **Context:** `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts` no longer awaits the refetch after a `RequestTimeoutError`, so the timeout line shows at 30 s; `statusLine` in `apps/app/src/lib/correction.ts` puts a refusal ahead of any waiting text, and `waiting` follows writes only, not `list.isFetching`. New text needs the pen file's 訂正シート・状態行 board first. Left over from the PR that added the status line (2026-09-25).
 
@@ -181,6 +181,66 @@
 **Why:** `StatusLine` renders nothing when idle, so the polite region only appears together with its text, and NVDA, JAWS and VoiceOver on the web often skip a live region that arrives already filled. The offline line is the only thing that tells a screen-reader user an edit is queued. The refusal line is a keyed `role="alert"`, which is announced on insertion, so it is fine.
 
 **Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx`. The sheet's column uses `gap-4`, so an always-mounted empty child would add a 16 px gap when idle: keep it out of the flow (visually hidden, absolutely positioned) or settle the idle spacing in the pen file first. Left over from the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tell a write that may have landed from one that failed before it left
+
+**What:** Treat every failure that is not an `ORPCError` (a `TypeError` "Failed to fetch" after the request went out, a reset or a 502 while App Platform redeploys the API) like a timeout: drop the older 元に戻す in `fail()` and say 「反映されたか一覧で確かめてください」 rather than 「保存できませんでした。もう一度お試しください」. Keep the retry text for answers the server rolled back. For failures a retry cannot fix (UNAUTHORIZED, the input `BAD_REQUEST`s such as a row that is not one of the day's own), say what is wrong and turn 元に戻す off rather than keeping it armed.
+
+**Why:** A connection that drops after the server committed tells the user the edit was not saved. The refetch then shows it landed, and pressing ±15分 again moves the record twice, because the new baseline matches. A request refused for its input fails the same way on every press while the text asks for another try.
+
+**Context:** `fail` and `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Stop naming another device when this device's own late write changed the day
+
+**What:** Remember that the last write on the sheet timed out, and until the next success show a neutral day-changed or record-changed text (for example 「記録が変わっていたため、最新の状態を表示しました」) instead of one that names 別の端末.
+
+**Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch.
+
+**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `fail` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Show a refusal even while the re-read after it waits for the network
+
+**What:** Set the refusal text in the hook-level `onError` of each correction mutation, before `onSettled` awaits the re-read, and keep the re-read only as the gate for enabling the panel again.
+
+**Why:** TanStack calls the per-call `mutate(..., { onError })` only after the hook-level `onSettled` resolves. If the connection drops between the refusal and its re-read, the re-read pauses offline with no deadline, the mutation stays pending, and the sheet says the edit will apply once back online although the server already refused it.
+
+**Context:** `useRefetchAfterEdit` and the edit callbacks in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tie a refusal to the day it was said on
+
+**What:** Keep the refusal as `{ day, text }` and show it only while the sheet shows that day, as `canUndo` already checks `slot.day`.
+
+**Why:** With no `?day=` the sheet follows today, so after midnight, or after a `?day=` change that keeps the screen mounted, the day before's 「これ以上動かせません」 stays under the new day's rows.
+
+**Context:** `useCorrectionState` and the `status` wiring in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Cover a refused day undo's archived line end to end
+
+**What:** Add an e2e that merges into today's running record so the day slot would restore an archived activity as the current state, archives that activity through the API, presses 元に戻す, and checks the one `role="alert"` reads 「アーカイブ済みの活動になるため、変更できません」 with 元に戻す off.
+
+**Why:** A day undo refused as archived has no row id, so it shows the line under the rows rather than the row notice. The only archived-undo e2e takes the row path, so a regression back to a silent refusal, or to both alerts at once, would pass every test.
+
+**Context:** the `&& id` branch of the undo's `onError` in `apps/app/src/hooks/use-correction.ts`; 'undoing a pick whose previous activity was archived meanwhile' in `apps/app/e2e/correction.spec.ts`. Also narrow `conflict`'s JSDoc in `apps/api/src/rpc/switches.ts`: the archived and busy refusals are a `BAD_REQUEST` and a `TOO_MANY_REQUESTS`, not a `CONFLICT`. Found by the pre-landing review of the PR that added the status line (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -258,7 +318,7 @@
 
 **Why:** Since 0.5.0.0, `withUserLock` counts each account's timeline writes in flight and frees a place in `finally`. Only `lock_timeout` bounds a write today: when the connection to the database goes half-open (a managed-database failover), `db.transaction` does not settle until the OS gives up on the socket, minutes later, and after 4 such writes every tap, archive and zone change of that account is refused with TOO_MANY_REQUESTS until then.
 
-**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Since the correction sheet's status line (2026-09-25) the app gives up on a call after 30 s (`REQUEST_TIMEOUT_MS` in `apps/app/src/lib/deadline.ts`), but the server does not see that: the stuck write keeps its place, and it may still commit. Raised by the Claude adversarial pass during the 0.5.0.0 ship.
+**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Since the correction sheet's status line (2026-09-25) the app gives up on a call after 30 s (`REQUEST_TIMEOUT_MS` in `apps/app/src/lib/deadline.ts`), but the server does not see that: the stuck write keeps its place, and it may still commit. The server's own waits before a write starts can already add up to 30 s (a pool connection for the session lookup, one for the lock, then `lock_timeout`), so size the server's whole-request bound below the client's deadline. A write that commits after the client gave up has also released its mutation scope, so the next `switchTo` or `activities.update` (an unconditional whole-row update with no revision check) can go first and be overwritten by the late one. Raised by the Claude adversarial pass during the 0.5.0.0 ship; the ordering case by both outside passes of the PR that added the status line.
 
 **Effort:** S
 **Priority:** P3

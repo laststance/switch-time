@@ -5,7 +5,7 @@ import type { AppRouterClient } from '@switch-time/api'
 import { Platform } from 'react-native'
 
 import { authClient } from './auth-client'
-import { REQUEST_TIMEOUT_MS, withDeadline } from './deadline'
+import { readWholeAnswer, REQUEST_TIMEOUT_MS, withDeadline } from './deadline'
 import { API_ORIGIN } from './env'
 
 const link = new RPCLink({
@@ -23,10 +23,7 @@ const link = new RPCLink({
         signal,
         credentials: 'include',
       })
-      // oRPC reads the body only after fetch resolves, so an answer that stalls after its headers would outlive the deadline:
-      // read it here. A bodiless answer (204, a manual redirect) goes back as it is.
-      if (response.body === null) return response
-      return new Response(await response.arrayBuffer(), response)
+      return readWholeAnswer(response)
     }),
   // Native has no cookie jar: replay the SecureStore session kept by the Better Auth Expo client.
   headers: async () =>
