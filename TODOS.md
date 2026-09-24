@@ -44,9 +44,9 @@
 
 **What:** Key the settings query (or the synced-zone check) by the account, or have `useTimeZoneSync` skip the render in which the session's user id changed, so it only compares the device's zone with the new account's stored one.
 
-**Why:** When another tab signs in as a different account, this tab's session turns to that account on focus. `AppLayout` then resets the query cache (the PR that bound 元に戻す to its account), but in the same commit `useTimeZoneSync`'s effect still reads the first account's settings: it can find that zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
+**Why:** When another tab signs in as a different account, this tab's session turns to that account on focus. `useAccountScope` then resets the query cache (the PR that bound 元に戻す to its account), but in the same commit `useTimeZoneSync`'s effect still reads the first account's settings: it can find that zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
 
-**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), the account effect in `apps/app/src/app/(app)/_layout.tsx`. Raised by the Claude adversarial pass during the 0.5.0.0 ship; narrowed when the cache reset landed.
+**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), `useAccountScope` in `apps/app/src/hooks/use-account-scope.ts`. Raised by the Claude adversarial pass during the 0.5.0.0 ship; narrowed when the cache reset landed.
 
 **Effort:** S
 **Priority:** P3

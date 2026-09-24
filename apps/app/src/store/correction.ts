@@ -43,3 +43,25 @@ export const correctionSlice = createSlice({
     },
   },
 })
+
+/**
+ * What {@link useAccountScope} does when the session reports `account`: another tab can sign in as someone else, and this
+ * tab's session turns to them on focus without this tab's sign-in or sign-out running.
+ * @param seen - The account the store's undo slots belong to (`null` before the first one, and after {@link resetApp}).
+ * @param account - The session's user id, undefined while there is no session.
+ * @returns
+ * - `null`: nothing to do (no session, or the same account)
+ * - `{ account, switched: false }`: the first account since the store started over, whose slots start empty anyway
+ * - `{ account, switched: true }`: someone else: the cached queries go as well as the slots
+ * @example
+ * accountChange(null, 'user-a')     // => { account: 'user-a', switched: false }
+ * accountChange('user-a', 'user-b') // => { account: 'user-b', switched: true }
+ * accountChange('user-a', undefined) // => null
+ */
+export function accountChange(
+  seen: string | null,
+  account: string | undefined,
+): { account: string; switched: boolean } | null {
+  if (!account || account === seen) return null
+  return { account, switched: seen !== null }
+}

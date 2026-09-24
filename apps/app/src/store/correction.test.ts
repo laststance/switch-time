@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest'
 
 import type { UndoSlot } from '@/lib/correction'
 
-import { correctionSlice } from './correction'
+import { accountChange, correctionSlice } from './correction'
 
 import { resetApp, store } from './index'
 
@@ -169,4 +169,31 @@ test('arming a day undo whose rows hold Dates raises no non-serializable warning
   // Assert
   expect(warnings).toBe(0)
   expect(store.getState().correction.undo['2026-09-25']?.kind).toBe('day')
+})
+
+test('a sign-in as someone else in another tab drops the cached queries too, while the first account after a reset only claims the slots', () => {
+  // Arrange
+  const firstSinceReset = { seen: null, account: 'account-a' }
+  const someoneElse = { seen: 'account-a', account: 'account-b' }
+
+  // Act
+  const claimed = accountChange(firstSinceReset.seen, firstSinceReset.account)
+  const switched = accountChange(someoneElse.seen, someoneElse.account)
+
+  // Assert
+  expect(claimed).toEqual({ account: 'account-a', switched: false })
+  expect(switched).toEqual({ account: 'account-b', switched: true })
+})
+
+test('a session refetch for the same account, or a signed-out moment, changes nothing', () => {
+  // Arrange
+  const seen = 'account-a'
+
+  // Act
+  const refetched = accountChange(seen, 'account-a')
+  const signedOut = accountChange(seen, undefined)
+
+  // Assert
+  expect(refetched).toBeNull()
+  expect(signedOut).toBeNull()
 })
