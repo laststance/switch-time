@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.4.0.0] - 2026-09-25
+
+### Fixed
+
+- Two devices correcting the same timeline at once no longer corrupt it.
+  Every tap, correction, undo, archive and time-zone change of one account
+  now runs one after the other, and each reads the records it changes only
+  once it is its turn. Before, merging neighbouring records from two devices
+  could hand a span to the wrong activity for good, two undos of one day
+  could write every record twice, and a tap could start an activity that was
+  being archived at that moment.
+- A correction made on a sheet whose list another device has since changed
+  is refused instead of landing on records the sheet never showed, and the
+  sheet then shows the other device's change.
+- 「元に戻す」 is refused once the day changed after the edit (a switch or a
+  correction from another device, a merge or cut on the next day's sheet
+  that moved where the day's last record ends, or a different time zone), so
+  it never erases a switch made elsewhere or silently undoes someone else's
+  correction. It turns off instead.
+- Changing the time zone refetches every day list, so the correction sheet
+  never works on a day windowed in the old zone.
+
+### Changed
+
+- `switches.replaceDay` requires `timeZone` and `expected` (the rows the day
+  must still hold), and every other correction accepts a `baseline` (the day,
+  the zone and the rows the sheet listed). A web tab opened before this
+  release loses 「元に戻す」 until it is reloaded.
+
 ## [0.3.0.0] - 2026-09-24
 
 ### Added
