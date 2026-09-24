@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.5.0.0] - 2026-09-25
+
+### Fixed
+
+- A phone and a laptop in different time zones no longer take turns
+  rewriting the account's zone on every focus, which moved every day
+  boundary back and forth. A device now writes its zone only when its own
+  zone changed since it last synced, and never while signed out.
+- 「前の記録に統合」 on the running record, and a day's 「元に戻す」, can no
+  longer leave an archived activity as the one running now. The sheet
+  disables the merge in that case, and the server refuses both.
+- 「前の記録に統合」 on a day's first record is refused when another device
+  has changed the record carried in from the day before, instead of handing
+  time to a record the sheet never showed.
+- A day with more than 300 switches can be corrected again. Its edits are
+  still checked against the day, but it offers no 「元に戻す」.
+- Two switches of one account can no longer start at the same instant, so
+  the timeline and the day lists always read in the same order. A tap in the
+  same millisecond as the running switch starts 1 ms after it.
+- One account can no longer tie up the server with a burst of taps and
+  corrections: at most 4 of its timeline writes wait at once, the rest are
+  refused, and no request waits more than 10 s for a database connection.
+- Fast taps on ホーム reach the server one at a time, in the order they were
+  made, so the last activity picked is the one left running.
+- The correction sheet waits for a pending settings write (a time-zone
+  change) before it allows another edit.
+
+### Changed
+
+- A database migration moves switches of one account that started at the
+  same instant 1 ms apart, in the order they were recorded, and makes the
+  start of each switch unique per account. The moved instants are not kept.
+  While it runs, taps and corrections wait for it to finish.
+
 ## [0.4.0.0] - 2026-09-25
 
 ### Fixed
