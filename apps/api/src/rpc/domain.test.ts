@@ -69,7 +69,10 @@ test('switching creates a new current state and never leaves zero states', async
   expect((await api.switches.current())?.id).toBe(second.id)
   await expect(
     api.switches.mergeIntoPrevious({ id: first.id }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'no-neighbour' },
+  })
   await expect(api.activities.archive({ id: rest })).rejects.toMatchObject({
     code: 'CONFLICT',
   })
@@ -443,6 +446,37 @@ test('merging into the next record removes the row and the next state now starts
   expect(day.totals[娯楽]).toBe(11 * H)
 })
 
+test('merging a mis-tap into the running state makes the clock start where the mis-tap did', async () => {
+  // Arrange: yesterday 仕事 9:00, 娯楽 18:00 (the mis-tap), 睡眠 18:30, which is still running.
+  const api = await signedIn('merge-next-running@example.com')
+  const list = await api.activities.list()
+  const 睡眠 = idOf(list, '睡眠')
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+      { activityId: 睡眠, startedAt: at(yesterday, 18.5) },
+    ],
+  })
+  const [, misTap, running] = (await api.switches.listByDay({ day: yesterday }))
+    .rows
+  if (!misTap || !running) throw new Error('fixture has fewer than three rows')
+
+  // Act
+  await api.switches.mergeIntoNext({ id: misTap.id })
+
+  // Assert: the running 睡眠 keeps its id and now runs from 18:00.
+  expect(await api.switches.current()).toMatchObject({
+    id: running.id,
+    activityId: 睡眠,
+    startedAt: at(yesterday, 18),
+    source: 'merge',
+  })
+})
+
 test('the current state cannot merge into the next record, since no state starts after it', async () => {
   // Arrange: 仕事 is the only row, so it is the current state.
   const api = await signedIn('merge-next-current@example.com')
@@ -454,7 +488,10 @@ test('the current state cannot merge into the next record, since no state starts
   const merge = api.switches.mergeIntoNext({ id: work.id })
 
   // Assert: refused, and the clock keeps its state.
-  await expect(merge).rejects.toThrow('no next state')
+  await expect(merge).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'no-neighbour' },
+  })
   expect(await api.switches.current()).toMatchObject({ id: work.id })
 })
 
@@ -560,7 +597,10 @@ test('the last record of a day cannot merge into the next day’s first switch, 
   const merge = api.switches.mergeIntoNext({ id: fun.id })
 
   // Assert: refused, and neither day lost or moved a row.
-  await expect(merge).rejects.toThrow('next state is on a later day')
+  await expect(merge).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'next-on-later-day' },
+  })
   const [thatDay, nextDay] = await Promise.all([
     api.switches.listByDay({ day }),
     api.switches.listByDay({ day: yesterday }),
@@ -609,7 +649,10 @@ test('the day a merge may not leave is the account’s own: a record two hours b
   const merge = api.switches.mergeIntoNext({ id: late.id })
 
   // Assert
-  await expect(merge).rejects.toThrow('next state is on a later day')
+  await expect(merge).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'next-on-later-day' },
+  })
 })
 
 test('a merge of a record that another device has just merged away is refused, so the span stays with the record that merge gave it to', async () => {
@@ -756,7 +799,7 @@ test('moving a start time cannot cross the neighbouring rows', async () => {
   if (!cramped) throw new Error('fixture has no second row')
   await expect(
     api.switches.moveStart({ id: cramped.id, deltaMinutes: 15 }),
-  ).rejects.toThrow('no room to move')
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { reason: 'no-room' } })
 })
 
 test('reorder rejects a position set that is not a permutation', async () => {
@@ -895,7 +938,10 @@ test('splitting keeps both halves at least a minute long', async () => {
   expect(half.source).toBe('split')
   await expect(
     api.switches.splitInHalf({ id: short.id }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'cannot-split' },
+  })
 })
 
 test('an empty settings update is rejected as input, not as a database error', async () => {
@@ -1428,10 +1474,16 @@ test('a cut keeps a minute from both ends of the record: exactly a minute is acc
   // Act + Assert: a millisecond inside either margin is refused and writes nothing
   await expect(
     api.switches.splitAt({ id: work.id, at: new Date(earliest - 1) }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'cannot-split' },
+  })
   await expect(
     api.switches.splitAt({ id: work.id, at: new Date(latest + 1) }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'cannot-split' },
+  })
   expect((await api.switches.listByDay({ day: yesterday })).rows).toHaveLength(
     2,
   )
@@ -1469,7 +1521,10 @@ test('the current state cannot be cut within the last minute before now', async 
       id: current.id,
       at: new Date(Date.now() - 30_000),
     }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'cannot-split' },
+  })
   const anHourAgo = new Date(Date.now() - H)
   const created = await api.switches.splitAt({ id: current.id, at: anHourAgo })
   expect(created).toMatchObject({ activityId: 仕事, startedAt: anHourAgo })
@@ -1530,7 +1585,10 @@ test('an activity change that names the revision it saw writes once, and a secon
     source: 'correction',
     revision: 1,
   })
-  await expect(stale).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(stale).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'record-changed' },
+  })
   expect((await api.switches.current())?.activityId).toBe(睡眠)
 })
 
@@ -1596,7 +1654,10 @@ test('a stale activity undo is refused after another device merged the next reco
   })
 
   // Assert: refused, and 9:00 – 15:00 stays 睡眠
-  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(undo).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'record-changed' },
+  })
   const after = await api.switches.listByDay({ day: yesterday })
   expect(after.rows.map((row) => [row.startedAt, row.activityId])).toEqual([
     [at(yesterday, 9), 睡眠],
@@ -1635,7 +1696,10 @@ test('a stale activity undo is refused after another device changed the activity
   })
 
   // Assert
-  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(undo).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'record-changed' },
+  })
   expect((await api.switches.current())?.activityId).toBe(睡眠)
 })
 
@@ -1664,7 +1728,10 @@ test('a stale carried-in undo is refused after the record was picked again on it
   })
 
   // Assert
-  await expect(undo).rejects.toMatchObject({ code: 'CONFLICT' })
+  await expect(undo).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'record-changed' },
+  })
   expect(await api.switches.current()).toMatchObject({
     activityId: 睡眠,
     revision: 3,

@@ -14,6 +14,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Say why a tap on ホーム was refused
+
+**What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`refusalMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a timeout, or a plain failure.
+
+**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of timeline writes (`TIMELINE_WRITES_PER_USER`), and every refusal now carries a reason the app can read.
+
+**Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Settings
 
 ### Let the main device take the account's zone back
@@ -42,42 +54,6 @@
 
 ## Correction
 
-### Say why a correction was refused
-
-**What:** Show a short message in the correction sheet when an edit or 「元に戻す」 fails, e.g. 「次の記録は翌日なので統合できません」.
-
-**Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
-
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Since the day baseline (2026-09-25), every edit of the sheet and the day's 「元に戻す」 can also be refused because the day changed elsewhere (another device's switch or edit, or a stored-zone change): that refusal already carries `DAY_CHANGED_REFUSAL` (`{ reason: 'day-changed' }`, thrown by `checkBaseline` and `replaceDay` in `apps/api/src/rpc/switches.ts`), so it can map to a message such as 「別の端末で記録が変わったため、最新の状態を表示しました」. `moveStart`, `splitInHalf` and `splitAt` also refuse a result that would land on another day. Since 0.5.0.0, 「前の記録に統合」 on the running record is refused with `ARCHIVED_REFUSAL` when the previous record's activity is archived (the sheet disables the button then, but a list another device has since changed can still reach it, and the refusal is silent: the edit is not an undo, so `afterUndoFailure` never sees it), and any timeline write is refused with TOO_MANY_REQUESTS when the account already has `TIMELINE_WRITES_PER_USER` (4) in flight (`withUserLock` in `apps/api/src/rpc/base.ts`): a tap on ホーム refused that way only rolls back its optimistic state, and the refusal carries no reason yet. A day 「元に戻す」 that `replaceDay` refuses with `ARCHIVED_REFUSAL` (the row that would become the current state is archived) turns 元に戻す off with no notice, since `refuseUndo` gets no row id for the day slot. Raised by the review during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
-### Explain a dimmed correction panel, and bound how long a write can hold it
-
-**What:** Show one short line under the action panel while a `switches.*` write is pending, and a different one while it waits offline (for example 「接続が戻ると反映されます」), designed in the pen file first. Give the RPCLink `fetch` a deadline (`AbortSignal.timeout`, merged with `init.signal`) so a request that never answers fails and releases the panel.
-
-**Why:** Since 0.2.0.0 the panel waits for every pending `switches.*` write in the shared mutation cache: a tap on ホーム, an edit from a sheet closed mid-flight, or a write paused offline on the web. Closing and reopening the sheet no longer clears that wait, as the old per-sheet `isPending` flags did. The dim looks the same as "not allowed on this row", and one request that never answers keeps every 訂正 sheet dim until the page reloads.
-
-**Context:** Keep the gate. Leaving paused writes out of it would let edits made offline, each with its own stale snapshot, replay at once (`resumePausedMutations` runs them in parallel, and they have no `scope`). Do not `void` the `onSettled` refetch either: that unlocks the panel before the refetch lands and reopens the stale-snapshot window. `apps/app/src/lib/orpc.ts` sets no timeout, and `onSettled` awaits the refetch. Add e2e cases for a paused write and for one that never answers. Raised by the design, red-team and Claude adversarial passes during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
-### Pin the undo snapshot and a merge into the running state with tests
-
-**What:** Add two tests. (1) e2e: hold the `mergeIntoNext` answer, force a refetch that shows the merged day (`page.clock` past the 30 s `staleTime`, then `visibilitychange`), release the answer, press 元に戻す and expect the merged row back. (2) API: merging the record before the running state moves `switches.current()` back to that record's start, with `source: 'merge'`.
-
-**Why:** No test fails if the undo snapshot goes back to being taken when the edit lands (the 0.2.0.0 fix has no regression test). Every `mergeIntoNext` test merges into a record that has a later switch, so the everyday case, a mis-tap just before what is running now, is untested.
-
-**Context:** `apps/app/src/hooks/use-correction.ts` (`press` and its `arm`), `apps/app/e2e/correction.spec.ts` (the held-answer pattern is in "an edit still landing after its sheet closed…"), `apps/api/src/rpc/domain.test.ts`. A refused edit on a stale list leaving 元に戻す disabled is covered since the day baseline (2026-09-25). Raised by the testing pass during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
-
 ### Decide what a merge that makes a segment idle should do
 
 **What:** Warn in the sheet, or mark the row, when a merge makes a segment longer than the idle threshold. Decide as well whether a merge that leaves two rows of the same activity side by side should join them.
@@ -94,9 +70,9 @@
 
 **What:** Take the undo snapshot in a hook-level `onMutate` (returned as the mutation's context), arm the slot in the hook-level `onSuccess`, and keep the slot outside the sheet (Redux, keyed by day) so a reopened sheet for that day can still offer 元に戻す.
 
-**Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND, or the day-changed refusal) leaves 元に戻す unarmed, or armed with an older edit, which the day undo's `expected` rows now refuse rather than reverting two edits. A merge that lands after 完了 can never be undone.
+**Why:** Callbacks passed to `mutate()` run only for the latest `mutate()` call and only while the sheet is mounted. A double tap that lands the first merge and fails the second (NOT_FOUND, or the day-changed refusal) leaves 元に戻す unarmed, or armed with an older edit, which the day undo's `expected` rows now refuse rather than reverting two edits. A merge that lands after 完了 can never be undone, and neither can one whose answer the app gave up on after 30 s (the status line asks the user to check the rows, and any older 元に戻す turns off).
 
-**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list; it would take over `press` in `use-correction.ts`, which takes the day's baseline at the press and arms from it and the returned row (`rowsAfterEdit`). Extend the held-answer e2e to press 元に戻す after the answer lands. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
+**Context:** The double-tap case is new in 0.2.0.0, which moved the snapshot into `mutate()` callbacks (the buttons dim only after the next render). The closed-sheet case has existed since 0.1.0.0 for 「前の記録に統合」. A hook-level `onMutate` runs with the render that pressed the button, so the snapshot stays the pre-edit list; it would take over `press` in `use-correction.ts`, which takes the day's baseline at the press and arms from it and the returned row (`rowsAfterEdit`). `correction.spec.ts` already presses 元に戻す after a held answer lands with the sheet open ("undo after a merge restores the day the merge was pressed on…"); add the closed-sheet and double-tap cases. Since the carried-in row's panel (2026-09-24), the slot is a union of a `day` and an `activity` undo, and `undoSlotFor` in `lib/correction.ts` picks the kind; the hook-level callbacks would call it, and the Redux slot must hold either kind (and the archived notice it can raise instead). Raised by the red team and the Claude adversarial pass during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
@@ -186,6 +162,90 @@
 **Priority:** P4
 **Depends on:** None
 
+### Say the list is being read again after a timeout
+
+**What:** While the correction sheet re-reads the day after an edit timed out, say so under the rows (for example 「一覧を読み直しています…」), and show 「応答がありませんでした。反映されたか一覧で確かめてください」 only once that read settles. If the read fails as well, say the rows may be out of date rather than asking the user to check them.
+
+**Why:** Against a hung API the re-read hits the same 30 s deadline plus the one query retry (about 61 s). The panel is dim that whole time, but the line already asks the user to check rows that still show the day before the edit. If the read fails, the panel is released on those stale rows, and redoing the edit is refused with the day-changed text, which blames another device for this device's late write. Nothing is lost there (the API's baseline check holds), but the line points at the wrong rows. On a day over `DAY_ROWS_MAX` (300 rows) the baseline carries no row list, so redoing a ±15分 move or a split that did land late passes the check and applies twice.
+
+**Context:** `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts` no longer awaits the refetch after a `RequestTimeoutError`, so the timeout line shows at 30 s; `statusLine` in `apps/app/src/lib/correction.ts` puts a refusal ahead of any waiting text, and `waiting` follows writes only, not `list.isFetching`. New text needs the pen file's 訂正シート・状態行 board first. Left over from the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep the correction sheet's polite status region mounted
+
+**What:** Keep an empty `role="status"` / `aria-live="polite"` region mounted under the correction sheet's rows while the sheet is open, and change only its text, so screen readers announce 「反映しています…」 and the offline line.
+
+**Why:** `StatusLine` renders nothing when idle, so the polite region only appears together with its text, and NVDA, JAWS and VoiceOver on the web often skip a live region that arrives already filled. The offline line is the only thing that tells a screen-reader user an edit is queued. The refusal line is a keyed `role="alert"`, which is announced on insertion, so it is fine.
+
+**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx`. The sheet's column uses `gap-4`, so an always-mounted empty child would add a 16 px gap when idle: keep it out of the flow (visually hidden, absolutely positioned) or settle the idle spacing in the pen file first. Left over from the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tell a write that may have landed from one that failed before it left
+
+**What:** Treat every failure that is not an `ORPCError` (a `TypeError` "Failed to fetch" after the request went out, a reset or a 502 while App Platform redeploys the API) like a timeout: drop the older 元に戻す in `fail()` and say 「反映されたか一覧で確かめてください」 rather than 「保存できませんでした。もう一度お試しください」. Keep the retry text for answers the server rolled back. For failures a retry cannot fix (UNAUTHORIZED, the input `BAD_REQUEST`s such as a row that is not one of the day's own), say what is wrong and turn 元に戻す off rather than keeping it armed.
+
+**Why:** A connection that drops after the server committed tells the user the edit was not saved. The refetch then shows it landed, and pressing ±15分 again moves the record twice, because the new baseline matches. A request refused for its input fails the same way on every press while the text asks for another try.
+
+**Context:** `fail` and `useRefetchAfterEdit` in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Stop naming another device when this device's own late write changed the day
+
+**What:** Remember that the last write on the sheet timed out, and until the next success show a neutral day-changed or record-changed text (for example 「記録が変わっていたため、最新の状態を表示しました」) instead of one that names 別の端末.
+
+**Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch.
+
+**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `fail` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Show a refusal even while the re-read after it waits for the network
+
+**What:** Set the refusal text in the hook-level `onError` of each correction mutation, before `onSettled` awaits the re-read, and keep the re-read only as the gate for enabling the panel again.
+
+**Why:** TanStack calls the per-call `mutate(..., { onError })` only after the hook-level `onSettled` resolves. If the connection drops between the refusal and its re-read, the re-read pauses offline with no deadline, the mutation stays pending, and the sheet says the edit will apply once back online although the server already refused it.
+
+**Context:** `useRefetchAfterEdit` and the edit callbacks in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tie a refusal to the day it was said on
+
+**What:** Keep the refusal as `{ day, text }` and show it only while the sheet shows that day, as `canUndo` already checks `slot.day`.
+
+**Why:** With no `?day=` the sheet follows today, so after midnight, or after a `?day=` change that keeps the screen mounted, the day before's 「これ以上動かせません」 stays under the new day's rows.
+
+**Context:** `useCorrectionState` and the `status` wiring in `apps/app/src/hooks/use-correction.ts`. Found by the outside review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Cover a refused day undo's archived line end to end
+
+**What:** Add an e2e that merges into today's running record so the day slot would restore an archived activity as the current state, archives that activity through the API, presses 元に戻す, and checks the one `role="alert"` reads 「アーカイブ済みの活動になるため、変更できません」 with 元に戻す off.
+
+**Why:** A day undo refused as archived has no row id, so it shows the line under the rows rather than the row notice. The only archived-undo e2e takes the row path, so a regression back to a silent refusal, or to both alerts at once, would pass every test.
+
+**Context:** the `&& id` branch of the undo's `onError` in `apps/app/src/hooks/use-correction.ts`; 'undoing a pick whose previous activity was archived meanwhile' in `apps/app/e2e/correction.spec.ts`. Also narrow `conflict`'s JSDoc in `apps/api/src/rpc/switches.ts`: the archived and busy refusals are a `BAD_REQUEST` and a `TOO_MANY_REQUESTS`, not a `CONFLICT`. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Stats
 
 ### Decide what a detox that runs past midnight does to 連続記録
@@ -252,6 +312,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Bound how long a stuck database call keeps an account's write places
+
+**What:** Give pool queries a deadline (`query_timeout` or `statement_timeout` on `apps/api/src/db/client.ts`'s pool, with `keepAlive`), and an `idle_in_transaction_session_timeout` on the database, sized above `TIMELINE_LOCK_TIMEOUT` (10 s) and kept away from the migration runner, which shares the pool.
+
+**Why:** Since 0.5.0.0, `withUserLock` counts each account's timeline writes in flight and frees a place in `finally`. Only `lock_timeout` bounds a write today: when the connection to the database goes half-open (a managed-database failover), `db.transaction` does not settle until the OS gives up on the socket, minutes later, and after 4 such writes every tap, archive and zone change of that account is refused with TOO_MANY_REQUESTS until then.
+
+**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Since the correction sheet's status line (2026-09-25) the app gives up on a call after 30 s (`REQUEST_TIMEOUT_MS` in `apps/app/src/lib/deadline.ts`), but the server does not see that: the stuck write keeps its place, and it may still commit. The server's own waits before a write starts can already add up to 30 s (a pool connection for the session lookup, one for the lock, then `lock_timeout`), so size the server's whole-request bound below the client's deadline. A write that commits after the client gave up has also released its mutation scope, so the next `switchTo` or `activities.update` (an unconditional whole-row update with no revision check) can go first and be overwritten by the late one. Raised by the Claude adversarial pass during the 0.5.0.0 ship; the ordering case by both outside passes of the PR that added the status line.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Design
 
 ### Raise the sub token's contrast to WCAG AA
@@ -309,18 +381,6 @@
 **Why:** A merge deletes the selected row, which unmounts its card together with the focused button. On the web, focus falls to `<body>`: a keyboard or screen-reader user loses their place, and nothing announces the merge.
 
 **Context:** `correction.tsx` keys the cards by `row.id`. Applies to both merge buttons (「前の記録に統合」 since 0.1.0.0). 「ここで分割」 already does this since the carried-in row's panel (2026-09-24): `useCorrection` sets `focusId` to the row `splitAt` returns, and `RowHeader` takes focus when its `focused` prop turns on, so a merge can set the same id. Raised by the design pass during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Bound how long a stuck database call keeps an account's write places
-
-**What:** Give pool queries a deadline (`query_timeout` or `statement_timeout` on `apps/api/src/db/client.ts`'s pool, with `keepAlive`), and an `idle_in_transaction_session_timeout` on the database, sized above `TIMELINE_LOCK_TIMEOUT` (10 s) and kept away from the migration runner, which shares the pool.
-
-**Why:** Since 0.5.0.0, `withUserLock` counts each account's timeline writes in flight and frees a place in `finally`. Only `lock_timeout` bounds a write today: when the connection to the database goes half-open (a managed-database failover), `db.transaction` does not settle until the OS gives up on the socket, minutes later, and after 4 such writes every tap, archive and zone change of that account is refused with TOO_MANY_REQUESTS until then.
-
-**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Raised by the Claude adversarial pass during the 0.5.0.0 ship.
 
 **Effort:** S
 **Priority:** P3

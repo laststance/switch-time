@@ -26,6 +26,7 @@ import {
   type CorrectionRow,
   type CutStepMinutes,
   type DayBounds,
+  type SheetStatus,
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
@@ -451,6 +452,27 @@ function RowPanel({ row, correction }: RowPanelProps) {
   )
 }
 
+// The line between the rows and the footer: why the last edit or undo failed, else why the panel is dim. Nothing, and no
+// height, when idle. A refusal is announced (a new message mounts a fresh node, as ArchivedBox does); the waiting line is polite.
+function StatusLine({ status }: { status: SheetStatus | null }) {
+  if (!status) return null
+  if (status.tone === 'alert')
+    return (
+      <Text
+        key={status.text}
+        role="alert"
+        className="text-ink text-xs leading-4.5 font-medium"
+      >
+        {status.text}
+      </Text>
+    )
+  return (
+    <Text role="status" aria-live="polite" className={NOTE}>
+      {status.text}
+    </Text>
+  )
+}
+
 type FooterProps = { canUndo: boolean; onUndo: () => void }
 
 function Footer({ canUndo, onUndo }: FooterProps) {
@@ -546,6 +568,7 @@ export default function CorrectionSheet() {
           )
         })}
       </ScrollView>
+      <StatusLine status={correction.status} />
       <Footer
         canUndo={correction.canUndo && !correction.pending}
         onUndo={correction.undo}

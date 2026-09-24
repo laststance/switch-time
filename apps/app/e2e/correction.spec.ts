@@ -1070,3 +1070,345 @@ test('a carried-in record with no quarter hour to cut at disables every step and
     dialog.getByText('15分単位で区切れる時刻がありません'),
   ).toBeVisible()
 })
+
+// Yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00 (today's first-launch tap closes 娯楽 at 24:00), for the status line's cases.
+async function seedYesterday(page: Page) {
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  return { api, yesterday }
+}
+
+test('a refused edit says why under the rows until the next selection', async ({
+  page,
+}) => {
+  // Arrange: the sheet lists 娯楽 at 18:00, then another device moves it to 17:45.
+  const { api, yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const staleRest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6h 00m',
+  })
+  await expect(staleRest).toBeVisible()
+  const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!leisure) throw new Error('no 娯楽 row')
+  await api.switches.moveStart({ id: leisure.id, deltaMinutes: -15 })
+
+  // Act: merge the stale 休息 into 仕事.
+  await staleRest.click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert: the line names the refusal, and selecting another row clears it.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+})
+
+test('undo after a merge restores the day the merge was pressed on, even when a refetch showed the merged day first', async ({
+  page,
+}) => {
+  // Arrange: the merge's answer is held back after the API applied it, and the clock is controlled so the list goes stale.
+  const { yesterday } = await seedYesterday(page)
+  const applied = Promise.withResolvers<void>()
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
+    const response = await route.fetch()
+    applied.resolve()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  // Past the 30 s staleTime before the merge starts, so its deadline is not reached by the jump.
+  await page.clock.fastForward('00:31')
+
+  // Act: merge, let a focus refetch show the merged day while the answer is held, then release it and undo.
+  await dialog.getByRole('button', { name: '次の記録に統合' }).click()
+  await applied.promise
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')))
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+  ).toBeVisible()
+  answer.resolve()
+  const undo = dialog.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  await undo.click()
+
+  // Assert: 休息 is back, which only a snapshot taken when the merge was pressed can do.
+  await expect(rest).toBeVisible()
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' }),
+  ).toBeVisible()
+})
+
+test('an edit made offline says it waits for the connection, and lands once it is back', async ({
+  page,
+  context,
+}) => {
+  // Arrange
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await context.setOffline(true)
+
+  // Act
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert: the paused write explains the dim panel, then lands when the connection returns.
+  await expect(
+    dialog.getByText('オフラインです。接続が戻ると反映されます'),
+  ).toBeVisible()
+  await context.setOffline(false)
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await expect(
+    dialog.getByText('オフラインです。接続が戻ると反映されます'),
+  ).toHaveCount(0)
+})
+
+test('an edit whose answer never arrives gives up after 30 seconds, turns off the older undo, releases the panel and shows what landed', async ({
+  page,
+}) => {
+  // Arrange: a split arms 元に戻す; then the API applies a merge, but its answer never reaches the app.
+  const { yesterday } = await seedYesterday(page)
+  await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
+    await route.fetch()
+    await new Promise<never>(() => undefined)
+  })
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '次の記録に統合' }).click()
+  await expect(dialog.getByText('反映しています…')).toBeVisible()
+  // The re-read after the timeout is held too, as a hung API would hold it.
+  let releaseList = (): void => undefined
+  const listHeld = new Promise<void>((resolve) => {
+    releaseList = resolve
+  })
+  await page.route('**/api/rpc/switches/listByDay', async (route) => {
+    await listHeld
+    await route.continue()
+  })
+
+  // Act
+  await page.clock.fastForward('00:30')
+
+  // Assert: the line shows at 30 s without waiting for the re-read.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '応答がありませんでした。反映されたか一覧で確かめてください',
+  )
+
+  // Act: the re-read answers.
+  releaseList()
+
+  // Assert: the merged day shows, the panel answers again, and the split's undo stays off.
+  const leisure = dialog.getByRole('button', {
+    name: '娯楽 12:00 – 24:00 12h 00m',
+  })
+  await expect(leisure).toBeVisible()
+  await leisure.click()
+  await expect(
+    dialog.getByRole('button', { name: '前の記録に統合' }),
+  ).toBeEnabled()
+  await expect(undo).toBeDisabled()
+})
+
+test('a write that lands at once says nothing, and one still in flight after 400 ms says it is landing', async ({
+  page,
+}) => {
+  // Arrange: the clock is paused, and a merge's answer is held until released.
+  const { yesterday } = await seedYesterday(page)
+  let releaseMerge = (): void => undefined
+  const mergeHeld = new Promise<void>((resolve) => {
+    releaseMerge = resolve
+  })
+  await page.route('**/api/rpc/switches/mergeIntoPrevious', async (route) => {
+    await mergeHeld
+    await route.continue()
+  })
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)
+  const writing = dialog.getByText('反映しています…')
+
+  // Act: the merge is pressed; once the panel waits for it, 350 ms pass in all, short of the delay.
+  const mergePrevious = dialog.getByRole('button', { name: '前の記録に統合' })
+  await mergePrevious.click()
+  await page.clock.runFor(100)
+  await expect(mergePrevious).toBeDisabled()
+  await page.clock.runFor(250)
+
+  // Assert: no line yet.
+  await expect(writing).toHaveCount(0)
+
+  // Act: another 200 ms pass, past the delay even if its timer started late.
+  await page.clock.runFor(200)
+
+  // Assert: the line shows, and goes once the merge lands.
+  await expect(writing).toBeVisible()
+  releaseMerge()
+  await page.clock.resume()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await expect(writing).toHaveCount(0)
+})
+
+test('a refused undo says why under the rows and turns 元に戻す off', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事 through the sheet, then another device splits 仕事 at 10:00.
+  const { api, yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  const [work] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work) throw new Error('no 仕事 row')
+  await api.switches.splitAt({ id: work.id, at: at(yesterday, 10) })
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: the line names the refusal, the other device's row shows, and there is nothing left to undo.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '仕事 10:00 – 18:00 8h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('a pick on a carried-in record changed on another device says that record changed', async ({
+  page,
+}) => {
+  // Arrange: the sheet shows 仕事 while another device has already changed the record to 娯楽.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  const listed = await api.switches.listByDay({ day })
+  if (!listed.carriedIn) throw new Error('no carried-in record')
+  await api.switches.changeActivity({
+    id: listed.carriedIn.id,
+    activityId: idOf(list, '娯楽'),
+  })
+  await carriedIn.click()
+
+  // Act
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+})
+
+test('pressing the edit again on the refreshed list clears the refusal and lands', async ({
+  page,
+}) => {
+  // Arrange: a merge of the stale 休息 is refused after another device moved 娯楽 to 17:45.
+  const { api, yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const staleRest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6h 00m',
+  })
+  await expect(staleRest).toBeVisible()
+  const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!leisure) throw new Error('no 娯楽 row')
+  await api.switches.moveStart({ id: leisure.id, deltaMinutes: -15 })
+  await staleRest.click()
+  const mergePrevious = dialog.getByRole('button', { name: '前の記録に統合' })
+  await mergePrevious.click()
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+  ).toBeVisible()
+
+  // Act: the row stays selected, so the same button is pressed again.
+  await mergePrevious.click()
+
+  // Assert: the refusal is gone and the merge landed on the day as it now reads.
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 17:45 8h 45m' }),
+  ).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+})
+
+test('an undo lost in transit says it was not saved, keeps 元に戻す for another try, and the retry clears the line', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事 through the sheet, and the undo's request fails on the network once.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await page.route(
+    '**/api/rpc/switches/replaceDay',
+    async (route) => route.abort('internetdisconnected'),
+    { times: 1 },
+  )
+  const undo = page.getByRole('button', { name: '元に戻す' })
+
+  // Act
+  await undo.click()
+
+  // Assert: the line says it was not saved, and 元に戻す stays armed.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '保存できませんでした。もう一度お試しください',
+  )
+  await expect(undo).toBeEnabled()
+
+  // Act: try again with the network back.
+  await undo.click()
+
+  // Assert: 休息 is back and the failure line is gone.
+  await expect(rest).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  await expect(undo).toBeDisabled()
+})

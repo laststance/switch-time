@@ -1,4 +1,5 @@
 import { ORPCError, os } from '@orpc/server'
+import { REFUSAL } from '@switch-time/shared'
 import { and, eq, sql } from 'drizzle-orm'
 
 import { auth } from '../auth'
@@ -81,6 +82,7 @@ export async function withUserLock<T>(
   if (inFlight >= TIMELINE_WRITES_PER_USER)
     throw new ORPCError('TOO_MANY_REQUESTS', {
       message: 'too many timeline writes in flight',
+      data: REFUSAL.busy,
     })
   writesInFlight.set(userId, inFlight + 1)
   try {

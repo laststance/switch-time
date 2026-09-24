@@ -4,7 +4,7 @@
 
 ## ファイル
 
-- `switch-time.pen` — 全フレーム（ST Phone 7 枚＋訂正シートの持ち越し行 2 枚・ST Menubar・ST Web 2 枚）、変数 37 個、`mode: light / dark` のテーマ軸
+- `switch-time.pen` — 全フレーム（ST Phone 7 枚＋訂正シートの持ち越し行 2 枚・ST Menubar・ST Web 2 枚＋訂正シートの状態行ボード）、変数 37 個、`mode: light / dark` のテーマ軸
   - 訂正シートがあるのは Phone（全画面のシート）と Web（幅 560 の中央ダイアログ）だけ。Menubar には訂正の入口が無い（デザインにもコードにも）
 - `PEN-MIGRATION.md` — Claude Design → pen.dev 移行の記録と、pen で実測してハマった点（自動保存なし・スクロールなし・フォント近似・MCP の接続先）
 - `tokens.md` — トークンの人間向け解説。**機械が読む正は `../design-system/styles.css` と `theme.json`**

@@ -16,12 +16,15 @@ import {
   isManuallyExcluded,
   openedCut,
   pickRequest,
+  refusalMessage,
   revealOffset,
   rowsAfterEdit,
+  statusLine,
   undoRequest,
   undoSlotFor,
   type ListedDay,
 } from './correction'
+import { RequestTimeoutError } from './deadline'
 
 const TZ = 'Asia/Tokyo'
 const MIN = 60_000
@@ -1155,6 +1158,17 @@ test('an undo refused because the account has too many timeline writes in flight
   expect(outcome).toBe('keep')
 })
 
+test('an undo that timed out keeps 元に戻す armed, since it may not have landed and a replay is refused once it has', () => {
+  // Arrange
+  const timedOut = new RequestTimeoutError()
+
+  // Act
+  const outcome = afterUndoFailure(timedOut)
+
+  // Assert
+  expect(outcome).toBe('keep')
+})
+
 test('only a day-changed refusal makes the sheet refetch the stored zone, so a settings update in flight is never overwritten otherwise', () => {
   // Arrange
   const answers = [
@@ -1745,4 +1759,73 @@ test('a card that exactly fills the view, or touches its edges, does not scroll'
   expect(revealOffset({ top: 700, height: 100 }, viewport)).toBeNull()
   // One pixel past the bottom edge scrolls by exactly one pixel.
   expect(revealOffset({ top: 701, height: 100 }, viewport)).toBe(201)
+})
+
+test('each refusal the API names reads as its own Japanese message in the status line', () => {
+  // Arrange
+  const refusals = [
+    new ORPCError('CONFLICT', { data: { reason: 'day-changed' } }),
+    new ORPCError('CONFLICT', { data: { reason: 'record-changed' } }),
+    new ORPCError('BAD_REQUEST', { data: { reason: 'archived' } }),
+    new ORPCError('CONFLICT', { data: { reason: 'no-room' } }),
+    new ORPCError('CONFLICT', { data: { reason: 'no-neighbour' } }),
+    new ORPCError('CONFLICT', { data: { reason: 'next-on-later-day' } }),
+    new ORPCError('CONFLICT', { data: { reason: 'cannot-split' } }),
+    new ORPCError('TOO_MANY_REQUESTS', { data: { reason: 'busy' } }),
+  ]
+
+  // Act
+  const messages = refusals.map(refusalMessage)
+
+  // Assert
+  expect(messages).toEqual([
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+    'アーカイブ済みの活動になるため、変更できません',
+    'これ以上動かせません',
+    '統合できる記録がありません',
+    '次の記録は翌日なので統合できません',
+    'ここでは分割できません',
+    '処理が混み合っています。少し待ってからもう一度お試しください',
+  ])
+})
+
+test('a record gone from the server reads as changed elsewhere, a timeout asks the user to check the rows, and anything else says it was not saved', () => {
+  // Arrange
+  const gone = new ORPCError('NOT_FOUND')
+  const timedOut = new RequestTimeoutError()
+  const unknownReason = new ORPCError('CONFLICT', { data: { reason: 'new' } })
+  const offline = new TypeError('Failed to fetch')
+
+  // Act
+  const messages = [gone, timedOut, unknownReason, offline].map(refusalMessage)
+
+  // Assert
+  expect(messages).toEqual([
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+    '応答がありませんでした。反映されたか一覧で確かめてください',
+    '保存できませんでした。もう一度お試しください',
+    '保存できませんでした。もう一度お試しください',
+  ])
+})
+
+test('the status line puts a refusal first, then says why the panel waits, online or offline, and is empty when idle', () => {
+  // Arrange
+  const refusal = 'これ以上動かせません'
+
+  // Act
+  const lines = [
+    statusLine({ refusal, waiting: true, online: false }),
+    statusLine({ refusal: null, waiting: true, online: true }),
+    statusLine({ refusal: null, waiting: true, online: false }),
+    statusLine({ refusal: null, waiting: false, online: false }),
+  ]
+
+  // Assert
+  expect(lines).toEqual([
+    { tone: 'alert', text: 'これ以上動かせません' },
+    { tone: 'quiet', text: '反映しています…' },
+    { tone: 'quiet', text: 'オフラインです。接続が戻ると反映されます' },
+    null,
+  ])
 })
