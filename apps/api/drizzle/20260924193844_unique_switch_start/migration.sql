@@ -1,11 +1,22 @@
--- Spread any switches of one account that start at the same instant 1 ms apart, in id order, before the unique index below
--- refuses them. Taps from two devices could land in the same millisecond before switchTo started each switch after the last.
-WITH "tied" AS (
-  SELECT "id", row_number() OVER (PARTITION BY "user_id", "started_at" ORDER BY "id") - 1 AS "offset_ms"
+-- Spread any switches of one account that start at the same instant 1 ms apart before the unique index below refuses them.
+-- Taps from two devices could land in the same millisecond before switchTo started each switch after the last. Each row
+-- starts at the later of its own start and 1 ms after the row before it (in start, then insertion order, so the later tap
+-- stays the later switch): `n ms + max(start - k ms)` over the rows up to the n-th. A tie next to a row already 1 ms later
+-- pushes that row on too, instead of landing on it. Forward-only: the original tied instants are not kept.
+WITH "ranked" AS (
+  SELECT "id", "user_id", "started_at",
+    (row_number() OVER (PARTITION BY "user_id" ORDER BY "started_at", "created_at", "id") - 1)
+      * interval '1 millisecond' AS "rank_ms"
   FROM "switches"
+), "spread" AS (
+  SELECT "id", "started_at",
+    "rank_ms" + max("started_at" - "rank_ms") OVER (
+      PARTITION BY "user_id" ORDER BY "rank_ms" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS "spread_at"
+  FROM "ranked"
 )
-UPDATE "switches" SET "started_at" = "switches"."started_at" + "tied"."offset_ms" * interval '1 millisecond'
-FROM "tied"
-WHERE "switches"."id" = "tied"."id" AND "tied"."offset_ms" > 0;--> statement-breakpoint
+UPDATE "switches" SET "started_at" = "spread"."spread_at"
+FROM "spread"
+WHERE "switches"."id" = "spread"."id" AND "spread"."spread_at" <> "spread"."started_at";--> statement-breakpoint
 DROP INDEX "switches_user_started_idx";--> statement-breakpoint
 CREATE UNIQUE INDEX "switches_user_started_idx" ON "switches" ("user_id","started_at" DESC);
