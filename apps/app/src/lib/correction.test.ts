@@ -12,6 +12,7 @@ import {
   daySnapshot,
   dayTitle,
   isManuallyExcluded,
+  needsReveal,
   pickRequest,
   revealOffset,
   undoRequest,
@@ -845,6 +846,24 @@ test('the idle line appears only for a cut that leaves a part within the thresho
   ).toEqual(['idle'])
 })
 
+test('a cut that leaves a part of exactly the threshold brings that part into the totals, as the totals judge idle', () => {
+  // Arrange: the 26 h whole-day record (9/7 22:00 – 9/9 0:00) against a 12 h threshold, on a day with its own rows.
+  const carriedIn = wholeDayWork()
+  const facts = {
+    idleThresholdMs: 12 * 3_600_000,
+    autoExcludeUnusedDays: true,
+    manuallyExcluded: false,
+    hasOwnRows: true,
+    isToday: false,
+  }
+  const tenOClock = at('2026-09-08', 10).getTime()
+
+  // Act & Assert: at 10:00 the part before the cut is exactly 12 h, which is not idle (a strict "longer than"); a
+  // millisecond later it is 12 h and 1 ms, and the other part is still 14 h.
+  expect(cutTotalsEffects(carriedIn, facts, tenOClock)).toEqual(['idle'])
+  expect(cutTotalsEffects(carriedIn, facts, tenOClock + 1)).toEqual([])
+})
+
 test('a cut of a record longer than twice the threshold never frees idle time', () => {
   // Arrange: 睡眠 from 9/6 22:00 until 9/9 22:00 is 72 h, against a 12 h threshold, viewed on 9/8.
   const day = '2026-09-08'
@@ -994,6 +1013,21 @@ test('a short carried-in record on a day with its own rows changes nothing in th
 
   // Assert
   expect(effects).toEqual([])
+})
+
+test('a selected card scrolls into view once per selection, and again only when it grows', () => {
+  // Arrange: 仕事's card was revealed at 300 px.
+  const last = { id: 'w', height: 300 }
+
+  // Act & Assert
+  // Another card was selected, or a row header was tapped (no mark): reveal.
+  expect(needsReveal(last, { id: 'h', height: 300 })).toBe(true)
+  expect(needsReveal(null, { id: 'w', height: 300 })).toBe(true)
+  // A clock tick lays the same card out at the same height: stay put.
+  expect(needsReveal(last, { id: 'w', height: 300 })).toBe(false)
+  // A note appeared and the card grew: reveal; it shrank: stay put.
+  expect(needsReveal(last, { id: 'w', height: 340 })).toBe(true)
+  expect(needsReveal(last, { id: 'w', height: 280 })).toBe(false)
 })
 
 test('selecting a card scrolls only as far as it takes to show the whole card', () => {

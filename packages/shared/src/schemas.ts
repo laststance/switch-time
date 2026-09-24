@@ -118,6 +118,13 @@ export const splitAtInputSchema = z.object({
 /** The client types its call with this alias: oRPC types the input from zod's input side, where `z.coerce.date()` is `unknown`. */
 export type SplitAtInput = z.infer<typeof splitAtInputSchema>
 
+/**
+ * The `data` of the BAD_REQUEST that `switchTo` and `changeActivity` answer for an archived activity. The API throws it and
+ * the correction sheet's undo reads it, so the two sides share one value rather than two string literals.
+ * @example new ORPCError('BAD_REQUEST', { message: 'activity is archived', data: ARCHIVED_REFUSAL })
+ */
+export const ARCHIVED_REFUSAL = { reason: 'archived' } as const
+
 /** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first; `activityId` null is a detox row. */
 export const replaceDayInputSchema = z.object({
   day: daySchema,

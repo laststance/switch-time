@@ -65,7 +65,7 @@ export function useCorrection(dayParam: string | undefined) {
     selectedId: state.selectedId,
     noticeId: state.noticeId,
     focusId: state.focusId,
-    totalsFacts: useTotalsFacts(day, today, list.data),
+    totalsFacts: useTotalsFacts(day, today, list.data, ready),
     select: state.select,
     ...edits,
     undo,
@@ -239,11 +239,16 @@ function useTotalsFacts(
   day: string,
   today: string,
   listed: ListedDay | undefined,
+  ready: boolean,
 ): TotalsFacts {
   const { settings } = useSettings()
-  // The viewed day alone: the 「除外中の日」 list stops a year back, and a correction can reach further.
+  // The viewed day alone: the 「除外中の日」 list stops a year back, and a correction can reach further. `ready` waits for the
+  // stored time zone, as the day's list does, so a default-zone "today" is never fetched first.
   const excluded = useQuery(
-    orpc.excludedDays.list.queryOptions({ input: { from: day, to: day } }),
+    orpc.excludedDays.list.queryOptions({
+      input: { from: day, to: day },
+      enabled: ready,
+    }),
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,

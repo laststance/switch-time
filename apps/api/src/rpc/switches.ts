@@ -1,5 +1,6 @@
 import { ORPCError } from '@orpc/server'
 import {
+  ARCHIVED_REFUSAL,
   clampStart,
   MIN_SEGMENT_MS,
   dayBounds,
@@ -69,10 +70,10 @@ async function assertLiveActivities(
 ): Promise<void> {
   const rows = await ownActivities(userId, ids)
   if (rows.some((row) => row.archivedAt !== null))
-    // `reason` lets the correction sheet tell this refusal from any other BAD_REQUEST.
+    // The data lets the correction sheet tell this refusal from any other BAD_REQUEST.
     throw new ORPCError('BAD_REQUEST', {
       message: 'activity is archived',
-      data: { reason: 'archived' },
+      data: ARCHIVED_REFUSAL,
     })
 }
 

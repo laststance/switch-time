@@ -21,11 +21,13 @@ import {
   CUT_STEPS,
   cutStepper,
   cutNotes,
+  needsReveal,
   revealOffset,
   type ChosenCut,
   type CorrectionRow,
   type CutStepMinutes,
   type DayBounds,
+  type RevealMark,
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
@@ -480,8 +482,8 @@ export default function CorrectionSheet() {
   const correction = useCorrection(params.day)
   const scroll = useRef<ScrollView>(null)
   const viewport = useRef({ scrollY: 0, viewportHeight: 0 })
-  // The row last revealed: a card lays out again on every tick and edit, and only a new selection should scroll.
-  const revealed = useRef<string | null>(null)
+  // The card last revealed: a card lays out again on every tick and edit, and only a new selection or growth should scroll.
+  const revealed = useRef<RevealMark | null>(null)
   // Scrolls just enough to show the whole selected card once it has laid out with its panel; reduced motion jumps.
   const reveal = (card: { top: number; height: number }): void => {
     const y = revealOffset(card, viewport.current)
@@ -524,8 +526,9 @@ export default function CorrectionSheet() {
               style={frame(selected, row.color)}
               onLayout={(event) => {
                 const { y, height } = event.nativeEvent.layout
-                if (selected && revealed.current !== row.id) {
-                  revealed.current = row.id
+                const card = { id: row.id, height }
+                if (selected && needsReveal(revealed.current, card)) {
+                  revealed.current = card
                   reveal({ top: y, height })
                 }
               }}

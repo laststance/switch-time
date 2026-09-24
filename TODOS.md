@@ -46,7 +46,7 @@
 
 **Why:** Every failed `switches.*` write is silent: the buttons re-enable and nothing changes. The server now refuses a cross-day 「次の記録に統合」 with CONFLICT; the row flags normally hide that button, but a stale list can still reach it, and the user sees a tap that did nothing.
 
-**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`data: { reason: 'archived' }` from `assertLiveActivities`, read by `afterUndoFailure`); follow its shape. Raised by the review during the 0.2.0.0 ship.
+**Context:** `useCorrection` never reads the mutations' `error`, and `correction.tsx` has no error slot. The code alone cannot pick the message: `mergeIntoNext`, `mergeIntoPrevious`, `moveStart` and `splitInHalf` all refuse with CONFLICT, and only the English `message` tells the reasons apart. Give each refusal a machine-readable reason (`new ORPCError('CONFLICT', { message, data: { reason } })`), map that to Japanese, and show it in one `Text` under the action panel. Since the carried-in row's panel (2026-09-24) three more refusals are silent: `splitAt`'s CONFLICT (the cut no longer fits its record), a pick on the carried-in record that another device changed (CONFLICT, or NOT_FOUND once it is gone), and the undo of such a pick for the same reasons (`afterUndoFailure` in `lib/correction.ts` turns 元に戻す off without a word). The undo refused because the previous activity was archived already shows its notice, and that refusal is the first to carry a reason (`ARCHIVED_REFUSAL` in `packages/shared`, thrown by `assertLiveActivities` and read by `afterUndoFailure`); follow its shape. Raised by the review during the 0.2.0.0 ship.
 
 **Effort:** S
 **Priority:** P2
@@ -155,6 +155,18 @@
 **Why:** In a zone with daylight saving the hour after the fall-back repeats, so two instants an hour apart read the same `H:MM`. A user can move a start or cut a record at the wrong one without seeing it.
 
 **Context:** `formatTime` (`apps/app/src/lib/format.ts`) prints `H:MM`; `timeZoneSchema` accepts any IANA zone; `dayBounds` already handles 23- and 25-hour days. The 区切る時刻 steps are elapsed time (±15 / ±60 min), so inside the repeated hour +1時間 can leave the readout unchanged. The owner's zone (Asia/Tokyo) never reaches it. Start with a helper that tells whether an instant's wall time occurs twice that day, tested on `America/New_York` 2026-11-01. Raised by Codex in the eng review of the carried-in row's panel (2026-09-24) (R10 kept `H:MM` for consistency with every other label).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Name every day a carried-in record reaches, and its year
+
+**What:** Make the carried-in panel's notes name the whole reach of the record. The scope note under 活動を変える should give the range of days the record covers (`9月21日〜9月24日の集計に反映されます`), not only the day it started. The origin note should add the year when the record started in another year than the viewed day. Change the text in the pen file first, then in `correction.tsx` and `lib/correction.ts` (`trueStartLabels`).
+
+**Why:** A pick changes the record's activity on every day it covers. A record from 9/21 23:00 viewed on 9/23 also changes 9/22, and one that is still running changes today, but the note names only 9/21. A record that began more than a year ago reads as a recent date: on the same calendar day it even reads as the viewed day.
+
+**Context:** `CorrectionRow` already carries `trueStart` and `trueEnd`, and the last day the record touches is `localDay(trueEnd - 1)` in the stored zone. Raised by the Red Team during the carried-in panel's ship (2026-09-24).
 
 **Effort:** S
 **Priority:** P3

@@ -880,7 +880,12 @@ test('the lines under ここで分割 follow the cut time and the day’s exclus
 
   // Act: the day is excluded by hand from another device.
   await api.excludedDays.exclude({ day })
+  // The 計測 line also hides while the day's exclusion is loading, so wait for that answer before looking.
+  const excludedAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/excludedDays/list'),
+  )
   await page.reload()
+  expect((await excludedAnswer).ok()).toBe(true)
   await carriedIn.click()
 
   // Assert: a manual exclusion outranks a switch, so the 計測 line is gone.

@@ -1,6 +1,7 @@
 import { ORPCError } from '@orpc/client'
 import type { AppRouterClient } from '@switch-time/api'
 import {
+  ARCHIVED_REFUSAL,
   clampStart,
   localDay,
   MIN_SEGMENT_MS,
@@ -146,6 +147,8 @@ export function correctionRows(
 }
 
 const QUARTER_MS = 15 * 60_000
+// How far a device clock may run ahead of the server's before 区切る時刻 would offer a cut `switches.splitAt` refuses.
+const CLOCK_SKEW_MARGIN_MS = 15 * 60_000
 
 /**
  * 区切る時刻's range for a record from `startedAt` to `trueEnd`: quarter hours of the viewed day (counted from its 0:00, so any
@@ -160,9 +163,9 @@ function cutRange(
   bounds: DayBounds,
 ): CutRange | null {
   const floor = Math.max(startedAt + MIN_SEGMENT_MS, bounds.start)
-  // A quarter short of now: a device clock running a little fast must not offer a cut the server's now refuses.
   const ceiling =
-    Math.min(trueEnd, bounds.end, bounds.now - QUARTER_MS) - MIN_SEGMENT_MS
+    Math.min(trueEnd, bounds.end, bounds.now - CLOCK_SKEW_MARGIN_MS) -
+    MIN_SEGMENT_MS
   const min =
     bounds.start + Math.ceil((floor - bounds.start) / QUARTER_MS) * QUARTER_MS
   const max =
@@ -546,13 +549,13 @@ export function afterUndoFailure(
     : 'keep'
 }
 
-// The archived refusal's marker from `switches.changeActivity`; any other BAD_REQUEST is a plain failure.
+// The archived refusal's marker ({@link ARCHIVED_REFUSAL}) from `switches.changeActivity`; any other BAD_REQUEST is a plain failure.
 function isArchivedRefusal(data: unknown): boolean {
   return (
     typeof data === 'object' &&
     data !== null &&
     'reason' in data &&
-    data.reason === 'archived'
+    data.reason === ARCHIVED_REFUSAL.reason
   )
 }
 
@@ -589,6 +592,26 @@ export function pickRequest(
   return row.carriedIn
     ? { id: row.id, activityId, from: row.activityId }
     : { id: row.id, activityId }
+}
+
+/** The selected card the sheet last scrolled into view, and how tall it was then. */
+export type RevealMark = { id: string; height: number }
+
+/**
+ * Whether the selected card's layout should scroll it into view: a card laid out for the first time since its selection, or
+ * one that grew (a note or the archived box appeared). The same height again is a clock tick or an edit that moved nothing,
+ * and scrolling then would pull the view back while the user reads elsewhere. The sheet calls it from the card's onLayout.
+ * @param last - The mark of the last reveal; null after a tap on a row header.
+ * @param card - The selected card's id and its new height.
+ * @returns True when {@link revealOffset} should run.
+ * @example needsReveal({ id: 'w', height: 300 }, { id: 'w', height: 340 }) // true
+ */
+export function needsReveal(
+  last: RevealMark | null,
+  card: RevealMark,
+): boolean {
+  if (last?.id !== card.id) return true
+  return card.height > last.height
 }
 
 /**

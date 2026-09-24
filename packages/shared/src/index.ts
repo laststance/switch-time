@@ -6,6 +6,7 @@ export {
   type DefaultActivity,
 } from './activity-palette'
 export {
+  ARCHIVED_REFUSAL,
   activityColorSchema,
   activityInputSchema,
   activityNameSchema,
