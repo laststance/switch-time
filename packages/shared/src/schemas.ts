@@ -110,6 +110,14 @@ export const moveStartInputSchema = z.object({
   deltaMinutes: z.literal([15, -15]),
 })
 
+/** 「ここで分割」 on the record carried into a day: cut it at `at`; the router keeps a minute from both ends and from now. */
+export const splitAtInputSchema = z.object({
+  id: z.uuid(),
+  at: z.coerce.date(),
+})
+/** The client types its call with this alias: oRPC types the input from zod's input side, where `z.coerce.date()` is `unknown`. */
+export type SplitAtInput = z.infer<typeof splitAtInputSchema>
+
 /** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first; `activityId` null is a detox row. */
 export const replaceDayInputSchema = z.object({
   day: daySchema,

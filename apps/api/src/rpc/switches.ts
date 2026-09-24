@@ -7,8 +7,9 @@ import {
   localDay,
   moveStartInputSchema,
   replaceDayInputSchema,
+  splitAtInputSchema,
 } from '@switch-time/shared'
-import { and, asc, desc, eq, gt, gte, inArray, lt } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '../db/client'
@@ -58,7 +59,7 @@ async function ownActivities(
 
 /**
  * Rejects an archived activity (the user can no longer pick it) or one that is not the user's, for the writes that pick an
- * activity: switchTo and changeActivity. splitInHalf copies its row's own activity and the merges only move time, so neither
+ * activity: switchTo and changeActivity. The splits copy their row's own activity and the merges only move time, so none
  * calls it; replaceDay stops at {@link ownActivities}.
  * @example await assertLiveActivities(userId, [input.activityId])
  */
@@ -78,6 +79,46 @@ const correct = async (id: string, values: Partial<SwitchRow>) =>
       .update(switches)
       .set({ ...values, source: 'correction' })
       .where(eq(switches.id, id))
+      .returning(),
+  )
+
+/**
+ * Writes an activity change only while the row still holds `from` (null = detox), in the statement that writes, so an edit
+ * from another device is never overwritten; called by changeActivity when the client names what it replaces (the activity
+ * undo on a carried-in row, and the pick that arms it).
+ * @returns the changed row; CONFLICT when the row now holds another activity, NOT_FOUND when it is gone
+ * @example await changeActivityFrom(userId, row.id, sleepId, workId) // 仕事 → 睡眠, unless the row stopped being 仕事
+ */
+async function changeActivityFrom(
+  userId: string,
+  id: string,
+  activityId: string | null,
+  from: string | null,
+): Promise<SwitchRow> {
+  const holdsFrom =
+    from === null ? isNull(switches.activityId) : eq(switches.activityId, from)
+  const [changed] = await db
+    .update(switches)
+    .set({ activityId, source: 'correction' })
+    .where(and(eq(switches.id, id), holdsFrom))
+    .returning()
+  if (changed) return changed
+  // Nothing matched: the row is gone (ownSwitch answers NOT_FOUND) or now holds another activity.
+  await ownSwitch(userId, id)
+  throw new ORPCError('CONFLICT', { message: 'activity changed elsewhere' })
+}
+
+// A split's new row: the split row's owner and activity from `startedAt` on. splitInHalf and splitAt both insert it.
+const insertSplit = async (row: SwitchRow, startedAt: Date) =>
+  one(
+    await db
+      .insert(switches)
+      .values({
+        userId: row.userId,
+        activityId: row.activityId,
+        startedAt,
+        source: 'split',
+      })
       .returning(),
   )
 
@@ -221,13 +262,27 @@ export const switchesRouter = {
     }),
 
   changeActivity: authed
-    .input(z.object({ id: z.uuid(), activityId: z.uuid().nullable() }))
+    .input(
+      z.object({
+        id: z.uuid(),
+        activityId: z.uuid().nullable(),
+        // The activity the caller saw on the row (null = detox): when given, the write happens only while the row still holds it.
+        from: z.uuid().nullable().optional(),
+      }),
+    )
     .handler(async ({ context, input }) => {
       const [row] = await Promise.all([
         ownSwitch(context.user.id, input.id),
         assertLiveActivities(context.user.id, [input.activityId]),
       ])
-      return correct(row.id, { activityId: input.activityId })
+      if (input.from === undefined)
+        return correct(row.id, { activityId: input.activityId })
+      return changeActivityFrom(
+        context.user.id,
+        row.id,
+        input.activityId,
+        input.from,
+      )
     }),
 
   mergeIntoPrevious: authed.input(byId).handler(async ({ context, input }) => {
@@ -261,18 +316,24 @@ export const switchesRouter = {
     if (end - row.startedAt.getTime() < 2 * MIN_SEGMENT_MS)
       throw new ORPCError('CONFLICT', { message: 'segment too short to split' })
     const midpoint = new Date(Math.floor((row.startedAt.getTime() + end) / 2))
-    return one(
-      await db
-        .insert(switches)
-        .values({
-          userId: row.userId,
-          activityId: row.activityId,
-          startedAt: midpoint,
-          source: 'split',
-        })
-        .returning(),
-    )
+    return insertSplit(row, midpoint)
   }),
+
+  // 「ここで分割」 on the carried-in row: the cut lands at the chosen time, which may be far from the record's middle. It needs no
+  // day: the client offers only times inside the viewed day, so the new row is that day's own and its 元に戻す removes it.
+  splitAt: authed
+    .input(splitAtInputSchema)
+    .handler(async ({ context, input }) => {
+      // gstack-shortcut(dec-7253328b): no per-user lock, upgrade when TODOS P1 "Serialize a user's switch writes" lands
+      const { row, next } = await withNeighbours(context.user.id, input.id)
+      const at = input.at.getTime()
+      // Both parts keep the 1-minute floor that moveStart enforces through clampStart; the current state ends at now.
+      const earliest = row.startedAt.getTime() + MIN_SEGMENT_MS
+      const latest = (next?.startedAt.getTime() ?? Date.now()) - MIN_SEGMENT_MS
+      if (at < earliest || at > latest)
+        throw new ORPCError('CONFLICT', { message: 'no room to split there' })
+      return insertSplit(row, input.at)
+    }),
 
   // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction. Rows on an archived
   // activity are accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good.

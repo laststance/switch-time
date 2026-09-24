@@ -19,6 +19,7 @@ export {
   settingsUpdateSchema,
   signInSchema,
   signUpSchema,
+  splitAtInputSchema,
   targetHoursSchema,
   THEME_MODES,
   themeModeSchema,
@@ -28,6 +29,7 @@ export {
   type SettingsUpdate,
   type SignInInput,
   type SignUpInput,
+  type SplitAtInput,
   type ThemeMode,
 } from './schemas'
 export {
