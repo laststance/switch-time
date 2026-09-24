@@ -13,6 +13,13 @@ const shift = (day: string, n: number) =>
     .slice(0, 10)
 const at = (day: string, hour: number) =>
   new Date(`${day}T${String(hour).padStart(2, '0')}:00:00+09:00`)
+// A History day's link, found by the name it reads out, which starts with the day as `formatDay` writes it (`9月24日（木）`).
+const dayLink = (page: Page, day: string) => {
+  const date = new Date(`${day}T00:00:00Z`)
+  const weekday = '日月火水木金土'.charAt(date.getUTCDay())
+  const name = `${date.getUTCMonth() + 1}月${date.getUTCDate()}日（${weekday}）`
+  return page.getByRole('link', { name: new RegExp(`^${name}`) })
+}
 const idOf = (list: { id: string; name: string }[], name: string) => {
   const activity = list.find((row) => row.name === name)
   if (!activity) throw new Error(`no activity named ${name}`)
@@ -1437,7 +1444,7 @@ test('a merge that lands after its sheet closed can still be undone from that da
   await page.getByRole('button', { name: '完了' }).click()
   answer.resolve()
   await page.getByRole('tab', { name: '記録' }).click()
-  await page.locator(`a[href*="day=${yesterday}"]`).click()
+  await dayLink(page, yesterday).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   await undo.click()
@@ -1474,7 +1481,7 @@ test('an undo that lands after its sheet closed leaves nothing to undo when that
   await page.getByRole('button', { name: '完了' }).click()
   answer.resolve()
   await page.getByRole('tab', { name: '記録' }).click()
-  await page.locator(`a[href*="day=${yesterday}"]`).click()
+  await dayLink(page, yesterday).click()
 
   // Assert: 休息 is back and 元に戻す is off, so the applied undo cannot be pressed again.
   await expect(rest).toBeVisible()
@@ -1534,7 +1541,7 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
     rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 9) }],
   })
   await page.getByRole('tab', { name: '記録' }).click()
-  await page.locator(`a[href*="day=${yesterday}"]`).click()
+  await dayLink(page, yesterday).click()
 
   // Assert: B's sheet for that date lists B's row and offers nothing to undo.
   await expect(
@@ -1582,7 +1589,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
     page.getByRole('heading', { name: 'いま', exact: true }),
   ).toBeVisible()
   await page.getByRole('tab', { name: '記録' }).click()
-  await page.locator(`a[href*="day=${yesterday}"]`).click()
+  await dayLink(page, yesterday).click()
 
   // Assert: the first tab's sheet for that date lists B's row, not A's cached ones, and offers nothing to undo.
   await expect(
