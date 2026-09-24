@@ -35,6 +35,17 @@ type SwitchRow = typeof switches.$inferSelect
 
 const own = (userId: string) => eq(switches.userId, userId)
 
+/** A day's window in epoch ms, [start, end). */
+type DayWindow = { start: number; end: number }
+
+// The user's switches that start inside the window: a day's own rows.
+const inDay = (userId: string, window: DayWindow) =>
+  and(
+    own(userId),
+    gte(switches.startedAt, new Date(window.start)),
+    lt(switches.startedAt, new Date(window.end)),
+  )
+
 /**
  * The latest switch is the current state; null only before the very first tap.
  * @example const current = await latestSwitch(userId)
@@ -230,13 +241,7 @@ export async function switchesBetween(
     db
       .select()
       .from(switches)
-      .where(
-        and(
-          own(userId),
-          gte(switches.startedAt, new Date(start)),
-          lt(switches.startedAt, new Date(end)),
-        ),
-      )
+      .where(inDay(userId, { start, end }))
       .orderBy(asc(switches.startedAt)),
     db
       .select()
@@ -247,9 +252,6 @@ export async function switchesBetween(
   ])
   return { carriedIn: carriedIn ?? null, rows, carriedOut: carriedOut ?? null }
 }
-
-/** A day's window in epoch ms, [start, end). */
-type DayWindow = { start: number; end: number }
 
 // The day's own rows as a baseline or 「元に戻す」's expectation lists them, oldest first.
 const dayRows = async (
@@ -264,13 +266,7 @@ const dayRows = async (
       startedAt: switches.startedAt,
     })
     .from(switches)
-    .where(
-      and(
-        own(userId),
-        gte(switches.startedAt, new Date(window.start)),
-        lt(switches.startedAt, new Date(window.end)),
-      ),
-    )
+    .where(inDay(userId, window))
     .orderBy(asc(switches.startedAt))
 
 /**
@@ -304,7 +300,8 @@ const dayChanged = () =>
  * Checks, under the user's lock, that the day an edit was made on still reads as the sheet listed it: the stored zone is
  * the sheet's and the day's rows are exactly the baseline's. That makes the sheet's snapshot the day's real state before the
  * edit, and the rows the edit leaves follow from it and the row the edit returns.
- * @returns the day's window, or null when the call named no baseline (the API's own tests)
+ * @returns the day's window, or null when the call named no baseline: a pick on the carried-in record (guarded by its
+ *   `revision` instead, since that record reaches another day) and the API's own tests
  * @example const window = await checkBaseline(tx, userId, input.baseline) // CONFLICT day-changed after another device's tap
  */
 async function checkBaseline(
@@ -319,6 +316,12 @@ async function checkBaseline(
   if (!sameRows(await dayRows(tx, userId, window), baseline.rows))
     throw dayChanged()
   return window
+}
+
+// The end of the day a switch starts on, in the stored zone.
+async function rowDayEnd(tx: LockedTx, userId: string, startedAt: Date) {
+  const { timeZone } = await getSettings(userId, tx)
+  return dayBounds(localDay(startedAt, timeZone), timeZone).end
 }
 
 // A new start must stay inside the baseline's day, where 「元に戻す」 can reach it; no baseline, no day to keep to.
@@ -422,13 +425,13 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
-        await checkBaseline(tx, userId, input.baseline)
+        const window = await checkBaseline(tx, userId, input.baseline)
         const { row, next } = await withNeighbours(tx, userId, input.id)
         // The current state has no later state to hand its time to.
         if (!next) throw new ORPCError('CONFLICT', { message: 'no next state' })
         // 元に戻す rewrites the row's day only: a next state pulled back from a later day would be deleted with it, for good.
-        const { timeZone } = await getSettings(userId, tx)
-        const { end } = dayBounds(localDay(row.startedAt, timeZone), timeZone)
+        // The baseline's day is the row's (the sheet lists it there); without one, the row's day is read from the stored zone.
+        const end = window?.end ?? (await rowDayEnd(tx, userId, row.startedAt))
         if (next.startedAt.getTime() >= end)
           throw new ORPCError('CONFLICT', {
             message: 'next state is on a later day',
@@ -531,15 +534,7 @@ export const switchesRouter = {
           .orderBy(desc(switches.startedAt))
           .limit(1)
         if (carriedIn) await bumpRevision(tx, carriedIn.id)
-        await tx
-          .delete(switches)
-          .where(
-            and(
-              own(userId),
-              gte(switches.startedAt, new Date(window.start)),
-              lt(switches.startedAt, new Date(window.end)),
-            ),
-          )
+        await tx.delete(switches).where(inDay(userId, window))
         if (input.rows.length === 0) return []
         return tx
           .insert(switches)

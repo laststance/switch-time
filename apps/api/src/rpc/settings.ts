@@ -9,6 +9,8 @@ import { authed, one, withUserLock, type Executor } from './base'
 
 /**
  * The user's settings row (time zone, idle threshold…); seeded at sign-up, so a miss is a bug rather than a first-launch case.
+ * @param executor - `db`, or the locked transaction of a timeline write, which reads the zone it decides on (and repairs a
+ *   missing row) on its own connection.
  * @example const { timeZone } = await getSettings(context.user.id)
  */
 export async function getSettings(userId: string, executor: Executor = db) {
@@ -18,7 +20,7 @@ export async function getSettings(userId: string, executor: Executor = db) {
     .where(eq(userSettings.userId, userId))
   // No row means the sign-up hook never ran to completion (or the account predates the domain tables): seed now, once.
   if (rows.length === 0) {
-    await seedUser(userId)
+    await seedUser(userId, executor)
     return getSettings(userId, executor)
   }
   return one(rows)

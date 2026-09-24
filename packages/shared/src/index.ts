@@ -12,8 +12,6 @@ export {
   activityNameSchema,
   changeActivityInputSchema,
   DAY_CHANGED_REFUSAL,
-  dayBaselineSchema,
-  dayRowSchema,
   daySchema,
   firstIssuePerField,
   monthSchema,

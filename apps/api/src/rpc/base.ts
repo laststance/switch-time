@@ -53,13 +53,20 @@ export const ownSwitch = async (
   )
 
 /** The first key of the lock pair: the lock guards one user's timeline, so no other use of advisory locks can collide with it. */
-export const TIMELINE_LOCK_NAMESPACE = 1
+const TIMELINE_LOCK_NAMESPACE = 1
+
+/**
+ * How long a write waits for the user's lock (Postgres `lock_timeout`, for this transaction only) before it fails: each waiting
+ * write holds a pool connection, so a burst from one account must give up rather than starve every other account's requests.
+ */
+const TIMELINE_LOCK_TIMEOUT = '10s'
 
 /**
  * Runs `work` in one transaction that first takes the user's timeline lock (`pg_advisory_xact_lock`, released at commit or
  * rollback). Every write to a user's switches, `activities.archive` and a stored-zone change take it, and read what they
  * decide on inside it, so two devices' writes run one after the other: a merge sees the neighbours the other merge left,
- * two 「元に戻す」 never both delete and insert, a tap cannot slip between archive's check and its write.
+ * two 「元に戻す」 never both delete and insert, a tap cannot slip between archive's check and its write. A write that waits
+ * longer than {@link TIMELINE_LOCK_TIMEOUT} fails (a server error, which the client treats as a passing failure).
  * @param userId - Whose timeline; other users never wait on it (a `hashtext` collision only makes two users take turns).
  * @param work - The reads and writes, all through the transaction it is handed.
  * @returns whatever `work` returns, once committed
@@ -70,6 +77,9 @@ export async function withUserLock<T>(
   work: (tx: LockedTx) => Promise<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select set_config('lock_timeout', ${TIMELINE_LOCK_TIMEOUT}, true)`,
+    )
     await tx.execute(
       sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
     )

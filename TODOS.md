@@ -148,6 +148,42 @@
 **Priority:** P3
 **Depends on:** None
 
+### Stop the stored time zone flipping between two devices
+
+**What:** Make `use-time-zone-sync.ts` write the device's zone only when that device's own zone changes (compare it with the last zone this device synced, kept on the device), or ask before overwriting the stored one. While a `settings.update` that carries `timeZone` is in flight, hold the correction sheet's buttons.
+
+**Why:** The hook writes the focused device's zone whenever it differs from the stored one, so two devices in different zones flip it back and forth on every focus. A browser with `resistFingerprinting` reports UTC, so one laptop and one phone are enough. Since the day baseline (2026-09-25), every edit and every day 「元に戻す」 carries the zone, so each flip makes the other device's open sheet refuse its next edit and turns its 元に戻す off (`DAY_CHANGED_REFUSAL`, which the client does not read yet). The same write runs at app start, where the settings cache takes the device zone at once while `listByDay` may still hold rows windowed in the old one, so edits are refused silently until the zone write settles.
+
+**Context:** Left open when the day baseline closed "Refetch the day's switches after the time zone changes" (`useUpdateSettings` now refetches `switches.*` too, and a replay under another zone is refused). Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Refuse an edit that makes a record of an archived activity the current state
+
+**What:** Under the per-user lock, refuse `replaceDay` and `mergeIntoPrevious` with `ARCHIVED_REFUSAL` when the row that becomes the user's latest switch names an archived activity.
+
+**Why:** `activities.archive` refuses the activity of the current state, and the lock keeps a tap or a pick from racing that check, but two locked writes still get around it. (1) Device A's sheet changes today's running record from X to Y, device B archives X (allowed: X is no longer current), then A presses 「元に戻す」: the day still reads as the edit left it (archiving writes no switch), and `replaceDay` checks ownership only, so the running record goes back to X. (2) 「前の記録に統合」 on the latest record makes the previous record the current state without looking at its activity.
+
+**Context:** The owner accepted archived ids in `replaceDay` for past time (0.2.1.0, PR #49), not for the running state. `apps/api/src/rpc/switches.ts`. The rule matches the "not the latest row" rule that "Rebuild a merged-away record of an archived activity" needs. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Let a day with more than 500 switches still be corrected
+
+**What:** Send no baseline and arm no day 「元に戻す」 when the listed day holds more rows than the baseline schema allows, or raise the cap to an explicit server limit on switches per day.
+
+**Why:** Since the day baseline (2026-09-25), every sheet edit sends all the day's rows, capped at 500 by `dayRowsSchema` in `packages/shared/src/schemas.ts`. On a day with more (a script, a hotkey burst), every edit fails validation with BAD_REQUEST and nothing is shown, so the day cannot be corrected at all. Before, only 「元に戻す」 hit the cap.
+
+**Context:** The API already accepts an edit without a baseline. `dayBaseline` in `apps/app/src/lib/correction.ts` builds it. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Stats
 
 ### Decide what a detox that runs past midnight does to 連続記録
@@ -189,6 +225,18 @@
 **Depends on:** None
 
 ## Database
+
+### Keep two switches of one account from starting at the same instant
+
+**What:** In `switchTo`, under the per-user lock, start the new switch at `max(now, current.startedAt + 1 ms)` (or take the time from the database with `greatest()`), and add `id` as a second sort key in `dayRows`, `switchesBetween` and `rowsAfterEdit`.
+
+**Why:** Two taps from two devices, serialized by the lock, can land in the same millisecond, and a clock step or a second API instance can even start the new row before the current one. Nothing orders tied rows: the list and the locked re-read can then read them in different orders, which refuses edits as day-changed for no reason, and `replaceDay` rejects tied rows with BAD_REQUEST, which `afterUndoFailure` keeps armed, so 「元に戻す」 fails on every press.
+
+**Context:** No unique index covers `(user_id, started_at)`. `apps/api/src/rpc/switches.ts`, `apps/app/src/lib/correction.ts`. Raised by the Red Team during the day baseline's ship (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Let the switches index serve the timeline queries in order
 

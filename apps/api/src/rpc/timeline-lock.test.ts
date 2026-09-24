@@ -1,14 +1,14 @@
 import { setTimeout as delay } from 'node:timers/promises'
 
 import { addDays, dayBounds, localDay, type DayRow } from '@switch-time/shared'
-import { eq, sql } from 'drizzle-orm'
-import { expect, test } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { expect, onTestFinished, test } from 'vitest'
 
 import { db, pool } from '../db/client'
 import { userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
-import { TIMELINE_LOCK_NAMESPACE } from './base'
+import { withUserLock } from './base'
 
 const TZ = 'Asia/Tokyo'
 const H = 3_600_000
@@ -26,24 +26,24 @@ const listedRows = (rows: DayRow[]): DayRow[] =>
   rows.map(({ id, activityId, startedAt }) => ({ id, activityId, startedAt }))
 
 /**
- * Takes the user's timeline lock in a transaction of its own, as another device's write in flight would, and keeps it until
- * the returned release is awaited. Calls made meanwhile queue behind it in the order they arrive.
+ * Takes the user's timeline lock through {@link withUserLock}, as another device's write in flight would, and keeps it until
+ * the returned release is awaited (or the test ends, so a failed test never leaves the lock and its queue holding pool
+ * connections). Calls made meanwhile queue behind it in the order they arrive.
  */
 async function holdTimelineLock(userId: string) {
   const held = Promise.withResolvers<void>()
   const mayRelease = Promise.withResolvers<void>()
-  const holder = db.transaction(async (tx) => {
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
-    )
+  const holder = withUserLock(userId, async () => {
     held.resolve()
     await mayRelease.promise
   })
   await held.promise
-  return async (): Promise<void> => {
+  const release = async (): Promise<void> => {
     mayRelease.resolve()
     await holder
   }
+  onTestFinished(release)
+  return release
 }
 
 // Waits until `count` calls are queued on an advisory lock, so the next call is known to queue behind them.
@@ -117,6 +117,93 @@ test('a tap on an activity queued behind its archive is refused, so an archived 
   await expect(archive).resolves.toMatchObject({ archivedAt: expect.any(Date) })
   await expect(tap).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   expect(await api.switches.current()).toMatchObject({ id: running.id })
+})
+
+test('an activity change queued behind the archive of that activity is refused, so no record takes an archived activity', async () => {
+  // Arrange: 仕事 is running
+  const api = await signedIn('lock-pick-archive@example.com')
+  const list = await api.activities.list()
+  const running = await api.switches.switchTo({
+    activityId: idOf(list, '仕事'),
+  })
+  const release = await holdTimelineLock(running.userId)
+
+  // Act: the archive of 休息 queues first, the change of the running record to 休息 second
+  const archive = api.activities.archive({ id: idOf(list, '休息') })
+  await waitForLockQueue(1)
+  const pick = api.switches.changeActivity({
+    id: running.id,
+    activityId: idOf(list, '休息'),
+  })
+  await waitForLockQueue(2)
+  await release()
+
+  // Assert: archived, the change refused as archived, and 仕事 still runs
+  await expect(archive).resolves.toMatchObject({ archivedAt: expect.any(Date) })
+  await expect(pick).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    data: { reason: 'archived' },
+  })
+  expect(await api.switches.current()).toMatchObject({
+    activityId: idOf(list, '仕事'),
+  })
+})
+
+test('two archives of the last two live activities at once leave one live, so the clock always has one to switch to', async () => {
+  // Arrange: detox runs (no activity is the running state); every activity but 食事 and 娯楽 is archived
+  const api = await signedIn('lock-archive-last-two@example.com')
+  const list = await api.activities.list()
+  const running = await api.switches.switchTo({ activityId: null })
+  for (const name of ['家事', '仕事', '休息', '睡眠'])
+    await api.activities.archive({ id: idOf(list, name) })
+  const release = await holdTimelineLock(running.userId)
+
+  // Act: both archives queue behind the lock
+  const first = api.activities.archive({ id: idOf(list, '食事') })
+  await waitForLockQueue(1)
+  const second = api.activities.archive({ id: idOf(list, '娯楽') })
+  await waitForLockQueue(2)
+  await release()
+  const outcomes = await Promise.allSettled([first, second])
+
+  // Assert: the first lands, the second is refused, and 娯楽 stays live
+  expect(outcomes.map((outcome) => outcome.status)).toEqual([
+    'fulfilled',
+    'rejected',
+  ])
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => row.name)).toEqual(['娯楽'])
+})
+
+test('a 15-minute move waits for a switch write in flight, so it lands next to the neighbours that write left', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, with a tap on 家事 today so 休息 has a later state
+  const api = await signedIn('lock-move@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  await api.switches.switchTo({ activityId: idOf(list, '家事') })
+  const [, rest] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!rest) throw new Error('fixture has no second row')
+  const release = await holdTimelineLock(rest.userId)
+
+  // Act
+  const move = api.switches.moveStart({ id: rest.id, deltaMinutes: 15 })
+  await waitForLockQueue(1)
+  await release()
+
+  // Assert
+  await expect(move).resolves.toMatchObject({
+    startedAt: at(yesterday, 12.25),
+  })
 })
 
 test('an archive queued behind a tap on its activity is refused, because that activity is now the running state', async () => {

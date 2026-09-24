@@ -105,7 +105,7 @@ export const reorderInputSchema = z.object({
 })
 
 /** One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares. */
-export const dayRowSchema = z.object({
+const dayRowSchema = z.object({
   id: z.uuid(),
   activityId: z.uuid().nullable(),
   startedAt: z.coerce.date(),
@@ -120,14 +120,15 @@ const dayRowsSchema = z.array(dayRowSchema).max(500)
  * router refuses the edit (CONFLICT, {@link DAY_CHANGED_REFUSAL}) unless the day still reads exactly so, which makes the
  * sheet's snapshot the day's true state before the edit and lets 「元に戻す」 know the state the edit left.
  */
-export const dayBaselineSchema = z.object({
+const dayBaselineSchema = z.object({
   day: daySchema,
   timeZone: timeZoneSchema,
   rows: dayRowsSchema,
 })
 export type DayBaseline = z.infer<typeof dayBaselineSchema>
 
-// Every correction-sheet edit may name its baseline; the API's own tests edit without one.
+// Every correction-sheet edit of the day's own rows names its baseline; a pick on the carried-in record names its revision
+// instead, and the API's own tests edit without either.
 const withBaseline = { baseline: dayBaselineSchema.optional() }
 
 /** 前の記録に統合 / 次の記録に統合 / 半分で分割: a row and, from the sheet, its day's baseline. */
