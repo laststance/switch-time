@@ -1,8 +1,11 @@
+import { setTimeout as delay } from 'node:timers/promises'
+
 import { addDays, dayBounds, localDay, type DayRow } from '@switch-time/shared'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { expect, test } from 'vitest'
 
 import { db, pool } from '../db/client'
+import { userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
 import { TIMELINE_LOCK_NAMESPACE } from './base'
@@ -477,4 +480,356 @@ test('元に戻す is refused once the account’s time zone has changed since t
     code: 'CONFLICT',
     data: { reason: 'day-changed' },
   })
+})
+
+// Whether `call` settles within two seconds: long enough for a call that never waits, short enough to catch one that does.
+async function settlesWithoutWaiting(call: Promise<unknown>): Promise<boolean> {
+  return Promise.race([call.then(() => true), delay(2_000).then(() => false)])
+}
+
+test('a settings change that leaves the time zone alone does not wait for a switch write in flight', async () => {
+  // Arrange
+  const api = await signedIn('lock-theme@example.com')
+  const running = await api.switches.switchTo({
+    activityId: idOf(await api.activities.list(), '仕事'),
+  })
+  const release = await holdTimelineLock(running.userId)
+
+  // Act
+  const themeChange = api.settings.update({ theme: 'dark' })
+  const landedWhileLocked = await settlesWithoutWaiting(themeChange)
+  await release()
+
+  // Assert
+  expect(landedWhileLocked).toBe(true)
+  await expect(themeChange).resolves.toMatchObject({ theme: 'dark' })
+})
+
+test('one account’s switch write in flight never holds up another account’s tap', async () => {
+  // Arrange
+  const owner = await signedIn('lock-owner@example.com')
+  const other = await signedIn('lock-other@example.com')
+  const running = await owner.switches.switchTo({
+    activityId: idOf(await owner.activities.list(), '仕事'),
+  })
+  const otherList = await other.activities.list()
+  const release = await holdTimelineLock(running.userId)
+
+  // Act
+  const tap = other.switches.switchTo({ activityId: idOf(otherList, '休息') })
+  const landedWhileLocked = await settlesWithoutWaiting(tap)
+  await release()
+
+  // Assert
+  expect(landedWhileLocked).toBe(true)
+  await expect(tap).resolves.toMatchObject({
+    activityId: idOf(otherList, '休息'),
+  })
+})
+
+test('merging into the next record on a list another device has since changed is refused, and nothing is written', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00 as the sheet listed them; then another device moves 娯楽 to 18:15
+  const api = await signedIn('baseline-merge-next@example.com')
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 18) },
+    ],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  const [, rest, fun] = listed.rows
+  if (!rest || !fun) throw new Error('fixture has fewer than three rows')
+  await api.switches.moveStart({ id: fun.id, deltaMinutes: 15 })
+
+  // Act
+  const merge = api.switches.mergeIntoNext({
+    id: rest.id,
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: refused as a changed day; 休息 is still there and 娯楽 keeps the other device's 18:15
+  await expect(merge).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => row.startedAt)).toEqual([
+    at(yesterday, 9),
+    at(yesterday, 12),
+    at(yesterday, 18.25),
+  ])
+})
+
+test('ここで分割 on a list another device has since changed is refused, and no row is added', async () => {
+  // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00; then another device turns 食事 into 家事
+  const api = await signedIn('baseline-cut@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  const [meal] = listed.rows
+  if (!listed.carriedIn || !meal) throw new Error('fixture is incomplete')
+  await api.switches.changeActivity({
+    id: meal.id,
+    activityId: idOf(list, '家事'),
+  })
+
+  // Act
+  const cut = api.switches.splitAt({
+    id: listed.carriedIn.id,
+    at: at(yesterday, 3),
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert
+  await expect(cut).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.activityId,
+    ),
+  ).toEqual([idOf(list, '家事')])
+})
+
+test('a move that would take the day’s last row past its midnight is refused when the sheet names its day', async () => {
+  // Arrange: the day before yesterday ends on 仕事 at 23:50, and yesterday starts on 休息 at 6:00
+  const api = await signedIn('baseline-window-end@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: at(dayBefore, 23 + 50 / 60),
+      },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(yesterday, 6) }],
+  })
+  const listed = await api.switches.listByDay({ day: dayBefore })
+  const [work] = listed.rows
+  if (!work) throw new Error('fixture has no row')
+
+  // Act: +15 min would start 仕事 at 0:05 yesterday
+  const move = api.switches.moveStart({
+    id: work.id,
+    deltaMinutes: 15,
+    baseline: { day: dayBefore, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: refused, 仕事 still starts at 23:50 on its own day
+  await expect(move).rejects.toThrow('no room to move')
+  expect(
+    (await api.switches.listByDay({ day: dayBefore })).rows[0]?.startedAt,
+  ).toEqual(at(dayBefore, 23 + 50 / 60))
+})
+
+test('半分で分割 is refused when the half-way point falls on the next day, so the new row never leaves the sheet’s day', async () => {
+  // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00 (midpoint 1:00 yesterday)
+  const api = await signedIn('baseline-split-midpoint@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(yesterday, 6) }],
+  })
+  const listed = await api.switches.listByDay({ day: dayBefore })
+  const [work] = listed.rows
+  if (!work) throw new Error('fixture has no row')
+
+  // Act
+  const split = api.switches.splitInHalf({
+    id: work.id,
+    baseline: { day: dayBefore, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: refused, and yesterday still holds only 休息
+  await expect(split).rejects.toThrow('midpoint is on another day')
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.activityId,
+    ),
+  ).toEqual([idOf(list, '休息')])
+})
+
+test('ここで分割 at a time before the sheet’s day is refused, so the cut never lands on the earlier day', async () => {
+  // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00
+  const api = await signedIn('baseline-cut-window@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  if (!listed.carriedIn) throw new Error('fixture has no carried-in record')
+
+  // Act: 23:00 is inside the record, but on the day before the sheet's
+  const cut = api.switches.splitAt({
+    id: listed.carriedIn.id,
+    at: at(dayBefore, 23),
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert
+  await expect(cut).rejects.toThrow('no room to split there')
+  expect(
+    (await api.switches.listByDay({ day: dayBefore })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(dayBefore, 22)])
+})
+
+test('元に戻す of a cut on a day with no switch of its own empties the day again and the carried-in record runs through it', async () => {
+  // Arrange: 仕事 from 22:00 the day before is still running; yesterday is cut at 3:00 from its sheet
+  const api = await signedIn('undo-empty-day@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  const [work] = await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  if (!work) throw new Error('fixture has no row')
+  const inserted = await api.switches.splitAt({
+    id: work.id,
+    at: at(yesterday, 3),
+    baseline: { day: yesterday, timeZone: TZ, rows: [] },
+  })
+
+  // Act
+  const written = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: listedRows([inserted]),
+    rows: [],
+  })
+
+  // Assert
+  expect(written).toEqual([])
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows).toEqual([])
+  expect(after.carriedIn?.id).toBe(work.id)
+})
+
+test('a rewritten day with a row outside that day is refused as bad input, and the day stays as it was', async () => {
+  // Arrange: yesterday 仕事 9:00
+  const api = await signedIn('replace-outside@example.com')
+  const list = await api.activities.list()
+  const listed = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+  })
+
+  // Act: the second row starts at 9:00 the day after
+  const replacement = api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: listedRows(listed),
+    rows: [
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 10) },
+      { activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 33) },
+    ],
+  })
+
+  // Assert
+  await expect(replacement).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.activityId,
+    ),
+  ).toEqual([idOf(list, '仕事')])
+})
+
+test('an edit on an account whose settings row is missing still lands: the day check repairs the row first', async () => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00 listed by the sheet; then the settings row goes missing
+  const api = await signedIn('baseline-unseeded@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  const [, rest] = listed.rows
+  if (!rest) throw new Error('fixture has no second row')
+  await db.delete(userSettings).where(eq(userSettings.userId, userId))
+
+  // Act
+  const moved = await api.switches.moveStart({
+    id: rest.id,
+    deltaMinutes: 15,
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert: the default zone (Asia/Tokyo) matched the sheet's
+  expect(moved.startedAt).toEqual(at(yesterday, 12.25))
+  expect((await api.settings.get()).timeZone).toBe(TZ)
+})
+
+test('the last live activity cannot be archived, so the clock always has one to switch to', async () => {
+  // Arrange: no switch yet; every activity but 娯楽 is archived
+  const api = await signedIn('archive-last@example.com')
+  const list = await api.activities.list()
+  for (const name of ['家事', '仕事', '休息', '睡眠', '食事'])
+    await api.activities.archive({ id: idOf(list, name) })
+
+  // Act
+  const archive = api.activities.archive({ id: idOf(list, '娯楽') })
+
+  // Assert
+  await expect(archive).rejects.toMatchObject({ code: 'CONFLICT' })
+  const fun = (await api.activities.list()).find(
+    (row) => row.id === idOf(list, '娯楽'),
+  )
+  expect(fun?.archivedAt).toBeNull()
 })

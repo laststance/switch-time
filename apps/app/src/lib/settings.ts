@@ -26,6 +26,18 @@ export const SETTINGS_DEFAULTS: Pick<
   timeZone: 'Asia/Tokyo',
 }
 
+/**
+ * The routers {@link useUpdateSettings} refetches once the last in-flight update settles: `settings.*` for the row, `stats.*`
+ * because the idle threshold and the unused-day rule change every total, and `switches.*` because a stored-zone change moves
+ * every day's window. `switches` is there even for a theme tap, since the last update of a batch may follow a zone write.
+ * @example SETTINGS_REFETCH_ROUTERS.map((router) => orpc[router].key())
+ */
+export const SETTINGS_REFETCH_ROUTERS = [
+  'settings',
+  'stats',
+  'switches',
+] as const
+
 const MINUTES_PER_HOUR = 60
 /** 「無操作とみなす時間」 choices, the sheet's four buttons (the design's 6/8/10/12 h; the API takes any 15 min … 24 h). */
 export const IDLE_OPTIONS = [6, 8, 10, 12].map((hours) => ({
