@@ -50,3 +50,17 @@ Unless the user says otherwise, a Claude Code or Codex task that changes the rep
 ## Cloud Agent environment
 
 Cloud Agents use the documented Compose backend (`docker compose up --build`: Postgres 18 + the API). systemd is not PID 1, so start launches `dockerd` itself, then Compose. install writes `.env` including a generated `BETTER_AUTH_SECRET`. After start the API is on `:4100`; open the Expo web app with `pnpm --filter app web` (`:4101`). The environment still installs Node `24.20.0` with nvm, while the repository pins `26.10.0` (`.node-version`) and the API image runs Node 26. Until its install step moves to 26 (TODOS.md), run `. "$HOME/.nvm/nvm.sh" && nvm install 26.10.0`, then prepend `$HOME/.nvm/versions/node/v26.10.0/bin` when `node -v` shows 22 (from `/exec-daemon`) or 24.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues on `laststance/switch-time`, through the `gh` CLI; `TODOS.md` stays the list of open work. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
