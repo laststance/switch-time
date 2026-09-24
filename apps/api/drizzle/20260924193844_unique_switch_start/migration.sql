@@ -3,9 +3,9 @@
 -- starts at the later of its own start and 1 ms after the row before it (in start, then insertion order, so the later tap
 -- stays the later switch): `n ms + max(start - k ms)` over the rows up to the n-th. A tie next to a row already 1 ms later
 -- pushes that row on too, instead of landing on it. Forward-only: the original tied instants are not kept.
--- The previous API stays live while the PRE_DEPLOY job runs this, in one transaction: the lock holds its writes (reads go on)
--- from before the spread reads the table until the unique index is built, so no tap or correction lands in between, where
--- the spread would overwrite it or a new tie would fail the index.
+-- The previous API stays live while the PRE_DEPLOY job runs this, in one transaction: the lock holds its writes from before
+-- the spread reads the table until the unique index is built, so no tap or correction lands in between, where the spread
+-- would overwrite it or a new tie would fail the index. Reads go on until DROP INDEX, which holds them too until the commit.
 LOCK TABLE "switches" IN SHARE ROW EXCLUSIVE MODE;--> statement-breakpoint
 WITH "ranked" AS (
   SELECT "id", "user_id", "started_at",
