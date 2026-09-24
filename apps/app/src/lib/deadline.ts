@@ -43,7 +43,8 @@ export async function readWholeAnswer(response: Response): Promise<Response> {
  * @returns
  * - what `request` resolves to, when it settles in time
  * - rejects with {@link RequestTimeoutError} once `ms` passed, and aborts the request
- * - rejects with the request's own error when it fails or the caller aborts first
+ * - rejects with the request's own error when it fails first
+ * - rejects with the caller's abort reason once the caller aborts, and aborts the request, even one that ignores its signal
  * @example await withDeadline(request.signal, REQUEST_TIMEOUT_MS, async (signal) => fetch(request, { signal })) // a Response, or RequestTimeoutError after 30 s
  */
 export async function withDeadline<T>(
@@ -52,22 +53,27 @@ export async function withDeadline<T>(
   request: (signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   const controller = new AbortController()
-  const abort = (): void => controller.abort()
-  // A caller that already gave up never starts the request.
-  if (signal?.aborted) abort()
-  signal?.addEventListener('abort', abort, { once: true })
   let timer: ReturnType<typeof setTimeout> | undefined
-  // The deadline rejects on its own, so a request that ignores the abort is still let go of.
-  const deadline = new Promise<never>((_resolve, reject) => {
+  let cancel = (): void => undefined
+  // The deadline and the caller's cancelling reject on their own, so a request that ignores the abort is still let go of.
+  const stopped = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
       reject(new RequestTimeoutError())
-      abort()
+      controller.abort()
     }, ms)
+    cancel = (): void => {
+      reject(signal?.reason)
+      controller.abort()
+    }
   })
+  // A caller that already gave up hands the request an aborted signal, and the call rejects with the caller's reason.
+  if (signal?.aborted) cancel()
+  signal?.addEventListener('abort', cancel, { once: true })
   try {
-    return await Promise.race([request(controller.signal), deadline])
+    // `stopped` first: when both have already settled (a caller that already gave up), the race takes the earlier entry.
+    return await Promise.race([stopped, request(controller.signal)])
   } finally {
     clearTimeout(timer)
-    signal?.removeEventListener('abort', abort)
+    signal?.removeEventListener('abort', cancel)
   }
 }

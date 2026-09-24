@@ -71,7 +71,7 @@ test('a request that ignores the abort (a body that never finishes) still fails 
   expect(await settled).toBeInstanceOf(RequestTimeoutError)
 })
 
-test('the caller cancelling aborts the request with the requestâ€™s own error, not a timeout', async () => {
+test('the caller cancelling aborts the request and fails with the cancellation, not a timeout', async () => {
   // Arrange
   const caller = new AbortController()
   const settled = withDeadline(caller.signal, 30_000, hanging(true)).catch(
@@ -118,20 +118,38 @@ test('a caller cancelling after the request answered does not abort the requestâ
   expect(seenSignal?.aborted).toBe(false)
 })
 
-test('a caller that already gave up hands the request an aborted signal', async () => {
+test('a caller that already gave up hands the request an aborted signal and gets the cancellation, not the answer', async () => {
   // Arrange
   const caller = new AbortController()
   caller.abort()
   let startedAborted: boolean | undefined
 
   // Act
-  await withDeadline(caller.signal, 30_000, async (signal) => {
+  const error = await withDeadline(caller.signal, 30_000, async (signal) => {
     startedAborted = signal.aborted
     return 'rows'
-  })
+  }).catch((reason: unknown) => reason)
 
   // Assert
   expect(startedAborted).toBe(true)
+  expect(error).toMatchObject({ name: 'AbortError' })
+})
+
+test('a caller cancelling a request that ignores the abort still settles at once, without waiting for the deadline', async () => {
+  // Arrange
+  const caller = new AbortController()
+  const settled = withDeadline(caller.signal, 30_000, hanging(false)).catch(
+    (error: unknown) => error,
+  )
+
+  // Act
+  caller.abort()
+
+  // Assert
+  const error = await settled
+  expect(error).not.toBeInstanceOf(RequestTimeoutError)
+  expect(error).toMatchObject({ name: 'AbortError' })
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 test('a Japanese answer reads back intact on native, whose Response is the whatwg-fetch polyfill', async () => {
