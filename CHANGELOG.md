@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.6.0.0] - 2026-09-25
+
+### Added
+
+- The correction sheet says why an edit or 「元に戻す」 did nothing, on a
+  line between the rows and 元に戻す: for example 「これ以上動かせません」,
+  「統合できる記録がありません」, 「ここでは分割できません」, or
+  「別の端末で記録が変わったため、最新の状態を表示しました」 when another
+  device changed the day. The line stays until the next press, selection
+  or undo.
+- While a write is still landing after 400 ms, the same line says
+  「反映しています…」, and while the web page is offline it says
+  「オフラインです。接続が戻ると反映されます」. A write that lands at once
+  shows nothing, so the footer does not jump.
+
+### Fixed
+
+- A request that never answers no longer holds the correction sheet until
+  the page is reloaded. Every call now gives up after 30 s, and the sheet
+  says 「応答がありませんでした。反映されたか一覧で確かめてください」 and
+  reads the day again. The edit may still have landed, so an older
+  「元に戻す」 turns off after a timed-out edit, while a timed-out
+  「元に戻す」 stays armed and is refused if replayed once the day changed.
+- A refused 「元に戻す」 (another device changed the day, or its activity
+  was archived meanwhile) now says why as it turns off, instead of only
+  going grey.
+
+### Changed
+
+- Every refusal of a timeline write from the API now carries a reason in
+  its error `data` (day changed, record changed, archived, no room, no
+  record to merge into, next record on a later day, cannot split, busy),
+  shared by the API and the app, so the app no longer guesses from the
+  error's text.
+
 ## [0.5.0.0] - 2026-09-25
 
 ### Fixed
