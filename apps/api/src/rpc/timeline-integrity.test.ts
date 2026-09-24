@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import {
   addDays,
   DAY_ROWS_MAX,
@@ -5,9 +7,10 @@ import {
   localDay,
   type DayRow,
 } from '@switch-time/shared'
+import type { PoolClient } from 'pg'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import { db } from '../db/client'
+import { db, pool } from '../db/client'
 import { switches } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
@@ -469,7 +472,299 @@ test('the database refuses two switches of one account that start at the same in
     { userId, activityId: idOf(list, '休息'), startedAt: instant },
   ])
 
-  // Assert
-  await expect(tied).rejects.toThrow()
+  // Assert: the unique index, not another constraint, refuses the pair
+  await expect(tied).rejects.toMatchObject({
+    cause: { code: '23505', constraint: 'switches_user_started_idx' },
+  })
   expect((await api.switches.listByDay({ day: yesterday })).rows).toEqual([])
+})
+
+test('an edit sent with a rowless baseline on the first switch after the day is refused as bad input, since the day’s 元に戻す cannot reach it', async () => {
+  // Arrange: 家事 from today's 0:00 ends the busy day's last row
+  const { api, list, carriedOutId } = await busyDay(
+    'rowless-carried-out@example.com',
+    DAY_ROWS_MAX + 1,
+  )
+
+  // Act
+  const pick = api.switches.changeActivity({
+    id: carriedOutId,
+    activityId: idOf(list, '睡眠'),
+    baseline: { day: yesterday, timeZone: TZ, carriedIn: null, carriedOutId },
+  })
+
+  // Assert
+  await expect(pick).rejects.toThrow("row is not one of the day's own rows")
+  expect(
+    (await api.switches.listByDay({ day: today })).rows[0]?.activityId,
+  ).toBe(idOf(list, '家事'))
+})
+
+test('元に戻す of the day’s first row lands after another device changed the carried-in record, and that change survives', async () => {
+  // Arrange: the sheet moves 食事 back to 6:45; another device then picks 睡眠 for 仕事, which runs into the day
+  const { api, list, carriedIn, meal, baseline } = await carriedInDay(
+    'carried-in-survives-undo@example.com',
+  )
+  const moved = await api.switches.moveStart({
+    id: meal.id,
+    deltaMinutes: -15,
+    baseline,
+  })
+  const listedAfterMove = await api.switches.listByDay({ day: yesterday })
+  if (!listedAfterMove.carriedIn) throw new Error('fixture lost its record')
+  await api.switches.changeActivity({
+    id: carriedIn.id,
+    activityId: idOf(list, '睡眠'),
+    revision: listedAfterMove.carriedIn.revision,
+  })
+
+  // Act
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: listedRows([moved]),
+    carriedOutId: null,
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+  })
+
+  // Assert: 食事 starts at 7:00 again, and the carried-in record keeps 睡眠 and now ends there
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [idOf(list, '食事'), at(yesterday, 7)],
+  ])
+  expect(after.carriedIn).toMatchObject({
+    id: carriedIn.id,
+    activityId: idOf(list, '睡眠'),
+  })
+})
+
+test('an edit is refused once another device emptied the day before, so the record the sheet listed running into the day is gone', async () => {
+  // Arrange: the sheet lists 仕事 from 22:00 the day before running into yesterday; another device then empties the day before
+  const { api, carriedIn, meal, baseline } = await carriedInDay(
+    'carried-in-gone@example.com',
+  )
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: listedRows([carriedIn]),
+    rows: [],
+  })
+
+  // Act: -15 min on 食事, which now has nothing before it
+  const move = api.switches.moveStart({
+    id: meal.id,
+    deltaMinutes: -15,
+    baseline,
+  })
+
+  // Assert: refused as day-changed, and 食事 still starts at 7:00
+  await expect(move).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows[0]?.startedAt,
+  ).toEqual(at(yesterday, 7))
+})
+
+test('an edit is refused once another device added a later record to the day before, so a different record now runs into the day', async () => {
+  // Arrange: the sheet lists 仕事 from 22:00 the day before; another device adds 休息 at 23:00 on the day before's sheet
+  const { api, list, carriedIn, meal, baseline } = await carriedInDay(
+    'carried-in-replaced@example.com',
+  )
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: listedRows([carriedIn]),
+    carriedOutId: meal.id,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) },
+      { activityId: idOf(list, '休息'), startedAt: at(dayBefore, 23) },
+    ],
+  })
+
+  // Act
+  const move = api.switches.moveStart({
+    id: meal.id,
+    deltaMinutes: -15,
+    baseline,
+  })
+
+  // Assert: refused as day-changed, and 食事 still starts at 7:00
+  await expect(move).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows[0]?.startedAt,
+  ).toEqual(at(yesterday, 7))
+})
+
+test('元に戻す with nothing after the day still writes back an earlier row on an archived activity, as long as the row left running is live', async () => {
+  // Arrange: no switches yet, so 休息 can be archived
+  const api = await signedIn('replace-archived-earlier@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const work = idOf(list, '仕事')
+  await api.activities.archive({ id: rest })
+
+  // Act: 休息 at 9:00 is past time; 仕事 at 12:00 becomes the running state
+  const written = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: rest, startedAt: at(yesterday, 9) },
+      { activityId: work, startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert
+  expect(written.map((row) => [row.activityId, row.startedAt])).toEqual([
+    [rest, at(yesterday, 9)],
+    [work, at(yesterday, 12)],
+  ])
+  expect(await api.switches.current()).toMatchObject({
+    activityId: work,
+    startedAt: at(yesterday, 12),
+  })
+})
+
+test('元に戻す that empties the account’s only day leaves no running state, since there is no record before it to take over', async () => {
+  // Arrange: yesterday's 仕事 at 9:00 is the account's only switch
+  const api = await signedIn('replace-empty-only-day@example.com')
+  const list = await api.activities.list()
+  const seeded = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+  })
+
+  // Act
+  const written = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: listedRows(seeded),
+    carriedOutId: null,
+    rows: [],
+  })
+
+  // Assert
+  expect(written).toEqual([])
+  expect(await api.switches.current()).toBeNull()
+})
+
+// The unique-start migration's first statement: the data step that spreads tied starts before the unique index is built.
+const spreadTiesStatement =
+  readFileSync(
+    new URL(
+      '../../drizzle/20260924193844_unique_switch_start/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  ).split('--> statement-breakpoint')[0] ?? ''
+
+/**
+ * Runs `work` on one pool connection inside a transaction that holds a temporary `switches` without the unique index,
+ * which shadows the real table (Postgres searches `pg_temp` first), then rolls everything back. Lets a test feed the
+ * migration's data step the ties the real table now refuses.
+ */
+async function withShadowSwitches(
+  work: (connection: PoolClient) => Promise<void>,
+): Promise<void> {
+  const connection = await pool.connect()
+  try {
+    await connection.query('begin')
+    await connection.query(
+      'create temp table switches (like public.switches including defaults) on commit drop',
+    )
+    await work(connection)
+  } finally {
+    // Nothing the migration step did may outlive the test: the temporary table goes with the rollback
+    await connection.query('rollback')
+    connection.release()
+  }
+}
+
+test('the unique-start migration spreads one account’s tied switches 1 ms apart in the order they were recorded, and leaves other accounts and untied rows alone', async () => {
+  await withShadowSwitches(async (connection) => {
+    // Arrange: three of user-a's switches tie at 3:00, recorded in the order …3, …1, …2 (not their id order)
+    await connection.query(
+      `insert into switches (id, user_id, started_at, created_at) values
+         ('00000000-0000-4000-8000-000000000001', 'user-a', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:02Z'),
+         ('00000000-0000-4000-8000-000000000002', 'user-a', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:03Z'),
+         ('00000000-0000-4000-8000-000000000003', 'user-a', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:01Z'),
+         ('00000000-0000-4000-8000-000000000004', 'user-a', '2026-09-24T04:00:00.000Z', '2026-09-24T04:00:00Z'),
+         ('00000000-0000-4000-8000-000000000005', 'user-b', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:00Z')`,
+    )
+
+    // Act
+    await connection.query(spreadTiesStatement)
+
+    // Assert: the first recorded keeps 3:00, the later taps stay later
+    const { rows } = await connection.query<{ id: string; started_at: Date }>(
+      'select id, started_at from switches order by id',
+    )
+    expect(rows.map((row) => [row.id, row.started_at])).toEqual([
+      [
+        '00000000-0000-4000-8000-000000000001',
+        new Date('2026-09-24T03:00:00.001Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000002',
+        new Date('2026-09-24T03:00:00.002Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000003',
+        new Date('2026-09-24T03:00:00.000Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000004',
+        new Date('2026-09-24T04:00:00.000Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000005',
+        new Date('2026-09-24T03:00:00.000Z'),
+      ],
+    ])
+  })
+})
+
+test('the unique-start migration pushes on a switch 1 ms after a tie instead of landing on it, so the unique index can still be built', async () => {
+  await withShadowSwitches(async (connection) => {
+    // Arrange: two switches tie at 3:00 and a third already starts at 3:00:00.001
+    await connection.query(
+      `insert into switches (id, user_id, started_at, created_at) values
+         ('00000000-0000-4000-8000-000000000001', 'user-a', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:01Z'),
+         ('00000000-0000-4000-8000-000000000002', 'user-a', '2026-09-24T03:00:00.000Z', '2026-09-24T03:00:02Z'),
+         ('00000000-0000-4000-8000-000000000003', 'user-a', '2026-09-24T03:00:00.001Z', '2026-09-24T03:00:03Z')`,
+    )
+
+    // Act
+    await connection.query(spreadTiesStatement)
+    const buildIndex = connection.query(
+      'create unique index on switches (user_id, started_at desc)',
+    )
+
+    // Assert
+    await expect(buildIndex).resolves.toBeDefined()
+    const { rows } = await connection.query<{ id: string; started_at: Date }>(
+      'select id, started_at from switches order by id',
+    )
+    expect(rows.map((row) => [row.id, row.started_at])).toEqual([
+      [
+        '00000000-0000-4000-8000-000000000001',
+        new Date('2026-09-24T03:00:00.000Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000002',
+        new Date('2026-09-24T03:00:00.001Z'),
+      ],
+      [
+        '00000000-0000-4000-8000-000000000003',
+        new Date('2026-09-24T03:00:00.002Z'),
+      ],
+    ])
+  })
 })
