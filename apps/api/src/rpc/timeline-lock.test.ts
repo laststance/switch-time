@@ -1,6 +1,12 @@
 import { setTimeout as delay } from 'node:timers/promises'
 
-import { addDays, dayBounds, localDay, type DayRow } from '@switch-time/shared'
+import {
+  addDays,
+  dayBounds,
+  localDay,
+  type DayBaseline,
+  type DayRow,
+} from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 import { expect, onTestFinished, test } from 'vitest'
 
@@ -842,6 +848,83 @@ test('merging the carried-in record from a day’s sheet is refused, because tha
     ),
   ).toEqual([at(yesterday, 7)])
 })
+
+type SignedInApi = Awaited<ReturnType<typeof signedIn>>
+type CarriedInEdit = (
+  api: SignedInApi,
+  id: string,
+  baseline: DayBaseline,
+  list: { id: string; name: string }[],
+) => Promise<unknown>
+
+const carriedInEdits: [string, CarriedInEdit][] = [
+  [
+    'a 15-minute move',
+    async (api, id, baseline) =>
+      api.switches.moveStart({ id, deltaMinutes: 15, baseline }),
+  ],
+  [
+    'a pick sent with the day instead of the record’s revision',
+    async (api, id, baseline, list) =>
+      api.switches.changeActivity({
+        id,
+        activityId: idOf(list, '睡眠'),
+        baseline,
+      }),
+  ],
+  [
+    '前の記録に統合',
+    async (api, id, baseline) =>
+      api.switches.mergeIntoPrevious({ id, baseline }),
+  ],
+  [
+    '半分で分割',
+    async (api, id, baseline) => api.switches.splitInHalf({ id, baseline }),
+  ],
+]
+
+test.each(carriedInEdits)(
+  '%s on the carried-in record from a day’s sheet is refused, so the record keeps its earlier start and activity',
+  async (_name, edit) => {
+    // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00
+    const api = await signedIn('baseline-carried-in-edit@example.com')
+    const list = await api.activities.list()
+    const dayBefore = addDays(yesterday, -1)
+    await api.switches.replaceDay({
+      day: dayBefore,
+      timeZone: TZ,
+      expected: [],
+      rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+    })
+    await api.switches.replaceDay({
+      day: yesterday,
+      timeZone: TZ,
+      expected: [],
+      rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 7) }],
+    })
+    const listed = await api.switches.listByDay({ day: yesterday })
+    if (!listed.carriedIn) throw new Error('fixture has no carried-in record')
+
+    // Act
+    const attempt = edit(
+      api,
+      listed.carriedIn.id,
+      { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+      list,
+    )
+
+    // Assert: refused as bad input; 仕事 still starts at 22:00 the day before, and 食事 at 7:00
+    await expect(attempt).rejects.toThrow(
+      "row is not one of the day's own rows",
+    )
+    const after = await api.switches.listByDay({ day: yesterday })
+    expect([after.carriedIn?.activityId, after.carriedIn?.startedAt]).toEqual([
+      idOf(list, '仕事'),
+      at(dayBefore, 22),
+    ])
+    expect(after.rows.map((row) => row.startedAt)).toEqual([at(yesterday, 7)])
+  },
+)
 
 test('ここで分割 at a time before the sheet’s day is refused, so the cut never lands on the earlier day', async () => {
   // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00
