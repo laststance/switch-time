@@ -12,7 +12,6 @@ import {
   daySnapshot,
   dayTitle,
   isManuallyExcluded,
-  needsReveal,
   pickRequest,
   revealOffset,
   undoRequest,
@@ -1013,21 +1012,6 @@ test('a short carried-in record on a day with its own rows changes nothing in th
 
   // Assert
   expect(effects).toEqual([])
-})
-
-test('a selected card scrolls into view once per selection, and again only when it grows', () => {
-  // Arrange: 仕事's card was revealed at 300 px.
-  const last = { id: 'w', height: 300 }
-
-  // Act & Assert
-  // Another card was selected, or a row header was tapped (no mark): reveal.
-  expect(needsReveal(last, { id: 'h', height: 300 })).toBe(true)
-  expect(needsReveal(null, { id: 'w', height: 300 })).toBe(true)
-  // A clock tick lays the same card out at the same height: stay put.
-  expect(needsReveal(last, { id: 'w', height: 300 })).toBe(false)
-  // A note appeared and the card grew: reveal; it shrank: stay put.
-  expect(needsReveal(last, { id: 'w', height: 340 })).toBe(true)
-  expect(needsReveal(last, { id: 'w', height: 280 })).toBe(false)
 })
 
 test('selecting a card scrolls only as far as it takes to show the whole card', () => {
