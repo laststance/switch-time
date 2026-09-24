@@ -39,7 +39,7 @@ const activities = [
   {
     id: 'old',
     name: '旧仕事',
-    color: '#8A8F98',
+    color: '#3B7BD9',
     iconKey: 'work',
     archivedAt: new Date('2026-09-01T00:00:00Z'),
   },
