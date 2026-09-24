@@ -38,6 +38,35 @@ export const SETTINGS_REFETCH_ROUTERS = [
   'switches',
 ] as const
 
+/** What {@link useTimeZoneSync} does with the device's zone: write it to the account, only remember it, or nothing. */
+export type ZoneSyncAction = 'write' | 'record' | 'none'
+
+/**
+ * Whether this device writes its zone into the account's `settings.timeZone`. It writes only when its own zone differs from
+ * the one it last synced for the account (a fresh install, or the device moved), so two devices in different zones no longer
+ * overwrite each other on every focus. When the account already holds the device's zone, the device only remembers it,
+ * and only once no settings write is in flight: the cached value may be an optimistic one that a failed write rolls back.
+ * @param zones.stored - The account's zone as `settings.get` last answered (or the optimistic value of a write in flight).
+ * @param zones.device - The device's IANA zone.
+ * @param zones.lastSynced - The zone this device last synced for the account, null when it never did.
+ * @param zones.settled - The settings row has loaded, no settings write is in flight, and the last zone write did not fail.
+ * @returns
+ * - 'write': the device's zone differs from both the account's and the one it last synced
+ * - 'record': the account already holds the device's zone, which the device has not remembered yet
+ * - 'none': otherwise, or while not settled
+ * @example zoneSyncAction({ stored: 'UTC', device: 'Asia/Tokyo', lastSynced: 'Asia/Tokyo', settled: true }) // 'none': another device set UTC
+ */
+export function zoneSyncAction(zones: {
+  stored: string
+  device: string
+  lastSynced: string | null
+  settled: boolean
+}): ZoneSyncAction {
+  const { stored, device, lastSynced, settled } = zones
+  if (!settled || lastSynced === device) return 'none'
+  return stored === device ? 'record' : 'write'
+}
+
 const MINUTES_PER_HOUR = 60
 /** 「無操作とみなす時間」 choices, the sheet's four buttons (the design's 6/8/10/12 h; the API takes any 15 min … 24 h). */
 export const IDLE_OPTIONS = [6, 8, 10, 12].map((hours) => ({

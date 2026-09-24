@@ -58,8 +58,9 @@ export async function latestSwitch(
 
 /**
  * Rejects an id that is not the user's (null = detox, nothing to check) in one query however many ids arrive; returns one
- * archivedAt per distinct id, unordered. It is replaceDay's only activity check: 「元に戻す」 must write back rows that name an
- * archived activity, so the user's own client can also write past time onto one, a trade-off the owner accepted.
+ * archivedAt per distinct id, unordered. It is replaceDay's check on the rows it writes back: 「元に戻す」 must restore past
+ * rows that name an archived activity, so the user's own client can also write past time onto one, a trade-off the owner
+ * accepted. Only the row that becomes the current state goes through {@link assertLiveActivities}.
  * @example await ownActivities(tx, userId, input.rows.map((row) => row.activityId)) // NOT_FOUND if any id is a stranger's
  */
 async function ownActivities(
@@ -80,8 +81,9 @@ async function ownActivities(
 
 /**
  * Rejects an archived activity (the user can no longer pick it) or one that is not the user's, for the writes that pick an
- * activity: switchTo and changeActivity. The splits copy their row's own activity and the merges only move time, so none
- * calls it; replaceDay stops at {@link ownActivities}. Read under the user's lock, so an archive cannot land in between.
+ * activity (switchTo and changeActivity) and those that make an existing record the current state: replaceDay for the row
+ * its day leaves latest, mergeIntoPrevious when it merges the running record. The splits copy their row's own activity and
+ * mergeIntoNext keeps the latest record, so neither calls it. Read under the user's lock, so an archive cannot land in between.
  * @example await assertLiveActivities(tx, userId, [input.activityId])
  */
 async function assertLiveActivities(
@@ -283,27 +285,76 @@ function sameRows(actual: readonly DayRow[], listed: readonly DayRow[]) {
 }
 
 /**
- * Whether the day's last row still runs into the switch the sheet saw after the day ({@link switchesBetween}'s `carriedOut`).
- * A write from the next day's sheet changes it without touching the day's rows: without this, the day's 「元に戻す」 would
- * rewrite a last row whose span the next day has since taken over, and the rewritten activity would run through that day.
- * @param expectedId - The id the sheet saw; undefined skips the check (the API's own tests).
- * @returns true when there is nothing to compare or the id still matches
- * @example await sameCarriedOut(tx, userId, window, input.carriedOutId) // false once the next day's first switch was merged away
+ * The record carried into the day, read under the user's lock: the latest switch before the day, whose span the day's first
+ * row ends. Read by {@link sameCarriedIn}, and by replaceDay, which moves that end and may make the record current again.
+ * @returns The record, or null when the account has no switch before the day
+ * @example const carriedIn = await carriedInto(tx, userId, window) // { id, activityId, revision } of yesterday's last switch
  */
-async function sameCarriedOut(
-  tx: LockedTx,
-  userId: string,
-  window: DayWindow,
-  expectedId: string | null | undefined,
-): Promise<boolean> {
-  if (expectedId === undefined) return true
+async function carriedInto(tx: LockedTx, userId: string, window: DayWindow) {
+  const [carriedIn] = await tx
+    .select({
+      id: switches.id,
+      activityId: switches.activityId,
+      revision: switches.revision,
+    })
+    .from(switches)
+    .where(and(own(userId), lt(switches.startedAt, new Date(window.start))))
+    .orderBy(desc(switches.startedAt))
+    .limit(1)
+  return carriedIn ?? null
+}
+
+/**
+ * The first switch after the day, read under the user's lock: where the day's last row ends. Read for {@link sameCarriedOut} in {@link checkBaseline},
+ * and by replaceDay, which leaves the day's last row the current state when there is none.
+ * @returns The switch's id, or null when nothing follows the day yet
+ * @example const carriedOut = await carriedOutOf(tx, userId, window) // { id } of tomorrow's first switch
+ */
+async function carriedOutOf(tx: LockedTx, userId: string, window: DayWindow) {
   const [carriedOut] = await tx
     .select({ id: switches.id })
     .from(switches)
     .where(and(own(userId), gte(switches.startedAt, new Date(window.end))))
     .orderBy(asc(switches.startedAt))
     .limit(1)
-  return (carriedOut?.id ?? null) === expectedId
+  return carriedOut ?? null
+}
+
+/**
+ * Whether the day's last row still runs into the switch the sheet saw after the day ({@link switchesBetween}'s `carriedOut`).
+ * A write from the next day's sheet changes it without touching the day's rows: without this, the day's 「元に戻す」 would
+ * rewrite a last row whose span the next day has since taken over, and the rewritten activity would run through that day.
+ * Called by {@link checkBaseline} and replaceDay with {@link carriedOutOf}'s read under the lock.
+ * @param carriedOut - The first switch after the day now, null when nothing follows it.
+ * @param expectedId - The id the sheet saw; undefined skips the check (the API's own tests).
+ * @returns true when there is nothing to compare or the id still matches
+ * @example sameCarriedOut(await carriedOutOf(tx, userId, window), input.carriedOutId) // false once the next day's first switch was merged away
+ */
+function sameCarriedOut(
+  carriedOut: { id: string } | null,
+  expectedId: string | null | undefined,
+): boolean {
+  return expectedId === undefined || (carriedOut?.id ?? null) === expectedId
+}
+
+/**
+ * Whether the record carried into the day is still the one the sheet listed, at the same `revision`. A write on the earlier
+ * day's sheet (a pick, a merge that leaves an earlier row in its place) changes it without touching the day's rows, and
+ * 前の記録に統合 on the day's first row would then hand that row's time to an activity the sheet never showed.
+ * @param expected - The record the sheet listed (null: none); undefined skips the check (the API's own tests).
+ * @returns true when there is nothing to compare, or the id and revision still match
+ * @example await sameCarriedIn(tx, userId, window, baseline.carriedIn) // false once another device picked yesterday's last record
+ */
+async function sameCarriedIn(
+  tx: LockedTx,
+  userId: string,
+  window: DayWindow,
+  expected: DayBaseline['carriedIn'],
+): Promise<boolean> {
+  if (expected === undefined) return true
+  const actual = await carriedInto(tx, userId, window)
+  if (actual === null || expected === null) return actual === expected
+  return actual.id === expected.id && actual.revision === expected.revision
 }
 
 // The refusal for a day that no longer reads as the sheet saw it; the data names the reason for the sheet.
@@ -315,8 +366,9 @@ const dayChanged = () =>
 
 /**
  * Checks, under the user's lock, that the day an edit was made on still reads as the sheet listed it: the stored zone is
- * the sheet's and the day's rows are exactly the baseline's. That makes the sheet's snapshot the day's real state before the
- * edit, and the rows the edit leaves follow from it and the row the edit returns.
+ * the sheet's, the day's rows are exactly the baseline's, and the records on either side of the day are the ones it saw.
+ * That makes the sheet's snapshot the day's real state before the edit, and the rows the edit leaves follow from it and the
+ * row the edit returns. A baseline without rows (a day busier than `DAY_ROWS_MAX`) skips only the row comparison.
  * @returns the day's window, or null when the call named no baseline: a pick on the carried-in record (guarded by its
  *   `revision` instead, since that record reaches another day) and the API's own tests
  * @example const window = await checkBaseline(tx, userId, input.baseline) // CONFLICT day-changed after another device's tap
@@ -330,17 +382,23 @@ async function checkBaseline(
   const { timeZone } = await getSettings(userId, tx)
   if (timeZone !== baseline.timeZone) throw dayChanged()
   const window = dayBounds(baseline.day, timeZone)
-  if (!sameRows(await dayRows(tx, userId, window), baseline.rows))
+  if (
+    baseline.rows &&
+    !sameRows(await dayRows(tx, userId, window), baseline.rows)
+  )
     throw dayChanged()
-  if (!(await sameCarriedOut(tx, userId, window, baseline.carriedOutId)))
+  if (!(await sameCarriedIn(tx, userId, window, baseline.carriedIn)))
     throw dayChanged()
+  const carriedOut = await carriedOutOf(tx, userId, window)
+  if (!sameCarriedOut(carriedOut, baseline.carriedOutId)) throw dayChanged()
   return window
 }
 
 /**
  * {@link checkBaseline} for an edit of one of the day's own rows (every edit but 「ここで分割」, which cuts the carried-in
- * record): the edited row must be one of the baseline's rows, since 「元に戻す」 rewrites only those. An edit of the
- * carried-in record would change time before the day, which the day's undo could never put back.
+ * record): the edited row must be one of the baseline's rows (or, when the baseline lists none, start inside the day), since
+ * 「元に戻す」 rewrites only those. An edit of the carried-in record would change time before the day, which the day's undo
+ * could never put back.
  * @returns the day's window, or null when the call named no baseline
  * @example const window = await checkOwnRowBaseline(tx, userId, input.baseline, input.id) // BAD_REQUEST for the carried-in id
  */
@@ -351,7 +409,15 @@ async function checkOwnRowBaseline(
   id: string,
 ): Promise<DayWindow | null> {
   const window = await checkBaseline(tx, userId, baseline)
-  if (baseline && !baseline.rows.some((row) => row.id === id))
+  if (!baseline || !window) return window
+  // A baseline without rows (a busy day) names no rows to look in: the row's own start must fall inside the day.
+  const isOwnRow = baseline.rows
+    ? baseline.rows.some((row) => row.id === id)
+    : !outsideWindow(
+        window,
+        (await ownSwitch(userId, id, tx)).startedAt.getTime(),
+      )
+  if (!isOwnRow)
     throw new ORPCError('BAD_REQUEST', {
       message: "row is not one of the day's own rows",
     })
@@ -362,6 +428,50 @@ async function checkOwnRowBaseline(
 async function rowDayEnd(tx: LockedTx, userId: string, startedAt: Date) {
   const { timeZone } = await getSettings(userId, tx)
   return dayBounds(localDay(startedAt, timeZone), timeZone).end
+}
+
+/**
+ * Where a tap's new switch starts: now, or 1 ms after the running record when two devices' taps land in the same millisecond
+ * (or a clock step put the running record ahead of now). The unique `(user_id, started_at)` index refuses a tie, and every
+ * read of the timeline relies on that order. Called by switchTo under the user's lock, after reading the running record.
+ * @param current - The running record, null before the very first tap.
+ * @param now - The server's clock in epoch ms.
+ * @returns The new switch's start.
+ * @example nextSwitchStart({ startedAt: new Date(1000), … }, 1000) // new Date(1001)
+ */
+function nextSwitchStart(
+  current: Pick<SwitchRow, 'startedAt'> | null,
+  now: number,
+): Date {
+  if (!current) return new Date(now)
+  return new Date(Math.max(now, current.startedAt.getTime() + 1))
+}
+
+/**
+ * Refuses 「元に戻す」 rows that fall outside the day the client meant, lie in the future, or are not strictly ordered, before
+ * replaceDay takes the lock. The unique `(user_id, started_at)` index would refuse a tie as a server error; this says it is
+ * bad input instead.
+ * @param rows - The rows replaceDay would write back.
+ * @param window - The day's [start, end) in the zone the client sent.
+ * @example assertRowsFitDay([{ startedAt: tomorrowMidnight, … }], window) // throws BAD_REQUEST
+ */
+function assertRowsFitDay(
+  rows: Pick<DayRow, 'startedAt'>[],
+  window: DayWindow,
+): void {
+  const latest = Math.min(window.end, Date.now())
+  const startedAt = rows.map((row) => row.startedAt.getTime())
+  if (startedAt.some((time) => time < window.start || time >= latest))
+    throw new ORPCError('BAD_REQUEST', {
+      message: 'rows must fall inside the day and not in the future',
+    })
+  if (
+    startedAt.some((time, index) => time <= (startedAt[index - 1] ?? -Infinity))
+  )
+    throw new ORPCError('BAD_REQUEST', {
+      message:
+        'rows must be ordered by startedAt, each one later than the last',
+    })
 }
 
 // A new start must stay inside the baseline's day, where 「元に戻す」 can reach it; no baseline, no day to keep to.
@@ -389,7 +499,7 @@ export const switchesRouter = {
             .values({
               userId,
               activityId: input.activityId,
-              startedAt: new Date(),
+              startedAt: nextSwitchStart(current, Date.now()),
             })
             .returning(),
         )
@@ -456,10 +566,12 @@ export const switchesRouter = {
       const userId = context.user.id
       return withUserLock(userId, async (tx) => {
         await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
-        const { row, prev } = await withNeighbours(tx, userId, input.id)
+        const { row, prev, next } = await withNeighbours(tx, userId, input.id)
         // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
         if (!prev)
           throw new ORPCError('CONFLICT', { message: 'no previous state' })
+        // Merging the running record makes the previous one the current state, which an archived activity can never be.
+        if (!next) await assertLiveActivities(tx, userId, [prev.activityId])
         return mergeInto(tx, row.id, prev.id)
       })
     }),
@@ -538,36 +650,16 @@ export const switchesRouter = {
     }),
 
   // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction, only while the day still
-  // holds exactly the rows the edit left (`expected`) under the same stored zone. Rows on an archived activity are accepted:
-  // refusing them made every undo fail on a day that holds one, and lost a merged-away row for good.
+  // holds exactly the rows the edit left (`expected`) under the same stored zone. Past rows on an archived activity are
+  // accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good. The row that
+  // becomes the current state is not: an archived activity never runs.
   replaceDay: authed
     .input(replaceDayInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       // The window the client meant; the lock below refuses the call when the stored zone is no longer this one.
       const window = dayBounds(input.day, input.timeZone)
-      const latest = Math.min(window.end, Date.now())
-      if (
-        input.rows.some(
-          (row) =>
-            row.startedAt.getTime() < window.start ||
-            row.startedAt.getTime() >= latest,
-        )
-      )
-        throw new ORPCError('BAD_REQUEST', {
-          message: 'rows must fall inside the day and not in the future',
-        })
-      // Ties would make the day's order (and therefore its totals) depend on Postgres' unspecified tie-break.
-      const startedAt = input.rows.map((row) => row.startedAt.getTime())
-      if (
-        startedAt.some(
-          (time, index) => time <= (startedAt[index - 1] ?? -Infinity),
-        )
-      )
-        throw new ORPCError('BAD_REQUEST', {
-          message:
-            'rows must be ordered by startedAt, each one later than the last',
-        })
+      assertRowsFitDay(input.rows, window)
       return withUserLock(userId, async (tx) => {
         const { timeZone } = await getSettings(userId, tx)
         if (timeZone !== input.timeZone) throw dayChanged()
@@ -579,17 +671,15 @@ export const switchesRouter = {
         // Under the lock no other write can land between this read and the delete below.
         if (!sameRows(await dayRows(tx, userId, window), input.expected))
           throw dayChanged()
-        if (!(await sameCarriedOut(tx, userId, window, input.carriedOutId)))
-          throw dayChanged()
-        // The record carried into the day ends at the day's first row, which this write may move.
-        const [carriedIn] = await tx
-          .select({ id: switches.id })
-          .from(switches)
-          .where(
-            and(own(userId), lt(switches.startedAt, new Date(window.start))),
-          )
-          .orderBy(desc(switches.startedAt))
-          .limit(1)
+        const carriedOut = await carriedOutOf(tx, userId, window)
+        if (!sameCarriedOut(carriedOut, input.carriedOutId)) throw dayChanged()
+        // The carried-in record is not compared: this rewrites the day's own rows only, and a change another device made to
+        // that record (its activity) survives it. The record ends at the day's first row, which this write may move.
+        const carriedIn = await carriedInto(tx, userId, window)
+        // With nothing after the day, the day's last row (or, once emptied, the carried-in record) becomes the current
+        // state, which an archived activity can never be; earlier rows of one are written back as they were.
+        const latest = carriedOut ? null : (input.rows.at(-1) ?? carriedIn)
+        if (latest) await assertLiveActivities(tx, userId, [latest.activityId])
         if (carriedIn) await bumpRevision(tx, carriedIn.id)
         await tx.delete(switches).where(inDay(userId, window))
         if (input.rows.length === 0) return []

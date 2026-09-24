@@ -34,6 +34,7 @@ export const app = new Hono()
 
 // Nothing here takes a body bigger than a small JSON document; without this, Node/Hono accept unbounded bodies on the unauthenticated auth routes.
 // ponytail: raise (or scope per route) when an upload endpoint appears.
+// `DAY_ROWS_MAX` (packages/shared) is sized so the largest 「元に戻す」 fits; app.test.ts sends that request through this limit.
 app.use('/api/*', bodyLimit({ maxSize: 100 * 1024 }))
 
 // App Platform puts its CDN in front of the whole app once a static site is attached; a cached session response would leak

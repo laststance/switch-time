@@ -3,6 +3,7 @@ import type { AppRouterClient } from '@switch-time/api'
 import {
   ARCHIVED_REFUSAL,
   DAY_CHANGED_REFUSAL,
+  DAY_ROWS_MAX,
   clampStart,
   localDay,
   MIN_SEGMENT_MS,
@@ -299,24 +300,31 @@ const listedRow = ({
 
 /**
  * The day as the sheet listed it, sent with every edit the day undo covers: the API refuses the edit unless the day still
- * reads exactly so under the same stored zone, which makes the list the day's true state before the edit.
+ * reads exactly so under the same stored zone, which makes the list the day's true state before the edit. On a day busier
+ * than {@link DAY_ROWS_MAX} it lists no rows, so the request stays small: the API still checks the zone and the records on
+ * either side, and no day undo is armed.
  * @param day - The sheet's day.
  * @param timeZone - The stored zone the list was windowed in.
  * @param list - The `switches.listByDay` answer the button was pressed on.
- * @returns The baseline: the day's own rows with their ids, oldest first, and the first switch after the day (null: none).
- * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …], carriedOutId: 'n' }
+ * @returns The baseline: the day's own rows with their ids, oldest first (left out on a busy day), the carried-in record with
+ *   its revision and the first switch after the day (null: none).
+ * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …], carriedIn: { id: 'c', revision: 2 }, carriedOutId: 'n' }
  */
 export function dayBaseline(
   day: string,
   timeZone: string,
   list: ListedDay,
 ): DayBaseline {
-  return {
+  const sides = {
     day,
     timeZone,
-    rows: list.rows.map(listedRow),
+    carriedIn: list.carriedIn
+      ? { id: list.carriedIn.id, revision: list.carriedIn.revision }
+      : null,
     carriedOutId: list.carriedOut?.id ?? null,
   }
+  if (list.rows.length > DAY_ROWS_MAX) return sides
+  return { ...sides, rows: list.rows.map(listedRow) }
 }
 
 /**
@@ -561,22 +569,26 @@ export type CorrectionEdit = {
 /**
  * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed (the baseline the API
  * checked). A pick on the carried-in record arms an activity undo, or nothing when its activity is archived (the picker
- * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo.
+ * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo, unless the baseline
+ * listed no rows (a day busier than {@link DAY_ROWS_MAX}), which leaves nothing to write back. Called by the sheet's edits
+ * once they land.
  * @param edit - The edit just made and the row it returned.
  * @param row - The row it was made on, before the edit.
- * @param baseline - The day as the sheet listed it when the button was pressed.
+ * @param baseline - The day as the sheet listed it when the button was pressed; undefined before the day's list arrived.
  * @param window - The day's [start, end) in epoch ms.
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
  * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, remembering the carried-in row after a cut
+ * - null with no baseline or a busy day's: no undo, and the caller drops any older one
  * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, baseline, bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
 export function undoSlotFor(
   edit: CorrectionEdit,
   row: CorrectionRow,
-  baseline: DayBaseline,
+  baseline: DayBaseline | undefined,
   window: Pick<DayBounds, 'start' | 'end'>,
-): UndoSlot | { blocked: 'archived' } {
+): UndoSlot | { blocked: 'archived' } | null {
+  if (!baseline) return null
   if (edit.kind === 'pick' && row.carriedIn) {
     if (row.archived) return { blocked: 'archived' }
     return {
@@ -587,6 +599,7 @@ export function undoSlotFor(
       revision: edit.returned.revision,
     }
   }
+  if (!baseline.rows) return null
   return {
     kind: 'day',
     day: baseline.day,

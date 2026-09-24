@@ -1139,3 +1139,82 @@ test('the last live activity cannot be archived, so the clock always has one to 
   )
   expect(fun?.archivedAt).toBeNull()
 })
+
+test('one account’s fifth timeline write in flight is refused at once, while another account’s tap still lands', async () => {
+  // Arrange: another device holds the owner's lock and three taps queue behind it, so four writes are in flight
+  const owner = await signedIn('cap-owner@example.com')
+  const other = await signedIn('cap-other@example.com')
+  const { id: ownerId } = await owner.me()
+  const list = await owner.activities.list()
+  const otherList = await other.activities.list()
+  const release = await holdTimelineLock(ownerId)
+  const work = owner.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await waitForLockQueue(1)
+  const rest = owner.switches.switchTo({ activityId: idOf(list, '休息') })
+  await waitForLockQueue(2)
+  const fun = owner.switches.switchTo({ activityId: idOf(list, '娯楽') })
+  await waitForLockQueue(3)
+
+  // Act
+  const fifth = owner.switches.switchTo({ activityId: idOf(list, '睡眠') })
+  const fifthSettledAtOnce = await settlesWithoutWaiting(
+    fifth.then(
+      () => undefined,
+      () => undefined,
+    ),
+  )
+  const otherTap = other.switches.switchTo({
+    activityId: idOf(otherList, '休息'),
+  })
+  const otherLandedWhileLocked = await settlesWithoutWaiting(otherTap)
+  await release()
+
+  // Assert: the fifth is refused without queueing, and the queued taps land in the order they arrived
+  expect(fifthSettledAtOnce).toBe(true)
+  await expect(fifth).rejects.toMatchObject({ code: 'TOO_MANY_REQUESTS' })
+  expect(otherLandedWhileLocked).toBe(true)
+  await expect(work).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+  await expect(rest).resolves.toMatchObject({ activityId: idOf(list, '休息') })
+  await expect(fun).resolves.toMatchObject({ activityId: idOf(list, '娯楽') })
+  expect(
+    (await owner.switches.listByDay({ day: today })).rows.map(
+      (row) => row.activityId,
+    ),
+  ).toEqual([idOf(list, '仕事'), idOf(list, '休息'), idOf(list, '娯楽')])
+})
+
+test('timeline writes that failed free their places, so the account’s next burst queues as usual', async () => {
+  // Arrange: three merges of rows that do not exist queue behind a held lock and fail
+  const api = await signedIn('cap-freed@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const releaseFirst = await holdTimelineLock(userId)
+  const failedMerges = [
+    api.switches.mergeIntoPrevious({ id: crypto.randomUUID() }),
+    api.switches.mergeIntoPrevious({ id: crypto.randomUUID() }),
+    api.switches.mergeIntoPrevious({ id: crypto.randomUUID() }),
+  ]
+  await waitForLockQueue(3)
+  await releaseFirst()
+  const mergeOutcomes = await Promise.allSettled(failedMerges)
+  expect(mergeOutcomes.map((outcome) => outcome.status)).toEqual([
+    'rejected',
+    'rejected',
+    'rejected',
+  ])
+
+  // Act: a full burst again
+  const releaseSecond = await holdTimelineLock(userId)
+  const work = api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await waitForLockQueue(1)
+  const rest = api.switches.switchTo({ activityId: idOf(list, '休息') })
+  await waitForLockQueue(2)
+  const fun = api.switches.switchTo({ activityId: idOf(list, '娯楽') })
+  await waitForLockQueue(3)
+  await releaseSecond()
+
+  // Assert
+  await expect(work).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+  await expect(rest).resolves.toMatchObject({ activityId: idOf(list, '休息') })
+  await expect(fun).resolves.toMatchObject({ activityId: idOf(list, '娯楽') })
+})

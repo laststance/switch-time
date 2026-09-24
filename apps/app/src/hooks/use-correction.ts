@@ -60,13 +60,17 @@ export function useCorrection(dayParam: string | undefined) {
   const edits = useCorrectionEdits(day, bounds, list.data, state)
   const undo = useCorrectionUndo(state)
   // Any switches write holds the panel, not only this sheet's: a hotkey tap, or an edit still landing from a sheet closed mid-flight.
-  const writing = useIsMutating({ mutationKey: orpc.switches.key() }) > 0
+  // A settings write in flight may move the stored zone, and with it the day's window: it holds the panel too, until it lands
+  // and the day refetches, so no edit sends a baseline in the zone being replaced.
+  const writesInFlight =
+    useIsMutating({ mutationKey: orpc.switches.key() }) +
+    useIsMutating({ mutationKey: orpc.settings.key() })
   return {
     day,
     title: dayTitle(day, today),
     bounds,
     rows: correctionRows(list.data, activities.data, bounds),
-    pending: list.isFetching || writing,
+    pending: list.isFetching || writesInFlight > 0,
     canUndo: state.slot?.day === day,
     selectedId: state.selectedId,
     noticeId: state.noticeId,
@@ -173,9 +177,9 @@ function useCorrectionEdits(
     const arm =
       (kind: CorrectionEdit['kind']) =>
       (returned: SwitchRow): void => {
-        if (!baseline) return
+        // No undo for this edit (no list yet, a busy day's baseline) also drops the older one: it no longer matches the day.
         const next = undoSlotFor({ kind, returned }, row, baseline, bounds)
-        const blocked = 'blocked' in next
+        const blocked = next !== null && 'blocked' in next
         state.setSlot(blocked ? null : next)
         state.setNoticeId(blocked ? row.id : null)
       }

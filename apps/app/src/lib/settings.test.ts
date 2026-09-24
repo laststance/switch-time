@@ -9,7 +9,88 @@ import {
   SETTINGS_REFETCH_ROUTERS,
   spareColor,
   targetHoursFromText,
+  zoneSyncAction,
 } from './settings'
+
+test('a fresh install writes its zone once when the account holds another', () => {
+  // Arrange
+  const zones = {
+    stored: 'Asia/Tokyo',
+    device: 'Europe/London',
+    lastSynced: null,
+    settled: true,
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('write')
+})
+
+test('two devices in different zones stop overwriting each other: the one that already synced its zone leaves the other’s write alone', () => {
+  // Arrange: this device wrote Tokyo, then a laptop in London wrote London.
+  const zones = {
+    stored: 'Europe/London',
+    device: 'Asia/Tokyo',
+    lastSynced: 'Asia/Tokyo',
+    settled: true,
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('none')
+})
+
+test('a device that moved to another zone writes its new zone', () => {
+  // Arrange
+  const zones = {
+    stored: 'Asia/Tokyo',
+    device: 'America/New_York',
+    lastSynced: 'Asia/Tokyo',
+    settled: true,
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('write')
+})
+
+test('a fresh install whose zone the account already holds only remembers it, so a later write from another device is not undone', () => {
+  // Arrange
+  const zones = {
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    lastSynced: null,
+    settled: true,
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('record')
+})
+
+test('nothing is written or remembered while a settings write is in flight, since the cached zone may be an optimistic one', () => {
+  // Arrange: the zone write's optimistic value already reads as the device's.
+  const inFlight = {
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    lastSynced: null,
+    settled: false,
+  }
+  const differs = { ...inFlight, stored: 'UTC' }
+
+  // Act & Assert
+  expect(zoneSyncAction(inFlight)).toBe('none')
+  expect(zoneSyncAction(differs)).toBe('none')
+})
+
+test('a device already in step with the account does nothing', () => {
+  // Arrange
+  const zones = {
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    lastSynced: 'Asia/Tokyo',
+    settled: true,
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('none')
+})
 
 const activity = (
   id: string,

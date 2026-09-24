@@ -4,7 +4,6 @@ import {
   boolean,
   check,
   date,
-  index,
   integer,
   numeric,
   pgEnum,
@@ -89,7 +88,12 @@ export const switches = pgTable(
     createdAt: timestamptz('created_at').defaultNow().notNull(),
   },
   (table) => [
-    index('switches_user_started_idx').on(table.userId, table.startedAt.desc()),
+    // Unique: two switches of one account never start at the same instant, so every read of the timeline orders it the same
+    // way. NULLS FIRST matches the queries' desc()/asc() sort order, so the index serves them without a sort.
+    uniqueIndex('switches_user_started_idx').on(
+      table.userId,
+      table.startedAt.desc().nullsFirst(),
+    ),
   ],
 )
 
