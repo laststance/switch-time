@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { apiAs, signUp } from './helpers'
 
@@ -496,4 +496,334 @@ test('the picker turns a segment into detox', async ({ page }) => {
     'aria-checked',
     'true',
   )
+})
+
+// `9月22日`, the form the carried-in panel writes a record's start date in.
+const monthDay = (day: string) => {
+  const [, month, date] = day.split('-').map(Number)
+  return `${month}月${date}日`
+}
+
+// D−2 仕事 22:00 and D−1 食事 7:00: the D−1 sheet lists 仕事 0:00 – 7:00 as the record carried in from D−2 (9 h, under the
+// 12 h idle threshold). Signs up (today's first-launch tap is 家事), seeds both days and opens D−1's sheet.
+async function openCarriedInWork(page: Page) {
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const dayBefore = shift(today(), -2)
+  const day = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  await api.switches.replaceDay({
+    day,
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(day, 7) }],
+  })
+  await page.goto(`/correction?day=${day}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const carriedIn = dialog.getByRole('button', {
+    name: '仕事 0:00 – 7:00 7h 00m',
+  })
+  await expect(carriedIn).toBeVisible()
+  return { api, list, dayBefore, day, dialog, carriedIn }
+}
+
+test('the carried-in record opens a panel that says where it started, and a pick changes the earlier day’s totals until undone', async ({
+  page,
+}) => {
+  // Arrange
+  const { api, list, dayBefore, dialog, carriedIn } =
+    await openCarriedInWork(page)
+  const work = idOf(list, '仕事')
+  const sleep = idOf(list, '睡眠')
+
+  // Act
+  await carriedIn.click()
+  await expect(
+    dialog.getByText(`${monthDay(dayBefore)} 22:00 から続く記録です`),
+  ).toBeVisible()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert: the whole record is 睡眠 now, so D−2's 22:00 – 24:00 moved from 仕事 to 睡眠.
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  await expect(slept).toBeVisible()
+  const [afterPick] = (await api.stats.day({ day: dayBefore })).days
+  expect([afterPick?.totals[work] ?? 0, afterPick?.totals[sleep]]).toEqual([
+    0, 7_200_000,
+  ])
+
+  // Act: 元に戻す puts 仕事 back.
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert
+  await expect(carriedIn).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+  const [afterUndo] = (await api.stats.day({ day: dayBefore })).days
+  expect([afterUndo?.totals[work], afterUndo?.totals[sleep] ?? 0]).toEqual([
+    7_200_000, 0,
+  ])
+})
+
+test('a pick on the carried-in record stays after the sheet closes', async ({
+  page,
+}) => {
+  // Arrange
+  const { api, list, dayBefore, dialog, carriedIn } =
+    await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+
+  // Act
+  await page.getByRole('button', { name: '完了' }).click()
+
+  // Assert
+  await expect(dialog).toHaveCount(0)
+  const [stats] = (await api.stats.day({ day: dayBefore })).days
+  expect(stats?.totals[idOf(list, '睡眠')]).toBe(7_200_000)
+})
+
+test('区切る時刻 opens at 3:15, cuts the carried-in record at 3:00 into a selected new row, and undo removes the cut', async ({
+  page,
+}) => {
+  // Arrange
+  const { dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await expect(dialog.getByText('3:15', { exact: true })).toBeVisible()
+
+  // Act
+  await dialog.getByRole('button', { name: '区切る時刻を15分早める' }).click()
+  await expect(dialog.getByText('3:00', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+
+  // Assert: the new row 3:00 – 7:00 is the selected, focused one, above the shortened carried-in record.
+  const later = dialog.getByRole('button', { name: '仕事 3:00 – 7:00 4h 00m' })
+  const earlier = dialog.getByRole('button', {
+    name: '仕事 0:00 – 3:00 3h 00m',
+  })
+  await expect(later).toHaveAttribute('aria-expanded', 'true')
+  await expect(later).toBeFocused()
+  await expect(earlier).toHaveAttribute('aria-expanded', 'false')
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: one record again, selected, with nothing further to undo.
+  await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
+  await expect(later).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('after a cut, a pick changes only the later part of the record', async ({
+  page,
+}) => {
+  // Arrange: the carried-in 仕事 cut at 3:15, where 区切る時刻 opens.
+  const { dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 3:15 – 7:00 3h 45m' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+
+  // Act
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert: the carried-in part keeps 仕事, so the earlier day is untouched.
+  await expect(
+    dialog.getByRole('button', { name: '睡眠 3:15 – 7:00 3h 45m' }),
+  ).toBeVisible()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 0:00 – 3:15 3h 15m' }),
+  ).toBeVisible()
+})
+
+test('a cut at 0:00 leaves the whole day to a new row, and undo selects the carried-in record again', async ({
+  page,
+}) => {
+  // Arrange: from 3:15, three hours and a quarter back is 0:00, the earliest cut.
+  const { dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  const hourEarlier = dialog.getByRole('button', {
+    name: '区切る時刻を1時間早める',
+  })
+  await hourEarlier.click()
+  await hourEarlier.click()
+  await hourEarlier.click()
+  await dialog.getByRole('button', { name: '区切る時刻を15分早める' }).click()
+  await expect(dialog.getByText('0:00', { exact: true })).toBeVisible()
+  await expect(hourEarlier).toBeDisabled()
+
+  // Act
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+
+  // Assert: the carried-in record has nothing left in the day; 仕事 0:00 – 7:00 is now the day's own row, open with its panel.
+  await expect(dialog.getByRole('button', { name: '半分で分割' })).toBeVisible()
+  await expect(dialog.getByText('区切る時刻')).toHaveCount(0)
+  await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: the carried-in record is back, selected with its own panel.
+  await expect(dialog.getByText('区切る時刻')).toBeVisible()
+  await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.getByRole('button', { name: '半分で分割' })).toHaveCount(
+    0,
+  )
+})
+
+test('the carried-in panel warns before a pick away from an archived activity and says after it that undo is gone', async ({
+  page,
+}) => {
+  // Arrange: 仕事 archived after the fixture was written (today's current state is 家事, so the archive is allowed).
+  const { api, list, dialog, carriedIn } = await openCarriedInWork(page)
+  await api.activities.archive({ id: idOf(list, '仕事') })
+  await page.reload()
+  await expect(carriedIn).toBeVisible()
+  await carriedIn.click()
+  await expect(
+    dialog.getByText(
+      'この記録の活動はアーカイブ済みです。別の活動に変えると元に戻せません',
+    ),
+  ).toBeVisible()
+
+  // Act
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '前の活動はアーカイブ済みのため、元に戻せません',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('undoing a pick whose previous activity was archived meanwhile is refused with a notice', async ({
+  page,
+}) => {
+  // Arrange: 睡眠 picked on the carried-in record, then 仕事 archived from another device.
+  const { api, list, dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  await expect(slept).toBeVisible()
+  await api.activities.archive({ id: idOf(list, '仕事') })
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '前の活動はアーカイブ済みのため、元に戻せません',
+  )
+  await expect(slept).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('undoing a pick never overwrites a change made on another device', async ({
+  page,
+}) => {
+  // Arrange: 睡眠 picked on the carried-in record, then the same record changed to 娯楽 from another device.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+  const listed = await api.switches.listByDay({ day })
+  if (!listed.carriedIn) throw new Error('no carried-in record')
+  await api.switches.changeActivity({
+    id: listed.carriedIn.id,
+    activityId: idOf(list, '娯楽'),
+  })
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: the undo is refused, the sheet shows 娯楽 and not 仕事, and 元に戻す is off.
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+  await expect(carriedIn).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('a pick on a carried-in record changed elsewhere is refused instead of overwriting it', async ({
+  page,
+}) => {
+  // Arrange: the sheet shows 仕事 while another device has already changed the record to 娯楽.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  const listed = await api.switches.listByDay({ day })
+  if (!listed.carriedIn) throw new Error('no carried-in record')
+  await api.switches.changeActivity({
+    id: listed.carriedIn.id,
+    activityId: idOf(list, '娯楽'),
+  })
+  await carriedIn.click()
+
+  // Act
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert: the refused pick leaves 娯楽 in place and arms no undo.
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /^睡眠 / })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('on a phone-width screen 区切る時刻 shares a line with its readout and the four steps share one row above a full-width ここで分割', async ({
+  page,
+}) => {
+  // Arrange: a phone-width window, so the sheet fills the screen and the panel is 320 px wide.
+  await page.setViewportSize({ width: 390, height: 844 })
+  const { dialog, carriedIn } = await openCarriedInWork(page)
+
+  // Act
+  await carriedIn.click()
+  const cut = dialog.getByRole('button', { name: 'ここで分割' })
+  await expect(cut).toBeVisible()
+
+  // Assert: four 74 px steps 8 px apart, then one 320 px button 8 px below; the label and the readout on one line.
+  const [label, readout, first, second, third, fourth, cutBox] =
+    await Promise.all([
+      dialog.getByText('区切る時刻', { exact: true }).boundingBox(),
+      dialog.getByText('3:15', { exact: true }).boundingBox(),
+      dialog
+        .getByRole('button', { name: '区切る時刻を1時間早める' })
+        .boundingBox(),
+      dialog
+        .getByRole('button', { name: '区切る時刻を15分早める' })
+        .boundingBox(),
+      dialog
+        .getByRole('button', { name: '区切る時刻を15分遅らせる' })
+        .boundingBox(),
+      dialog
+        .getByRole('button', { name: '区切る時刻を1時間遅らせる' })
+        .boundingBox(),
+      cut.boundingBox(),
+    ])
+  if (!label || !readout || !first || !second || !third || !fourth || !cutBox)
+    throw new Error('a cut control has no box')
+  expect(readout.y).toBeLessThan(label.y + label.height)
+  expect(label.y).toBeLessThan(readout.y + readout.height)
+  expect(readout.x + readout.width).toBe(first.x + 320)
+  expect(first).toMatchObject({ width: 74, height: 44 })
+  expect([second.x, third.x, fourth.x]).toEqual([
+    first.x + 82,
+    first.x + 164,
+    first.x + 246,
+  ])
+  expect([second.y, third.y, fourth.y]).toEqual([first.y, first.y, first.y])
+  expect(cutBox).toMatchObject({
+    x: first.x,
+    y: first.y + 52,
+    width: 320,
+    height: 44,
+  })
 })
