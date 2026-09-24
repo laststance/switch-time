@@ -1220,3 +1220,131 @@ test('an edit whose answer never arrives gives up after 30 seconds, releases the
     dialog.getByRole('button', { name: '前の記録に統合' }),
   ).toBeEnabled()
 })
+
+test('a refused undo says why under the rows and turns 元に戻す off', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事 through the sheet, then another device splits 仕事 at 10:00.
+  const { api, yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  const [work] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work) throw new Error('no 仕事 row')
+  await api.switches.splitAt({ id: work.id, at: at(yesterday, 10) })
+
+  // Act
+  await page.getByRole('button', { name: '元に戻す' }).click()
+
+  // Assert: the line names the refusal, the other device's row shows, and there is nothing left to undo.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '仕事 10:00 – 18:00 8h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('a pick on a carried-in record changed on another device says that record changed', async ({
+  page,
+}) => {
+  // Arrange: the sheet shows 仕事 while another device has already changed the record to 娯楽.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  const listed = await api.switches.listByDay({ day })
+  if (!listed.carriedIn) throw new Error('no carried-in record')
+  await api.switches.changeActivity({
+    id: listed.carriedIn.id,
+    activityId: idOf(list, '娯楽'),
+  })
+  await carriedIn.click()
+
+  // Act
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+
+  // Assert
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+  ).toBeVisible()
+})
+
+test('pressing the edit again on the refreshed list clears the refusal and lands', async ({
+  page,
+}) => {
+  // Arrange: a merge of the stale 休息 is refused after another device moved 娯楽 to 17:45.
+  const { api, yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const staleRest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6h 00m',
+  })
+  await expect(staleRest).toBeVisible()
+  const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!leisure) throw new Error('no 娯楽 row')
+  await api.switches.moveStart({ id: leisure.id, deltaMinutes: -15 })
+  await staleRest.click()
+  const mergePrevious = dialog.getByRole('button', { name: '前の記録に統合' })
+  await mergePrevious.click()
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '別の端末で記録が変わったため、最新の状態を表示しました',
+  )
+  await expect(
+    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+  ).toBeVisible()
+
+  // Act: the row stays selected, so the same button is pressed again.
+  await mergePrevious.click()
+
+  // Assert: the refusal is gone and the merge landed on the day as it now reads.
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 17:45 8h 45m' }),
+  ).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+})
+
+test('an undo lost in transit says it was not saved, keeps 元に戻す for another try, and the retry clears the line', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事 through the sheet, and the undo's request fails on the network once.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await page.route(
+    '**/api/rpc/switches/replaceDay',
+    async (route) => route.abort('internetdisconnected'),
+    { times: 1 },
+  )
+  const undo = page.getByRole('button', { name: '元に戻す' })
+
+  // Act
+  await undo.click()
+
+  // Assert: the line says it was not saved, and 元に戻す stays armed.
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '保存できませんでした。もう一度お試しください',
+  )
+  await expect(undo).toBeEnabled()
+
+  // Act: try again with the network back.
+  await undo.click()
+
+  // Assert: 休息 is back and the failure line is gone.
+  await expect(rest).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  await expect(undo).toBeDisabled()
+})

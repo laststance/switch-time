@@ -84,6 +84,36 @@ test('the caller cancelling aborts the request with the request’s own error, n
   expect(vi.getTimerCount()).toBe(0)
 })
 
+test('a request that fails before the deadline (offline) fails with its own error, not a timeout, and leaves no timer behind', async () => {
+  // Arrange
+  const offline = new TypeError('Failed to fetch')
+
+  // Act
+  const error = await withDeadline(undefined, 30_000, async () => {
+    throw offline
+  }).catch((reason: unknown) => reason)
+
+  // Assert
+  expect(error).toBe(offline)
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+test('a caller cancelling after the request answered does not abort the request’s signal', async () => {
+  // Arrange
+  const caller = new AbortController()
+  let seenSignal: AbortSignal | undefined
+  await withDeadline(caller.signal, 30_000, async (signal) => {
+    seenSignal = signal
+    return 'rows'
+  })
+
+  // Act
+  caller.abort()
+
+  // Assert
+  expect(seenSignal?.aborted).toBe(false)
+})
+
 test('a caller that already gave up hands the request an aborted signal', async () => {
   // Arrange
   const caller = new AbortController()
