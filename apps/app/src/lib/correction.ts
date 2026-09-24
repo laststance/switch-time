@@ -665,21 +665,21 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
 
 /**
  * What a failed undo of either kind does to 「元に戻す」: an answer that can never succeed turns it off (the day or the record
- * changed elsewhere, or is gone, silently; the previous activity was archived, with the notice), and so does a timeout, which
- * may have landed (a second press would then be refused as another device's change). A passing failure (network, server
- * error, an expired sign-in) keeps it for another try.
+ * changed elsewhere, or is gone; the previous activity was archived, with the notice), and the status line says why. A
+ * passing failure (network, server error, an expired sign-in, a timeout) keeps it for another try: a timed-out undo may not
+ * have landed, and a replay writes only while the day still holds what the edit left (`expected`, or the pick's `revision`),
+ * so it cannot undo twice.
  * @param error - The error the undo's mutation failed with.
  * @returns
- * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision), NOT_FOUND, or a {@link RequestTimeoutError}
+ * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision) or NOT_FOUND
  * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target; `replaceDay` refuses
  *   a day whose current state would name one)
- * - 'keep': anything else, another BAD_REQUEST included
+ * - 'keep': anything else, another BAD_REQUEST and a {@link RequestTimeoutError} included
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
  */
 export function afterUndoFailure(
   error: unknown,
 ): 'keep' | 'clear' | 'archived' {
-  if (error instanceof RequestTimeoutError) return 'clear'
   if (!(error instanceof ORPCError)) return 'keep'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
   return error.code === 'BAD_REQUEST' &&
@@ -772,7 +772,8 @@ const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映され�
  * is paused while online, and a refetch after a landed write pauses offline while its mutation reads as running.
  * @param facts.refusal - The last failure's message ({@link refusalMessage}), until the next press, selection or undo.
  * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
- * (its refetch included, since `onSettled` awaits it). A refetch alone dims the panel without a line.
+ * (its refetch included, since `onSettled` awaits it, except after a timeout, whose refetch runs on its own). A refetch alone
+ * dims the panel without a line.
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
  * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }

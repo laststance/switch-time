@@ -1158,7 +1158,7 @@ test('an undo refused because the account has too many timeline writes in flight
   expect(outcome).toBe('keep')
 })
 
-test('an undo that timed out turns 元に戻す off, since it may have landed and a second press would be refused as another device’s change', () => {
+test('an undo that timed out keeps 元に戻す armed, since it may not have landed and a replay is refused once it has', () => {
   // Arrange
   const timedOut = new RequestTimeoutError()
 
@@ -1166,7 +1166,7 @@ test('an undo that timed out turns 元に戻す off, since it may have landed an
   const outcome = afterUndoFailure(timedOut)
 
   // Assert
-  expect(outcome).toBe('clear')
+  expect(outcome).toBe('keep')
 })
 
 test('only a day-changed refusal makes the sheet refetch the stored zone, so a settings update in flight is never overwritten otherwise', () => {

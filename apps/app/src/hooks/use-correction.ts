@@ -85,6 +85,7 @@ export function useCorrection(dayParam: string | undefined) {
     rows: correctionRows(list.data, activities.data, bounds),
     pending: list.isFetching || writesInFlight > 0,
     // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both; a quick one says nothing.
+    // After a timeout the refetch runs on its own: it dims the panel through `pending`, without a line.
     status: statusLine({ refusal: state.refusal, waiting, online }),
     canUndo: state.slot?.day === day,
     selectedId: state.selectedId,

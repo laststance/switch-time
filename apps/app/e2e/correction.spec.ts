@@ -1207,15 +1207,28 @@ test('an edit whose answer never arrives gives up after 30 seconds, turns off th
     .click()
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
   await expect(dialog.getByText('反映しています…')).toBeVisible()
+  // The re-read after the timeout is held too, as a hung API would hold it.
+  let releaseList = (): void => undefined
+  const listHeld = new Promise<void>((resolve) => {
+    releaseList = resolve
+  })
+  await page.route('**/api/rpc/switches/listByDay', async (route) => {
+    await listHeld
+    await route.continue()
+  })
 
   // Act
   await page.clock.fastForward('00:30')
 
-  // Assert: the line asks to check the rows, the split's undo is off, the merged day shows, and the panel answers again.
+  // Assert: the line shows at 30 s without waiting for the re-read.
   await expect(dialog.getByRole('alert')).toHaveText(
     '応答がありませんでした。反映されたか一覧で確かめてください',
   )
-  await expect(undo).toBeDisabled()
+
+  // Act: the re-read answers.
+  releaseList()
+
+  // Assert: the merged day shows, the panel answers again, and the split's undo stays off.
   const leisure = dialog.getByRole('button', {
     name: '娯楽 12:00 – 24:00 12h 00m',
   })
@@ -1224,6 +1237,52 @@ test('an edit whose answer never arrives gives up after 30 seconds, turns off th
   await expect(
     dialog.getByRole('button', { name: '前の記録に統合' }),
   ).toBeEnabled()
+  await expect(undo).toBeDisabled()
+})
+
+test('a write that lands at once says nothing, and one still in flight after 400 ms says it is landing', async ({
+  page,
+}) => {
+  // Arrange: the clock is paused, and a merge's answer is held until released.
+  const { yesterday } = await seedYesterday(page)
+  let releaseMerge = (): void => undefined
+  const mergeHeld = new Promise<void>((resolve) => {
+    releaseMerge = resolve
+  })
+  await page.route('**/api/rpc/switches/mergeIntoPrevious', async (route) => {
+    await mergeHeld
+    await route.continue()
+  })
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)
+  const writing = dialog.getByText('反映しています…')
+
+  // Act: the merge is pressed; once the panel waits for it, 350 ms pass in all, short of the delay.
+  const mergePrevious = dialog.getByRole('button', { name: '前の記録に統合' })
+  await mergePrevious.click()
+  await page.clock.runFor(100)
+  await expect(mergePrevious).toBeDisabled()
+  await page.clock.runFor(250)
+
+  // Assert: no line yet.
+  await expect(writing).toHaveCount(0)
+
+  // Act: another 200 ms pass, past the delay even if its timer started late.
+  await page.clock.runFor(200)
+
+  // Assert: the line shows, and goes once the merge lands.
+  await expect(writing).toBeVisible()
+  releaseMerge()
+  await page.clock.resume()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await expect(writing).toHaveCount(0)
 })
 
 test('a refused undo says why under the rows and turns 元に戻す off', async ({
