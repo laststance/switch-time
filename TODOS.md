@@ -188,7 +188,7 @@
 
 **What:** Send no baseline and arm no day 「元に戻す」 when the listed day holds more rows than the baseline schema allows, or raise the cap to an explicit server limit on switches per day.
 
-**Why:** Since the day baseline (2026-09-25), every sheet edit sends all the day's rows, capped at 500 by `dayRowsSchema` in `packages/shared/src/schemas.ts`. On a day with more (a script, a hotkey burst), every edit fails validation with BAD_REQUEST and nothing is shown, so the day cannot be corrected at all. Before, only 「元に戻す」 hit the cap.
+**Why:** Since the day baseline (2026-09-25), every sheet edit sends all the day's rows, capped at 500 by `dayRowsSchema` in `packages/shared/src/schemas.ts`. On a day with more (a script, a hotkey burst), every edit fails validation with BAD_REQUEST and nothing is shown, so the day cannot be corrected at all. Before, only 「元に戻す」 hit the cap. The sheet can also cross it itself: 半分で分割 on a day of exactly 500 rows lands (its baseline holds 500), and then its own 「元に戻す」 is refused, since `expected` would hold 501; keep the cap on the rows written back apart from the one on the rows compared, and test 500 → 501.
 
 **Context:** The API already accepts an edit without a baseline. `dayBaseline` in `apps/app/src/lib/correction.ts` builds it. Raised by the Red Team during the day baseline's ship (2026-09-25).
 

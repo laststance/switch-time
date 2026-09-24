@@ -109,16 +109,21 @@ function useCorrectionState() {
 
 // Every mutation here and in the undo refetches `switches.*` and `stats.*` once it settles. A day-changed refusal also refetches
 // `settings.*`, since the stored zone may be what changed on another device, and the next edit would otherwise send the stale
-// cached zone again; only then, as a settings refetch at any other time can overwrite a settings update still in flight.
+// cached zone again. Never while a settings update is in flight: its answer could roll back the optimistic value, and that
+// update refetches settings itself once it settles.
 function useRefetchAfterEdit() {
   const queryClient = useQueryClient()
   return {
-    onSettled: async (_data: unknown, error: unknown): Promise<void> =>
-      invalidateKeys(queryClient, [
+    onSettled: async (_data: unknown, error: unknown): Promise<void> => {
+      const refetchZone =
+        isDayChangedRefusal(error) &&
+        queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
+      await invalidateKeys(queryClient, [
         orpc.switches.key(),
         orpc.stats.key(),
-        ...(isDayChangedRefusal(error) ? [orpc.settings.key()] : []),
-      ]),
+        ...(refetchZone ? [orpc.settings.key()] : []),
+      ])
+    },
   }
 }
 

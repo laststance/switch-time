@@ -303,15 +303,20 @@ const listedRow = ({
  * @param day - The sheet's day.
  * @param timeZone - The stored zone the list was windowed in.
  * @param list - The `switches.listByDay` answer the button was pressed on.
- * @returns The baseline: the day's own rows with their ids, oldest first.
- * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …] }
+ * @returns The baseline: the day's own rows with their ids, oldest first, and the first switch after the day (null: none).
+ * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …], carriedOutId: 'n' }
  */
 export function dayBaseline(
   day: string,
   timeZone: string,
   list: ListedDay,
 ): DayBaseline {
-  return { day, timeZone, rows: list.rows.map(listedRow) }
+  return {
+    day,
+    timeZone,
+    rows: list.rows.map(listedRow),
+    carriedOutId: list.carriedOut?.id ?? null,
+  }
 }
 
 /**
@@ -521,7 +526,8 @@ export function cutNotes(
 
 /**
  * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay` only while the
- * stored zone is still `timeZone` and the day still holds exactly `expected`, the rows the edit left; `reselectId` is the
+ * stored zone is still `timeZone`, the day still holds exactly `expected`, the rows the edit left, and its last row still
+ * runs into `carriedOutId` (an edit on the day never changes it, so it is the baseline's); `reselectId` is the
  * carried-in row a cut came from, selected again once the undo lands. `activity`: a pick on the carried-in record, put back
  * through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
  * reaches another day (a record's revision does not depend on any day's window, so it carries no zone).
@@ -533,6 +539,7 @@ export type UndoSlot =
       timeZone: string
       rows: DaySnapshot
       expected: DayRow[]
+      carriedOutId: DayBaseline['carriedOutId']
       reselectId: string | null
     }
   | {
@@ -586,6 +593,7 @@ export function undoSlotFor(
     timeZone: baseline.timeZone,
     rows: daySnapshot(baseline.rows),
     expected: rowsAfterEdit(baseline.rows, edit, row.id, window),
+    carriedOutId: baseline.carriedOutId,
     reselectId: edit.kind === 'cut' ? row.id : null,
   }
 }
@@ -619,6 +627,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
         day: slot.day,
         timeZone: slot.timeZone,
         expected: slot.expected,
+        carriedOutId: slot.carriedOutId,
         rows: slot.rows,
       },
       reselectId: slot.reselectId,

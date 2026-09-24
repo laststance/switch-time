@@ -926,6 +926,71 @@ test.each(carriedInEdits)(
   },
 )
 
+test('元に戻す is refused once the next day’s sheet merged its first switch into the day’s last row, so the running state keeps the activity that merge chose', async () => {
+  // Arrange: the day before yesterday ends on 仕事 at 22:00, and yesterday's only switch is 娯楽 at 1:00, still running
+  const api = await signedIn('undo-carried-out@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '娯楽'), startedAt: at(yesterday, 1) }],
+  })
+  const listedBefore = await api.switches.listByDay({ day: dayBefore })
+  const [work] = listedBefore.rows
+  if (!work || !listedBefore.carriedOut) throw new Error('fixture has no rows')
+  // Device A changes 仕事 to 睡眠 on the earlier day's sheet
+  await api.switches.changeActivity({
+    id: work.id,
+    activityId: idOf(list, '睡眠'),
+    baseline: {
+      day: dayBefore,
+      timeZone: TZ,
+      rows: listedRows(listedBefore.rows),
+      carriedOutId: listedBefore.carriedOut.id,
+    },
+  })
+  // Device B, on yesterday's sheet, merges 娯楽 into the 睡眠 record it now sees running into the day
+  const listedYesterday = await api.switches.listByDay({ day: yesterday })
+  const [fun] = listedYesterday.rows
+  if (!fun) throw new Error('fixture has no row')
+  await api.switches.mergeIntoPrevious({
+    id: fun.id,
+    baseline: {
+      day: yesterday,
+      timeZone: TZ,
+      rows: listedRows(listedYesterday.rows),
+      carriedOutId: null,
+    },
+  })
+
+  // Act: device A's 元に戻す of the pick
+  const undo = api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [
+      {
+        id: work.id,
+        activityId: idOf(list, '睡眠'),
+        startedAt: at(dayBefore, 22),
+      },
+    ],
+    carriedOutId: listedBefore.carriedOut.id,
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+
+  // Assert: refused, and 睡眠 is still what runs
+  await expect(undo).rejects.toThrow('day changed elsewhere')
+  expect((await api.switches.current())?.activityId).toBe(idOf(list, '睡眠'))
+})
+
 test('ここで分割 at a time before the sheet’s day is refused, so the cut never lands on the earlier day', async () => {
   // Arrange: 仕事 from 22:00 the day before runs into yesterday, whose own row is 食事 at 7:00
   const api = await signedIn('baseline-cut-window@example.com')

@@ -282,6 +282,30 @@ function sameRows(actual: readonly DayRow[], listed: readonly DayRow[]) {
   )
 }
 
+/**
+ * Whether the day's last row still runs into the switch the sheet saw after the day ({@link switchesBetween}'s `carriedOut`).
+ * A write from the next day's sheet changes it without touching the day's rows: without this, the day's 「元に戻す」 would
+ * rewrite a last row whose span the next day has since taken over, and the rewritten activity would run through that day.
+ * @param expectedId - The id the sheet saw; undefined skips the check (the API's own tests).
+ * @returns true when there is nothing to compare or the id still matches
+ * @example await sameCarriedOut(tx, userId, window, input.carriedOutId) // false once the next day's first switch was merged away
+ */
+async function sameCarriedOut(
+  tx: LockedTx,
+  userId: string,
+  window: DayWindow,
+  expectedId: string | null | undefined,
+): Promise<boolean> {
+  if (expectedId === undefined) return true
+  const [carriedOut] = await tx
+    .select({ id: switches.id })
+    .from(switches)
+    .where(and(own(userId), gte(switches.startedAt, new Date(window.end))))
+    .orderBy(asc(switches.startedAt))
+    .limit(1)
+  return (carriedOut?.id ?? null) === expectedId
+}
+
 // The refusal for a day that no longer reads as the sheet saw it; the data names the reason for the sheet.
 const dayChanged = () =>
   new ORPCError('CONFLICT', {
@@ -307,6 +331,8 @@ async function checkBaseline(
   if (timeZone !== baseline.timeZone) throw dayChanged()
   const window = dayBounds(baseline.day, timeZone)
   if (!sameRows(await dayRows(tx, userId, window), baseline.rows))
+    throw dayChanged()
+  if (!(await sameCarriedOut(tx, userId, window, baseline.carriedOutId)))
     throw dayChanged()
   return window
 }
@@ -552,6 +578,8 @@ export const switchesRouter = {
         )
         // Under the lock no other write can land between this read and the delete below.
         if (!sameRows(await dayRows(tx, userId, window), input.expected))
+          throw dayChanged()
+        if (!(await sameCarriedOut(tx, userId, window, input.carriedOutId)))
           throw dayChanged()
         // The record carried into the day ends at the day's first row, which this write may move.
         const [carriedIn] = await tx

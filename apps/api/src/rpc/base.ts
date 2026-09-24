@@ -66,13 +66,18 @@ export async function withUserLock<T>(
   userId: string,
   work: (tx: LockedTx) => Promise<T>,
 ): Promise<T> {
-  return db.transaction(async (tx) => {
-    await tx.execute(
-      sql`select set_config('lock_timeout', ${TIMELINE_LOCK_TIMEOUT}, true)`,
-    )
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
-    )
-    return work(tx)
-  })
+  // READ COMMITTED on purpose: each statement after the lock reads what the writer before it committed. Under REPEATABLE
+  // READ the snapshot would be taken before the wait, and the lock would serialize nothing.
+  return db.transaction(
+    async (tx) => {
+      await tx.execute(
+        sql`select set_config('lock_timeout', ${TIMELINE_LOCK_TIMEOUT}, true)`,
+      )
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(${TIMELINE_LOCK_NAMESPACE}, hashtext(${userId}))`,
+      )
+      return work(tx)
+    },
+    { isolationLevel: 'read committed' },
+  )
 }

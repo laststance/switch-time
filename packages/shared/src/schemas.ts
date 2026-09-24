@@ -115,15 +115,22 @@ export type DayRow = z.infer<typeof dayRowSchema>
 // A day holds a few dozen switches; 500 bounds a request without ever refusing a real one.
 const dayRowsSchema = z.array(dayRowSchema).max(500)
 
+// The first switch after the day, where the day's last row ends (null: none yet), as `switches.listByDay`'s `carriedOut`
+// names it. A write from the next day's sheet (a merge into this day's last row, a cut of it) changes it without touching
+// the day's rows. Left out, it is not compared (the API's own tests).
+const carriedOutIdSchema = z.uuid().nullable().optional()
+
 /**
- * The day a correction-sheet edit was made on, as the sheet saw it: the stored zone and the day's own rows, oldest first. The
- * router refuses the edit (CONFLICT, {@link DAY_CHANGED_REFUSAL}) unless the day still reads exactly so, which makes the
- * sheet's snapshot the day's true state before the edit and lets 「元に戻す」 know the state the edit left.
+ * The day a correction-sheet edit was made on, as the sheet saw it: the stored zone, the day's own rows, oldest first, and the
+ * switch its last row runs into. The router refuses the edit (CONFLICT, {@link DAY_CHANGED_REFUSAL}) unless the day still
+ * reads exactly so, which makes the sheet's snapshot the day's true state before the edit and lets 「元に戻す」 know the
+ * state the edit left.
  */
 const dayBaselineSchema = z.object({
   day: daySchema,
   timeZone: timeZoneSchema,
   rows: dayRowsSchema,
+  carriedOutId: carriedOutIdSchema,
 })
 export type DayBaseline = z.infer<typeof dayBaselineSchema>
 
@@ -179,12 +186,14 @@ export const DAY_CHANGED_REFUSAL = Object.freeze({
 
 /**
  * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only
- * while the stored zone is still `timeZone` and the day's rows are still exactly `expected`, the rows the edit left.
+ * while the stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left, and its last
+ * row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's).
  */
 export const replaceDayInputSchema = z.object({
   day: daySchema,
   timeZone: timeZoneSchema,
   expected: dayRowsSchema,
+  carriedOutId: carriedOutIdSchema,
   rows: z
     .array(
       z.object({ activityId: z.uuid().nullable(), startedAt: z.coerce.date() }),

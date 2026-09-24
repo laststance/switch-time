@@ -213,12 +213,12 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
   expect(correctionRows(list, undefined, bounds)).toEqual([])
 })
 
-test('the title names the day unless it is today, and the baseline an edit sends holds only the day’s own rows, with their ids', () => {
+test('the title names the day unless it is today, and the baseline an edit sends holds the day’s own rows with their ids and the switch its last row runs into', () => {
   // Arrange
   const list: ListedDay = {
     carriedIn: row('s', 'sleep', at('2026-09-07', 23)),
     rows: [row('w', 'work', at('2026-09-08', 9))],
-    carriedOut: null,
+    carriedOut: row('t', 'home', at('2026-09-09', 8)),
   }
 
   // Act & Assert
@@ -228,6 +228,7 @@ test('the title names the day unless it is today, and the baseline an edit sends
     day: '2026-09-08',
     timeZone: TZ,
     rows: [{ id: 'w', activityId: 'work', startedAt: at('2026-09-08', 9) }],
+    carriedOutId: 't',
   })
 })
 
@@ -700,6 +701,7 @@ test('a cut arms the day undo, which expects the new row, writes back the day wi
       { id: 'n', activityId: 'work', startedAt: at(day, 3, 15) },
       { id: 'h', activityId: 'home', startedAt: at(day, 7) },
     ],
+    carriedOutId: null,
     reselectId: 'w',
   })
 })
@@ -726,6 +728,7 @@ test('a move of the day’s own row arms the day undo that expects the moved sta
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [{ id: 'h', activityId: 'home', startedAt: at(day, 7, 15) }],
+    carriedOutId: null,
     reselectId: null,
   })
 })
@@ -752,6 +755,7 @@ test('a pick on the day’s own row goes through the day undo, which expects the
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [{ id: 'h', activityId: 'sleep', startedAt: at(day, 7) }],
+    carriedOutId: null,
     reselectId: null,
   })
 })
@@ -865,6 +869,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
       { id: 'n', activityId: 'work', startedAt: at('2026-09-08', 3, 15) },
       { id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) },
     ],
+    carriedOutId: 't',
     reselectId: 'w',
   }
   const activitySlot = {
@@ -892,6 +897,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
         { id: 'n', activityId: 'work', startedAt: at('2026-09-08', 3, 15) },
         { id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) },
       ],
+      carriedOutId: 't',
       rows: [{ activityId: 'home', startedAt: at('2026-09-08', 7) }],
     },
     reselectId: 'w',
@@ -1028,6 +1034,7 @@ test('a pick on the carried-in record only writes if no other write reached the 
       day: '2026-09-08',
       timeZone: TZ,
       rows: [{ id: 'h', activityId: 'home', startedAt: at(day, 7) }],
+      carriedOutId: null,
     },
   })
 })
