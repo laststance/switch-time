@@ -13,6 +13,7 @@ import { useSettings } from '@/hooks/use-settings'
 import {
   afterUndoFailure,
   correctionRows,
+  dayBaseline,
   dayTitle,
   isManuallyExcluded,
   pickRequest,
@@ -20,11 +21,12 @@ import {
   undoSlotFor,
   type CorrectionEdit,
   type CorrectionRow,
+  type DayBounds,
   type ListedDay,
   type TotalsFacts,
   type UndoSlot,
 } from '@/lib/correction'
-import { orpc } from '@/lib/orpc'
+import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 import { useAppSelector } from '@/store'
 
@@ -33,12 +35,14 @@ import { useAppSelector } from '@/store'
  * Every edit invalidates `switches.*` and `stats.*`, so Home and History pick it up at once. An invalid or missing `dayParam`
  * means today.
  *
- * The undo slot ({@link UndoSlot}) is one of two kinds. A `day` slot holds the day's rows before the last edit and writes them
- * back through `switches.replaceDay`; every edit arms it, except a pick on the carried-in record, which arms an `activity`
- * slot that puts the previous activity back through `switches.changeActivity` only while the record is still at the revision
- * the pick left (that record reaches another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing
- * and drops any older slot, and raises the archived notice instead ({@link undoSlotFor}). A failed activity undo is sorted by
- * {@link afterUndoFailure}; a failed day undo keeps its slot.
+ * Every edit sends the day as the sheet listed it ({@link dayBaseline}), and the API refuses it once the day reads otherwise.
+ * The undo slot ({@link UndoSlot}) is one of two kinds. A `day` slot holds the day's rows before the last edit and the rows
+ * it left, and writes the former back through `switches.replaceDay` only while the day still holds the latter; every edit
+ * arms it, except a pick on the carried-in record, which arms an `activity` slot that puts the previous activity back
+ * through `switches.changeActivity` only while the record is still at the revision the pick left (that record reaches
+ * another day, which the day slot cannot rewrite). A pick away from an archived activity arms nothing and drops any older
+ * slot, and raises the archived notice instead ({@link undoSlotFor}). A failed undo of either kind is sorted by
+ * {@link afterUndoFailure}.
  * @example const correction = useCorrection(params.day)
  */
 export function useCorrection(dayParam: string | undefined) {
@@ -50,11 +54,11 @@ export function useCorrection(dayParam: string | undefined) {
   )
   const activities = useAllActivities()
   const state = useCorrectionState()
-  const edits = useCorrectionEdits(day, list.data, state)
+  const bounds = { ...dayBounds(day, timeZone), now, timeZone }
+  const edits = useCorrectionEdits(day, bounds, list.data, state)
   const undo = useCorrectionUndo(state)
   // Any switches write holds the panel, not only this sheet's: a hotkey tap, or an edit still landing from a sheet closed mid-flight.
   const writing = useIsMutating({ mutationKey: orpc.switches.key() }) > 0
-  const bounds = { ...dayBounds(day, timeZone), now, timeZone }
   return {
     day,
     title: dayTitle(day, today),
@@ -110,9 +114,10 @@ function useRefetchAfterEdit() {
   }
 }
 
-// The sheet's edits. Each arms 元に戻す through {@link undoSlotFor} once it succeeds.
+// The sheet's edits. Each sends the day's baseline and arms 元に戻す through {@link undoSlotFor} once it succeeds.
 function useCorrectionEdits(
   day: string,
+  bounds: DayBounds,
   listed: ListedDay | undefined,
   state: CorrectionState,
 ) {
@@ -141,65 +146,67 @@ function useCorrectionEdits(
     ...orpc.switches.splitAt.mutationOptions(),
     ...edit,
   })
-  // The slot is decided when the button is pressed, when `listed` is still the pre-edit answer (the buttons wait for
+  // The baseline is taken when the button is pressed, when `listed` is still the pre-edit answer (the buttons wait for
   // fetches and writes); hook-level options are re-read at every render, so they would snapshot whatever arrived meanwhile.
-  // It is armed only once the edit succeeded: a failed one (stale row, offline) must not leave rows that would overwrite
-  // someone else's change. The day travels with it so a slot never replays into the next day. The returned arming takes the
-  // edit once it succeeded, since a pick's slot needs the revision the write left.
-  const arm = (row: CorrectionRow) => {
+  // The API refuses the edit unless the day still reads as this baseline, so a slot armed from it and the returned row is
+  // exactly the day before and after the edit. It is armed only once the edit succeeded: a failed one (stale list, offline)
+  // must not leave rows that would overwrite someone else's change. The day and zone travel with it so a slot never replays
+  // into another day's window.
+  const press = (row: CorrectionRow) => {
     state.setNoticeId(null)
-    const pressed = listed
-    return (edit: CorrectionEdit): void => {
-      if (!pressed) return
-      const next = undoSlotFor(edit, row, day, pressed)
-      const blocked = 'blocked' in next
-      state.setSlot(blocked ? null : next)
-      state.setNoticeId(blocked ? row.id : null)
-    }
+    const baseline = listed
+      ? dayBaseline(day, bounds.timeZone, listed)
+      : undefined
+    const arm =
+      (kind: CorrectionEdit['kind']) =>
+      (returned: SwitchRow): void => {
+        if (!baseline) return
+        const next = undoSlotFor({ kind, returned }, row, baseline, bounds)
+        const blocked = 'blocked' in next
+        state.setSlot(blocked ? null : next)
+        state.setNoticeId(blocked ? row.id : null)
+      }
+    return { baseline, arm }
   }
   return {
     move: (row: CorrectionRow, deltaMinutes: 15 | -15): void => {
-      const armed = arm(row)
+      const { baseline, arm } = press(row)
       moveStart.mutate(
-        { id: row.id, deltaMinutes },
-        { onSuccess: () => armed({ kind: 'move' }) },
+        { id: row.id, deltaMinutes, baseline },
+        { onSuccess: arm('move') },
       )
     },
     pick: (row: CorrectionRow, activityId: string | null): void => {
-      const armed = arm(row)
-      changeActivity.mutate(pickRequest(row, activityId), {
-        onSuccess: (changed) =>
-          armed({ kind: 'pick', revision: changed.revision }),
+      const { baseline, arm } = press(row)
+      changeActivity.mutate(pickRequest(row, activityId, baseline), {
+        onSuccess: arm('pick'),
       })
     },
     mergePrevious: (row: CorrectionRow): void => {
-      const armed = arm(row)
+      const { baseline, arm } = press(row)
       mergeIntoPrevious.mutate(
-        { id: row.id },
-        { onSuccess: () => armed({ kind: 'merge' }) },
+        { id: row.id, baseline },
+        { onSuccess: arm('merge') },
       )
     },
     mergeNext: (row: CorrectionRow): void => {
-      const armed = arm(row)
+      const { baseline, arm } = press(row)
       mergeIntoNext.mutate(
-        { id: row.id },
-        { onSuccess: () => armed({ kind: 'merge' }) },
+        { id: row.id, baseline },
+        { onSuccess: arm('merge') },
       )
     },
     split: (row: CorrectionRow): void => {
-      const armed = arm(row)
-      splitInHalf.mutate(
-        { id: row.id },
-        { onSuccess: () => armed({ kind: 'split' }) },
-      )
+      const { baseline, arm } = press(row)
+      splitInHalf.mutate({ id: row.id, baseline }, { onSuccess: arm('split') })
     },
     // 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
     cut: (row: CorrectionRow, at: number): void => {
-      const armed = arm(row)
-      const input: SplitAtInput = { id: row.id, at: new Date(at) }
+      const { baseline, arm } = press(row)
+      const input: SplitAtInput = { id: row.id, at: new Date(at), baseline }
       splitAt.mutate(input, {
         onSuccess: (inserted) => {
-          armed({ kind: 'cut' })
+          arm('cut')(inserted)
           state.select(inserted.id)
           state.setFocusId(inserted.id)
         },
@@ -220,16 +227,17 @@ function useCorrectionUndo(state: CorrectionState) {
     ...orpc.switches.changeActivity.mutationOptions(),
     ...edit,
   })
-  // A refused activity undo that can never succeed turns 元に戻す off; the archived one also says why on its row.
-  const refuseActivityUndo = (error: unknown, id: string): void => {
+  // A refused undo that can never succeed (the day or record changed elsewhere) turns 元に戻す off; the archived one also says
+  // why on its row. A passing failure (offline, server error) keeps it armed for another try.
+  const refuseUndo = (error: unknown, id: string | null): void => {
     const outcome = afterUndoFailure(error)
     if (outcome !== 'keep') state.setSlot(null)
-    if (outcome === 'archived') state.showNotice(id)
+    if (outcome === 'archived' && id) state.showNotice(id)
   }
   return (): void => {
     if (!state.slot) return
     const request = undoRequest(state.slot)
-    // Dropped on success, not on mutate, so a failed day undo (offline, stale row) leaves 元に戻す armed for another try.
+    // Dropped on success, not on mutate, so a passing failure leaves 元に戻す armed.
     if (request.procedure === 'replaceDay')
       replaceDay.mutate(request.input, {
         onSuccess: () => {
@@ -237,11 +245,12 @@ function useCorrectionUndo(state: CorrectionState) {
           // A cut's undo brings the carried-in row back: select it again.
           if (request.reselectId) state.select(request.reselectId)
         },
+        onError: (error) => refuseUndo(error, null),
       })
     else
       restoreActivity.mutate(request.input, {
         onSuccess: () => state.setSlot(null),
-        onError: (error) => refuseActivityUndo(error, request.input.id),
+        onError: (error) => refuseUndo(error, request.input.id),
       })
   }
 }

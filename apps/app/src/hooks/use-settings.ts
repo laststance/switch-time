@@ -25,8 +25,9 @@ export function useSettings() {
 }
 
 /**
- * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error; `settings.*`
- * and `stats.*` refetch once the server has answered, since the idle threshold and the unused-day rule change every total.
+ * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error; `settings.*`,
+ * `stats.*` and `switches.*` refetch once the server has answered, since the idle threshold and the unused-day rule change every total
+ * and a stored-zone change moves every day's window.
  * @example const update = useUpdateSettings(); update.mutate({ theme: 'dark' })
  */
 export function useUpdateSettings() {
@@ -52,6 +53,8 @@ export function useUpdateSettings() {
           )
       },
       // Only the last in-flight update refetches: an earlier settle would replay stale server values over a newer optimistic one.
+      // That last one may be a theme tap after a zone change, so it always refetches `switches.*` too: the day lists must be
+      // re-windowed, or a correction sends a baseline in the old zone and is refused.
       onSettled: async () => {
         const inFlight = queryClient.isMutating({
           mutationKey: orpc.settings.update.mutationKey(),
@@ -60,6 +63,7 @@ export function useUpdateSettings() {
           await invalidateKeys(queryClient, [
             orpc.settings.key(),
             orpc.stats.key(),
+            orpc.switches.key(),
           ])
       },
     }),

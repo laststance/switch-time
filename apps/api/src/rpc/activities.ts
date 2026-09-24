@@ -7,7 +7,7 @@ import { db } from '../db/client'
 import { activities } from '../db/schema/app'
 import { seedUser } from '../db/seed-user'
 
-import { authed, one } from './base'
+import { authed, one, withUserLock } from './base'
 import { latestSwitch } from './switches'
 
 const active = (userId: string) =>
@@ -114,20 +114,20 @@ export const activitiesRouter = {
     .input(z.object({ id: z.uuid() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      const [current, activeCount] = await Promise.all([
-        latestSwitch(userId),
-        db.$count(activities, active(userId)),
-      ])
-      // The clock always holds exactly one state: its activity, and the last remaining one, stay.
-      // ponytail: check-then-act without a per-user lock; add pg_advisory_xact_lock(hashtext(user_id)) if concurrent archives ever show up.
-      if (current?.activityId === input.id || activeCount <= 1)
-        throw new ORPCError('CONFLICT', { message: 'activity is in use' })
-      return one(
-        await db
-          .update(activities)
-          .set({ archivedAt: new Date() })
-          .where(and(eq(activities.id, input.id), active(userId)))
-          .returning(),
-      )
+      // Under the timeline lock: a tap on this activity, or a second archive, waits until this one has checked and written.
+      return withUserLock(userId, async (tx) => {
+        const current = await latestSwitch(userId, tx)
+        const activeCount = await tx.$count(activities, active(userId))
+        // The clock always holds exactly one state: its activity, and the last remaining one, stay.
+        if (current?.activityId === input.id || activeCount <= 1)
+          throw new ORPCError('CONFLICT', { message: 'activity is in use' })
+        return one(
+          await tx
+            .update(activities)
+            .set({ archivedAt: new Date() })
+            .where(and(eq(activities.id, input.id), active(userId)))
+            .returning(),
+        )
+      })
     }),
 }

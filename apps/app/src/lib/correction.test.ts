@@ -9,12 +9,14 @@ import {
   cutStepper,
   cutNotes,
   cutTotalsEffects,
+  dayBaseline,
   daySnapshot,
   dayTitle,
   isManuallyExcluded,
   openedCut,
   pickRequest,
   revealOffset,
+  rowsAfterEdit,
   undoRequest,
   undoSlotFor,
   type ListedDay,
@@ -177,7 +179,7 @@ test('a detox row names itself, has no colour and keeps every correction', () =>
     null,
     'wind',
   ])
-  expect(daySnapshot(list)[1]).toEqual({
+  expect(daySnapshot(list.rows)[1]).toEqual({
     activityId: null,
     startedAt: at(day, 12),
   })
@@ -210,7 +212,7 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
   expect(correctionRows(list, undefined, bounds)).toEqual([])
 })
 
-test('the title names the day unless it is today, and the snapshot holds only the day’s own rows', () => {
+test('the title names the day unless it is today, and the baseline an edit sends holds only the day’s own rows, with their ids', () => {
   // Arrange
   const list: ListedDay = {
     carriedIn: row('s', 'sleep', at('2026-09-07', 23)),
@@ -221,9 +223,11 @@ test('the title names the day unless it is today, and the snapshot holds only th
   // Act & Assert
   expect(dayTitle('2026-09-09', '2026-09-09')).toBe('今日の記録を訂正')
   expect(dayTitle('2026-09-08', '2026-09-09')).toBe('9月8日（火）の記録を訂正')
-  expect(daySnapshot(list)).toEqual([
-    { activityId: 'work', startedAt: at('2026-09-08', 9) },
-  ])
+  expect(dayBaseline('2026-09-08', TZ, list)).toEqual({
+    day: '2026-09-08',
+    timeZone: TZ,
+    rows: [{ id: 'w', activityId: 'work', startedAt: at('2026-09-08', 9) }],
+  })
 })
 
 test('区切る時刻 reaches 0:00 on a record that began the night before and stops a quarter hour before the next switch', () => {
@@ -587,10 +591,16 @@ test('without a cut range the stepper shows a dash and every step is disabled', 
 
 test('a pick on the carried-in record arms an undo that puts only its previous activity back, at the revision the pick left', () => {
   // Arrange
-  const { day, list, carriedIn } = carriedWork()
+  const { day, list, bounds, carriedIn } = carriedWork()
+  const returned = { ...row('w', 'sleep', at('2026-09-07', 22)), revision: 4 }
 
   // Act
-  const slot = undoSlotFor({ kind: 'pick', revision: 4 }, carriedIn, day, list)
+  const slot = undoSlotFor(
+    { kind: 'pick', returned },
+    carriedIn,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
 
   // Assert
   expect(slot).toEqual({
@@ -617,9 +627,15 @@ test('a pick on a carried-in detox record arms an undo back to detox', () => {
   }
   const carriedIn = correctionRows(list, activities, bounds).at(-1)
   if (!carriedIn) throw new Error('no carried-in row')
+  const returned = { ...row('d', 'sleep', at('2026-09-07', 22)), revision: 1 }
 
   // Act
-  const slot = undoSlotFor({ kind: 'pick', revision: 1 }, carriedIn, day, list)
+  const slot = undoSlotFor(
+    { kind: 'pick', returned },
+    carriedIn,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
 
   // Assert
   expect(slot).toEqual({
@@ -646,49 +662,195 @@ test('a pick away from an archived activity on the carried-in record arms no und
   }
   const carriedIn = correctionRows(list, activities, bounds).at(-1)
   if (!carriedIn) throw new Error('no carried-in row')
+  const returned = { ...row('o', 'sleep', at('2026-09-07', 22)), revision: 1 }
 
   // Act
-  const slot = undoSlotFor({ kind: 'pick', revision: 1 }, carriedIn, day, list)
+  const slot = undoSlotFor(
+    { kind: 'pick', returned },
+    carriedIn,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
 
   // Assert
   expect(slot).toEqual({ blocked: 'archived' })
 })
 
-test('a cut arms the day undo, which selects the carried-in record again', () => {
-  // Arrange
-  const { day, list, carriedIn } = carriedWork()
+test('a cut arms the day undo, which expects the new row, writes back the day without it and selects the carried-in record again', () => {
+  // Arrange: 「ここで分割」 at 3:15 left a new 仕事 row on the day.
+  const { day, list, bounds, carriedIn } = carriedWork()
+  const inserted = row('n', 'work', at(day, 3, 15))
 
   // Act
-  const slot = undoSlotFor({ kind: 'cut' }, carriedIn, day, list)
+  const slot = undoSlotFor(
+    { kind: 'cut', returned: inserted },
+    carriedIn,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
 
   // Assert
   expect(slot).toEqual({
     kind: 'day',
     day,
+    timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
+    expected: [
+      { id: 'n', activityId: 'work', startedAt: at(day, 3, 15) },
+      { id: 'h', activityId: 'home', startedAt: at(day, 7) },
+    ],
     reselectId: 'w',
   })
 })
 
-test('edits of the day’s own rows arm the day undo without a reselection', () => {
+test('a move of the day’s own row arms the day undo that expects the moved start, without a reselection', () => {
   // Arrange
-  const { day, list, rows } = carriedWork()
+  const { day, list, bounds, rows } = carriedWork()
   const ownRow = rows[0]
   if (!ownRow) throw new Error('no own row')
-  const expected = {
+  const moved = row('h', 'home', at(day, 7, 15))
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'move', returned: moved },
+    ownRow,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toEqual({
     kind: 'day',
     day,
+    timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
+    expected: [{ id: 'h', activityId: 'home', startedAt: at(day, 7, 15) }],
     reselectId: null,
-  }
+  })
+})
 
-  // Act & Assert: a pick on a day-own row still goes through the day undo.
-  expect(undoSlotFor({ kind: 'move' }, ownRow, day, list)).toEqual(expected)
-  expect(undoSlotFor({ kind: 'merge' }, ownRow, day, list)).toEqual(expected)
-  expect(undoSlotFor({ kind: 'split' }, ownRow, day, list)).toEqual(expected)
-  expect(undoSlotFor({ kind: 'pick', revision: 1 }, ownRow, day, list)).toEqual(
-    expected,
+test('a pick on the day’s own row goes through the day undo, which expects the picked activity', () => {
+  // Arrange
+  const { day, list, bounds, rows } = carriedWork()
+  const ownRow = rows[0]
+  if (!ownRow) throw new Error('no own row')
+  const picked = { ...row('h', 'sleep', at(day, 7)), revision: 1 }
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'pick', returned: picked },
+    ownRow,
+    dayBaseline(day, TZ, list),
+    bounds,
   )
+
+  // Assert
+  expect(slot).toEqual({
+    kind: 'day',
+    day,
+    timeZone: TZ,
+    rows: [{ activityId: 'home', startedAt: at(day, 7) }],
+    expected: [{ id: 'h', activityId: 'sleep', startedAt: at(day, 7) }],
+    reselectId: null,
+  })
+})
+
+test('the day after a merge into the previous row lacks the merged row, and the kept row is as returned', () => {
+  // Arrange: 仕事 9:00, 休息 12:00, 家 18:00; 休息 merges into 仕事.
+  const day = '2026-09-08'
+  const before = [
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ]
+  const kept = row('w', 'work', at(day, 9))
+
+  // Act
+  const after = rowsAfterEdit(
+    before,
+    { kind: 'merge', returned: kept },
+    'r',
+    dayBounds(day, TZ),
+  )
+
+  // Assert
+  expect(after).toEqual([
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ])
+})
+
+test('the day after a merge into the next row lacks the merged row, and the kept row starts where the merged one did', () => {
+  // Arrange: 休息 merges into 家, which takes 休息's 12:00 start.
+  const day = '2026-09-08'
+  const before = [
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ]
+  const kept = row('h', 'home', at(day, 12))
+
+  // Act
+  const after = rowsAfterEdit(
+    before,
+    { kind: 'merge', returned: kept },
+    'r',
+    dayBounds(day, TZ),
+  )
+
+  // Assert
+  expect(after).toEqual([
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 12) },
+  ])
+})
+
+test('the day after a merge into the carried-in record keeps only the rows still on the day', () => {
+  // Arrange: the day's first row 仕事 merges into the carried-in 睡眠 of the day before.
+  const day = '2026-09-08'
+  const before = [
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ]
+  const kept = row('s', 'sleep', at('2026-09-07', 23))
+
+  // Act
+  const after = rowsAfterEdit(
+    before,
+    { kind: 'merge', returned: kept },
+    'w',
+    dayBounds(day, TZ),
+  )
+
+  // Assert
+  expect(after).toEqual([
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ])
+})
+
+test('the day after 半分で分割 holds the new later part in start order', () => {
+  // Arrange: 仕事 9:00 – 18:00 splits at 13:30.
+  const day = '2026-09-08'
+  const before = [
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ]
+  const inserted = row('n', 'work', at(day, 13, 30))
+
+  // Act
+  const after = rowsAfterEdit(
+    before,
+    { kind: 'split', returned: inserted },
+    'w',
+    dayBounds(day, TZ),
+  )
+
+  // Assert
+  expect(after).toEqual([
+    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
+    { id: 'n', activityId: 'work', startedAt: at(day, 13, 30) },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+  ])
 })
 
 test('undo rewrites the day for a day slot and puts the activity back only if no other write reached the record since the pick', () => {
@@ -696,7 +858,12 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
   const daySlot = {
     kind: 'day' as const,
     day: '2026-09-08',
+    timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at('2026-09-08', 7) }],
+    expected: [
+      { id: 'n', activityId: 'work', startedAt: at('2026-09-08', 3, 15) },
+      { id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) },
+    ],
     reselectId: 'w',
   }
   const activitySlot = {
@@ -719,6 +886,11 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
     procedure: 'replaceDay',
     input: {
       day: '2026-09-08',
+      timeZone: TZ,
+      expected: [
+        { id: 'n', activityId: 'work', startedAt: at('2026-09-08', 3, 15) },
+        { id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) },
+      ],
       rows: [{ activityId: 'home', startedAt: at('2026-09-08', 7) }],
     },
     reselectId: 'w',
@@ -814,19 +986,25 @@ test('a live activity on the carried-in record shows no archived box', () => {
 
 test('a pick on the carried-in record only writes if no other write reached the record since the sheet listed it', () => {
   // Arrange
-  const { rows, carriedIn } = carriedWork()
+  const { day, list, rows, carriedIn } = carriedWork()
   const ownRow = rows[0]
   if (!ownRow) throw new Error('no own row')
+  const baseline = dayBaseline(day, TZ, list)
 
-  // Act & Assert: day-own rows keep their unconditional pick.
-  expect(pickRequest(carriedIn, 'sleep')).toEqual({
+  // Act & Assert: day-own rows are conditional on the day as listed instead.
+  expect(pickRequest(carriedIn, 'sleep', baseline)).toEqual({
     id: 'w',
     activityId: 'sleep',
     revision: 0,
   })
-  expect(pickRequest(ownRow, 'sleep')).toEqual({
+  expect(pickRequest(ownRow, 'sleep', baseline)).toEqual({
     id: 'h',
     activityId: 'sleep',
+    baseline: {
+      day: '2026-09-08',
+      timeZone: TZ,
+      rows: [{ id: 'h', activityId: 'home', startedAt: at(day, 7) }],
+    },
   })
 })
 
@@ -1280,7 +1458,7 @@ test('a pick on a carried-in record names the revision the day list reported for
   if (!carriedIn) throw new Error('no carried-in row')
 
   // Act
-  const request = pickRequest(carriedIn, 'work')
+  const request = pickRequest(carriedIn, 'work', undefined)
 
   // Assert
   expect(request).toEqual({ id: 'd', activityId: 'work', revision: 2 })

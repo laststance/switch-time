@@ -104,16 +104,58 @@ export const reorderInputSchema = z.object({
   ids: z.array(z.uuid()).min(1).max(100),
 })
 
+/** One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares. */
+export const dayRowSchema = z.object({
+  id: z.uuid(),
+  activityId: z.uuid().nullable(),
+  startedAt: z.coerce.date(),
+})
+export type DayRow = z.infer<typeof dayRowSchema>
+
+// A day holds a few dozen switches; 500 bounds a request without ever refusing a real one.
+const dayRowsSchema = z.array(dayRowSchema).max(500)
+
+/**
+ * The day a correction-sheet edit was made on, as the sheet saw it: the stored zone and the day's own rows, oldest first. The
+ * router refuses the edit (CONFLICT, {@link DAY_CHANGED_REFUSAL}) unless the day still reads exactly so, which makes the
+ * sheet's snapshot the day's true state before the edit and lets 「元に戻す」 know the state the edit left.
+ */
+export const dayBaselineSchema = z.object({
+  day: daySchema,
+  timeZone: timeZoneSchema,
+  rows: dayRowsSchema,
+})
+export type DayBaseline = z.infer<typeof dayBaselineSchema>
+
+// Every correction-sheet edit may name its baseline; the API's own tests edit without one.
+const withBaseline = { baseline: dayBaselineSchema.optional() }
+
+/** 前の記録に統合 / 次の記録に統合 / 半分で分割: a row and, from the sheet, its day's baseline. */
+export const rowEditInputSchema = z.object({ id: z.uuid(), ...withBaseline })
+
 /** Correction sheet ±15 min step; the router clamps to the neighbouring switches. */
 export const moveStartInputSchema = z.object({
   id: z.uuid(),
   deltaMinutes: z.literal([15, -15]),
+  ...withBaseline,
+})
+
+/**
+ * 活動を変える: `revision` makes the write conditional on the record being unchanged since (the carried-in pick and its undo);
+ * `baseline` is the day's, for the picks the day undo covers.
+ */
+export const changeActivityInputSchema = z.object({
+  id: z.uuid(),
+  activityId: z.uuid().nullable(),
+  revision: z.int().nonnegative().optional(),
+  ...withBaseline,
 })
 
 /** 「ここで分割」 on the record carried into a day: cut it at `at`; the router keeps a minute from both ends and from now. */
 export const splitAtInputSchema = z.object({
   id: z.uuid(),
   at: z.coerce.date(),
+  ...withBaseline,
 })
 /** The client types its call with this alias: oRPC types the input from zod's input side, where `z.coerce.date()` is `unknown`. */
 export type SplitAtInput = z.infer<typeof splitAtInputSchema>
@@ -125,9 +167,23 @@ export type SplitAtInput = z.infer<typeof splitAtInputSchema>
  */
 export const ARCHIVED_REFUSAL = Object.freeze({ reason: 'archived' } as const)
 
-/** Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first; `activityId` null is a detox row. */
+/**
+ * The `data` of the CONFLICT a correction answers when the day no longer reads as the sheet saw it (another device or tab
+ * wrote since, or the stored zone moved the day's window): an edit's {@link dayBaselineSchema} or 「元に戻す」's `expected`.
+ * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: DAY_CHANGED_REFUSAL })
+ */
+export const DAY_CHANGED_REFUSAL = Object.freeze({
+  reason: 'day-changed',
+} as const)
+
+/**
+ * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only
+ * while the stored zone is still `timeZone` and the day's rows are still exactly `expected`, the rows the edit left.
+ */
 export const replaceDayInputSchema = z.object({
   day: daySchema,
+  timeZone: timeZoneSchema,
+  expected: dayRowsSchema,
   rows: z
     .array(
       z.object({ activityId: z.uuid().nullable(), startedAt: z.coerce.date() }),
