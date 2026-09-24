@@ -159,6 +159,7 @@ test('arming a day undo whose rows hold Dates raises no non-serializable warning
     ],
     carriedOutId: null,
     reselect: { startedAt: Date.parse('2026-09-25T09:00:00+09:00') },
+    account: 'account-a',
   }
 
   // Act

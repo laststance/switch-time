@@ -548,7 +548,9 @@ export function cutNotes(
  * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay` only while the
  * stored zone is still `timeZone`, the day still holds exactly `expected`, the rows the edit left, and its last row still
  * runs into `carriedOutId` (an edit on the day never changes it, so it is the baseline's); `reselect` is the row to
- * select again once the undo lands ({@link Reselect}). `activity`: a pick on the carried-in record, put back
+ * select again once the undo lands ({@link Reselect}); `account` is the user the edit was written as (the returned row's
+ * `userId`, what the cookie said, not what this tab believed), so `replaceDay` refuses the undo from any other session: a
+ * detox-only snapshot of an empty day passes every other check. `activity`: a pick on the carried-in record, put back
  * through `switches.changeActivity` only while the record is still at the `revision` the pick left, since that record
  * reaches another day (a record's revision does not depend on any day's window, so it carries no zone).
  */
@@ -561,6 +563,7 @@ export type UndoSlot =
       expected: DayRow[]
       carriedOutId: DayBaseline['carriedOutId']
       reselect: Reselect
+      account: string
     }
   | {
       kind: 'activity'
@@ -582,7 +585,10 @@ export type Reselect = { id: string } | { startedAt: number } | null
  */
 export type CorrectionEdit = {
   kind: 'move' | 'pick' | 'merge' | 'split' | 'cut'
-  returned: Pick<SwitchRow, 'id' | 'activityId' | 'startedAt' | 'revision'>
+  returned: Pick<
+    SwitchRow,
+    'id' | 'activityId' | 'startedAt' | 'revision' | 'userId'
+  >
 }
 
 /**
@@ -627,6 +633,7 @@ export function undoSlotFor(
     expected: rowsAfterEdit(baseline.rows, edit, row.id, window),
     carriedOutId: baseline.carriedOutId,
     reselect: reselectAfterUndo(edit.kind, row),
+    account: edit.returned.userId,
   }
 }
 
@@ -712,6 +719,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
         expected: slot.expected,
         carriedOutId: slot.carriedOutId,
         rows: slot.rows,
+        account: slot.account,
       },
       reselect: slot.reselect,
     }

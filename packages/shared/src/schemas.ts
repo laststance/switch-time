@@ -235,8 +235,8 @@ export const REFUSAL = Object.freeze({
 /**
  * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only
  * while the stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left, and its last
- * row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's). `account` is the user the undo was
- * armed under: a tab that another tab has since signed in as someone else still sends the new session's cookie, and a detox-only
+ * row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's). `account` is the user the edit was
+ * written as (its returned row's `userId`): a tab that another tab has since signed in as someone else still sends the new session's cookie, and a detox-only
  * day passes every other check on an empty day. Left out, it is not compared (seeds and the API's own tests).
  */
 export const replaceDayInputSchema = z.object({

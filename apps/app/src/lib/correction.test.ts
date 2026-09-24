@@ -909,6 +909,7 @@ test('a cut arms the day undo, which expects the new row, writes back the day wi
     ],
     carriedOutId: null,
     reselect: { id: 'w' },
+    account: 'u',
   })
 })
 
@@ -936,6 +937,7 @@ test('a move of the day’s own row arms the day undo that expects the moved sta
     expected: [{ id: 'h', activityId: 'home', startedAt: at(day, 7, 15) }],
     carriedOutId: null,
     reselect: null,
+    account: 'u',
   })
 })
 
@@ -966,6 +968,7 @@ test('a split arms the day undo that selects the halved row again by its start, 
     ],
     carriedOutId: null,
     reselect: { startedAt: at(day, 7).getTime() },
+    account: 'u',
   })
 })
 
@@ -1020,6 +1023,7 @@ test('a pick on the day’s own row goes through the day undo, which expects the
     expected: [{ id: 'h', activityId: 'sleep', startedAt: at(day, 7) }],
     carriedOutId: null,
     reselect: null,
+    account: 'u',
   })
 })
 
@@ -1134,6 +1138,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
     ],
     carriedOutId: 't',
     reselect: { id: 'w' },
+    account: 'u',
   }
   const activitySlot = {
     kind: 'activity' as const,
@@ -1162,6 +1167,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
       ],
       carriedOutId: 't',
       rows: [{ activityId: 'home', startedAt: at('2026-09-08', 7) }],
+      account: 'u',
     },
     reselect: { id: 'w' },
   })

@@ -311,8 +311,6 @@ function useCorrectionUndo(
 ) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
-  // The slots belong to this account (a new one starts them over), so the API can refuse an undo a stale tab sends as someone else.
-  const account = useAppSelector((s) => s.correction.account) ?? undefined
   const edit = useEditLifecycle(day, state)
   const replaceDay = useMutation({
     ...orpc.switches.replaceDay.mutationOptions(),
@@ -338,7 +336,7 @@ function useCorrectionUndo(
     const request = undoRequest(slot)
     // Dropped on success, not on mutate, so a passing failure leaves 元に戻す armed.
     if (request.procedure === 'replaceDay')
-      replaceDay.mutateAsync({ ...request.input, account }).then((written) => {
+      replaceDay.mutateAsync(request.input).then((written) => {
         dispatch(dropped({ epoch, day }))
         // A cut's or a split's undo brings back the row the edit was made on: select it again.
         const reselectId = reselectedRow(request.reselect, written)
