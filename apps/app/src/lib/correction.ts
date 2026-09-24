@@ -134,17 +134,21 @@ export function correctionRows(
     (row) => row !== null,
   )
   const byId = new Map(activities.map((activity) => [activity.id, activity]))
+  const activityOf = (row: SwitchRow) =>
+    row.activityId === null ? DETOX_ROW : byId.get(row.activityId)
   return (
     timeline
-      .map((row, index) =>
-        describeRow(
+      .map((row, index) => {
+        const prev = timeline[index - 1] ?? null
+        return describeRow(
           row,
-          timeline[index - 1] ?? null,
+          prev,
           timeline[index + 1] ?? null,
-          row.activityId === null ? DETOX_ROW : byId.get(row.activityId),
+          activityOf(row),
           bounds,
-        ),
-      )
+          Boolean(prev && activityOf(prev)?.archivedAt),
+        )
+      })
       // The carried-out state only closes the last segment (it is the next day's row), and a day whose
       // first row starts at 0:00 leaves the carried-in state no span to show.
       .filter((row) => row.id !== list.carriedOut?.id)
@@ -198,13 +202,15 @@ function trueStartLabels(
   }
 }
 
-// One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included).
+// One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included), and
+// `prevArchived` says whether the previous row's activity is archived.
 function describeRow(
   row: SwitchRow,
   prev: SwitchRow | null,
   next: SwitchRow | null,
   activity: CorrectionActivity = UNKNOWN,
   bounds: DayBounds,
+  prevArchived: boolean,
 ): CorrectionRow {
   const startedAt = row.startedAt.getTime()
   const carriedIn = startedAt < bounds.start
@@ -231,7 +237,9 @@ function describeRow(
     trueStart: startedAt,
     trueEnd,
     cut: carriedIn ? cutRange(startedAt, trueEnd, bounds) : null,
-    ...(carriedIn ? LOCKED : ownRowFlags(row, prev, next, bounds)),
+    ...(carriedIn
+      ? LOCKED
+      : ownRowFlags(row, prev, next, bounds, prevArchived)),
   }
 }
 
@@ -258,6 +266,7 @@ function ownRowFlags(
   prev: SwitchRow | null,
   next: SwitchRow | null,
   bounds: DayBounds,
+  prevArchived: boolean,
 ): RowFlags {
   const startedAt = row.startedAt.getTime()
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
@@ -265,7 +274,8 @@ function ownRowFlags(
   return {
     canMoveEarlier: moveTarget(row, prev, next, bounds, -15) !== null,
     canMoveLater: moveTarget(row, prev, next, bounds, 15) !== null,
-    canMergePrevious: prev !== null,
+    // Merging the running record makes the previous one the current state, which the API refuses for an archived activity.
+    canMergePrevious: prev !== null && (next !== null || !prevArchived),
     // Merging moves the next row back to this row's start, so that row must be the day's own: 「元に戻す」 rewrites this day
     // only, and would drop the next day's first switch for good.
     canMergeNext: next !== null && trueEnd < bounds.end,
