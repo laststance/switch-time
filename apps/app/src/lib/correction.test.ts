@@ -2036,12 +2036,11 @@ test('a sheet that moves to another day starts over, and a notice kept for the d
 
 test('an answer to a press selects its row while the sheet shows the day it was pressed on, and nothing once it shows another day', () => {
   // Arrange
-  type Sheet = {
-    day: string
-    selectedId: string | null
-    focusId: string | null
+  const sameDay: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: null,
+    focusId: null,
   }
-  const sameDay: Sheet = { day: '2026-09-08', selectedId: null, focusId: null }
   const nextDay: CorrectionSheet = {
     day: '2026-09-09',
     selectedId: 'kept',
@@ -2223,6 +2222,37 @@ test('a carried-in pick’s 元に戻す turns off once the day no longer lists 
   // Assert
   expect(noneCarried).toBeUndefined()
   expect(anotherCarried).toBeUndefined()
+})
+
+test('an edit that left its day with no rows keeps 元に戻す while the day stays empty, and turns it off once a tap adds a row', () => {
+  // Arrange: the edit left 2026-09-08 with no row of its own and nothing carried out.
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const tapped = row('t', 'rest', new Date('2026-09-08T15:00:00+09:00'))
+
+  // Act
+  const whileEmpty = offeredUndo(
+    slot,
+    { rows: [], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+  const afterTap = offeredUndo(
+    slot,
+    { rows: [tapped], carriedIn: null, carriedOut: null },
+    'Asia/Tokyo',
+  )
+
+  // Assert
+  expect(whileEmpty).toBe(slot)
+  expect(afterTap).toBeUndefined()
 })
 
 test('on the same day the user’s own selection outranks the row a kept notice was raised for', () => {

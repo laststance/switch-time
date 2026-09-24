@@ -710,11 +710,14 @@ export type CorrectionSheet = {
   focusId: string | null
 }
 
+/** What an answer to a press sets on {@link CorrectionSheet}: never its day, which only a render for a new day changes. */
+export type SheetPatch = Partial<Omit<CorrectionSheet, 'day'>>
+
 /**
  * What the sheet shows for `day`, from its own state and what the store keeps about the day. Its own state belongs to the day
  * it was made on, so a new day (midnight on today's sheet, a `?day=` change) starts it over; the row the archived notice was
  * raised for is selected when nothing else is, so a notice kept after the sheet closed is seen when it reopens. Called by
- * {@link useCorrection} on every render, which stores `sheet` back when it started over.
+ * {@link useCorrectionState} (inside {@link useCorrection}) on every render, which stores `sheet` back when it started over.
  * @param sheet - The sheet's own state.
  * @param day - The day the sheet shows.
  * @param said - The day's line and notice from the store, if any.
@@ -748,7 +751,8 @@ export function sheetView(
 /**
  * The sheet's own state after an answer to a press: the patch applies only while the sheet still shows the day the press
  * was made on, so a split or an undo that lands after midnight or a `?day=` change selects nothing on the day now shown.
- * Called by {@link useCorrection}'s answers through a functional state update, whose `current.day` is the viewed day.
+ * Called by the answers of {@link useCorrectionState} (inside {@link useCorrection}) through a functional state update, whose
+ * `current.day` is the viewed day.
  * @param current - The sheet's state, whose `day` is the day it shows.
  * @param pressedDay - The day the press was made on.
  * @param patch - What the answer sets.
@@ -760,7 +764,7 @@ export function sheetView(
 export function onPressedDay(
   current: CorrectionSheet,
   pressedDay: string,
-  patch: Partial<Omit<CorrectionSheet, 'day'>>,
+  patch: SheetPatch,
 ): CorrectionSheet {
   if (current.day !== pressedDay) return current
   return { ...current, ...patch }

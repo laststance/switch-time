@@ -35,6 +35,7 @@ import {
   type CorrectionSheet,
   type DayBounds,
   type ListedDay,
+  type SheetPatch,
   type TotalsFacts,
   type UndoSlot,
 } from '@/lib/correction'
@@ -44,7 +45,7 @@ import { invalidateKeys } from '@/lib/query'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { correctionSlice } from '@/store/correction'
 
-const { armed, dropped } = correctionSlice.actions
+const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
 
 /**
  * Everything the correction sheet needs for one day: the row model, the selection, the `switches.*` edits and 「元に戻す」.
@@ -142,7 +143,7 @@ function useCorrectionState(day: string) {
   // A new day started the sheet over ("adjusting state when a prop changes"); `current` already covers this render.
   if (current !== sheet) setSheet(current)
   // An answer to a press: kept off the sheet once it shows another day.
-  const answer = (pressedDay: string, patch: Partial<CorrectionSheet>): void =>
+  const answer = (pressedDay: string, patch: SheetPatch): void =>
     setSheet((latest) => onPressedDay(latest, pressedDay, patch))
   return {
     selectedId: view.selectedId,
@@ -151,12 +152,12 @@ function useCorrectionState(day: string) {
     refusal: view.refusal,
     // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice.
     hush: (notice: boolean): void => {
-      dispatch(correctionSlice.actions.hushed({ epoch, day, notice }))
+      dispatch(hushed({ epoch, day, notice }))
     },
     // A tap on a row: what the line or the notice said was about another moment.
     select: (id: string | null): void => {
       setSheet({ ...current, selectedId: id })
-      dispatch(correctionSlice.actions.hushed({ epoch, day, notice: true }))
+      dispatch(hushed({ epoch, day, notice: true }))
     },
     // A row the sheet selects by itself (an undo's reselect): a refusal a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
@@ -168,7 +169,7 @@ function useCorrectionState(day: string) {
     },
     // An archived pick, or an undo refused as archived: the notice on the press's day, whose row is then selected.
     showNotice: (pressed: Pressed, id: string): void => {
-      dispatch(correctionSlice.actions.noticed({ ...pressed, id }))
+      dispatch(noticed({ ...pressed, id }))
       answer(pressed.day, { selectedId: id })
     },
   }
@@ -196,7 +197,7 @@ function useEditLifecycle(day: string) {
     ): void => {
       if (pressed)
         dispatch(
-          correctionSlice.actions.refused({
+          refused({
             ...pressed,
             text: refusalMessage(error),
           }),

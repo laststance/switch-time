@@ -1943,13 +1943,19 @@ test('a split whose answer lands after midnight selects nothing on the new day, 
 
   // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick, and then the split's answer
   // lands. Setting the time fires no timer, so the split's 30 s deadline does not run out on the way.
-  await page.clock.setSystemTime(
-    new Date(`${shift(today(), 1)}T00:00:30+09:00`),
-  )
-  const carriedIn = dialog.getByRole('button', { name: /^仕事 0:00 – / })
+  const newDay = shift(today(), 1)
+  await page.clock.setSystemTime(new Date(`${newDay}T00:00:30+09:00`))
+  // Only the new day lists 仕事 at under 2 minutes: the skip above keeps the old day's running row at 2 minutes or more.
+  const carriedIn = dialog.getByRole('button', {
+    name: /^仕事 0:00 – いま [01]m$/,
+  })
   await expect(carriedIn).toBeVisible()
-  // The split settles once the list is read again after its answer; its selection runs right after that read.
-  const reread = page.waitForResponse('**/api/rpc/switches/listByDay**')
+  // The split settles once the new day's list is read again after its answer; its selection runs right after that read.
+  const reread = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/rpc/switches/listByDay') &&
+      (response.request().postData() ?? '').includes(newDay),
+  )
   answer.resolve()
   await reread
 
