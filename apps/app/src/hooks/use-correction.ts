@@ -244,8 +244,9 @@ function useCorrectionUndo(state: CorrectionState) {
     ...orpc.switches.changeActivity.mutationOptions(),
     ...edit,
   })
-  // A refused undo that can never succeed (the day or record changed elsewhere) turns 元に戻す off; the archived one also says
-  // why on its row. A passing failure (offline, server error) keeps it armed for another try.
+  // A refused undo that can never succeed (the day or record changed elsewhere) turns 元に戻す off; an archived refusal of the
+  // carried-in pick's undo also says why on its row, while a day undo has no row id and turns off silently (TODOS.md "Say why a
+  // correction was refused"). A passing failure (offline, server error) keeps it armed for another try.
   const refuseUndo = (error: unknown, id: string | null): void => {
     const outcome = afterUndoFailure(error)
     if (outcome !== 'keep') state.setSlot(null)

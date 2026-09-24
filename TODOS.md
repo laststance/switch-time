@@ -14,6 +14,20 @@
 **Priority:** P3
 **Depends on:** None
 
+## Settings
+
+### Let the main device take the account's zone back
+
+**What:** Give the user a way back when another device's zone replaced the account's: a zone row in 設定 (designed in the pen file first) or a prompt when the stored zone differs from both the device's zone and the one it last synced.
+
+**Why:** Since 0.4.1.0 a device writes its zone only when its own zone changed since it last synced (`zoneSyncAction` in `apps/app/src/lib/settings.ts`), which stopped two devices from flipping the zone on every focus. A single sign-in from another zone (a friend's laptop abroad, a browser that reports UTC to resist fingerprinting, a test run against the real account) now writes once, and the main device, whose own zone has not changed, never writes again. Every day boundary, the stats and the correction windows stay shifted, and the app has no zone control to undo it.
+
+**Context:** `apps/app/src/lib/device-zone.ts` keeps the last synced zone per account (localStorage on the web, `expo-secure-store` on native). On iOS the keychain can keep that entry across a reinstall, so reinstalling does not reclaim the zone either. A prompt keeps the automatic path; a 設定 row is simpler and also covers a user who wants a zone other than the device's. Raised by the red-team pass during the 0.4.1.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ## Correction
 
 ### Say why a correction was refused

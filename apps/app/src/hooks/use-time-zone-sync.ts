@@ -22,8 +22,9 @@ export function useTimeZoneSync(): void {
   const accountId = session?.user.id
   const { mutate, isError } = useUpdateSettings()
   const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
-  // `isError` breaks the loop a rollback would otherwise start (the old zone is back in the cache, so write it again).
-  const settled = ready && !isError && !writing
+  // `isError` breaks the loop a rollback would otherwise start (the old zone is back in the cache, so write it again). Without an
+  // account id (an expired session, a sign-out from another tab) the device's store cannot be read, and a write would only fail.
+  const settled = ready && !isError && !writing && Boolean(accountId)
   useEffect(() => {
     const action = zoneSyncAction({
       stored: settings.timeZone,

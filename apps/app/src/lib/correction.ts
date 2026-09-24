@@ -668,7 +668,8 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
  * @param error - The error the undo's mutation failed with.
  * @returns
  * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision) or NOT_FOUND
- * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target)
+ * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target; `replaceDay` refuses
+ *   a day whose current state would name one)
  * - 'keep': anything else, another BAD_REQUEST included
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
  */

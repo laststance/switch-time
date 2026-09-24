@@ -49,7 +49,8 @@ export type ZoneSyncAction = 'write' | 'record' | 'none'
  * @param zones.stored - The account's zone as `settings.get` last answered (or the optimistic value of a write in flight).
  * @param zones.device - The device's IANA zone.
  * @param zones.lastSynced - The zone this device last synced for the account, null when it never did.
- * @param zones.settled - The settings row has loaded, no settings write is in flight, and the last zone write did not fail.
+ * @param zones.settled - The settings row has loaded for a signed-in account, no settings write is in flight, and the last zone
+ *   write did not fail.
  * @returns
  * - 'write': the device's zone differs from both the account's and the one it last synced
  * - 'record': the account already holds the device's zone, which the device has not remembered yet
