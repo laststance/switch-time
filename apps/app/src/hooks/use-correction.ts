@@ -6,6 +6,8 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
+  type QueryKey,
 } from '@tanstack/react-query'
 import { useState, useSyncExternalStore } from 'react'
 
@@ -212,37 +214,45 @@ function useEditLifecycle(day: string) {
       _variables: unknown,
       pressed: Pressed | undefined,
     ): Promise<void> => {
-      const refetchZone =
-        isDayChangedRefusal(error) &&
-        queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
-      const others = [
-        orpc.stats.key(),
-        ...(refetchZone ? [orpc.settings.key()] : []),
-      ]
+      const others = othersToRefetch(queryClient, error)
       // A landed write: the mutation stays pending until the refetch settles, so the panel waits for the rows the edit left.
       if (!error)
         return invalidateKeys(queryClient, [orpc.switches.key(), ...others])
       // A failed one arms nothing, so its refetch runs on its own (a hung API stalls it too, another 30 s and a retry); the
-      // list's fetch still dims the panel. The pressed day's list is read again even once its sheet has closed, so
-      // {@link useDayReads} can settle the line; the rest of `switches.*` only where a screen watches it. The two calls match
-      // disjoint queries, since a second invalidation of the same query would cancel the first one's fetch.
-      const pressedList = hashKey(
-        orpc.switches.listByDay.queryKey({
-          input: { day: pressed?.day ?? day },
-        }),
-      )
-      void queryClient.invalidateQueries({
-        queryKey: orpc.switches.key(),
-        predicate: (query) => query.queryHash === pressedList,
-        refetchType: 'all',
-      })
-      void queryClient.invalidateQueries({
-        queryKey: orpc.switches.key(),
-        predicate: (query) => query.queryHash !== pressedList,
-      })
+      // list's fetch still dims the panel.
+      reReadAfterFailure(queryClient, pressed?.day ?? day)
       void invalidateKeys(queryClient, others)
     },
   }
+}
+
+// The keys a settled edit refetches besides `switches.*`: `stats.*`, and `settings.*` after a day-changed refusal while no
+// settings update is in flight ({@link useEditLifecycle}).
+function othersToRefetch(queryClient: QueryClient, error: unknown): QueryKey[] {
+  const refetchZone =
+    isDayChangedRefusal(error) &&
+    queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
+  return refetchZone
+    ? [orpc.stats.key(), orpc.settings.key()]
+    : [orpc.stats.key()]
+}
+
+// A failed edit's re-read of `switches.*`. The pressed day's list is read again even once its sheet has closed, so
+// {@link useDayReads} can settle the line; the rest only where a screen watches it. The two calls match disjoint queries,
+// since a second invalidation of the same query would cancel the first one's fetch.
+function reReadAfterFailure(queryClient: QueryClient, day: string): void {
+  const pressedList = hashKey(
+    orpc.switches.listByDay.queryKey({ input: { day } }),
+  )
+  void queryClient.invalidateQueries({
+    queryKey: orpc.switches.key(),
+    predicate: (query) => query.queryHash === pressedList,
+    refetchType: 'all',
+  })
+  void queryClient.invalidateQueries({
+    queryKey: orpc.switches.key(),
+    predicate: (query) => query.queryHash !== pressedList,
+  })
 }
 
 // The sheet's edits. Each sends the day's baseline and arms 元に戻す through {@link undoSlotFor} once it succeeds.
