@@ -231,11 +231,7 @@ async function withNeighbours(tx: LockedTx, userId: string, id: string) {
  * which closes the last segment. Oldest first: the input for segments.
  * @example const { carriedIn, rows, carriedOut } = await switchesBetween(userId, start, end)
  */
-export async function switchesBetween(
-  userId: string,
-  start: number,
-  end: number,
-) {
+async function switchesBetween(userId: string, start: number, end: number) {
   const [[carriedIn], rows, [carriedOut]] = await Promise.all([
     db
       .select()
