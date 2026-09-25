@@ -175,6 +175,82 @@ test('the carried-in detox is measured from the day its run started, not the day
   )
 })
 
+test('switching a carried-in activity that ends a detox run to detox counts the week of the run it joins', () => {
+  // Arrange: a detox run from 9/1 ended at 仕事 on 9/5, which runs into 9/6.
+  const list: ListedDay = {
+    carriedIn: row('c', 'work', at('2026-09-05', 9)),
+    carriedInRunStart: '2026-09-01',
+    rows: [],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'c', activityId: 'work' },
+    facts('2026-09-06', '2026-09-15'),
+  )
+
+  // Assert: detox there joins the run from 9/1, whose week ends on 9/8, not on 9/12.
+  expect(note).toBe(
+    'detox と活動を切り替えると、タップのない日（9月6日〜9月8日）の計測が変わることがあります',
+  )
+})
+
+test('switching an activity that keeps a re-tap mark to detox names the days of the week it renews', () => {
+  // Arrange: a detox run from 9/1; on 9/10 a re-tap (startsRun) that was later switched to 仕事.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-01', 22)),
+    carriedInRunStart: '2026-09-01',
+    rows: [row('w', 'work', at('2026-09-10', 9), true)],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'w', activityId: 'work' },
+    facts('2026-09-10', '2026-09-20'),
+  )
+
+  // Assert: detox again renews the run from 9/10, so its week runs through 9/17.
+  expect(note).toBe(
+    'detox と活動を切り替えると、タップのない日（9月11日〜9月17日）の計測が変わることがあります',
+  )
+})
+
+test('a clock tick that rebuilds the selected row reuses its lines while the day list is unchanged', () => {
+  // Arrange: the weekend detox carried into Monday, its panel open.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+  const sheetFacts = { ...facts('2026-09-21', '2026-09-25'), ready: true }
+  const selected = {
+    id: 'c',
+    activityId: null,
+    carriedIn: true,
+    canMergePrevious: false,
+    canMergeNext: false,
+  }
+  const first = untappedSheetNotes(list, undefined, sheetFacts).untappedNotes(
+    selected,
+  )
+
+  // Act: the next render passes an equal row and equal facts as new objects.
+  const again = untappedSheetNotes(list, undefined, {
+    ...sheetFacts,
+  }).untappedNotes({ ...selected })
+
+  // Assert
+  expect(again).toBe(first)
+  expect(again.pick).toBe(
+    'detox と活動を切り替えると、タップのない日（9月19日〜9月20日）の計測が変わることがあります',
+  )
+})
+
 test('switching today’s last record to detox shows no note, since no untapped day follows it yet', () => {
   // Arrange: viewing today, 仕事 from 9:00.
   const list: ListedDay = {
@@ -542,6 +618,152 @@ test('no undo note shows when no undo is offered', () => {
     list,
     undefined,
     facts('2026-09-21', '2026-09-25'),
+  )
+
+  // Assert
+  expect(note).toBeNull()
+})
+
+test('the merge note names 次の記録に統合 when it is the only merge the row allows', () => {
+  // Arrange: detox from Friday 9/18, 仕事 on Monday 9:00, a new detox run from 20:00 still running; 前の記録に統合 is not offered.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [
+      row('w', 'work', at('2026-09-21', 9)),
+      row('d', null, at('2026-09-21', 20)),
+    ],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedMergeNote(
+    list,
+    { id: 'w', canMergePrevious: false, canMergeNext: true },
+    facts('2026-09-21', '2026-09-28'),
+  )
+
+  // Assert
+  expect(note).toBe(
+    '次の記録に統合すると、タップのない日（9月26日〜9月28日）の計測が変わることがあります',
+  )
+})
+
+test('no merge note shows for a merge the list has no neighbour for, since the API would refuse it', () => {
+  // Arrange: the account's first state ever (仕事 9:00), then detox from 20:00 still running; the flags claim both merges.
+  const list: ListedDay = {
+    carriedIn: null,
+    carriedInRunStart: null,
+    rows: [
+      row('w', 'work', at('2026-09-21', 9)),
+      row('d', null, at('2026-09-21', 20)),
+    ],
+    carriedOut: null,
+  }
+
+  // Act
+  const firstIntoPrevious = untappedMergeNote(
+    list,
+    { id: 'w', canMergePrevious: true, canMergeNext: false },
+    facts('2026-09-21', '2026-09-25'),
+  )
+  const currentIntoNext = untappedMergeNote(
+    list,
+    { id: 'd', canMergePrevious: false, canMergeNext: true },
+    facts('2026-09-21', '2026-09-25'),
+  )
+
+  // Assert
+  expect(firstIntoPrevious).toBeNull()
+  expect(currentIntoNext).toBeNull()
+})
+
+test('no merge note shows before the day list or the settings have loaded', () => {
+  // Arrange: the weekend detox list whose 仕事 row both merges would change.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [
+      row('w', 'work', at('2026-09-21', 9)),
+      row('d', null, at('2026-09-21', 20)),
+    ],
+    carriedOut: null,
+  }
+  const work = { id: 'w', canMergePrevious: true, canMergeNext: true }
+
+  // Act
+  const withoutList = untappedMergeNote(
+    undefined,
+    work,
+    facts('2026-09-21', '2026-09-28'),
+  )
+  const withoutFacts = untappedMergeNote(list, work, undefined)
+
+  // Assert
+  expect(withoutList).toBeNull()
+  expect(withoutFacts).toBeNull()
+})
+
+test('no undo note shows when the undo only swaps one activity for another', () => {
+  // Arrange: the carried-in record from Friday was just switched from 睡眠 to 休息 on Monday's sheet.
+  const list: ListedDay = {
+    carriedIn: row('c', 'rest', at('2026-09-18', 22)),
+    carriedInRunStart: null,
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-21',
+    id: 'c',
+    to: 'sleep',
+    revision: 1,
+  }
+
+  // Act
+  const note = untappedUndoNote(list, slot, facts('2026-09-21', '2026-09-25'))
+
+  // Assert
+  expect(note).toBeNull()
+})
+
+test('no undo note shows once the record the undo would restore is no longer listed', () => {
+  // Arrange: the undo restores 仕事 on record 'c', but another device replaced it with detox record 'x' since.
+  const list: ListedDay = {
+    carriedIn: row('x', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-21',
+    id: 'c',
+    to: 'work',
+    revision: 1,
+  }
+
+  // Act
+  const note = untappedUndoNote(list, slot, facts('2026-09-21', '2026-09-25'))
+
+  // Assert
+  expect(note).toBeNull()
+})
+
+test('a day after today shows no untapped-day note, since none of the days it could change has come yet', () => {
+  // Arrange: detox tapped at 8:00 today (9/25) is still running; the sheet is opened on 9/27.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-25', 8)),
+    carriedInRunStart: '2026-09-25',
+    rows: [],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'c', activityId: null },
+    facts('2026-09-27', '2026-09-25'),
   )
 
   // Assert

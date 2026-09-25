@@ -1048,3 +1048,44 @@ test('次の記録に統合 keeps the next row mark, or takes a detox re-tap ren
   expect(nextKeepsMark).toBe(true)
   expect(pickedHandsNothing).toBe(false)
 })
+
+test('前の記録に統合 decides "the same day" in the account zone, not in UTC', () => {
+  // Arrange: a re-tap at 09-12 21:00 and a plain detox from 09-12 0:30 in Tokyo, which is still 09-11 in UTC
+  const reTap = {
+    activityId: null,
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+  const justAfterMidnight = {
+    activityId: null,
+    startedAt: at('2026-09-12', 0.5),
+  }
+
+  // Act
+  const inTokyo = mergedIntoPreviousMark(reTap, justAfterMidnight, TZ)
+  const inUtc = mergedIntoPreviousMark(reTap, justAfterMidnight, 'UTC')
+
+  // Assert: in Tokyo both rows are on 09-12, so the renewal is handed over; in UTC they are not
+  expect(inTokyo).toBe(true)
+  expect(inUtc).toBe(false)
+})
+
+test('前の記録に統合 reads the rows the API passes, whose starts are Dates', () => {
+  // Arrange: the same-day re-tap hand-over, with startedAt as the Dates a database row carries
+  const reTap = {
+    activityId: null,
+    startedAt: new Date(at('2026-09-12', 21)),
+    startsRun: true,
+  }
+  const sameDayDetox = {
+    activityId: null,
+    startedAt: new Date(at('2026-09-12', 9)),
+    startsRun: false,
+  }
+
+  // Act
+  const mark = mergedIntoPreviousMark(reTap, sameDayDetox, TZ)
+
+  // Assert
+  expect(mark).toBe(true)
+})

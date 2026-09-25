@@ -57,8 +57,9 @@ const tapOf = (row: {
 /**
  * The listed day as the run rule reads it, oldest first: the carried-in record, the day's rows and the first switch after
  * the day. A carried-in detox whose run started on an earlier day gets a plain detox row at 0:00 of that day in front, so
- * `runStartDays` counts its week from where it really started (the API's `carriedInRunStart`); taps before that are not
- * listed and cannot change anything the day's edits do.
+ * {@link runStartDays} counts its week from where it really started (the API's `carriedInRunStart`); taps before that are
+ * not listed and cannot change anything the day's edits do. A carried-in activity gets the same row when a detox run ends
+ * at it, so a pick to detox joins that run as the API would.
  * @example timeline(list, 'Asia/Tokyo') // [{ id: '', activityId: null, … }, carriedIn, …rows, carriedOut]
  */
 function timeline(list: ListedDay, timeZone: string): Tap[] {
@@ -265,7 +266,7 @@ export function untappedMergeNote(
 }
 
 /**
- * Both lines of a selected row's panel, which `useCorrection` hands the sheet: the pick line on every row, the merge line on
+ * Both lines of a selected row's panel, which {@link useCorrection} hands the sheet: the pick line on every row, the merge line on
  * the day's own rows only, since the carried-in record never merges.
  * @param list - The day's list; undefined while it loads.
  * @param row - The selected row.
@@ -311,10 +312,16 @@ export function untappedUndoNote(
   return span ? untappedLine('元に戻すと', span, 'も') : null
 }
 
+type RowNotes = ReturnType<typeof untappedRowNotes>
+
+// A row's lines per listed day; a list the query cache has let go of takes its lines with it.
+const rowNotesByList = new WeakMap<ListedDay, Map<string, RowNotes>>()
+
 /**
- * The sheet's untapped-day notes, recomputed from the list on every render (never stored); `useCorrection` spreads them into
- * what it returns. Until the stored settings are read, the zone and the unused-day rule may be defaults, so every note is
- * null rather than wrong.
+ * The sheet's untapped-day notes, worked out from the list (never stored); {@link useCorrection} spreads them into what it
+ * returns. Until the stored settings are read, the zone and the unused-day rule may be defaults, so every note is null
+ * rather than wrong. The panel asks for its row's lines on every clock tick, with the row rebuilt each time, so they are
+ * kept per listed day ({@link rowNotesByList}) and worked out again only once a read brings a new list.
  * @param list - The day's list; undefined while it loads.
  * @param slot - The undo the sheet offers; undefined when none.
  * @param facts - {@link UntappedFacts}, with `ready` once the stored settings are read.
@@ -329,7 +336,25 @@ export function untappedSheetNotes(
   const known = facts.ready ? facts : undefined
   return {
     undoNote: untappedUndoNote(list, slot, known),
-    untappedNotes: (row: Parameters<typeof untappedRowNotes>[1]) =>
-      untappedRowNotes(list, row, known),
+    untappedNotes: (row: Parameters<typeof untappedRowNotes>[1]) => {
+      if (!list || !known) return untappedRowNotes(list, row, known)
+      // Everything the lines read besides the list itself.
+      const key = [
+        row.id,
+        row.activityId,
+        row.carriedIn,
+        row.canMergePrevious,
+        row.canMergeNext,
+        known.day,
+        known.today,
+        known.timeZone,
+        known.autoExcludeUnusedDays,
+      ].join('|')
+      const kept = rowNotesByList.get(list) ?? new Map<string, RowNotes>()
+      rowNotesByList.set(list, kept)
+      const notes = kept.get(key) ?? untappedRowNotes(list, row, known)
+      kept.set(key, notes)
+      return notes
+    },
   }
 }

@@ -338,11 +338,12 @@ test('the correction sheet reads where the carried-in detox run started, not onl
   })
   const tapDayItself = await api.switches.listByDay({ day: tapDay })
 
-  // Assert: the cut's record carries the run from the tap day; an activity or nothing carried in reads none
+  // Assert: the cut's record carries the run from the tap day; the 仕事 after it reads the run a pick to detox would join;
+  // nothing carried in reads none
   expect(dayAfterCut.carriedIn?.startedAt).toEqual(new Date(at(cutDay, 12)))
   expect(dayAfterCut.carriedInRunStart).toBe(tapDay)
   expect(dayAfterWork.carriedIn?.activityId).toBe(work)
-  expect(dayAfterWork.carriedInRunStart).toBeNull()
+  expect(dayAfterWork.carriedInRunStart).toBe(tapDay)
   expect(tapDayItself.carriedIn).toBeNull()
   expect(tapDayItself.carriedInRunStart).toBeNull()
 })

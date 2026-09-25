@@ -18,7 +18,7 @@ import {
   type DayBaseline,
   type DayRow,
 } from '@switch-time/shared'
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db, type Executor, type LockedTx } from '../db/client'
@@ -75,9 +75,11 @@ const runColumns = {
 /**
  * The day the detox run that `row` belongs to started, in `timeZone`, or null for an activity row. Two reads on the partial
  * `switches_run_boundary_idx` and the timeline index decide it, however long the account's history is: the latest boundary
- * at or before `row` (an activity row, or a detox row that starts a run) and the row right after it (the run's first row
- * when the boundary is an activity). {@link detoxRunStartDay} applies the run rule to them. Called by `current` for Home's
- * notices and by switchTo (with the latest row), and by listByDay for the record carried into the day.
+ * before `row` (an activity row, or a detox row that starts a run) and the row right after it (the run's first row when the
+ * boundary is an activity); {@link detoxRunStartDay} applies the run rule to them and `row` itself. Neither read returns
+ * `row`, so it may describe a stored row as it would read after a pick (listByDay asks where a carried-in activity's run
+ * would start were it detox). Called by `current` for Home's notices and by switchTo (with the latest row), and by listByDay
+ * for the record carried into the day.
  * @example await runStartOf(tx, userId, latest, 'Asia/Tokyo') // '2026-09-01' for a detox from 09-01 that a cut split on 09-05
  */
 async function runStartOf(
@@ -87,8 +89,9 @@ async function runStartOf(
   timeZone: string,
 ): Promise<string | null> {
   if (row.activityId !== null) return null
-  // Rows after `row` belong to later runs, or to this one's later records: neither decides where it started.
-  const upToRow = lte(switches.startedAt, row.startedAt)
+  // Rows after `row` belong to later runs, or to this one's later records: neither decides where it started. `row` itself
+  // is passed in, since the stored row may differ from the one asked about.
+  const upToRow = lt(switches.startedAt, row.startedAt)
   // The same predicate as the index, so the planner can use it.
   const [boundary] = await executor
     .select(runColumns)
@@ -299,8 +302,9 @@ async function withNeighbours(tx: LockedTx, userId: string, id: string) {
 
 /**
  * Every switch inside [start, end) plus its neighbours: the state carried in from before and the first switch after,
- * which closes the last segment, and the day the carried-in detox's run started ({@link runStartOf}; null for an activity
- * or no carried-in state), which the sheet's untapped-day note needs to place that run's week. Oldest first: the input for
+ * which closes the last segment, and the day the carried-in record's detox run started ({@link runStartOf}; for an activity,
+ * the day it would have started were the record detox; null with no carried-in state), which the sheet's untapped-day notes
+ * need to place that run's week. Oldest first: the input for
  * segments. The reads share one connection (one per request, however fast a client refetches) and one snapshot, so a write
  * landing between them cannot pair rows with neighbours from before it.
  * @example const { carriedIn, rows, carriedOut, carriedInRunStart } = await switchesBetween(userId, { start, end }, 'Asia/Tokyo', context.deadline)
@@ -335,8 +339,14 @@ async function switchesBetween(
         carriedIn: carriedIn ?? null,
         rows,
         carriedOut: carriedOut ?? null,
+        // Read as detox even when an activity is carried in: a pick to detox joins the run before it.
         carriedInRunStart: carriedIn
-          ? await runStartOf(tx, userId, carriedIn, timeZone)
+          ? await runStartOf(
+              tx,
+              userId,
+              { ...carriedIn, activityId: null },
+              timeZone,
+            )
           : null,
       }
     },

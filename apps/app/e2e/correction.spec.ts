@@ -770,6 +770,47 @@ test('switching a weekend detox to an activity says which untapped days it measu
   await expect(undoNote).toHaveCount(0)
 })
 
+test('an activity that ends a detox says which untapped days switching it to detox or merging it into the detox would measure', async ({
+  page,
+}) => {
+  // Arrange: detox from D−4 22:00, 仕事 from D−3 9:00 until today's 家事, so D−2 and D−1 have no tap and are not measured.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const detoxDay = shift(today(), -4)
+  const day = shift(today(), -3)
+  await api.switches.replaceDay({
+    day: detoxDay,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(detoxDay, 22) }],
+  })
+  await api.switches.replaceDay({
+    day,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(day, 9) }],
+  })
+  await page.goto(`/correction?day=${day}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const untapped = `タップのない日（${monthDay(shift(today(), -2))}〜${monthDay(shift(today(), -1))}）`
+
+  // Act
+  await dialog.getByRole('button', { name: /^仕事 9:00 – / }).click()
+
+  // Assert: detox on 仕事, or 仕事 folded into the detox, carries the run through both days.
+  await expect(
+    dialog.getByText(
+      `detox と活動を切り替えると、${untapped}の計測が変わることがあります`,
+    ),
+  ).toBeVisible()
+  await expect(
+    dialog.getByText(
+      `前の記録に統合すると、${untapped}の計測が変わることがあります`,
+    ),
+  ).toBeVisible()
+})
+
 test('a pick on the carried-in record stays after the sheet closes', async ({
   page,
 }) => {
