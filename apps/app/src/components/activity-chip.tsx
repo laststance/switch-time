@@ -15,7 +15,7 @@ type ActivityChipProps = {
 
 /**
  * The activity's glyph on a rounded square of its own colour: 26 px in the 状態別 list, 32 px on a correction row. Detox has no
- * colour, so its chip is a dashed `line` frame with the glyph in ink.
+ * colour, so its chip is a solid `sub` frame with the glyph in ink, like every other detox outline.
  * @example <ActivityChip color="#3B7BD9" iconKey="work" size={32} iconSize={18} />
  */
 export function ActivityChip({
@@ -28,7 +28,7 @@ export function ActivityChip({
   const look =
     color === null
       ? {
-          root: 'border border-dashed border-line text-ink',
+          root: 'border border-sub text-ink',
           fill: undefined,
           glyph: ink,
         }

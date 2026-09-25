@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native'
 
 import { useWide } from '@/hooks/use-wide'
-import { legendEntries } from '@/lib/today'
+import { legendEntries, spanCorners } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 // Wide web frames the bar as the 「今日の流れ」 card with a legend; phones show the bare 10 px bar under the switch row.
@@ -9,38 +9,47 @@ const BANDS = {
   wide: {
     root: 'gap-3 rounded-card border border-line bg-surface px-5 pb-4 pt-[18px]',
     bar: 'h-3.5 rounded-[7px]',
+    // A span touching either end of the bar takes its curve (spanCorners), so the rounded track does not clip an outline open.
+    corners: { first: 'rounded-l-[7px]', last: 'rounded-r-[7px]' },
     labels: ['0:00', '6:00', '12:00', '18:00', '24:00'],
   },
   narrow: {
     root: 'gap-1.5 py-2',
     bar: 'h-2.5 rounded-[5px]',
+    corners: { first: 'rounded-l-[5px]', last: 'rounded-r-[5px]' },
     labels: ['0:00', '12:00', '24:00'],
   },
 }
 
 type Segment = {
   switchId: string
-  /** null = detox: outlined like an idle span. */
+  /** null = detox: outlined solid in `sub`, even past the idle threshold. */
   activityId: string | null
   start: number
   end: number
   idle: boolean
 }
 
-// A span or legend square with no colour (idle past the threshold, or detox) is outlined over the `chip` track; the rest fill.
-const paint = (color: string | null | undefined) =>
-  color === null
-    ? {
-        className: 'border border-dashed border-line',
-        backgroundColor: undefined,
-      }
-    : { className: '', backgroundColor: color }
+// Spans with no colour of their own are outlined over the `chip` track: detox solid in `sub` (the same mark as a detox day on
+// 記録), idle dashed in `line` (dashed = no data, as 記録's 「点線の日」). Detox differs from idle by shape as well as tone.
+const LOOK = {
+  detox: { className: 'border border-sub', backgroundColor: undefined },
+  idle: {
+    className: 'border border-dashed border-line',
+    backgroundColor: undefined,
+  },
+}
+const fill = (color: string | undefined) => ({
+  className: '',
+  backgroundColor: color,
+})
+// Detox is checked before idle: a detox left running overnight is past the threshold too, and {@link sumSegments} counts it as detox.
 const slice = (segment: Segment, colors: Record<string, string>) =>
-  paint(
-    segment.idle || segment.activityId === null
-      ? null
-      : colors[segment.activityId],
-  )
+  segment.activityId === null
+    ? LOOK.detox
+    : segment.idle
+      ? LOOK.idle
+      : fill(colors[segment.activityId])
 
 type TodayFlowProps = {
   segments: Segment[]
@@ -51,8 +60,9 @@ type TodayFlowProps = {
 }
 
 /**
- * The 24-hour bar: one absolutely placed slice per segment in its activity colour; idle segments (past the idle threshold) and
- * detox spans (no activity) are dashed over the `chip` fill on both platforms. Ponytail: the native hatch pattern is skipped, dashed reads the same.
+ * The 24-hour bar: one absolutely placed slice per segment in its activity colour over the `chip` fill. Detox spans (no activity)
+ * are outlined solid in `sub`; idle segments (past the idle threshold) are dashed in `line` on both platforms. Ponytail: the native
+ * hatch pattern is skipped, dashed reads the same.
  * The wide legend ({@link legendEntries}) names every activity drawn, and detox when a span was recorded to nothing.
  * @example <TodayFlow segments={segments} activities={activities} start={start} end={end} />
  */
@@ -80,7 +90,7 @@ export function TodayFlow({
           </View>
           <View className="flex-row flex-wrap gap-x-3.5 gap-y-1.5">
             {legendEntries(activities, segments).map((entry) => {
-              const look = paint(entry.color)
+              const look = entry.color === null ? LOOK.detox : fill(entry.color)
               return (
                 <View key={entry.id} className="flex-row items-center gap-1.5">
                   <View
@@ -104,7 +114,11 @@ export function TodayFlow({
           return (
             <View
               key={segment.switchId}
-              className={cn('absolute inset-y-0', look.className)}
+              className={cn(
+                'absolute inset-y-0',
+                look.className,
+                spanCorners(segment, { start, end }, band.corners),
+              )}
               style={{
                 left: percent(segment.start - start),
                 width: percent(segment.end - segment.start),

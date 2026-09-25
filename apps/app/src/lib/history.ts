@@ -23,6 +23,8 @@ const H = 3_600_000
 const DAY_MS = 24 * H
 // Bar heights from the pen frames: 132 px columns for the week, 48 px calendar cells for the month.
 const BAR_PX = { week: 132, month: 48 }
+// The wind glyph centred in a detox cell: 14 px as in the pen's week frame, 12 px so it stays quiet in the shorter month cells.
+const DETOX_GLYPH_PX = { week: 14, month: 12 }
 
 export type Slice = {
   activityId: string
@@ -59,6 +61,8 @@ export type BreakdownRow = {
 export type HistoryView = {
   title: string
   barHeight: number
+  /** Size of the wind glyph drawn inside a `detox` cell. */
+  detoxGlyphSize: number
   /** The 日…土 header of the month calendar; empty for the week. */
   weekdays: string[]
   /** Rows of seven; `null` pads the month calendar so cells keep their width. */
@@ -145,11 +149,13 @@ function dayCell(
       : String(Number(stat.day.slice(8)))
   const slices = stackSlices(stat.totals, activities, BAR_PX[range])
   // Today is a stack even before its first tap (its carried-in state is already drawing); older untapped days are 計測なし.
-  // A measured day with nothing to stack but detox time is outlined, so a day off the clock does not read as an untapped one.
+  // A measured day with no activity time but detox time is outlined, so a day off the clock does not read as an untapped one.
+  // Judged on the totals, not the slices: an activity missing from a stale list must not turn a worked day into detox.
+  const hasActivityTime = Object.values(stat.totals).some((ms) => ms > 0)
   const kind = stat.excluded
     ? 'excluded'
     : stat.measured || isToday
-      ? slices.length === 0 && stat.detoxMs > 0
+      ? !hasActivityTime && stat.detoxMs > 0
         ? 'detox'
         : 'stack'
       : 'empty'
@@ -220,6 +226,7 @@ export function historyView(input: {
   return {
     title: chartTitle(range, offset, first, last),
     barHeight: BAR_PX[range],
+    detoxGlyphSize: DETOX_GLYPH_PX[range],
     weekdays: range === 'month' ? [...'日月火水木金土'] : [],
     rows: range === 'month' ? calendarRows(cells, first) : [cells],
     measured: `${stats.measuredDays} / ${stats.days.filter((stat) => stat.day <= today).length}日`,

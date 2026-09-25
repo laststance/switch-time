@@ -30,10 +30,10 @@ import {
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
+import { spanCorners } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
-// gstack-shortcut(dec-f15d7e22): notes stay text-sub below AA, upgrade when the sub token contrast TODO lands
 const NOTE = 'text-sub text-xs leading-4.5'
 // The four 区切る時刻 steps: the glyph text on the button, and the action a screen reader speaks instead.
 const STEP_TEXT: Record<CutStepMinutes, { title: string; label: string }> = {
@@ -58,6 +58,9 @@ type BarProps = {
   selectedId: string | null
 }
 
+// The day bar's own corners, lent to a span touching either end so the rounded strip does not clip its outline open.
+const DAY_BAR_CORNERS = { first: 'rounded-l-md', last: 'rounded-r-md' }
+
 // The 12 px 24-h strip above the list: the selected row's span stays solid, the rest dim to 0.4.
 function DayBar({ rows, bounds, selectedId }: BarProps) {
   const percent = (ms: number): `${number}%` =>
@@ -66,23 +69,30 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
   const active = rows.some((row) => row.id === selectedId) ? selectedId : null
   const dim = (id: string) => (active === null || active === id ? 1 : DIMMED)
   return (
-    <View className="bg-chip h-3 w-full overflow-hidden rounded-md">
-      {rows.map((row) => (
-        <View
-          key={row.id}
-          // A detox span has no colour: outlined, like the 24-h bar's idle spans.
-          className={cn(
-            'absolute inset-y-0',
-            row.color === null && 'border-line border border-dashed',
-          )}
-          style={{
-            left: percent(row.start - bounds.start),
-            width: percent(row.end - row.start),
-            backgroundColor: row.color ?? undefined,
-            opacity: dim(row.id),
-          }}
-        />
-      ))}
+    <View
+      testID="day-bar"
+      className="bg-chip h-3 w-full overflow-hidden rounded-md"
+    >
+      {/* A device clock behind the server can end the latest row before it starts; its outline would draw as a stray line. */}
+      {rows
+        .filter((row) => row.end > row.start)
+        .map((row) => (
+          <View
+            key={row.id}
+            // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
+            className={cn(
+              'absolute inset-y-0',
+              row.color === null && 'border-sub border',
+              spanCorners(row, bounds, DAY_BAR_CORNERS),
+            )}
+            style={{
+              left: percent(row.start - bounds.start),
+              width: percent(row.end - row.start),
+              backgroundColor: row.color ?? undefined,
+              opacity: dim(row.id),
+            }}
+          />
+        ))}
     </View>
   )
 }
