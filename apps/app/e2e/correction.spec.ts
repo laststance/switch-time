@@ -1983,14 +1983,12 @@ test('a split whose answer lands after midnight selects nothing on the new day, 
     name: /^仕事 0:00 – いま [01]m$/,
   })
   await expect(carriedIn).toBeVisible()
-  // The split settles once the new day's list is read again after its answer; its selection runs right after that read.
-  const reread = page.waitForResponse(
-    (response) =>
-      response.url().endsWith('/api/rpc/switches/listByDay') &&
-      (response.request().postData() ?? '').includes(newDay),
-  )
+  // The line stays while the split is in flight, its re-read included, and goes once it settles; the selection its answer
+  // would set runs as it settles, so the assertions below come after it.
+  const writing = dialog.getByText('反映しています…')
+  await expect(writing).toBeVisible()
   answer.resolve()
-  await reread
+  await expect(writing).toBeHidden()
 
   // Assert: the carried-in half is listed but not opened by an answer about yesterday.
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'false')
