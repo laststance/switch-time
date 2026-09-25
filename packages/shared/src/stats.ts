@@ -162,8 +162,8 @@ export const detoxRunLastDay = (runStartDay: string): string =>
   addDays(runStartDay, DETOX_MEASURED_DAYS_MAX)
 
 /**
- * Whether a detox run's measured week ended before `today`, so a detox re-tap starts a new run. switchTo applies it under the
- * user's lock and Home's `detoxRenewable` before sending the press, so both read the same boundary.
+ * Whether a detox run's measured week ended before `today`, so a detox re-tap starts a new run (only while the unused-day rule is
+ * on). switchTo applies it under the user's lock and Home's `detoxRenewable` before sending the press, so both read the same boundary.
  * @param runStartDay - {@link detoxRunStartDay} of the running record; null while an activity runs.
  * @param today - Today in the stored zone.
  * @returns

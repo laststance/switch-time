@@ -6,7 +6,7 @@
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
 
-**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
+**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. On the first-launch screen, where a digit hotkey now sends the first tap, a refusal swaps Home back to the first-launch screen just as silently. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
 
 **Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
 

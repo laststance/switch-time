@@ -45,6 +45,40 @@ test('the plain 0 starts detox, a modifier combo or another digit does not', () 
   expect(detox).toEqual([true, false, false, false, false])
 })
 
+test('0 starts detox on the first-launch screen before its activity buttons have loaded, and the digits pick nothing yet', () => {
+  // Arrange: the activity list has not answered, so the first-launch screen shows no activity button
+  const activities: { id: string }[] = []
+  const press = (key: string) => ({
+    key,
+    metaKey: false,
+    ctrlKey: false,
+    altKey: false,
+    repeat: false,
+  })
+
+  // Act
+  const picks = [press('0'), press('1')].map((event) =>
+    hotkeyPick(event, activities),
+  )
+
+  // Assert
+  expect(picks).toEqual([null, undefined])
+})
+
+test('⌘0 is left to the browser instead of starting detox', () => {
+  // Arrange
+  const activities = [{ id: 'chores' }, { id: 'work' }]
+
+  // Act
+  const picked = hotkeyPick(
+    { key: '0', metaKey: true, ctrlKey: false, altKey: false },
+    activities,
+  )
+
+  // Assert
+  expect(picked).toBeUndefined()
+})
+
 test('a hotkey picks the button at its position or detox, and a held key’s repeats pick nothing', () => {
   // Arrange: the first-launch screen's three buttons
   const activities = [{ id: 'chores' }, { id: 'work' }, { id: 'rest' }]

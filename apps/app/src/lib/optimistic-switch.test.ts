@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 
 import {
   confirmTap,
+  forgetConfirmedTaps,
   isLastTap,
   OPTIMISTIC_ID,
   placeTap,
@@ -36,7 +37,9 @@ function tap(client: QueryClient, activityId: string | null) {
       scope: { id: SWITCH_TO_SCOPE },
       mutationFn: async () => answer.promise,
       onMutate: () => placeTap(client, CURRENT, activityId),
-      onSuccess: (row: CurrentSwitch) => confirmTap(client, row),
+      onSuccess: (row: CurrentSwitch, _input, context) => {
+        if (context) confirmTap(context, row)
+      },
       onError: (_error, _input, context) => {
         if (context) rollBackTap(client, CURRENT, context)
       },
@@ -171,6 +174,48 @@ test('a new burst that starts on an accepted tap’s placeholder falls back to t
   expect(client.getQueryData(CURRENT)).toEqual(serverRow('row-work', 'work'))
 })
 
+test('a lone accepted tap refetches the day and stats once it lands', async () => {
+  // Arrange: 仕事 runs on the server
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+
+  // Act: 休息 is tapped and accepted
+  const rest = tap(client, 'rest')
+  await flush()
+  rest.answer.resolve(serverRow('row-rest', 'rest'))
+  await rest.settled
+
+  // Assert: the only tap of its burst refetches, and 休息 stays shown until the refetch
+  expect(rest.lastTapWhenSettled).toEqual([true])
+  expect(shownActivity(client)).toBe('rest')
+})
+
+test('an accepted tap with a later tap still queued leaves the refetch to the later tap, so the later pick is not wiped', async () => {
+  // Arrange: 家事 runs; 仕事 then 休息 are tapped
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-chores', 'chores'))
+  const work = tap(client, 'work')
+  await flush()
+  const rest = tap(client, 'rest')
+  await flush()
+
+  // Act: the server takes 仕事 while 休息 waits
+  work.answer.resolve(serverRow('row-work', 'work'))
+  await work.settled
+
+  // Assert: 仕事 does not refetch, and 休息 stays shown
+  expect(work.lastTapWhenSettled).toEqual([false])
+  expect(shownActivity(client)).toBe('rest')
+
+  // Act: the server takes 休息 too
+  await flush()
+  rest.answer.resolve(serverRow('row-rest', 'rest'))
+  await rest.settled
+
+  // Assert: the last tap of the burst refetches
+  expect(rest.lastTapWhenSettled).toEqual([true])
+})
+
 test('a refused tap whose row a refetch already replaced leaves the refetched switch alone', async () => {
   // Arrange: 休息 is tapped over 仕事, then a refetch brings the server's 睡眠 (another device) before the answer
   const client = new QueryClient()
@@ -185,4 +230,28 @@ test('a refused tap whose row a refetch already replaced leaves the refetched sw
 
   // Assert
   expect(client.getQueryData(CURRENT)).toEqual(serverRow('row-sleep', 'sleep'))
+})
+
+test('a tap of a signed-out account answered after the next account signs in never becomes what that account falls back to', async () => {
+  // Arrange: account X taps 休息 over 仕事 and signs out before the answer; account Y signs in with 睡眠 running and taps 家事
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-x-work', 'work'))
+  const lateTap = tap(client, 'rest')
+  await flush()
+  client.clear()
+  forgetConfirmedTaps(client)
+  client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Act: X's tap is accepted late, then Y's tap is refused
+  lateTap.answer.resolve(serverRow('row-x-rest', 'rest'))
+  await lateTap.settled
+  chores.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await chores.settled
+
+  // Assert: Y's own 睡眠, never X's 休息
+  expect(client.getQueryData(CURRENT)).toEqual(
+    serverRow('row-y-sleep', 'sleep'),
+  )
 })

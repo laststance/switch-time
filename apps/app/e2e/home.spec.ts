@@ -201,6 +201,53 @@ test('two taps refused in a row keep the second on screen until its own answer, 
   currentAnswer.resolve()
 })
 
+test('an accepted tap with a later tap still waiting leaves the later pick on screen instead of refetching over it', async ({
+  page,
+}) => {
+  // Arrange: 家事 runs; 仕事 is tapped and held, then 休息 is tapped and queues behind it (both held until released)
+  await signUp(page)
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const answers = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]
+  let tapRequests = 0
+  await page.route('**/api/rpc/switches/switchTo', async (route) => {
+    const answer = answers[tapRequests]
+    tapRequests += 1
+    await answer?.promise
+    await route.continue()
+  })
+  await page.getByRole('button', { name: '仕事' }).click()
+  await expect.poll(() => tapRequests).toBe(1)
+  await page.getByRole('button', { name: '休息' }).click()
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  // Act: the server takes 仕事; 休息 goes out only once 仕事 has settled
+  answers[0]?.resolve()
+  await expect.poll(() => tapRequests).toBe(2)
+
+  // Assert: 仕事's answer did not refetch 仕事 over the waiting 休息
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+
+  // Act: 休息 lands
+  answers[1]?.resolve()
+
+  // Assert: the last tap's refetch counts both switches
+  await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+})
+
 test('digit 0 on the first-launch screen starts a new account on detox', async ({
   page,
 }) => {
@@ -399,6 +446,64 @@ test('digit 0 starts detox and a digit hands the clock back to an activity', asy
   await expect(detox).toHaveAttribute('aria-pressed', 'false')
   await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+})
+
+test('two digits pressed within one frame leave the second one running', async ({
+  page,
+}) => {
+  // Arrange: 家事 runs
+  await signUp(page)
+  const chores = page.getByRole('button', { name: '家事' })
+  await expect(chores).toHaveAttribute('aria-pressed', 'true')
+
+  // Act: `2` then `1` as two keydown tasks that both run before Home re-renders for the first
+  await page.evaluate(async () => {
+    const press = (key: string): boolean =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+    press('2')
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        press('1')
+        resolve()
+      }, 0)
+    })
+  })
+
+  // Assert: 家事 again, after 仕事 in between
+  await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+  await expect(chores).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+})
+
+test('digits pressed while the correction sheet is open do not switch the activity behind it', async ({
+  page,
+}) => {
+  // Arrange: 仕事 runs, and the correction sheet is open over Home
+  await signUp(page)
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+  await page.keyboard.press('2')
+  const work = page.getByRole('button', { name: '仕事' })
+  await expect(work).toHaveAttribute('aria-pressed', 'true')
+  // The day list's refetch counts the press, so the switch has landed before the sheet opens.
+  await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
+  await page.getByRole('link', { name: '訂正' }).click()
+  await expect(
+    page.getByRole('dialog', { name: '今日の記録を訂正' }),
+  ).toBeVisible()
+
+  // Act
+  await page.keyboard.press('3')
+  await page.keyboard.press('0')
+  await page.getByRole('button', { name: '完了' }).click()
+
+  // Assert: back on Home, 仕事 still runs and only the first press reached the server
+  await expect(page).toHaveURL('/')
+  await expect(work).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
+  expect(tapRequests).toBe(1)
 })
 
 test('narrow Home keeps the clock on screen and can scroll to the 24-h bar', async ({
@@ -605,6 +710,43 @@ test('pressing detox again past its week starts a new run: the notice goes and t
     page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
   ).toBeVisible()
   await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
+  await expect(
+    page.getByText('どの行動にも記録しない', { exact: true }),
+  ).toBeVisible()
+  await expect(detox).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a detox re-tap from a tab that missed the unused-day rule being turned off keeps the run and stops offering a new one', async ({
+  page,
+}) => {
+  // Arrange: past the week with the rule on, then another device turns the rule off while this tab still offers a renewal
+  await signUp(page)
+  const start = shift(today(), -8)
+  await seedCarriedDetox(page, start)
+  await page.reload()
+  const detox = page.getByRole('button', { name: /^detox/ })
+  const renewHint = page.getByText('押し直すと新しく始まります', {
+    exact: true,
+  })
+  await expect(renewHint).toBeVisible()
+  const api = await apiAs(page)
+  await api.settings.update({ autoExcludeUnusedDays: false })
+
+  // Act
+  const answer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await detox.click()
+  expect((await answer).ok()).toBe(true)
+
+  // Assert: the server kept the carried-in run, and the tab has learned the rule is off
+  await expect(
+    page.getByText(
+      `${monthDay(start)} 21:00 から · どの行動にも積み上がりません`,
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await expect(renewHint).toHaveCount(0)
   await expect(
     page.getByText('どの行動にも記録しない', { exact: true }),
   ).toBeVisible()

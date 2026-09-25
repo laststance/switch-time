@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 
@@ -29,7 +29,7 @@ import {
   sendsPick,
 } from '@/lib/home'
 import { PENCIL } from '@/lib/icons'
-import { orpc } from '@/lib/orpc'
+import { type CurrentSwitch, orpc } from '@/lib/orpc'
 
 type Current = ReturnType<typeof useCurrentActivity>
 type HomeBodyProps = {
@@ -70,8 +70,21 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const notice = detoxNotice({ ...homeToday, stats: todayStats })
   const renewable = detoxRenewable(homeToday)
   const ink = useTokenColor('ink')
+  const queryClient = useQueryClient()
   const pick = (activityId: string | null): void => {
-    if (sendsPick({ activityId, current, renewable }))
+    // Two keys inside one frame: the second must weigh the first one's row, which is in the cache before Home re-renders.
+    const shown =
+      queryClient.getQueryData<CurrentSwitch | null>(
+        orpc.switches.current.queryKey(),
+      ) ?? current
+    // `renewable` was worked out for the rendered row; a newer row in the cache is a tap's placeholder, which never renews.
+    if (
+      sendsPick({
+        activityId,
+        current: shown,
+        renewable: renewable && shown.id === current.id,
+      })
+    )
       switchTo.mutate({ activityId })
   }
   useSwitchHotkeys(activities, pick)

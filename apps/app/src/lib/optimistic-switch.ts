@@ -11,14 +11,20 @@ export const SWITCH_TO_SCOPE = 'switches.switchTo'
 /** The id of the row a tap shows before the server answers; never sent back to the server. */
 export const OPTIMISTIC_ID = 'optimistic'
 
-/** What a tap's `onMutate` hands to its `onError`: the cached row it placed, to tell whether the display is still its own. */
-export type TapContext = { placed: CurrentShown }
+/** The last state the server confirmed, as one session of taps sees it. */
+type ConfirmedState = { value: CurrentShown }
+
+/**
+ * What a tap's `onMutate` hands to its `onSuccess` and `onError`: the cached row it placed, to tell whether the display is still
+ * its own, and the confirmed state of the session it was made in.
+ */
+export type TapContext = { placed: CurrentShown; confirmed: ConfirmedState }
 
 // The last state the server confirmed, per client: an object held in a WeakMap, not a module `let` (the React Compiler folds such
 // an alias into a comparison with itself).
-const confirmedStates = new WeakMap<QueryClient, { value: CurrentShown }>()
+const confirmedStates = new WeakMap<QueryClient, ConfirmedState>()
 
-function confirmedStateOf(client: QueryClient): { value: CurrentShown } {
+function confirmedStateOf(client: QueryClient): ConfirmedState {
   const known = confirmedStates.get(client)
   if (known) return known
   const created = { value: undefined }
@@ -49,8 +55,9 @@ export function placeTap(
   activityId: string | null,
 ): TapContext {
   const previous = client.getQueryData<CurrentShown>(queryKey)
+  const confirmed = confirmedStateOf(client)
   if (tapsInFlight(client) === 1 && previous?.id !== OPTIMISTIC_ID)
-    confirmedStateOf(client).value = previous
+    confirmed.value = previous
   // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call restarts
   // the counter right now. `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
   // No run start until the refetch: the detox notices stay away and a second re-tap is dropped meanwhile.
@@ -68,20 +75,20 @@ export function placeTap(
   }
   client.setQueryData(queryKey, next)
   // Structural sharing stores a copy, so the cached object, not `next`, is what a later read compares against.
-  return { placed: client.getQueryData<CurrentShown>(queryKey) }
+  return { placed: client.getQueryData<CurrentShown>(queryKey), confirmed }
 }
 
 /**
- * A tap's `onSuccess`: the server's row becomes the state a later refused tap falls back to.
- * @param client - The app's query client.
+ * A tap's `onSuccess`: the server's row becomes the state a later refused tap of the same session falls back to.
+ * @param context - What {@link placeTap} returned for this tap.
  * @param row - What `switches.switchTo` answered; its run start comes with the refetch.
- * @example onSuccess: (row) => confirmTap(queryClient, row)
+ * @example onSuccess: (row, _input, context) => { if (context) confirmTap(context, row) }
  */
 export function confirmTap(
-  client: QueryClient,
+  context: TapContext,
   row: Omit<CurrentSwitch, 'runStartDay'>,
 ): void {
-  confirmedStateOf(client).value = { ...row, runStartDay: null }
+  context.confirmed.value = { ...row, runStartDay: null }
 }
 
 /**
@@ -98,7 +105,17 @@ export function rollBackTap(
   context: TapContext,
 ): void {
   if (client.getQueryData(queryKey) === context.placed)
-    client.setQueryData(queryKey, confirmedStateOf(client).value)
+    client.setQueryData(queryKey, context.confirmed.value)
+}
+
+/**
+ * Starts a new session of taps when the cache is cleared for another account (sign-in, sign-out): a tap of the old session that
+ * is answered late then confirms into its own session's state, never into the one the new account's refused taps fall back to.
+ * @param client - The app's query client, right after `clear()`.
+ * @example queryClient.clear(); forgetConfirmedTaps(queryClient)
+ */
+export function forgetConfirmedTaps(client: QueryClient): void {
+  confirmedStates.delete(client)
 }
 
 /**
