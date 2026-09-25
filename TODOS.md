@@ -274,6 +274,18 @@
 **Priority:** P4
 **Depends on:** None
 
+### Cap how many live activities an account can have
+
+**What:** Refuse `activities.create` and `activities.unarchive` once the account has as many live activities as `reorderInputSchema` accepts (100), with a `$count` under `withUserLock` and a `REFUSAL` reason the editor can say, and share the number between the two.
+
+**Why:** `reorder` must name the whole live set and accepts 1 to 100 ids, but nothing stops the live set growing past that: an account with 101 live activities can never reorder again, and with the editor's silent refusals (the 活動項目 item under Settings) the ▲▼ buttons just stop working. A client adding in a loop is throttled only by the per-process in-flight cap.
+
+**Context:** `apps/api/src/rpc/activities.ts`, `reorderInputSchema` in `packages/shared/src/schemas.ts`. Raised by the red-team pass during the `activities.unarchive` ship; the gap predates it.
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ## Design
 
 ### Raise the 24-h bar's idle dash above 3:1

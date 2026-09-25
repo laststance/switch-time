@@ -1,6 +1,6 @@
 import { ORPCError } from '@orpc/server'
 import { activityInputSchema, reorderInputSchema } from '@switch-time/shared'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db, type Executor, type LockedTx } from '../db/client'
@@ -67,7 +67,7 @@ const nextLivePosition = async (
  * @param slotOf - The slot of the activity at each index.
  * @returns A `case id when … then … end` expression for `.set({ position })`
  * @example
- * slotsByIndex(['a', 'b'], (index) => index) // => case "id" when 'a' then 0 when 'b' then 1 end
+ * slotsByIndex(['a', 'b'], (index) => index) // => case "activities"."id" when $1 then $2::integer when $3 then $4::integer end ($1..$4 = 'a', 0, 'b', 1)
  */
 const slotsByIndex = (
   ids: readonly string[],
@@ -144,15 +144,17 @@ export const activitiesRouter = {
             message: 'ids must be exactly the active activities',
           })
         // Two statements whatever the grid's size. Parking every row on a negative slot first keeps the unique (user, position) index
-        // happy mid-shuffle; the permutation check proved `ids` is exactly the live set, so every live row gets a slot.
+        // happy mid-shuffle. Only the listed rows: a live row the unlocked seeding repair ({@link seedUser}) committed since the check
+        // would get no slot from the CASE.
+        const listed = and(active(userId), inArray(activities.id, input.ids))
         await tx
           .update(activities)
           .set({ position: slotsByIndex(input.ids, (index) => -index - 1) })
-          .where(active(userId))
+          .where(listed)
         await tx
           .update(activities)
           .set({ position: slotsByIndex(input.ids, (index) => index) })
-          .where(active(userId))
+          .where(listed)
         // The permutation check proved live rows exist, so the seeding repair in {@link listActivities} has nothing to do here.
         return selectActivities(tx, userId)
       })

@@ -93,7 +93,7 @@ const TIMELINE_LOCK_NAMESPACE = 1
  */
 const TIMELINE_LOCK_TIMEOUT = '10s'
 
-/** How long one statement of a timeline write may run on the server (Postgres `statement_timeout`); above the lock wait. */
+/** How long one statement of a write under {@link withUserLock} may run on the server (Postgres `statement_timeout`); above the lock wait. */
 const TIMELINE_STATEMENT_TIMEOUT = '15s'
 
 /**
