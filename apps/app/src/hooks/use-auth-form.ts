@@ -11,14 +11,18 @@ type AuthResult = { error: { message?: string } | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, the request as a mutation (the button waits on
- * `isPending`, Better Auth's message is its error). Success only clears the cache and the store: the (auth) layout redirects once the
- * session has landed, so the (app) guard never sees the gap in between.
+ * `isPending`, Better Auth's message is its error). Success clears the cache and the store, then runs `onDone`. Sign-in passes none:
+ * the (auth) layout redirects once the session has landed, so the (app) guard never sees the gap in between. Sign-up gets no session
+ * (`autoSignIn: false`) and passes `onDone` to move on to sign-in.
+ * @param onDone - Runs after a successful submit with the submitted values.
  * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v))
+ * @example useAuthForm(signUpSchema, blank, (v) => authClient.signUp.email(v), (v) => register(v.email))
  */
 export function useAuthForm<T extends Record<string, string>>(
   schema: ZodType<T>,
   initial: T,
   submit: (values: T) => Promise<AuthResult>,
+  onDone?: (values: T) => void,
 ) {
   const dispatch = useAppDispatch()
   const [values, setValues] = useState(initial)
@@ -34,9 +38,10 @@ export function useAuthForm<T extends Record<string, string>>(
     // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes), nor its undo slots:
     // a session that expired or was revoked elsewhere reaches sign-in without sign-out's reset. The reset also draws a new epoch,
     // so an edit of the old session that lands late is ignored.
-    onSuccess: () => {
+    onSuccess: (_result, values) => {
       queryClient.clear()
       dispatch(resetApp())
+      onDone?.(values)
     },
   })
 

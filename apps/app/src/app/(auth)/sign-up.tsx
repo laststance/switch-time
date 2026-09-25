@@ -7,15 +7,19 @@ import { CredentialFields } from '@/components/credential-fields'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuthForm } from '@/hooks/use-auth-form'
+import { useRegistration } from '@/hooks/use-registration'
 import { authClient } from '@/lib/auth-client'
 
 export default function SignUpScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>()
-  // Better Auth signs the new user in right away (autoSignIn); the (auth) layout then follows `next` into the app.
+  const { register } = useRegistration()
+  // Sign-up opens no session (`autoSignIn: false`, so an address that already has an account gets the same answer):
+  // the (auth) layout moves on to sign-in with the address filled in, and follows `next` from there.
   const form = useAuthForm(
     signUpSchema,
     { name: '', email: '', password: '' },
     async (values) => authClient.signUp.email(values),
+    (values) => register(values.email),
   )
 
   return (

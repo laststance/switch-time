@@ -350,17 +350,29 @@
 
 ## Auth
 
-### Stop sign-up from telling whether an e-mail is registered
+### Prove that an e-mail address belongs to the person signing up
 
-**What:** Make e-mail sign-up answer an address that already has an account the same way as a new one. Either turn on `requireEmailVerification` once there is a mailer, or set `autoSignIn: false` and send the user to sign in after signing up. When e-mail links or social sign-in bring auth deep links, also narrow the native entry in `trustedOrigins` from `switchtime://` to `switchtime://auth`.
+**What:** Turn on `requireEmailVerification` once there is a mailer, so an address cannot be used until its owner confirms it, and add a password reset through the same mailer. When e-mail links or social sign-in bring auth deep links, also narrow the native entry in `trustedOrigins` from `switchtime://` to `switchtime://auth`.
 
-**Why:** With neither option set, Better Auth 1.7.5 answers a sign-up for an existing address with 422 `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`, so anyone can check which addresses have an account. With either option, it returns the same 200 for both and hashes the password anyway to even out the timing.
+**Why:** Since 0.16.0.0 (`autoSignIn: false`) one sign-up request no longer tells whether an address has an account: Better Auth answers both the same way. The flow still does: sign up with a fresh password, then sign in with it, and only an unused address lets you in (leaving an account behind). Two overlapping sign-ups for an unused address can also differ: one may hit the unique index and get 422 `FAILED_TO_CREATE_USER`, while an existing address answers 200 twice. And someone who forgot they had an account and "registers" again with a new password gets 「登録しました」, then a sign-in error, with no way back without a reset.
 
-**Context:** `apps/api/src/auth.ts` sets only `emailAndPassword: { enabled: true }`. The branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`, so it waits for a mailer; with one, `onExistingUserSignUp` can also tell the owner of the address. `autoSignIn: false` needs no mailer but adds a sign-in step after 登録, so design it in the pen file first, and keep the navigation in the `(auth)` layout as sign-in does. A host-less `switchtime://` trusts every URL of the scheme, while `switchtime://auth` trusts only that host (`trusted-origins.mjs`). Deferred during MVP-02..06 (2026-09-09). The client-IP item from the same list is done: `advanced.ipAddress.ipAddressHeaders` reads `do-connecting-ip`.
+**Context:** `apps/api/src/auth.ts` sets `emailAndPassword: { enabled: true, autoSignIn: false }`; the branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`; with it, `onExistingUserSignUp` can mail the owner of an address that someone tried to register again. The 登録しました notice on sign-in (pen board 「ST Phone / サインイン（登録後）」) would then say to check the inbox, so change the board first. `switchtime://` stays host-less for now because the Expo client sends `expo-origin: switchtime://` (`Linking.createURL('', { scheme })`), which a `switchtime://auth` pattern rejects (`matchesOriginPattern`), so every native POST that carries cookies would get 403; the narrowing needs that origin to change too. A new account also takes longer to answer than an existing one (the inserts and `seedUser`), a weaker signal than the flow above; production rate limiting (Better Auth's rule for `/sign-up` and `/sign-in`, 3 per 10 s per `do-connecting-ip`) bounds both.
 
 **Effort:** M
 **Priority:** P3
-**Depends on:** A mailer, for the `requireEmailVerification` route
+**Depends on:** A mailer
+
+### Say the auth errors in Japanese
+
+**What:** Show the sign-in and sign-up server errors in Japanese: map Better Auth's error codes (`INVALID_EMAIL_OR_PASSWORD`, `PASSWORD_TOO_SHORT`, the rate limit's 429, …) to the app's words instead of showing its English `message`.
+
+**Why:** A wrong password shows "Invalid email or password" in an otherwise Japanese app. Since 0.16.0.0 every sign-up goes through sign-in, so more people see it.
+
+**Context:** `useAuthForm` (`apps/app/src/hooks/use-auth-form.ts`) throws `error.message ?? 'もう一度お試しください'` and `AuthCard` shows it as the role=alert line. Put the copy on a pen board first (the text on a screen is a design change). Raised by the design review of the 0.16.0.0 plan.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** The copy on a pen board
 
 ## Infrastructure
 

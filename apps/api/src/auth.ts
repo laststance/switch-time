@@ -24,7 +24,10 @@ export const auth = betterAuth({
     // Expo Go serves the app from exp://<lan-ip>:4101 while developing.
     ...(env.NODE_ENV === 'development' ? ['exp://**'] : []),
   ],
-  emailAndPassword: { enabled: true },
+  // No sign-in on sign-up: Better Auth then answers an address that already has an account like a new one (200, no session,
+  // the password hashed anyway) instead of 422 USER_ALREADY_EXISTS, so one request no longer tells who has an account.
+  // Sign-up followed by sign-in still can: only proof of e-mail ownership (a mailer) closes that (TODOS.md).
+  emailAndPassword: { enabled: true, autoSignIn: false },
   // Every account starts with the default activities and settings ({@link seedUser}).
   databaseHooks: {
     user: { create: { after: async (created) => seedUser(created.id) } },

@@ -13,7 +13,7 @@ import { z } from 'zod'
 
 import { db, pool } from '../db/client'
 import { switches } from '../db/schema/app'
-import { cookieJar, rpc, signedIn, signUp } from '../test/client'
+import { cookieJar, rpc, signedIn, signIn, signUp } from '../test/client'
 
 const TZ = 'Asia/Tokyo'
 const H = 3_600_000
@@ -662,7 +662,7 @@ test('元に戻す armed under another account is refused and writes nothing, ev
   const { user } = z
     .object({ user: z.object({ id: z.string() }) })
     .parse(await response.clone().json())
-  const api = rpc(cookieJar(response))
+  const api = rpc(cookieJar(await signIn('replace-other-account@example.com')))
   const snapshot = {
     day: yesterday,
     timeZone: TZ,
