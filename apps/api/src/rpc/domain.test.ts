@@ -1151,6 +1151,52 @@ test('an empty settings update is rejected as input, not as a database error', a
   })
 })
 
+test('a settings update naming only the account it is for is rejected as input, since it changes nothing', async () => {
+  // Arrange
+  const api = await signedIn('only-for-user@example.com')
+  const { id: userId } = await api.me()
+
+  // Act + Assert
+  await expect(
+    api.settings.update({ forUserId: userId }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('a zone write decided for another account is refused and leaves the signed-in account’s zone alone', async () => {
+  // Arrange: the write was decided on account A's row, but the session is account B's (a sign-in in another tab)
+  const accountA = await signedIn('zone-for-a@example.com')
+  const { id: userIdA } = await accountA.me()
+  const accountB = await signedIn('zone-for-b@example.com')
+  await accountB.settings.update({ timeZone: 'UTC' })
+
+  // Act
+  const write = accountB.settings.update({
+    timeZone: 'Europe/London',
+    forUserId: userIdA,
+  })
+
+  // Assert
+  await expect(write).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect((await accountB.settings.get()).timeZone).toBe('UTC')
+  expect((await accountA.settings.get()).timeZone).toBe('Asia/Tokyo')
+})
+
+test('a zone write decided for the signed-in account lands', async () => {
+  // Arrange
+  const api = await signedIn('zone-for-self@example.com')
+  const { id: userId } = await api.me()
+
+  // Act
+  const settings = await api.settings.update({
+    timeZone: 'Europe/London',
+    forUserId: userId,
+  })
+
+  // Assert
+  expect(settings).toMatchObject({ userId, timeZone: 'Europe/London' })
+  expect((await api.settings.get()).timeZone).toBe('Europe/London')
+})
+
 test('a replaced day that would end on an archived activity with nothing after it is refused, so an archived activity never runs', async () => {
   // Arrange: no switches yet, so nothing keeps 休息 from being archived
   const api = await signedIn('replace-archived@example.com')

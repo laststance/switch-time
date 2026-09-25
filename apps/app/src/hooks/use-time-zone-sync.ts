@@ -12,7 +12,8 @@ import { zoneSyncAction } from '@/lib/settings'
  * Writes the device's zone into `settings.timeZone` when this device's zone changed since it last synced the account (a fresh
  * install, a move, also while the app stays open), so every day boundary the API computes follows the user's clock, while two
  * devices in different zones leave each other's write alone ({@link zoneSyncAction}). It acts only on a settings row that is
- * the session account's own. A failed write waits for the next launch or the next account. Mounted once, in the root layout.
+ * the session account's own, and each write names that account, so the API refuses it once the cookie is another's. A failed
+ * write is not sent again for the same account and zone until the next launch. Mounted once, in the root layout.
  * @example useTimeZoneSync()
  */
 export function useTimeZoneSync(): void {
@@ -20,27 +21,38 @@ export function useTimeZoneSync(): void {
   const device = useDeviceZone()
   const { data: session } = authClient.useSession()
   const accountId = session?.user.id
-  const { mutate, isError, reset } = useUpdateSettings()
+  const { mutate, isError, variables } = useUpdateSettings()
   const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
-  // `isError` breaks the loop a rollback would otherwise start (the old zone is back in the cache, so write it again). Without an
-  // account id (an expired session, a sign-out from another tab) the device's store cannot be read, and a write would only fail.
-  const settled = ready && !isError && !writing && Boolean(accountId)
-  // The failure belongs to the account it was written for: the next account's sync must not stay off because of it.
-  useEffect(() => reset(), [accountId, reset])
+  // Without an account id (an expired session, a sign-out from another tab) the device's store cannot be read, and a write
+  // would only fail.
+  const settled = ready && !writing && Boolean(accountId)
+  // The failed write's own variables break the loop a rollback would otherwise start (the old zone is back in the cache, so
+  // write it again), for that account and zone only.
+  const failedWrite = isError ? variables : undefined
   useEffect(() => {
     const action = zoneSyncAction({
       stored: settings.timeZone,
       device,
       lastSynced: readSyncedZone(accountId),
       settled,
+      failedWrite,
       account: accountId,
       rowAccount: owner,
     })
     if (action === 'record') rememberSyncedZone(accountId, device)
     if (action === 'write')
       mutate(
-        { timeZone: device },
-        { onSuccess: () => rememberSyncedZone(accountId, device) },
+        { timeZone: device, forUserId: accountId },
+        // The row the API wrote says whose it was: the session may have turned to another account while the write was out.
+        { onSuccess: (row) => rememberSyncedZone(row.userId, device) },
       )
-  }, [settled, settings.timeZone, device, accountId, owner, mutate])
+  }, [
+    settled,
+    settings.timeZone,
+    device,
+    accountId,
+    owner,
+    failedWrite,
+    mutate,
+  ])
 }

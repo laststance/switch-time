@@ -6,6 +6,7 @@ import {
   exclusionSummary,
   idleLabel,
   reorderIds,
+  rolledBackSettings,
   SETTINGS_REFETCH_ROUTERS,
   spareColor,
   targetHoursFromText,
@@ -20,6 +21,7 @@ test('a fresh install writes its zone once when the account holds another', () =
     device: 'Europe/London',
     lastSynced: null,
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -35,6 +37,7 @@ test('two devices in different zones stop overwriting each other: the one that a
     device: 'Asia/Tokyo',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -50,6 +53,7 @@ test('a device that moved to another zone writes its new zone', () => {
     device: 'America/New_York',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -65,6 +69,7 @@ test('a fresh install whose zone the account already holds only remembers it, so
     device: 'Asia/Tokyo',
     lastSynced: null,
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -80,6 +85,7 @@ test('nothing is written or remembered while a settings write is in flight, sinc
     device: 'Asia/Tokyo',
     lastSynced: null,
     settled: false,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -97,6 +103,7 @@ test('a device already in step with the account does nothing', () => {
     device: 'Asia/Tokyo',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: 'user-1',
   }
@@ -112,6 +119,7 @@ test('right after a switch to another account, the previous account’s cached r
     device: 'Asia/Tokyo',
     lastSynced: null,
     settled: true,
+    failedWrite: undefined,
     account: 'user-2',
     rowAccount: 'user-1',
   }
@@ -132,6 +140,7 @@ test('the zone sync waits until the settings row says whose it is', () => {
     device: 'Europe/London',
     lastSynced: null,
     settled: true,
+    failedWrite: undefined,
     account: 'user-1',
     rowAccount: undefined,
   }
@@ -148,11 +157,49 @@ test('設定’s タイムゾーン row shows a dash and no button until the set
     stored: 'Asia/Tokyo',
     device: 'Europe/London',
     ready: false,
-    failed: false,
+    failedWrite: undefined,
+    account: 'user-1',
+    rowAccount: 'user-1',
   })
 
   // Assert
   expect(row).toEqual({ summary: '—', alert: false, canTakeBack: false })
+})
+
+test('設定’s タイムゾーン row does not claim the default zone matches this device, nor show a stale failure, before the settings row is read', () => {
+  // Arrange: the unread row sits on SETTINGS_DEFAULTS' Asia/Tokyo, which is also this device's zone.
+  const unreadOnDefaults = {
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    ready: false,
+    failedWrite: undefined,
+    account: 'user-1',
+    rowAccount: 'user-1',
+  }
+  const unreadAfterFailure = {
+    stored: 'America/New_York',
+    device: 'Asia/Tokyo',
+    ready: false,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Asia/Tokyo' },
+    account: 'user-1',
+    rowAccount: 'user-1',
+  }
+
+  // Act
+  const defaultsRow = zoneRow(unreadOnDefaults)
+  const failureRow = zoneRow(unreadAfterFailure)
+
+  // Assert
+  expect(defaultsRow).toEqual({
+    summary: '—',
+    alert: false,
+    canTakeBack: false,
+  })
+  expect(failureRow).toEqual({
+    summary: '—',
+    alert: false,
+    canTakeBack: false,
+  })
 })
 
 test('設定’s タイムゾーン row says the account already uses this device’s zone and offers no button', () => {
@@ -161,7 +208,9 @@ test('設定’s タイムゾーン row says the account already uses this devic
     stored: 'Asia/Tokyo',
     device: 'Asia/Tokyo',
     ready: true,
-    failed: false,
+    failedWrite: undefined,
+    account: 'user-1',
+    rowAccount: 'user-1',
   })
 
   // Assert
@@ -178,7 +227,9 @@ test('設定’s タイムゾーン row names both zones and offers この端末
     stored: 'America/New_York',
     device: 'Asia/Tokyo',
     ready: true,
-    failed: false,
+    failedWrite: undefined,
+    account: 'user-1',
+    rowAccount: 'user-1',
   })
 
   // Assert
@@ -195,7 +246,9 @@ test('a failed take-back says so and keeps the button for another try', () => {
     stored: 'America/New_York',
     device: 'Asia/Tokyo',
     ready: true,
-    failed: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Asia/Tokyo' },
+    account: 'user-1',
+    rowAccount: 'user-1',
   })
 
   // Assert
@@ -212,7 +265,9 @@ test('a failure line goes away once a later read shows the account already on th
     stored: 'Asia/Tokyo',
     device: 'Asia/Tokyo',
     ready: true,
-    failed: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Asia/Tokyo' },
+    account: 'user-1',
+    rowAccount: 'user-1',
   })
 
   // Assert
@@ -221,6 +276,107 @@ test('a failure line goes away once a later read shows the account already on th
     alert: false,
     canTakeBack: false,
   })
+})
+
+test('a zone write that failed is not sent again for the same account and zone, so a rollback does not start it over', () => {
+  // Arrange: the write of Europe/London for user-1 failed, and the rollback put Asia/Tokyo back.
+  const zones = {
+    stored: 'Asia/Tokyo',
+    device: 'Europe/London',
+    lastSynced: 'Asia/Tokyo',
+    settled: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Europe/London' },
+    account: 'user-1',
+    rowAccount: 'user-1',
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(zones)).toBe('none')
+})
+
+test('a failed zone write does not stop the next account, nor the same account once the device has moved on', () => {
+  // Arrange: user-1's write of Europe/London failed.
+  const nextAccount = {
+    stored: 'Asia/Tokyo',
+    device: 'Europe/London',
+    lastSynced: null,
+    settled: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Europe/London' },
+    account: 'user-2',
+    rowAccount: 'user-2',
+  }
+  const movedOn = {
+    stored: 'Asia/Tokyo',
+    device: 'America/New_York',
+    lastSynced: 'Asia/Tokyo',
+    settled: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Europe/London' },
+    account: 'user-1',
+    rowAccount: 'user-1',
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(nextAccount)).toBe('write')
+  expect(zoneSyncAction(movedOn)).toBe('write')
+})
+
+test('設定’s タイムゾーン row shows a dash, not the previous account’s zone, right after a switch to another account', () => {
+  // Act: the cache still holds user-1's row (Tokyo, this device's zone) while the session is already user-2's.
+  const row = zoneRow({
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failedWrite: undefined,
+    account: 'user-2',
+    rowAccount: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({ summary: '—', alert: false, canTakeBack: false })
+})
+
+test('a take-back that failed for the previous account shows no failure line on the next account’s row', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'UTC',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'Asia/Tokyo' },
+    account: 'user-2',
+    rowAccount: 'user-2',
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: 'UTC · この端末は Asia/Tokyo',
+    alert: false,
+    canTakeBack: true,
+  })
+})
+
+test('a failed settings write puts the account’s previous row back', () => {
+  // Arrange
+  const optimistic = { userId: 'user-1', timeZone: 'Asia/Tokyo' }
+  const previous = { userId: 'user-1', timeZone: 'UTC' }
+
+  // Act & Assert
+  expect(rolledBackSettings(optimistic, previous)).toEqual({
+    userId: 'user-1',
+    timeZone: 'UTC',
+  })
+})
+
+test('a failed settings write that lands after a switch to another account leaves the new account’s row alone', () => {
+  // Arrange: user-1's write was out when user-2 signed in and user-2's row was read; then the cache was cleared on sign-in.
+  const nextAccountsRow = { userId: 'user-2', timeZone: 'America/New_York' }
+  const previous = { userId: 'user-1', timeZone: 'UTC' }
+
+  // Act & Assert
+  expect(rolledBackSettings(nextAccountsRow, previous)).toEqual({
+    userId: 'user-2',
+    timeZone: 'America/New_York',
+  })
+  expect(rolledBackSettings(undefined, previous)).toBeUndefined()
 })
 
 const activity = (

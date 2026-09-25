@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '@/lib/auth-client'
 import { orpc } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
-import { SETTINGS_DEFAULTS, SETTINGS_REFETCH_ROUTERS } from '@/lib/settings'
+import {
+  rolledBackSettings,
+  SETTINGS_DEFAULTS,
+  SETTINGS_REFETCH_ROUTERS,
+} from '@/lib/settings'
 
 /**
  * The user's `settings.get` row (theme, second hand, idle threshold, unused-day rule, time zone): one query definition for the whole app,
@@ -27,7 +31,8 @@ export function useSettings() {
 }
 
 /**
- * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error; `settings.*`,
+ * `settings.update` written into the `settings.get` cache first (a theme tap or a toggle flips at once), rolled back on error (unless
+ * another account's row is cached by then, {@link rolledBackSettings}); `settings.*`,
  * `stats.*` and `switches.*` refetch once the server has answered, since the idle threshold and the unused-day rule change every total
  * and a stored-zone change moves every day's window.
  * @example const update = useUpdateSettings(); update.mutate({ theme: 'dark' })
@@ -49,9 +54,8 @@ export function useUpdateSettings() {
       },
       onError: (_error, _input, context) => {
         if (context)
-          queryClient.setQueryData(
-            orpc.settings.get.queryKey(),
-            context.previous,
+          queryClient.setQueryData(orpc.settings.get.queryKey(), (current) =>
+            rolledBackSettings(current, context.previous),
           )
       },
       // Only the last in-flight update refetches: an earlier settle would replay stale server values over a newer optimistic one.

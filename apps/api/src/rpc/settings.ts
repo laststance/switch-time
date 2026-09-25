@@ -1,3 +1,4 @@
+import { ORPCError } from '@orpc/server'
 import { settingsUpdateSchema, type SettingsUpdate } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
 
@@ -30,7 +31,7 @@ export async function getSettings(userId: string, executor: Executor = db) {
 // empty (NOT_FOUND). Settings only: seedUser would also insert the default activities, which this route has no business creating.
 async function updateSettings(
   userId: string,
-  input: SettingsUpdate,
+  input: Omit<SettingsUpdate, 'forUserId'>,
   executor: Executor,
 ) {
   await executor.insert(userSettings).values({ userId }).onConflictDoNothing()
@@ -48,11 +49,18 @@ export const settingsRouter = {
   update: authed
     .input(settingsUpdateSchema)
     .handler(async ({ context, input }) => {
+      const { forUserId, ...changes } = input
       const userId = context.user.id
+      // A write decided on another account's row (the cookie changed under it, a sign-in in another tab) must not land here.
+      if (forUserId !== undefined && forUserId !== userId)
+        throw new ORPCError('CONFLICT', {
+          message: 'settings write is for another account',
+        })
       // A zone change moves every day's window, so it waits for (and holds off) the timeline's writes, which read the zone.
-      if (input.timeZone === undefined) return updateSettings(userId, input, db)
+      if (changes.timeZone === undefined)
+        return updateSettings(userId, changes, db)
       return withUserLock(userId, context.deadline, async (tx) =>
-        updateSettings(userId, input, tx),
+        updateSettings(userId, changes, tx),
       )
     }),
 }

@@ -3,6 +3,7 @@ import {
   ACTIVITY_PALETTE,
   addDays,
   type ActivityColor,
+  type SettingsUpdate,
 } from '@switch-time/shared'
 
 import type { ActivityRow } from './orpc'
@@ -42,6 +43,24 @@ export const SETTINGS_REFETCH_ROUTERS = [
 export type ZoneSyncAction = 'write' | 'record' | 'none'
 
 /**
+ * The zone write a settings mutation last sent, when it failed: its variables, undefined otherwise. The failure holds only for
+ * that account and that zone, so a rollback does not start the same write again, while the next account, or a device that
+ * moved on, writes as usual. Read by {@link zoneSyncAction} and {@link zoneRow}.
+ */
+export type FailedZoneWrite =
+  Pick<SettingsUpdate, 'forUserId' | 'timeZone'> | undefined
+
+// The failed write was this account's and this zone's: sending it again would only repeat the failure.
+const failedHere = (
+  failedWrite: FailedZoneWrite,
+  account: string | undefined,
+  device: string,
+): boolean =>
+  failedWrite !== undefined &&
+  failedWrite.forUserId === account &&
+  failedWrite.timeZone === device
+
+/**
  * Whether this device writes its zone into the account's `settings.timeZone`. It writes only when its own zone differs from
  * the one it last synced for the account (a fresh install, or the device moved), so two devices in different zones no longer
  * overwrite each other on every focus. When the account already holds the device's zone, the device only remembers it,
@@ -49,8 +68,8 @@ export type ZoneSyncAction = 'write' | 'record' | 'none'
  * @param zones.stored - The account's zone as `settings.get` last answered (or the optimistic value of a write in flight).
  * @param zones.device - The device's IANA zone.
  * @param zones.lastSynced - The zone this device last synced for the account, null when it never did.
- * @param zones.settled - The settings row has loaded for a signed-in account, no settings write is in flight, and the last zone
- *   write did not fail.
+ * @param zones.settled - The settings row has loaded for a signed-in account and no settings write is in flight.
+ * @param zones.failedWrite - The sync's last write, when it failed ({@link FailedZoneWrite}).
  * @param zones.account - The session's user id, undefined while signed out.
  * @param zones.rowAccount - The `userId` of the settings row `stored` came from, undefined until it has loaded. In the commit
  *   where the session turns to another account the cache still holds the previous account's row, and its zone must not be
@@ -58,21 +77,23 @@ export type ZoneSyncAction = 'write' | 'record' | 'none'
  * @returns
  * - 'write': the device's zone differs from both the account's and the one it last synced
  * - 'record': the account already holds the device's zone, which the device has not remembered yet
- * - 'none': otherwise, while not settled, or while the row is not the session account's own
- * @example zoneSyncAction({ stored: 'UTC', device: 'Asia/Tokyo', lastSynced: 'Asia/Tokyo', settled: true, account: 'u1', rowAccount: 'u1' }) // 'none': another device set UTC
+ * - 'none': otherwise, while not settled, while the row is not the session account's own, or when this very write failed
+ * @example zoneSyncAction({ stored: 'UTC', device: 'Asia/Tokyo', lastSynced: 'Asia/Tokyo', settled: true, failedWrite: undefined, account: 'u1', rowAccount: 'u1' }) // 'none': another device set UTC
  */
 export function zoneSyncAction(zones: {
   stored: string
   device: string
   lastSynced: string | null
   settled: boolean
+  failedWrite: FailedZoneWrite
   account: string | undefined
   rowAccount: string | undefined
 }): ZoneSyncAction {
-  const { stored, device, lastSynced, settled, account, rowAccount } = zones
+  const { stored, device, lastSynced, settled, failedWrite, account } = zones
   // Positive ownership: an unloaded row (undefined) or another account's row never counts.
-  const ownRow = account !== undefined && account === rowAccount
+  const ownRow = account !== undefined && account === zones.rowAccount
   if (!settled || !ownRow || lastSynced === device) return 'none'
+  if (failedHere(failedWrite, account, device)) return 'none'
   return stored === device ? 'record' : 'write'
 }
 
@@ -85,29 +106,36 @@ export type ZoneRow = { summary: string; alert: boolean; canTakeBack: boolean }
  * @param zones.stored - The account's zone (the optimistic one while a take-back is in flight, so the row reads "same" at once).
  * @param zones.device - This device's IANA zone.
  * @param zones.ready - The settings row has been read.
- * @param zones.failed - The last take-back write failed and nothing has been tapped since.
+ * @param zones.failedWrite - The last take-back, when it failed and nothing has been tapped since ({@link FailedZoneWrite}).
+ * @param zones.account - The session's user id, undefined while signed out.
+ * @param zones.rowAccount - The `userId` of the cached settings row: after a switch to another account it can still be the
+ *   previous account's, whose zone must not read as the new account's.
  * @returns
- * - not ready: a dash, no button
+ * - not ready, or not the session account's row: a dash, no button
  * - same zone: `Asia/Tokyo · この端末と同じ`, no button
- * - failed: the alert line, button kept for another try
+ * - failed for this account and this zone: the alert line, button kept for another try
  * - otherwise: `America/New_York · この端末は Asia/Tokyo`, button
- * @example zoneRow({ stored: 'UTC', device: 'Asia/Tokyo', ready: true, failed: false }) // { summary: 'UTC · この端末は Asia/Tokyo', alert: false, canTakeBack: true }
+ * @example zoneRow({ stored: 'UTC', device: 'Asia/Tokyo', ready: true, failedWrite: undefined, account: 'u1', rowAccount: 'u1' }) // { summary: 'UTC · この端末は Asia/Tokyo', alert: false, canTakeBack: true }
  */
 export function zoneRow(zones: {
   stored: string
   device: string
   ready: boolean
-  failed: boolean
+  failedWrite: FailedZoneWrite
+  account: string | undefined
+  rowAccount: string | undefined
 }): ZoneRow {
-  const { stored, device, ready, failed } = zones
-  if (!ready) return { summary: '—', alert: false, canTakeBack: false }
+  const { stored, device, ready, failedWrite, account } = zones
+  const ownRow = account !== undefined && account === zones.rowAccount
+  if (!ready || !ownRow)
+    return { summary: '—', alert: false, canTakeBack: false }
   if (stored === device)
     return {
       summary: `${stored} · この端末と同じ`,
       alert: false,
       canTakeBack: false,
     }
-  if (failed)
+  if (failedHere(failedWrite, account, device))
     return {
       summary: '保存できませんでした。もう一度お試しください',
       alert: true,
@@ -118,6 +146,24 @@ export function zoneRow(zones: {
     alert: false,
     canTakeBack: true,
   }
+}
+
+/**
+ * What a failed settings write puts back into the `settings.get` cache: its snapshot, unless the cache now holds another
+ * account's row (a sign-in landed while the write was out), which the previous account's row must not replace. Called from
+ * {@link useUpdateSettings}' rollback.
+ * @param current - The cached row now, undefined once the cache was cleared.
+ * @param previous - The row the write's optimistic update replaced.
+ * @returns
+ * - the same account's row (or both undefined): `previous`
+ * - another account's row, or a cleared cache: `current`, left as it is
+ * @example rolledBackSettings({ userId: 'b', timeZone: 'UTC' }, { userId: 'a', timeZone: 'Asia/Tokyo' }) // { userId: 'b', timeZone: 'UTC' }
+ */
+export function rolledBackSettings<Row extends { userId: string }>(
+  current: Row | undefined,
+  previous: Row | undefined,
+): Row | undefined {
+  return current?.userId === previous?.userId ? previous : current
 }
 
 const MINUTES_PER_HOUR = 60
