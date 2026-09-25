@@ -5,6 +5,8 @@ import {
   MIN_SEGMENT_MS,
   dayBounds,
   daySchema,
+  detoxRunPastWeek,
+  detoxRunStartDay,
   localDay,
   moveStartInputSchema,
   REFUSAL,
@@ -59,6 +61,64 @@ export async function latestSwitch(
     .orderBy(desc(switches.startedAt))
     .limit(1)
   return row ?? null
+}
+
+// What a run's boundary rows are read for: enough for detoxRunStartDay.
+const runColumns = {
+  activityId: switches.activityId,
+  startedAt: switches.startedAt,
+  startsRun: switches.startsRun,
+}
+
+/**
+ * The day the detox run that `latest` belongs to started, in `timeZone`, or null while an activity runs. Two reads on the
+ * partial `switches_run_boundary_idx` and the timeline index decide it, however long the account's history is: the latest
+ * boundary (an activity row, or a detox row that starts a run) and the row right after it (the run's first row when the
+ * boundary is an activity). {@link detoxRunStartDay} applies the run rule to them. Called by `current` for Home's notices,
+ * and by switchTo to tell a detox re-tap past the run's week from a repeat press.
+ * @example await runStartOf(tx, userId, latest, 'Asia/Tokyo') // '2026-09-01' for a detox from 09-01 that a cut split on 09-05
+ */
+async function runStartOf(
+  executor: Executor,
+  userId: string,
+  latest: SwitchRow,
+  timeZone: string,
+): Promise<string | null> {
+  if (latest.activityId !== null) return null
+  // The same predicate as the index, so the planner can use it.
+  const [boundary] = await executor
+    .select(runColumns)
+    .from(switches)
+    .where(
+      and(
+        own(userId),
+        sql`${switches.activityId} is not null or ${switches.startsRun}`,
+      ),
+    )
+    .orderBy(desc(switches.startedAt))
+    .limit(1)
+  const [first] = await executor
+    .select(runColumns)
+    .from(switches)
+    .where(
+      boundary
+        ? and(own(userId), gt(switches.startedAt, boundary.startedAt))
+        : own(userId),
+    )
+    .orderBy(asc(switches.startedAt))
+    .limit(1)
+  const rows = [boundary, first, latest].flatMap((row) =>
+    row
+      ? [
+          {
+            activityId: row.activityId,
+            startedAt: row.startedAt.getTime(),
+            startsRun: row.startsRun,
+          },
+        ]
+      : [],
+  )
+  return detoxRunStartDay(rows, timeZone)
 }
 
 /**
@@ -188,9 +248,9 @@ const insertSplit = async (tx: LockedTx, row: SwitchRow, startedAt: Date) => {
 
 /**
  * Deletes a row and marks the neighbour that takes over its span as merged, or NOT_FOUND if either row is already gone;
- * `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start). Called by the two merge
- * procedures inside their locked transaction.
- * @example return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt }) // the next state, now starting at row.startedAt
+ * `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start) and sets its `startsRun` (the
+ * re-tap renewal a merge hands over). Called by the two merge procedures inside their locked transaction.
+ * @example return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt, startsRun: true }) // the next state, now starting at row.startedAt and renewing there
  */
 const mergeInto = async (
   tx: LockedTx,
@@ -502,7 +562,25 @@ const outsideWindow = (window: DayWindow | null, time: number) =>
   window !== null && (time < window.start || time >= window.end)
 
 export const switchesRouter = {
-  current: authed.handler(async ({ context }) => latestSwitch(context.user.id)),
+  // The running record plus the day its detox run started (null while an activity runs), for Home's detox notices. The
+  // settings are read first (a half-seeded account gets its row written); the two reads after share one snapshot, so a
+  // write landing between them cannot pair a record with another run's start.
+  current: authed.handler(async ({ context }) => {
+    const userId = context.user.id
+    const { timeZone } = await getSettings(userId)
+    return boundedTransaction(
+      context.deadline,
+      async (tx) => {
+        const latest = await latestSwitch(userId, tx)
+        if (!latest) return null
+        return {
+          ...latest,
+          runStartDay: await runStartOf(tx, userId, latest, timeZone),
+        }
+      },
+      { isolationLevel: 'repeatable read', accessMode: 'read only' },
+    )
+  }),
 
   switchTo: authed
     // null = detox: from now on the time is recorded to no activity, until the next real one.
@@ -512,8 +590,19 @@ export const switchesRouter = {
       return withUserLock(userId, context.deadline, async (tx) => {
         await assertLiveActivities(tx, userId, [input.activityId])
         const current = await latestSwitch(userId, tx)
-        // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
-        if (current?.activityId === input.activityId) return current
+        const now = Date.now()
+        // Tapping the active state again keeps it (no zero-length segment, and the clock never drops its state), except
+        // detox pressed again after its run's measured week: a new run starts here, and the days after it count again.
+        let startsRun = false
+        if (current !== null && current.activityId === input.activityId) {
+          if (input.activityId !== null) return current
+          const { timeZone } = await getSettings(userId, tx)
+          const runStartDay = await runStartOf(tx, userId, current, timeZone)
+          // Inside the week the press stays a no-op, so a double tap never cuts a run.
+          if (!detoxRunPastWeek(runStartDay, localDay(new Date(now), timeZone)))
+            return current
+          startsRun = true
+        }
         // The running record now ends here.
         if (current) await bumpRevision(tx, current.id)
         return one(
@@ -522,7 +611,8 @@ export const switchesRouter = {
             .values({
               userId,
               activityId: input.activityId,
-              startedAt: nextSwitchStart(current, Date.now()),
+              startedAt: nextSwitchStart(current, now),
+              startsRun,
             })
             .returning(),
         )
@@ -594,7 +684,18 @@ export const switchesRouter = {
         if (!prev) throw conflict('no previous state', REFUSAL.noNeighbour)
         // Merging the running record makes the previous one the current state, which an archived activity can never be.
         if (!next) await assertLiveActivities(tx, userId, [prev.activityId])
-        return mergeInto(tx, row.id, prev.id)
+        // A detox that takes over a re-tap on the same day takes over its renewal too; from an earlier day it would move the
+        // run's start back, so the renewal goes with the merged row there. A mark left on an activity row (changeActivity
+        // keeps it) renews only once that row is detox again, so merging the row itself hands nothing over.
+        let startsRun = prev.startsRun
+        const isReTap = row.startsRun && row.activityId === null
+        if (isReTap && prev.activityId === null && !prev.startsRun) {
+          const { timeZone } = await getSettings(userId, tx)
+          startsRun =
+            localDay(prev.startedAt, timeZone) ===
+            localDay(row.startedAt, timeZone)
+        }
+        return mergeInto(tx, row.id, prev.id, { startsRun })
       })
     }),
 
@@ -618,7 +719,15 @@ export const switchesRouter = {
         const end = window?.end ?? (await rowDayEnd(tx, userId, row.startedAt))
         if (next.startedAt.getTime() >= end)
           throw conflict('next state is on a later day', REFUSAL.nextOnLaterDay)
-        return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt })
+        // A detox that takes over a re-tap's start takes over its renewal too, or the days after it would fold into the old run.
+        // As in mergeIntoPrevious, a mark left on an activity row hands nothing over.
+        const startsRun =
+          next.startsRun ||
+          (row.startsRun && row.activityId === null && next.activityId === null)
+        return mergeInto(tx, row.id, next.id, {
+          startedAt: row.startedAt,
+          startsRun,
+        })
       })
     }),
 

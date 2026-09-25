@@ -214,7 +214,7 @@
 
 ### Say when an edit changes whether the untapped days around it count
 
-**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
+**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし, and a merge that removes a detox re-tap (a `starts_run` row, which the sheet lists as a plain デトックス row) into an earlier day's detox, which takes back the week the re-tap renewed. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
 
 **Why:** Since detox left on over midnight measures up to a week of the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
 
@@ -224,27 +224,15 @@
 **Priority:** P3
 **Depends on:** None
 
-### Let a detox re-tap past its week start a new run, and decide History's today cell
+### Name the detox re-tap in the unused-day setting's hint
 
-**What:** Let a tap on detox while a detox past its week runs start a new run (a new detox row the stats treat as a tap), and decide whether History's today cell says a stopped detox does not count, as Home now does.
+**What:** Add to the hint under 「使わなかった日を除外」 (`/excluded-days`) that pressing detox again after its week starts another week of counting, next to the rule it already states.
 
-**Why:** Home's 「今日は計測に入りません」 tells the user to switch to an activity to count today, but the obvious reaction, tapping detox again, is a no-op in `switches.switchTo` (and Home drops a press on the active state), so the only way to keep counting writes a minute of activity time.
+**Why:** Home says so on the last day and past the week, but the setting that explains the 7-day rule still reads as if a detox stops counting for good after it.
 
-**Context:** The re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`); the run rule and cap are `detoxCarriedDays` (`packages/shared/src/stats.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; the Home notice PR left these two parts of its TODO open (red team of its pre-landing review). A new state on Home or History goes through the pen file first.
+**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx` (`DETOX_MEASURED_DAYS_MAX`); the re-tap is `switchTo`'s `starts_run` row (the PR that closed the re-tap and last-day items). New text, so the pen file first.
 
-**Effort:** M
-**Priority:** P2
-**Depends on:** None
-
-### Warn on Home on the last day a detox still counts
-
-**What:** On the seventh day after a detox run started (the last untapped day it still measures), say on Home that from tomorrow the untapped days stop counting, before 「今日は計測に入りません」 appears the next day.
-
-**Why:** Home now speaks only once today is already unmeasured, so a user who keeps a week-long detox learns about the limit the morning after the day it could have been kept, when 連続記録 is already at risk.
-
-**Context:** The rule is in `detoxCarriedDays` (`packages/shared/src/stats.ts`); Home's notice is `detoxStopped` / `nowLook` in `apps/app/src/lib/home.ts`, drawn in `ST Phone / ホーム・detox の状態`. The last day depends on when the run started, which a cut can make earlier than the current record's start, so the client needs the run's start day from the server (for example a field on `stats.day`) rather than counting from the since label. The same field would let 「今日は計測に入りません」 speak for a run a cut split: `detoxPastWeek` counts from the record's start (which also keeps a future-day answer at midnight from reading as stopped), so such a run stays quiet today. Raised by the design review of the Home notice.
-
-**Effort:** M
+**Effort:** S
 **Priority:** P3
 **Depends on:** None
 

@@ -271,6 +271,344 @@ test('cutting a running detox does not extend the week it measures', async () =>
   )
 })
 
+test('Home reads the start of a detox run from its first record, even after a cut split it', async () => {
+  // Arrange: 仕事 then detox from twenty days ago, cut on its fifth day through 「ここで分割」
+  const api = await signedIn('detox-run-start@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const tapDay = addDays(today, -20)
+  const cutDay = addDays(tapDay, 5)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(tapDay, 9) },
+      { activityId: null, startedAt: at(tapDay, 20) },
+    ],
+  })
+  const { carriedIn } = await api.switches.listByDay({ day: cutDay })
+  if (!carriedIn) throw new Error('fixture carries no detox into the cut day')
+  await api.switches.splitAt({ id: carriedIn.id, at: at(cutDay, 12) })
+
+  // Act
+  const current = await api.switches.current()
+
+  // Assert: the running record is the cut's, but its run started on the tap day
+  expect(current).toMatchObject({
+    activityId: null,
+    startedAt: at(cutDay, 12),
+    startsRun: false,
+    runStartDay: tapDay,
+  })
+})
+
+test('Home reads no detox run while an activity runs', async () => {
+  // Arrange
+  const api = await signedIn('detox-run-activity@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  await api.switches.switchTo({ activityId: null })
+  await api.switches.switchTo({ activityId: work })
+
+  // Act
+  const current = await api.switches.current()
+
+  // Assert
+  expect(current).toMatchObject({ activityId: work, runStartDay: null })
+})
+
+test('pressing detox again after its week starts a new run from today', async () => {
+  // Arrange: 仕事 then detox from twenty days ago, nothing tapped since
+  const api = await signedIn('detox-renew@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const tapDay = addDays(today, -20)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(tapDay, 9) },
+      { activityId: null, startedAt: at(tapDay, 20) },
+    ],
+  })
+  const before = await api.switches.current()
+
+  // Act
+  const renewed = await api.switches.switchTo({ activityId: null })
+  const current = await api.switches.current()
+  const day = await api.stats.day({ day: today })
+
+  // Assert: a new detox record starts the run, the old one ends, and today counts through the new tap
+  expect(renewed).toMatchObject({
+    activityId: null,
+    source: 'tap',
+    startsRun: true,
+  })
+  expect(renewed.id).not.toBe(before?.id)
+  expect(current).toMatchObject({ id: renewed.id, runStartDay: today })
+  expect(day.days[0]).toMatchObject({ measured: true, excluded: null })
+})
+
+test('pressing detox again inside its week keeps the running record', async () => {
+  // Arrange: detox from three days ago, still inside its measured week
+  const api = await signedIn('detox-renew-inside@example.com')
+  const tapDay = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const before = await api.switches.current()
+
+  // Act
+  const again = await api.switches.switchTo({ activityId: null })
+
+  // Assert
+  expect(again.id).toBe(before?.id)
+  expect(again.startsRun).toBe(false)
+  expect((await api.switches.current())?.runStartDay).toBe(tapDay)
+})
+
+test('pressing detox on the eighth day after its run started renews it once, and ends the old record', async () => {
+  // Arrange: detox from eight days ago, the first day its run no longer measures
+  const api = await signedIn('detox-renew-eighth@example.com')
+  const tapDay = addDays(today, -8)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const before = await api.switches.current()
+
+  // Act: a double tap sends the press twice
+  const renewed = await api.switches.switchTo({ activityId: null })
+  const again = await api.switches.switchTo({ activityId: null })
+  const { rows } = await api.switches.listByDay({ day: tapDay })
+
+  // Assert: one new run from today; the second press keeps it; the old record's revision moved
+  expect(renewed.startsRun).toBe(true)
+  expect(renewed.id).not.toBe(before?.id)
+  expect(again.id).toBe(renewed.id)
+  expect(rows[0]?.revision).toBe((before?.revision ?? 0) + 1)
+})
+
+test('pressing detox on the seventh day after its run started keeps the running record', async () => {
+  // Arrange: detox from seven days ago, today is its run's last measured day
+  const api = await signedIn('detox-renew-seventh@example.com')
+  const tapDay = addDays(today, -7)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const before = await api.switches.current()
+
+  // Act
+  const again = await api.switches.switchTo({ activityId: null })
+
+  // Assert
+  expect(again.id).toBe(before?.id)
+  expect(again.startsRun).toBe(false)
+})
+
+test('merging a re-tap into the detox before it on the same day keeps the run renewed', async () => {
+  // Arrange: detox from twenty days ago, cut at 09:00 three days ago, re-tapped at 12:00 the same day
+  const api = await signedIn('detox-renew-merge-prev@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const [, renewal] = await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: null, startedAt: at(renewDay, 9) },
+      { activityId: null, startedAt: at(renewDay, 12), startsRun: true },
+    ],
+  })
+  if (!renewal) throw new Error('fixture wrote no re-tap')
+
+  // Act: the re-tap hands its time to the cut before it
+  await api.switches.mergeIntoPrevious({ id: renewal.id })
+
+  // Assert: the one detox record left that day starts the run on it
+  expect(await api.switches.current()).toMatchObject({
+    startedAt: at(renewDay, 9),
+    startsRun: true,
+    runStartDay: renewDay,
+  })
+})
+
+test('merging a re-tap into a detox from an earlier day hands the renewal nothing', async () => {
+  // Arrange: detox from twenty days ago, re-tapped three days ago with nothing between them
+  const api = await signedIn('detox-renew-merge-earlier@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const [renewal] = await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(renewDay, 12), startsRun: true }],
+  })
+  if (!renewal) throw new Error('fixture wrote no re-tap')
+
+  // Act: the re-tap hands its time to the detox from twenty days ago
+  await api.switches.mergeIntoPrevious({ id: renewal.id })
+
+  // Assert: `startsRun: false` pins the rule (a carried mark would still read the old detox's own day as its start)
+  expect(await api.switches.current()).toMatchObject({
+    startedAt: at(tapDay, 20),
+    startsRun: false,
+    runStartDay: tapDay,
+  })
+})
+
+test('merging an activity that was once a re-tap into the detox after it renews nothing', async () => {
+  // Arrange: detox from twenty days ago; three days ago a 仕事 row still marked from a re-tap, then detox
+  const api = await signedIn('detox-mark-activity-merge@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const tapDay = addDays(today, -20)
+  const day = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const [marked] = await api.switches.replaceDay({
+    day,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(day, 9), startsRun: true },
+      { activityId: null, startedAt: at(day, 12) },
+    ],
+  })
+  if (!marked) throw new Error('fixture wrote no marked row')
+
+  // Act
+  await api.switches.mergeIntoNext({ id: marked.id })
+
+  // Assert: the detox now joins the run from twenty days ago
+  expect(await api.switches.current()).toMatchObject({
+    startedAt: at(day, 9),
+    startsRun: false,
+    runStartDay: tapDay,
+  })
+})
+
+test('merging a re-tap into the detox split from it keeps the run renewed', async () => {
+  // Arrange: detox from twenty days ago, re-tapped three days ago, then split so its second half is its own row
+  const api = await signedIn('detox-renew-merge@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const [renewal] = await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(renewDay, 9), startsRun: true }],
+  })
+  if (!renewal) throw new Error('fixture wrote no re-tap')
+  await api.switches.splitAt({ id: renewal.id, at: at(renewDay, 12) })
+
+  // Act: the re-tap's half hands its time to the half after it
+  await api.switches.mergeIntoNext({ id: renewal.id })
+
+  // Assert: the one detox record left starts at the re-tap and still starts the run there
+  expect(await api.switches.current()).toMatchObject({
+    startedAt: at(renewDay, 9),
+    startsRun: true,
+    runStartDay: renewDay,
+  })
+})
+
+test('a detox run renewed after its week measures the seven days after the re-tap, then stops again', async () => {
+  // Arrange: detox from twenty days ago, re-tapped (startsRun) twelve days ago, nothing since
+  const api = await signedIn('detox-renew-stats@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(today, -12)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(renewDay, 9), startsRun: true }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(renewDay, 5) })
+
+  // Assert: the renewed run's week ends seven days after the re-tap, then days are unused again
+  expect(week.days.map((day) => [day.day, day.measured, day.excluded])).toEqual(
+    [
+      [addDays(renewDay, 5), true, null],
+      [addDays(renewDay, 6), true, null],
+      [addDays(renewDay, 7), true, null],
+      [addDays(renewDay, 8), false, 'auto_unused'],
+      [addDays(renewDay, 9), false, 'auto_unused'],
+      [addDays(renewDay, 10), false, 'auto_unused'],
+      [addDays(renewDay, 11), false, 'auto_unused'],
+    ],
+  )
+})
+
+test('undoing a day that holds a detox re-tap keeps the re-tap starting its run', async () => {
+  // Arrange: detox from twenty days ago, renewed today by a re-tap, listed as the correction sheet lists it
+  const api = await signedIn('detox-renew-undo@example.com')
+  const tapDay = addDays(today, -20)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  await api.switches.switchTo({ activityId: null })
+  const { rows } = await api.switches.listByDay({ day: today })
+
+  // Act: 「元に戻す」 writes the day's rows back as they were
+  await api.switches.replaceDay({
+    day: today,
+    timeZone: TZ,
+    expected: listedRows(rows),
+    rows: rows.map(({ activityId, startedAt, startsRun }) => ({
+      activityId,
+      startedAt,
+      startsRun,
+    })),
+  })
+
+  // Assert
+  expect(rows.map((row) => row.startsRun)).toEqual([true])
+  expect(await api.switches.current()).toMatchObject({
+    startsRun: true,
+    runStartDay: today,
+  })
+})
+
 test('the month and week views refuse days before 1970 at the API boundary', async () => {
   // Arrange
   const api = await signedIn('pre-epoch@example.com')

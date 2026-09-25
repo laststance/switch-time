@@ -119,11 +119,15 @@ export const reorderInputSchema = z.object({
   ids: z.array(z.uuid()).min(1).max(100),
 })
 
-/** One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares. */
+/**
+ * One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares (id,
+ * activity and start). `startsRun` rides along so 「元に戻す」 can write a detox re-tap back as one; nothing compares it.
+ */
 const dayRowSchema = z.object({
   id: z.uuid(),
   activityId: z.uuid().nullable(),
   startedAt: z.coerce.date(),
+  startsRun: z.boolean().optional(),
 })
 export type DayRow = z.infer<typeof dayRowSchema>
 
@@ -264,7 +268,12 @@ export const replaceDayInputSchema = z.object({
   account: z.string().optional(),
   rows: z
     .array(
-      z.object({ activityId: z.uuid().nullable(), startedAt: z.coerce.date() }),
+      z.object({
+        activityId: z.uuid().nullable(),
+        startedAt: z.coerce.date(),
+        // A detox re-tap that started a new run keeps doing so once written back; left out (older clients), it is false.
+        startsRun: z.boolean().optional(),
+      }),
     )
     .max(DAY_ROWS_MAX),
 })
