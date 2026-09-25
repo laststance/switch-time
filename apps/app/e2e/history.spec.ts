@@ -68,6 +68,8 @@ test('the week view shows the excluded day dashed and out of the average', async
     'border-top-style',
     'dashed',
   )
+  // The wind glyph marks detox days only: neither the excluded day nor the measured ones carry it.
+  await expect(page.getByTestId('detox-glyph')).toHaveCount(0)
 })
 
 test('days a detox runs through without a tap are outlined as detox, keep the streak and are not counted as unused', async ({

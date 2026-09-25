@@ -54,7 +54,7 @@ test('the first launch screen disappears after the first switch', async ({
   await expect(page.getByText(/^\d+:\d{2} から · 今日 0 回切替$/)).toBeVisible()
 })
 
-test('tapping 仕事 lights only 仕事 and restarts the elapsed counter', async ({
+test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {
   // Arrange
@@ -81,6 +81,14 @@ test('tapping 仕事 lights only 仕事 and restarts the elapsed counter', async
   )
   await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
+  // 仕事's span fills with its colour, without the outline that detox and idle spans draw instead.
+  const span = page
+    .getByRole('img', { name: '今日の流れ' })
+    .locator('div')
+    .last()
+  await expect(span).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  // RN-web gives every View a solid border style, so the missing outline shows as zero width.
+  await expect(span).toHaveCSS('border-top-width', '0px')
 })
 
 test('tapping detox unpresses every activity, dims the readout and outlines the bar', async ({
