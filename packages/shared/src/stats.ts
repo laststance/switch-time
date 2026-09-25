@@ -1,4 +1,4 @@
-import { addDays, dayBounds } from './time'
+import { addDays, dayBounds, localDay } from './time'
 
 /** What the stats helpers need from a `switches` row; `startedAt` in epoch ms, `activityId` null = detox (recorded to no activity). */
 export type SwitchLike = {
@@ -92,10 +92,51 @@ export function clampStart(
 
 export type ExcludedReason = 'auto_unused' | 'manual'
 
+/** How far back {@link streak} walks (~10 years); {@link detoxCarriedDays} needs no older day for it. */
+export const STREAK_CAP_DAYS = 3650
+
+/** What {@link detoxCarriedDays} reads from a `switches` row. */
+export type TapLike = Pick<SwitchLike, 'activityId' | 'startedAt'>
+
+/**
+ * The days a detox record runs through without a tap of their own, clipped to `window`; {@link classifyDay} measures
+ * them, so a detox left on over a weekend neither breaks 連続記録 nor lists as 切替なし. The `stats.*` handler calls it
+ * with every tap the account made. An activity left running gets no such day: it is usually a forgotten tap.
+ * @param taps - Every tap of the account, in any order; `activityId` null is detox.
+ * @param timeZone - The user's stored zone.
+ * @param window - The first and last day to report (inclusive); records reaching past it are clipped.
+ * @returns The covered days: from the day after the detox tap to the day before the next tap, or to `window.to` while it runs.
+ * @example detoxCarriedDays([{ activityId: null, startedAt: fri22h }, { activityId: work, startedAt: mon9h }], 'Asia/Tokyo', { from: '2026-09-01', to: '2026-09-30' }) // Set { sat, sun }
+ */
+export function detoxCarriedDays(
+  taps: readonly TapLike[],
+  timeZone: string,
+  window: { from: string; to: string },
+): Set<string> {
+  const ordered = [...taps].sort((a, b) => a.startedAt - b.startedAt)
+  const days = new Set<string>()
+  ordered.forEach((tap, index) => {
+    if (tap.activityId !== null) return
+    const next = ordered[index + 1]
+    const dayAfterTap = addDays(localDay(new Date(tap.startedAt), timeZone), 1)
+    // A running detox reaches the window's end; one ended by a later tap stops before that tap's own day.
+    const lastCovered = next
+      ? addDays(localDay(new Date(next.startedAt), timeZone), -1)
+      : window.to
+    const from = dayAfterTap > window.from ? dayAfterTap : window.from
+    const to = lastCovered < window.to ? lastCovered : window.to
+    // Records never overlap, so all of them together walk at most the window's length.
+    for (let day = from; day <= to; day = addDays(day, 1)) days.add(day)
+  })
+  return days
+}
+
 /** Everything {@link classifyDay} needs, gathered once per request. */
 export type DayFacts = {
   /** Local days ('YYYY-MM-DD') with at least one switch. */
   switchDays: ReadonlySet<string>
+  /** Untapped days a detox record runs through ({@link detoxCarriedDays}); measured like a tapped day. */
+  detoxDays: ReadonlySet<string>
   manualExcluded: ReadonlySet<string>
   /** Earliest day with a switch; null before the first tap. */
   firstDay: string | null
@@ -115,8 +156,12 @@ export function classifyDay(day: string, facts: DayFacts): DayStatus {
     return { measured: false, excluded: null }
   if (facts.manualExcluded.has(day))
     return { measured: false, excluded: 'manual' }
-  // Without auto-exclusion the carried-in state covers the whole day.
-  if (facts.switchDays.has(day) || !facts.autoExcludeUnusedDays)
+  // A tap or a detox left on measures the day; without auto-exclusion any carried-in state does.
+  if (
+    facts.switchDays.has(day) ||
+    facts.detoxDays.has(day) ||
+    !facts.autoExcludeUnusedDays
+  )
     return { measured: true, excluded: null }
   // Today is still in progress; earlier days without a tap are 計測なし.
   return day === facts.today
@@ -128,7 +173,7 @@ export function classifyDay(day: string, facts: DayFacts): DayStatus {
  * 連続記録: measured days walking back from today (from yesterday while today has no tap); manual exclusions are skipped, not broken on.
  * @example streak(facts) // 12
  */
-export function streak(facts: DayFacts, cap = 3650): number {
+export function streak(facts: DayFacts, cap = STREAK_CAP_DAYS): number {
   let day = classifyDay(facts.today, facts).measured
     ? facts.today
     : addDays(facts.today, -1)

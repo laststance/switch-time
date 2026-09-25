@@ -3,8 +3,10 @@ import {
   dayBounds,
   daySchema,
   daysInMonth,
+  detoxCarriedDays,
   localDay,
   monthSchema,
+  STREAK_CAP_DAYS,
   summarizeDays,
 } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
@@ -24,13 +26,17 @@ async function rangeStats(userId: string, first: string, count: number) {
   const now = Date.now()
   const { start } = dayBounds(first, timeZone)
   const { end } = dayBounds(addDays(first, count - 1), timeZone)
+  const today = localDay(new Date(now), timeZone)
   const [timeline, tapped, manual] = await Promise.all([
     switchesBetween(userId, start, end),
-    // Every tap's instant, folded into local days below with the same ICU zone math as dayBounds: Postgres names some
-    // zones differently (ICU's `Asia/Calcutta` is unknown there) and reads `+09:00` POSIX-style, so it must not take part.
-    // ponytail: loads one timestamp per tap ever made; keep a per-day table when an account passes ~100k taps.
+    // Every tap's instant and whether it was detox, folded into local days below with the same ICU zone math as dayBounds:
+    // Postgres names some zones differently (ICU's `Asia/Calcutta` is unknown there) and reads `+09:00` POSIX-style, so it must not take part.
+    // ponytail: loads one row per tap ever made; keep a per-day table when an account passes ~100k taps.
     db
-      .select({ startedAt: switches.startedAt })
+      .select({
+        startedAt: switches.startedAt,
+        activityId: switches.activityId,
+      })
       .from(switches)
       .where(eq(switches.userId, userId)),
     db
@@ -40,6 +46,16 @@ async function rangeStats(userId: string, first: string, count: number) {
   ])
   const switchDays = new Set(
     tapped.map((row) => localDay(row.startedAt, timeZone)),
+  )
+  // Detox days matter to the requested days and to the streak's walk back from today, whichever reaches further.
+  const streakFloor = addDays(today, -STREAK_CAP_DAYS)
+  const detoxDays = detoxCarriedDays(
+    tapped.map((row) => ({
+      activityId: row.activityId,
+      startedAt: row.startedAt.getTime(),
+    })),
+    timeZone,
+    { from: first < streakFloor ? first : streakFloor, to: today },
   )
   const rows = [timeline.carriedIn, ...timeline.rows, timeline.carriedOut]
   return summarizeDays({
@@ -57,9 +73,10 @@ async function rangeStats(userId: string, first: string, count: number) {
     ),
     facts: {
       switchDays,
+      detoxDays,
       manualExcluded: new Set(manual.map((row) => row.day)),
       firstDay: [...switchDays].sort()[0] ?? null,
-      today: localDay(new Date(now), timeZone),
+      today,
       autoExcludeUnusedDays: settings.autoExcludeUnusedDays,
     },
     timeZone,

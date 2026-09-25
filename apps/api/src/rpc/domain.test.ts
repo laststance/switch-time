@@ -116,6 +116,83 @@ test('a day without switches counts as unmeasured and breaks the streak', async 
   ])
 })
 
+test('a detox left on for two days keeps the streak and lists no unused day', async () => {
+  // Arrange: 仕事 at 09:00 three days ago, detox from 20:00 that evening, 仕事 again at midnight today
+  const api = await signedIn('detox-streak@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const threeDaysAgo = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(threeDaysAgo, 9) },
+      { activityId: null, startedAt: at(threeDaysAgo, 20) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: today,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(today, 0) }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(today, -6) })
+
+  // Assert
+  expect(week.days.map((day) => [day.measured, day.excluded])).toEqual([
+    [false, null],
+    [false, null],
+    [false, null],
+    [true, null],
+    [true, null],
+    [true, null],
+    [true, null],
+  ])
+  expect(week.days.map((day) => day.detoxMs)).toEqual([
+    0,
+    0,
+    0,
+    4 * H,
+    24 * H,
+    24 * H,
+    0,
+  ])
+  expect(week.streak).toBe(4)
+  expect(week.measuredDays).toBe(4)
+  expect(week.excludedDays).toEqual([])
+})
+
+test('an activity left on for two days still leaves them unused', async () => {
+  // Arrange: 休息 from 20:00 three days ago until 仕事 at midnight today, nothing tapped between
+  const api = await signedIn('carried-activity@example.com')
+  const list = await api.activities.list()
+  const threeDaysAgo = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(threeDaysAgo, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: today,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(today, 0) }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(today, -6) })
+
+  // Assert
+  expect(week.excludedDays).toEqual([
+    { day: addDays(today, -2), reason: 'auto_unused' },
+    { day: addDays(today, -1), reason: 'auto_unused' },
+  ])
+  expect(week.streak).toBe(1)
+})
+
 test('the week view gets totals over measured days only, with the unused day listed as excluded', async () => {
   // Arrange: 仕事 9 h three days ago, then 休息 through the untouched day (idle), 仕事 10 h + 娯楽 6 h yesterday, 睡眠 since midnight.
   const api = await signedIn('history@example.com')
