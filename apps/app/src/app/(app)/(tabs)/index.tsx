@@ -19,7 +19,7 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
-  detoxCarriedIn,
+  detoxPastWeek,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -45,12 +45,12 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const { today, timeZone, ready, start, end, segments, switchCount } =
     useToday()
   const homeToday = { current, today, timeZone, switchCountToday: switchCount }
-  // The server's class for today says whether a detox past its week still measures it; only a detox carried in from an earlier
-  // day with no tap today can be past its week, so nothing else asks (stats.day scans the whole history).
+  // The server's class for today says whether a detox past its week still measures it; only a detox record older than the week
+  // with no tap today can be past it, so nothing else asks (stats.day scans the whole history).
   const todayStats = useQuery(
     orpc.stats.day.queryOptions({
       input: { day: today },
-      enabled: ready && detoxCarriedIn(homeToday),
+      enabled: ready && detoxPastWeek(homeToday),
     }),
   )
   const stopped = detoxStopped({ ...homeToday, stats: todayStats })

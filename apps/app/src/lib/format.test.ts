@@ -106,3 +106,14 @@ test('the since line judges "today" in the stored zone, not in UTC', () => {
   expect(tokyo).toBe('8:30')
   expect(newYork).toBe('9月24日 19:30')
 })
+
+test('the since line does not date a start the device reads as tomorrow, when its clock is behind the server', () => {
+  // Arrange: the server stamped 9/26 0:00:10 JST while the device still reads 9/25
+  const justAfterMidnight = new Date('2026-09-25T15:00:10Z')
+
+  // Act
+  const label = formatSince(justAfterMidnight, '2026-09-25', 'Asia/Tokyo')
+
+  // Assert
+  expect(label).toBe('0:00')
+})

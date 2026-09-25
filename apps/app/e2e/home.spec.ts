@@ -301,14 +301,16 @@ test('a detox on the seventh day after it started names its start day and says n
   await signUp(page)
   const start = shift(today(), -7)
   await seedCarriedDetox(page, start)
-  const dayClassAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/day'),
-  )
+  const dayClassRequests: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/stats/day'))
+      dayClassRequests.push(request.url())
+  })
 
   // Act
   await page.reload()
 
-  // Assert: the since line carries the date, and once the server answered for today there is no notice
+  // Assert: the since line carries the date; inside its week Home neither asks the server about today nor shows the notice
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -319,20 +321,7 @@ test('a detox on the seventh day after it started names its start day and says n
       { exact: true },
     ),
   ).toBeVisible()
-  // The server still measures today; two frames later Home has rendered that answer, so the absence below is not a first-poll pass
-  const answer = await dayClassAnswer
-  expect(answer.ok()).toBe(true)
-  expect((await answer.json()).json.days[0]).toMatchObject({
-    day: today(),
-    measured: true,
-    excluded: null,
-  })
-  await page.evaluate(
-    async () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  )
+  expect(dayClassRequests).toEqual([])
   await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
 })
 

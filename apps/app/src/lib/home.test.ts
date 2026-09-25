@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import {
   badgeRing,
-  detoxCarriedIn,
+  detoxPastWeek,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -177,49 +177,61 @@ describe('nowLook', () => {
   })
 })
 
-describe('detoxCarriedIn', () => {
-  test('asks about today only for a detox from an earlier day with no tap today', () => {
-    // Arrange: a detox from 9/16 21:20 JST, read on 9/25 (Tokyo)
+describe('detoxPastWeek', () => {
+  test('asks about today from the eighth day after a detox record started, and not on the seventh', () => {
+    // Arrange: a detox from 9/16 21:20 JST, read in Tokyo
+    const current = {
+      activityId: null,
+      startedAt: new Date('2026-09-16T12:20:00Z'),
+    }
+    const base = { current, timeZone: 'Asia/Tokyo', switchCountToday: 0 }
+
+    // Act
+    const seventhDay = detoxPastWeek({ ...base, today: '2026-09-23' })
+    const eighthDay = detoxPastWeek({ ...base, today: '2026-09-24' })
+
+    // Assert
+    expect(seventhDay).toBe(false)
+    expect(eighthDay).toBe(true)
+  })
+
+  test('does not ask once today has a tap, or for an activity', () => {
+    // Arrange: nine days after a record from 9/16 21:20 JST
     const startedAt = new Date('2026-09-16T12:20:00Z')
     const base = { today: '2026-09-25', timeZone: 'Asia/Tokyo' }
 
     // Act
-    const carried = detoxCarriedIn({
-      ...base,
-      current: { activityId: null, startedAt },
-      switchCountToday: 0,
-    })
-    const tappedToday = detoxCarriedIn({
+    const tappedToday = detoxPastWeek({
       ...base,
       current: { activityId: null, startedAt },
       switchCountToday: 1,
     })
-    const activity = detoxCarriedIn({
+    const activity = detoxPastWeek({
       ...base,
       current: { activityId: 'work', startedAt },
       switchCountToday: 0,
     })
 
     // Assert
-    expect(carried).toBe(true)
     expect(tappedToday).toBe(false)
     expect(activity).toBe(false)
   })
 
-  test('does not ask for a detox started today, judged in the stored zone', () => {
-    // Act: 9/24 23:00 UTC is 9/25 08:00 in Tokyo
-    const carried = detoxCarriedIn({
-      current: {
-        activityId: null,
-        startedAt: new Date('2026-09-24T23:00:00Z'),
-      },
-      today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
-      switchCountToday: 0,
-    })
+  test('counts the week from the start day in the stored zone', () => {
+    // Arrange: 9/16 23:30 UTC is 9/17 8:30 in Tokyo but 9/16 19:30 in New York
+    const current = {
+      activityId: null,
+      startedAt: new Date('2026-09-16T23:30:00Z'),
+    }
+    const base = { current, today: '2026-09-24', switchCountToday: 0 }
+
+    // Act
+    const tokyo = detoxPastWeek({ ...base, timeZone: 'Asia/Tokyo' })
+    const newYork = detoxPastWeek({ ...base, timeZone: 'America/New_York' })
 
     // Assert
-    expect(carried).toBe(false)
+    expect(tokyo).toBe(false)
+    expect(newYork).toBe(true)
   })
 })
 
@@ -322,6 +334,23 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 1,
+      stats: { ...settled, data: unmeasuredToday },
+    })
+
+    // Assert
+    expect(stopped).toBe(false)
+  })
+
+  test('stays quiet on the first day of a detox when the server answers for a day still in its future', () => {
+    // Act: a detox from 9/24 21:00 JST; the device reached 9/25 before the server did, which classes a future day unmeasured
+    const stopped = detoxStopped({
+      current: {
+        activityId: null,
+        startedAt: new Date('2026-09-24T12:00:00Z'),
+      },
+      today: '2026-09-25',
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
       stats: { ...settled, data: unmeasuredToday },
     })
 

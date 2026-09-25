@@ -1,4 +1,5 @@
 import {
+  addDays,
   DETOX_MEASURED_DAYS_MAX,
   type DayStats,
   localDay,
@@ -108,17 +109,21 @@ type HomeToday = {
 }
 
 /**
- * Whether a detox runs that was carried in from an earlier day and today has no switch of its own: the only state that can be past
- * the detox week. Home asks `stats.day` for today only then, and {@link detoxStopped} reads the answer only then.
+ * Whether a detox runs whose record started more than {@link DETOX_MEASURED_DAYS_MAX} days before today, with no switch today: the
+ * only state that can be past the detox week. Home asks `stats.day` for today only then, and {@link detoxStopped} reads the answer
+ * only then. It also keeps the server's answer for a day still in its future (a device clock ahead at midnight, read as neither
+ * measured nor excluded) from passing for a stopped detox. Counting from the record's start is conservative: a cut can start the
+ * record after its run did, and such a run stays quiet (TODOS.md, the last-day warning, needs the run's start from the server).
  * @returns
- * - true for a detox started before today with no tap today
- * - false for an activity, a detox started today, and any day with a switch
- * @example detoxCarriedIn({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0 }) // true when startedAt is 9/24 or earlier in Tokyo
+ * - true for a detox record started on `today - 8` or earlier with no tap today
+ * - false for an activity, a detox inside its week (started today included), and any day with a switch
+ * @example detoxPastWeek({ current: { activityId: null, startedAt: new Date('2026-09-16T12:20:00Z') }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0 }) // true
  */
-export function detoxCarriedIn(input: HomeToday): boolean {
+export function detoxPastWeek(input: HomeToday): boolean {
   const { current } = input
   if (current.activityId !== null || input.switchCountToday > 0) return false
-  return localDay(current.startedAt, input.timeZone) < input.today
+  const startDay = localDay(current.startedAt, input.timeZone)
+  return addDays(startDay, DETOX_MEASURED_DAYS_MAX) < input.today
 }
 
 /**
@@ -126,8 +131,8 @@ export function detoxCarriedIn(input: HomeToday): boolean {
  * only while it can still describe today.
  * @param input.stats - The `stats.day` query for today: its last answer, whether its last fetch failed or waits for the network.
  * @returns
- * - true when {@link detoxCarriedIn} holds and the last trusted answer reads today as neither measured nor excluded (only a detox
- *   past its week reaches that; auto-exclusion off always measures)
+ * - true when {@link detoxPastWeek} holds and the last trusted answer reads today as neither measured nor excluded (auto-exclusion
+ *   off always measures)
  * - false for an activity, a detox started today, a day with a switch, a manual exclusion, a measured day, and while no answer
  *   can be trusted (none yet, a failed or paused fetch, an answer for another day): unknown is not "stopped"
  * @example detoxStopped({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
@@ -144,7 +149,7 @@ export function detoxStopped(
   },
 ): boolean {
   const { stats } = input
-  if (!detoxCarriedIn(input)) return false
+  if (!detoxPastWeek(input)) return false
   // A failed or paused fetch keeps an answer that may predate a tap from another device.
   if (stats.isError || stats.isPaused) return false
   const answer = stats.data?.days[0]
