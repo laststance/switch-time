@@ -236,7 +236,7 @@ export function detoxNotice(
  * is detox past its run's week, where the press starts a new run. Home's buttons, detox row and hotkeys all go through it, and so
  * do the first-launch screen's hotkeys once a first press has placed its row ({@link FirstLaunch}).
  * @param input.activityId - The pressed state; null is detox.
- * @param input.renewable - {@link detoxRenewable} for the current state.
+ * @param input.renewable - {@link detoxRenewable} when `current` is the row it was worked out for, otherwise false.
  * @returns
  * - true for a state other than the current one, and for detox pressed again while `renewable`
  * - false for any other press on the current state

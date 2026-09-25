@@ -20,7 +20,7 @@
 
 **Why:** The digit keys pick activities and `0` starts detox on both screens, but nothing on screen or in the accessibility tree says so, so only someone who read the README finds them.
 
-**Context:** `useSwitchHotkeys` and `hotkeyPick` (`apps/app/src/lib/hotkeys.ts`) map a key to the list the buttons are drawn from, so the button knows its own key. Check that react-native-web passes `aria-keyshortcuts` through before relying on it; a visible hint is a design change and starts in pen.
+**Context:** `useSwitchHotkeys` (`apps/app/src/hooks/use-switch-hotkeys.ts`) and `hotkeyPick` (`apps/app/src/lib/hotkeys.ts`) map a key to the list the buttons are drawn from, so the button knows its own key. Check that react-native-web passes `aria-keyshortcuts` through before relying on it; a visible hint is a design change and starts in pen.
 
 **Effort:** S
 **Priority:** P3

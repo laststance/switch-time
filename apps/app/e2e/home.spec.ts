@@ -873,15 +873,21 @@ test('0 pressed twice inside one frame past a detox’s week starts one new run,
   })
 
   // Act: two keydown tasks that both run before Home re-renders for the first
+  let isAnswered = false
   const renewal = page.waitForResponse((response) =>
     response.url().includes('/api/rpc/switches/switchTo'),
   )
-  // A second tap would wait in the scope for these refetches, then go out
-  const refetch = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/switches/current'),
+  void renewal.then(() => {
+    isAnswered = true
+  })
+  // A second tap would wait in the scope for the tap's own refetches, not Home's first reads, then go out
+  const refetch = page.waitForResponse(
+    (response) =>
+      isAnswered && response.url().includes('/api/rpc/switches/current'),
   )
-  const dayRefetch = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/switches/listByDay'),
+  const dayRefetch = page.waitForResponse(
+    (response) =>
+      isAnswered && response.url().includes('/api/rpc/switches/listByDay'),
   )
   await page.evaluate(async () => {
     const press = (key: string): boolean =>

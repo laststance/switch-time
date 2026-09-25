@@ -9,7 +9,7 @@ import { hotkeyPick } from '@/lib/hotkeys'
  * state in the cache, which a first press inside the same frame has already placed ({@link sendsPick}).
  * @param activities - The switch buttons' activities, in the order they are shown.
  * @param pick - Called with the picked activity id, or `null` for detox.
- * @example useSwitchHotkeys(activities, (activityId) => switchTo.mutate({ activityId }))
+ * @example useSwitchHotkeys(activities, (activityId) => { if (!placed || sendsPick({ activityId, current: placed, renewable: false })) switchTo.mutate({ activityId }) }) // placed: the cached current row
  */
 export function useSwitchHotkeys(
   activities: readonly { id: string }[],
