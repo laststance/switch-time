@@ -321,7 +321,7 @@ test('merging the day’s only record into the previous one names the viewed day
   // Arrange: 仕事 from the night before, 仕事 again at 9:00 on 9/20 (the current state).
   const list: ListedDay = {
     carriedIn: row('c', 'work', at('2026-09-19', 20)),
-    carriedInRunStart: null,
+    carriedInRunStart: '2026-09-19',
     rows: [row('w', 'work', at('2026-09-20', 9))],
     carriedOut: null,
   }
@@ -413,7 +413,7 @@ test('only the merge that changes an untapped day is named on the note', () => {
   // Arrange: 仕事 from the night before, 休息 at 9:00, detox from 20:00 still running.
   const list: ListedDay = {
     carriedIn: row('c', 'work', at('2026-09-20', 22)),
-    carriedInRunStart: null,
+    carriedInRunStart: '2026-09-20',
     rows: [
       row('r', 'rest', at('2026-09-21', 9)),
       row('d', null, at('2026-09-21', 20)),
@@ -708,7 +708,7 @@ test('no undo note shows when the undo only swaps one activity for another', () 
   // Arrange: the carried-in record from Friday was just switched from 睡眠 to 休息 on Monday's sheet.
   const list: ListedDay = {
     carriedIn: row('c', 'rest', at('2026-09-18', 22)),
-    carriedInRunStart: null,
+    carriedInRunStart: '2026-09-18',
     rows: [row('w', 'work', at('2026-09-21', 9))],
     carriedOut: null,
   }
