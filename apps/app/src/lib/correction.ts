@@ -1125,12 +1125,14 @@ export type LineAfterRead = 'keep' | 'expire' | 'unread' | { seen: string }
  * @param facts.slot - The day's armed undo, if any.
  * @param facts.read - The read that landed.
  * @param facts.zoneWriting - Whether a `settings.*` write is in flight: the cached zone may be one the API has not stored, so
- *   the slot waits for the read that write's settle brings. The line does not use the zone, so it is judged regardless.
+ *   the slot waits until that write settles ({@link useDayReads} judges it then). The line does not use the zone, so it is judged
+ *   regardless.
  * @param facts.timeZone - The stored zone from the cached settings; undefined before they arrived.
  * @returns
  * - `line`: 'keep' with no line, a read no later than the failure, or nothing new; `{ seen }` for the first good read (a reading
  *   line shows its text then) and for a good read after a failed one; 'expire' once a good read differs from the one seen;
- *   'unread' for a failed read, except on a sign-in line (the read fails for the same reason) or one already stale
+ *   'unread' for a failed read, except on a sign-in line (the read fails for the same reason) or one already stale; a good read expires a sign-in line, since the
+ *   session is back
  * - `retireUndo`: true once the day no longer reads as the slot left it ({@link offeredUndo}); false with no slot, a failed
  *   read, an unknown zone or a zone write in flight
  * @example afterDayRead({ line, slot: undefined, read: { at: line.at + 1, ok: true, listed }, zoneWriting: false, timeZone: 'Asia/Tokyo' }) // { line: { seen: '…' }, retireUndo: false }
@@ -1166,8 +1168,10 @@ function lineAfterFailedRead(line: DayLine): LineAfterRead {
   return line.kind === 'unauthorized' || line.stale ? 'keep' : 'unread'
 }
 
-// A good read: expire once the day differs from the one seen, else record it when nothing was seen yet or the line was stale.
+// A good read: expire a sign-in line (the session is back, a tab signed in again) or once the day differs from the one seen,
+// else record it when nothing was seen yet or the line was stale.
 function lineAfterGoodRead(line: DayLine, fingerprint: string): LineAfterRead {
+  if (line.kind === 'unauthorized') return 'expire'
   if (line.seen !== null && line.seen !== fingerprint) return 'expire'
   return line.seen === null || line.stale ? { seen: fingerprint } : 'keep'
 }
@@ -1206,6 +1210,21 @@ export function dayOfRead(
   if (action.manual) return null
   const day = listByDayKeySchema.safeParse(queryKey).data?.[1].input.day
   return day === undefined ? null : { day, ok: action.type === 'success' }
+}
+
+/**
+ * Whether a mutation-cache update is a write that just settled: its `success` or `error` lands once its `onSettled` has run,
+ * so the reads that callback awaited are in the cache. Called by {@link useDayReads} for every mutation-cache event.
+ * @param event - The mutation-cache event.
+ * @returns true for an `updated` event carrying `success` or `error`; false for the rest (a write starting, pausing, retrying)
+ * @example isSettledWrite({ type: 'updated', action: { type: 'success' } }) // true
+ */
+export function isSettledWrite(event: {
+  type: string
+  action?: { type: string }
+}): boolean {
+  if (event.type !== 'updated') return false
+  return event.action?.type === 'success' || event.action?.type === 'error'
 }
 
 /**

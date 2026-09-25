@@ -23,6 +23,7 @@ import {
   failureMessage,
   isDayChangedRefusal,
   isManuallyExcluded,
+  isSettledWrite,
   landedUndo,
   offeredUndo,
   onPressedDay,
@@ -2232,6 +2233,32 @@ test('a failed read marks the line stale, except a sign-in line or one already s
   })
 })
 
+test('a good read takes the sign-in line away, since the session is back (signed in again in another tab)', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const signedOut: DayLine = {
+    at: 1000,
+    kind: 'unauthorized',
+    text: 'サインインが切れました。サインインし直してください',
+    reading: false,
+    seen: null,
+    stale: false,
+  }
+
+  // Act
+  const outcome = afterDayRead({
+    line: signedOut,
+    slot: undefined,
+    read: { at: 2000, ok: true, listed: day },
+    zoneWriting: false,
+    timeZone: TZ,
+  })
+
+  // Assert
+  expect(outcome).toEqual({ line: 'expire', retireUndo: false })
+})
+
 test('a read retires 元に戻す once the day no longer reads as the slot left it, but not on a failed read or an unknown zone', () => {
   // Arrange: the pick left the carried-in record at revision 4; another device has since moved it to 5.
   const carried = { ...row('c', 'work', at('2026-09-07', 23)), revision: 5 }
@@ -2298,6 +2325,23 @@ test('only a landed fetch of a day’s list counts as a read of that day', () =>
     null,
     null,
   ])
+})
+
+test('only a write that just settled, landed or failed, sends the armed 元に戻す to be judged again', () => {
+  // Arrange
+  const events = [
+    { type: 'updated', action: { type: 'success' } },
+    { type: 'updated', action: { type: 'error' } },
+    { type: 'updated', action: { type: 'pending' } },
+    { type: 'updated', action: { type: 'pause' } },
+    { type: 'added' },
+  ]
+
+  // Act
+  const settled = events.map((event) => isSettledWrite(event))
+
+  // Assert
+  expect(settled).toEqual([true, true, false, false, false])
 })
 
 test('a read of a day’s list is still recognised under the key oRPC builds for it, so kept lines keep settling', () => {
