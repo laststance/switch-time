@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows
   left on over a weekend, a merge that removes the tap ending a detox, or a
   pick that joins two detox runs no longer moves 計測なし, the streak and the
   daily averages for days the sheet is not showing without saying so. No
-  line shows while 使わなかった日を除外 is off.
+  line shows while 未使用日の自動除外 is off.
 
 ## [0.20.0.0] - 2026-09-25
 
