@@ -156,7 +156,7 @@
 
 **Why:** A pick changes the record's activity on every day it covers. A record from 9/21 23:00 viewed on 9/23 also changes 9/22, and one that is still running changes today, but the note names only 9/21. A record that began more than a year ago reads as a recent date: on the same calendar day it even reads as the viewed day.
 
-**Context:** `CorrectionRow` already carries `trueStart` and `trueEnd`, and the last day the record touches is `localDay(trueEnd - 1)` in the stored zone. Raised by the Red Team during the carried-in panel's ship (2026-09-24).
+**Context:** `CorrectionRow` already carries `trueStart` and `trueEnd`, and the last day the record touches is `localDay(trueEnd - 1)` in the stored zone. Raised by the Red Team during the carried-in panel's ship (2026-09-24). The untapped-day notes (`spanLabel` in `lib/untapped.ts`, 0.21.0.0) name their days without a year too, so a span across New Year or from a record over a year old needs the same rule.
 
 **Effort:** S
 **Priority:** P3
@@ -210,19 +210,19 @@
 **Priority:** P4
 **Depends on:** None
 
-## Stats
+### Name only the untapped days an edit really changes
 
-### Say when an edit changes whether the untapped days around it count
+**What:** Make the correction sheet's untapped-day notes exact: (1) let `untappedChange` see the taps after the first switch after the day, up to that switch's day + 7, so a run that a later tap ends is not treated as running through its week; (2) leave manually excluded days out, as `classifyDay` does; (3) name separate runs of changed days separately (「9月9日、9月16日〜9月17日」) instead of one first-to-last range that can include the viewed day's own tapped day and days that do not change. (3) changes the note's text, so pen first.
 
-**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし, and a merge that removes a detox re-tap (a `starts_run` row, which the sheet lists as a plain デトックス row) into an earlier day's detox, which takes back the week the re-tap renewed. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
+**Why:** Each case shows a note, or a wider range, for days whose counting does not change. For example, picking detox for the last row of a day 8+ days back that a detox after midnight follows names the day a week later even when the next morning's tap ends that run. The notes say 「変わることがあります」 and never miss a real change, but a false warning makes them easy to ignore.
 
-**Why:** Since detox left on over midnight measures up to a week of the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
+**Context:** `untappedChange` and `timeline` in `apps/app/src/lib/untapped.ts`. `switches.listByDay` returns only the first switch after the day (`carriedOut`), and manual exclusions come from `excludedDays.list` (`use-excluded-days.ts`). Adding a hook to `useCorrection` puts it over fallow's complexity limit, so feed them through `untappedSheetNotes` or the list answer. Raised by the red-team review of the PR that added the notes (2026-09-25).
 
-**Context:** The rule is in `classifyDay` / `detoxCarriedDays` (`packages/shared/src/stats.ts`); `cutTotalsEffects` in `apps/app/src/lib/correction.ts` is the pattern for such a note. New text, so the pen file first. Left out of the PR that let detox days count.
-
-**Effort:** S
+**Effort:** M
 **Priority:** P3
 **Depends on:** None
+
+## Stats
 
 ### Check how screen readers speak the `9h 00m` durations
 

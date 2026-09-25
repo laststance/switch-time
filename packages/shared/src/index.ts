@@ -47,6 +47,8 @@ export {
   detoxRunLastDay,
   detoxRunPastWeek,
   detoxRunStartDay,
+  mergedIntoNextMark,
+  mergedIntoPreviousMark,
   MIN_SEGMENT_MS,
   segmentsInRange,
   STREAK_CAP_DAYS,
@@ -54,5 +56,6 @@ export {
   type DayFacts,
   type DayStats,
   type ExcludedReason,
+  type TapLike,
 } from './stats'
 export { addDays, dayBounds, daysInMonth, localDay } from './time'

@@ -153,6 +153,54 @@ export function detoxRunStartDay(
   return runStartDays(ordered, timeZone).at(-1) ?? null
 }
 
+/** What the merges' re-tap hand-over reads from the two rows; `startedAt` in epoch ms or as a Date (the API's rows). */
+type MarkRow = {
+  activityId: string | null
+  startedAt: number | Date
+  startsRun?: boolean
+}
+
+// A detox re-tap: the only row whose mark renews a run (a mark left on an activity row renews nothing until it is detox again).
+const isReTap = (row: MarkRow): boolean =>
+  Boolean(row.startsRun) && row.activityId === null
+
+/**
+ * The `startsRun` a detox keeps when 前の記録に統合 folds `row` into it: its own mark, except that a detox taking over a re-tap
+ * on the same local day takes over the renewal too. From an earlier day the renewal would move the run's start back, so it
+ * goes with the merged row. `switches.mergeIntoPrevious` writes it, and the correction sheet's untapped-day note simulates it.
+ * @param row - The merged (deleted) row.
+ * @param prev - The row that takes over its span.
+ * @param timeZone - The user's stored zone, which decides "the same day".
+ * @returns The kept row's new mark.
+ * @example mergedIntoPreviousMark({ activityId: null, startedAt: sep3_21h, startsRun: true }, { activityId: null, startedAt: sep3_9h }, 'Asia/Tokyo') // true
+ */
+export function mergedIntoPreviousMark(
+  row: MarkRow,
+  prev: MarkRow,
+  timeZone: string,
+): boolean {
+  const prevMark = Boolean(prev.startsRun)
+  // Only a plain detox taking over a re-tap can gain the mark; everything else keeps its own.
+  if (!isReTap(row) || prev.activityId !== null || prevMark) return prevMark
+  return (
+    localDay(new Date(prev.startedAt), timeZone) ===
+    localDay(new Date(row.startedAt), timeZone)
+  )
+}
+
+/**
+ * The `startsRun` the next state keeps when 次の記録に統合 pulls it back to `row`'s start: its own mark, or the re-tap's when
+ * a detox takes over a detox re-tap (else the days after it would fold into the old run). `switches.mergeIntoNext` writes it,
+ * and the correction sheet's untapped-day note simulates it.
+ * @param row - The merged (deleted) row.
+ * @param next - The row that takes over its span and start.
+ * @returns The kept row's new mark.
+ * @example mergedIntoNextMark({ activityId: null, startedAt: sep3_21h, startsRun: true }, { activityId: null, startedAt: sep3_22h }) // true
+ */
+export function mergedIntoNextMark(row: MarkRow, next: MarkRow): boolean {
+  return Boolean(next.startsRun) || (isReTap(row) && next.activityId === null)
+}
+
 /**
  * The last day a detox run measures: {@link DETOX_MEASURED_DAYS_MAX} days after the day it started. {@link detoxCarriedDays}
  * caps a run's untapped days here, and Home warns on it.
