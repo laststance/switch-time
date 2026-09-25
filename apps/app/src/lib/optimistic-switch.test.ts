@@ -43,8 +43,8 @@ function tap(client: QueryClient, activityId: string | null) {
       onError: (_error, _input, context) => {
         if (context) rollBackTap(client, CURRENT, context)
       },
-      onSettled: () => {
-        lastTapWhenSettled.push(isLastTap(client))
+      onSettled: (_row, _error, _input, context) => {
+        lastTapWhenSettled.push(isLastTap(client, context))
       },
     })
     .execute({ activityId })
@@ -254,4 +254,55 @@ test('a tap of a signed-out account answered after the next account signs in nev
   expect(client.getQueryData(CURRENT)).toEqual(
     serverRow('row-y-sleep', 'sleep'),
   )
+})
+
+test('a tap of a signed-out account answered late does not refetch over the next account’s pick', async () => {
+  // Arrange: account X taps 休息 and signs out before the answer; account Y signs in with 睡眠 running and taps 家事
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-x-work', 'work'))
+  const lateTap = tap(client, 'rest')
+  await flush()
+  client.clear()
+  forgetConfirmedTaps(client)
+  client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Act: X's tap is accepted while Y's is still unanswered
+  lateTap.answer.resolve(serverRow('row-x-rest', 'rest'))
+  await lateTap.settled
+
+  // Assert: X's tap leaves the refetch to Y's, and Y's 家事 stays shown
+  expect(lateTap.lastTapWhenSettled).toEqual([false])
+  expect(shownActivity(client)).toBe('chores')
+  chores.answer.resolve(serverRow('row-y-chores', 'chores'))
+  await chores.settled
+  expect(chores.lastTapWhenSettled).toEqual([true])
+})
+
+test('after another tab signs in as someone else, a refused tap queued behind the old account’s tap falls back to the new account’s switch', async () => {
+  // Arrange: account X taps 休息; before the answer another tab signs in as Y, whose 睡眠 this tab reads, and Y's 家事 queues behind X's tap
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-x-work', 'work'))
+  const oldTap = tap(client, 'rest')
+  await flush()
+  await client.resetQueries()
+  forgetConfirmedTaps(client)
+  client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Act: an outage refuses both
+  oldTap.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await oldTap.settled
+  await flush()
+  chores.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await chores.settled
+
+  // Assert: Y's own 睡眠, never X's 仕事, and only Y's tap refetches
+  expect(client.getQueryData(CURRENT)).toEqual(
+    serverRow('row-y-sleep', 'sleep'),
+  )
+  expect(oldTap.lastTapWhenSettled).toEqual([false])
+  expect(chores.lastTapWhenSettled).toEqual([true])
 })

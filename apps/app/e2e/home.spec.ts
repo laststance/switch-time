@@ -256,8 +256,13 @@ test('digit 0 on the first-launch screen starts a new account on detox', async (
   const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
   await expect(firstLaunch).toBeVisible()
 
-  // Act
+  // Act: wait for the server's answer so the reload reads the stored row, not the optimistic one
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
   await page.keyboard.press('0')
+  expect((await tapAnswer).ok()).toBe(true)
+  await page.reload()
 
   // Assert: Home in detox, as the detox row would have started it
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
@@ -279,8 +284,13 @@ test('a digit on the first-launch screen starts the clock on the button at that 
   const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
   await expect(firstLaunch).toBeVisible()
 
-  // Act
+  // Act: wait for the server's answer so the reload reads the stored row, not the optimistic one
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
   await page.keyboard.press('2')
+  expect((await tapAnswer).ok()).toBe(true)
+  await page.reload()
 
   // Assert
   await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
@@ -473,6 +483,43 @@ test('two digits pressed within one frame leave the second one running', async (
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
   await expect(chores).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+})
+
+test('a tap after a detox tap goes out while that detox tap’s settings refetch is still on its way', async ({
+  page,
+}) => {
+  // Arrange: 家事 runs; settings reads are held from here on
+  await signUp(page)
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const settingsAnswer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/settings/get**', async (route) => {
+    await settingsAnswer.promise
+    await route.continue()
+  })
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+  const settingsRefetch = page.waitForRequest((request) =>
+    request.url().includes('/api/rpc/settings/get'),
+  )
+  await page.getByRole('button', { name: /^detox/ }).click()
+  await settingsRefetch
+
+  // Act
+  await page.getByRole('button', { name: '仕事' }).click()
+
+  // Assert: 仕事 reaches the server without waiting for the settings
+  await expect.poll(() => tapRequests).toBe(2)
+  settingsAnswer.resolve()
+  await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
 })
 
 test('digits pressed while the correction sheet is open do not switch the activity behind it', async ({
@@ -751,6 +798,47 @@ test('a detox re-tap from a tab that missed the unused-day rule being turned off
     page.getByText('どの行動にも記録しない', { exact: true }),
   ).toBeVisible()
   await expect(detox).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('0 pressed twice inside one frame past a detox’s week starts one new run, not two', async ({
+  page,
+}) => {
+  // Arrange: start day + 8, the first untapped day the detox no longer measures
+  await signUp(page)
+  const start = shift(today(), -8)
+  await seedCarriedDetox(page, start)
+  await page.reload()
+  await expect(
+    page.getByText('押し直すと新しく始まります', { exact: true }),
+  ).toBeVisible()
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+
+  // Act: two keydown tasks that both run before Home re-renders for the first
+  const renewal = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await page.evaluate(async () => {
+    const press = (key: string): boolean =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+    press('0')
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        press('0')
+        resolve()
+      }, 0)
+    })
+  })
+  expect((await renewal).ok()).toBe(true)
+  await page.waitForLoadState('networkidle')
+
+  // Assert: the second 0 saw the first one's new run and sent nothing
+  expect(tapRequests).toBe(1)
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
 })
 
 test('digit 0 past a detox’s week starts a new run, like pressing the detox row', async ({

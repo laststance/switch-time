@@ -20,7 +20,7 @@ const ARCS = [
 
 /**
  * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity button, or detox from the
- * {@link DetoxRow} under the buttons, or Home's digit hotkeys on web), which flips `switches.current` and so swaps this for Home.
+ * {@link DetoxRow} under the buttons, or the digit hotkeys on web, {@link useSwitchHotkeys}), which flips `switches.current` and so swaps this for Home.
  * @example {current === null ? <FirstLaunch /> : <HomeBody />}
  */
 export function FirstLaunch() {

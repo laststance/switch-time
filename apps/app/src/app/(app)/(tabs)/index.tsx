@@ -77,7 +77,8 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       queryClient.getQueryData<CurrentSwitch | null>(
         orpc.switches.current.queryKey(),
       ) ?? current
-    // `renewable` was worked out for the rendered row; a newer row in the cache is a tap's placeholder, which never renews.
+    // `renewable` was worked out for the rendered row; a different row in the cache (a tap's placeholder, or a refetch Home has
+    // not rendered yet) does not renew here.
     if (
       sendsPick({
         activityId,

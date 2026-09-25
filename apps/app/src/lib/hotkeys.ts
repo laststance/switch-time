@@ -13,7 +13,7 @@ const plain = (event: KeyLike): boolean =>
 
 /**
  * Index of the activity a keydown picks on Home or the first-launch screen: digit keys by position (the menubar's ⌘1–6, never
- * stored); -1 for any other key or a modifier combo. {@link hotkeyPick} reads it.
+ * stored); -1 for `0` or a modifier combo and NaN for a key that is not a digit, both indexing nothing. {@link hotkeyPick} reads it.
  * @example hotkeyIndex({ key: '2', metaKey: false, ctrlKey: false, altKey: false }) // 1
  */
 export function hotkeyIndex(event: KeyLike): number {

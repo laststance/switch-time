@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { forgetConfirmedTaps } from '@/lib/optimistic-switch'
 import { queryClient } from '@/lib/query'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { accountChange, correctionSlice } from '@/store/correction'
@@ -17,7 +18,12 @@ export function useAccountScope(account: string | undefined): void {
   useEffect(() => {
     const change = accountChange(seen, account)
     if (!change) return
-    if (change.switched) void queryClient.resetQueries()
+    // `resetQueries` leaves the previous account's taps in the mutation cache: a new session of taps keeps them from becoming what
+    // this account's refused taps fall back to, and from refetching over this account's picks.
+    if (change.switched) {
+      void queryClient.resetQueries()
+      forgetConfirmedTaps(queryClient)
+    }
     dispatch(correctionSlice.actions.accountSeen(change.account))
   }, [account, seen, dispatch])
 }
