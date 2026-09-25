@@ -92,7 +92,11 @@ export const timeZoneSchema = z
   .string()
   .refine(isTimeZone, { error: 'タイムゾーンが正しくありません' })
 
-/** Settings sheet payload: any subset of the user_settings columns the UI edits. */
+/**
+ * Settings sheet payload: any subset of the user_settings columns the UI edits, plus `forUserId`, the account a write was
+ * decided for. The API refuses a write whose `forUserId` is not the session's (CONFLICT): the zone sync and 設定's take-back
+ * decide on one account's row, and a sign-in in another tab can change the cookie before the request goes out.
+ */
 export const settingsUpdateSchema = z
   .object({
     theme: themeModeSchema,
@@ -101,9 +105,11 @@ export const settingsUpdateSchema = z
     idleThresholdMinutes: z.int().min(15).max(1440),
     autoExcludeUnusedDays: z.boolean(),
     timeZone: timeZoneSchema,
+    forUserId: z.string().min(1),
   })
   .partial()
-  .refine((update) => Object.keys(update).length > 0, {
+  // `forUserId` names whose row, not a change: on its own it changes nothing.
+  .refine((update) => Object.keys(update).some((key) => key !== 'forUserId'), {
     error: '変更がありません',
   })
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>

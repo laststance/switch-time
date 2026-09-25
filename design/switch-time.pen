@@ -13820,7 +13820,6 @@
               "name": "div",
               "context": "div",
               "width": "fill_container",
-              "height": 724,
               "layout": "vertical",
               "gap": 14,
               "children": [
@@ -14356,6 +14355,91 @@
                                 },
                                 "blur": 3
                               }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G1pNxz",
+                      "name": "タイムゾーン",
+                      "context": "div",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DbPK1",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "yDRxF",
+                              "name": "タイムゾーン",
+                              "fill": "$ink",
+                              "content": "タイムゾーン",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PBw1B",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "America/New_York · この端末は Asia/Tokyo",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s8Ck0q",
+                          "name": "この端末に合わせる",
+                          "context": "button",
+                          "height": 44,
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "q9NBy",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "content": "この端末に合わせる",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "600"
                             }
                           ]
                         }
@@ -46828,6 +46912,418 @@
       "fontFamily": "Roboto",
       "fontSize": 10,
       "fontWeight": "normal"
+    },
+    {
+      "type": "frame",
+      "id": "nQJ4w",
+      "x": 4966,
+      "y": 2115,
+      "name": "ST Phone / 設定・タイムゾーン行の状態",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "nsVCg",
+          "name": "同じ（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "DJM9m",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "同じ（sub）。アカウントのゾーンがこの端末と同じ。ボタンなし。失敗のあとでも、読み直しで同じになればこれに戻る",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "S1adc",
+              "name": "Card",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ZgSOP",
+                  "name": "タイムゾーン",
+                  "context": "div",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kBxPz",
+                      "name": "span",
+                      "context": "span",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qKJ8k",
+                          "name": "タイムゾーン",
+                          "fill": "$ink",
+                          "content": "タイムゾーン",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "e0Id4",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Asia/Tokyo · この端末と同じ",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WoIqN",
+          "name": "違う（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "UmeD1",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "違う（sub）。アカウントのゾーン · この端末のゾーン。長い ID は切らずに折り返す。ボタンは外枠だけ（line, 角丸 10, 高さ 44）。他の設定の書き込み中は 40 %",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "RE1kR",
+              "name": "Card",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KBRon",
+                  "name": "タイムゾーン",
+                  "context": "div",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k5rTF",
+                      "name": "span",
+                      "context": "span",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Jt9sy",
+                          "name": "タイムゾーン",
+                          "fill": "$ink",
+                          "content": "タイムゾーン",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "y3eQP8",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "America/Argentina/ComodRivadavia · この端末は Asia/Tokyo",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XafHu",
+                      "name": "この端末に合わせる",
+                      "context": "button",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NmpJB",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "この端末に合わせる",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "runwp",
+          "name": "失敗（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "fjBuo",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "失敗（role=alert, ink 500）。サブ行と入れ替わり、ボタンは残る。次の押下・アカウントの切り替え・同じになる読み直しで消える",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "F8pSBB",
+              "name": "Card",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "mo2me",
+                  "name": "タイムゾーン",
+                  "context": "div",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nlXJA",
+                      "name": "span",
+                      "context": "span",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "G6L7A",
+                          "name": "タイムゾーン",
+                          "fill": "$ink",
+                          "content": "タイムゾーン",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "bWtzb",
+                          "name": "Alert line",
+                          "fill": "$ink",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "保存できませんでした。もう一度お試しください",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZbHOW",
+                      "name": "この端末に合わせる",
+                      "context": "button",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vQvHD",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "この端末に合わせる",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "kJ1y8",
+          "name": "読み込み中（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "xvfwh",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "読み込み中（sub）。設定を読むまでは — だけ、ボタンなし。読み込み失敗はカード全体が再読み込みの案内になる",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "pCD14",
+              "name": "Card",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "larI9",
+                  "name": "タイムゾーン",
+                  "context": "div",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "W0gCzD",
+                      "name": "span",
+                      "context": "span",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b5Zqn9",
+                          "name": "タイムゾーン",
+                          "fill": "$ink",
+                          "content": "タイムゾーン",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "P5cxq",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "—",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
