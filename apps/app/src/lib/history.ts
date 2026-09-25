@@ -228,7 +228,7 @@ function cellKind(stat: DayStat, isToday: boolean): Cell['kind'] {
  * - `empty`: the date alone (the cell is not a link)
  * - `excluded`: the date and `・計測なし`, then the times, since the dashed cell still draws its slices
  * - `stack` / `detox`: the date, each activity's time, then `・detox <time>`
- * - Times that round to 0 min are left out
+ * - Times that round to 0 min are left out; a detox day whose detox rounds to 0 min still ends in `・detox`
  * @example cellLabel(day('2026-09-09', { measured: true, totals: { work: 9 * H }, detoxMs: 6 * H }), 'stack', [work])
  * // => '9月9日（水）・仕事 9h 00m・detox 6h 00m'
  */
@@ -249,6 +249,8 @@ function cellLabel(
     // formatDuration rounds to the minute, so anything under 30 s would read as 0m.
     .filter(({ ms }) => Math.round(ms / 60_000) > 0)
     .map(({ name, ms }) => `・${name} ${formatDuration(ms)}`)
+  // An outlined detox day still names itself when its detox is too short to read as a time (just after midnight).
+  if (kind === 'detox' && times.length === 0) return `${date}・${DETOX.name}`
   return `${date}${kind === 'excluded' ? '・計測なし' : ''}${times.join('')}`
 }
 
