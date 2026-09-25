@@ -57,3 +57,16 @@ test('durations read as hours and padded minutes, minutes alone under an hour', 
   // Assert
   expect(readouts).toEqual(['19h 00m', '6h 20m', '45m', '0m', '0m'])
 })
+
+test('the since line keeps failing for an unknown time zone instead of caching a broken formatter', () => {
+  // Arrange
+  const instant = new Date('2026-09-09T00:05:00Z')
+
+  // Act
+  const readUnknownZone = () => formatTime(instant, 'Mars/Olympus_Mons')
+
+  // Assert
+  expect(readUnknownZone).toThrow(RangeError)
+  expect(readUnknownZone).toThrow(RangeError)
+  expect(formatTime(instant, 'Asia/Tokyo')).toBe('9:05')
+})

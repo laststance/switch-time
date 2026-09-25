@@ -164,6 +164,43 @@ test('a detox left on for two days keeps the streak and lists no unused day', as
   expect(week.excludedDays).toEqual([])
 })
 
+test('a month older than the streak window still counts the days a detox ran through', async () => {
+  // Arrange: 仕事 then detox on the 1st of a month 4000 days back, 仕事 again on the 4th
+  const api = await signedIn('old-detox@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const month = addDays(today, -4000).slice(0, 7)
+  const first = `${month}-01`
+  const fourth = `${month}-04`
+  await api.switches.replaceDay({
+    day: first,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(first, 9) },
+      { activityId: null, startedAt: at(first, 20) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: fourth,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(fourth, 9) }],
+  })
+
+  // Act
+  const stats = await api.stats.month({ month })
+
+  // Assert
+  expect(
+    stats.days.slice(0, 4).map((day) => [day.day, day.measured, day.excluded]),
+  ).toEqual([
+    [first, true, null],
+    [`${month}-02`, true, null],
+    [`${month}-03`, true, null],
+    [fourth, true, null],
+  ])
+})
+
 test('an activity left on for two days still leaves them unused', async () => {
   // Arrange: 休息 from 20:00 three days ago until 仕事 at midnight today, nothing tapped between
   const api = await signedIn('carried-activity@example.com')

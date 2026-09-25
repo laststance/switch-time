@@ -109,3 +109,16 @@ test('day math builds one formatter per time zone, however many instants it read
   expect(construct).toHaveBeenCalledTimes(2)
   construct.mockRestore()
 })
+
+test('an unknown time zone keeps failing on every read instead of reusing a cached formatter', () => {
+  // Arrange
+  const instant = new Date('2026-09-09T00:00:00Z')
+
+  // Act
+  const readUnknownZone = () => localDay(instant, 'Mars/Olympus_Mons')
+
+  // Assert
+  expect(readUnknownZone).toThrow(RangeError)
+  expect(readUnknownZone).toThrow(RangeError)
+  expect(localDay(instant, 'Asia/Tokyo')).toBe('2026-09-09')
+})
