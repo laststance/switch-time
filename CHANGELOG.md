@@ -25,6 +25,45 @@ All notable changes to this project are documented here. The format follows
   answer is loading, failed or held offline. A sheet left open over
   midnight asks again once the day is past.
 
+## [0.12.0.0] - 2026-09-25
+
+### Changed
+
+- When an edit on the correction sheet gets no clear answer (no reply in
+  30 seconds, a lost connection, or a server error), the sheet no longer
+  says it was not saved. It says 「一覧を読み直しています…」 while it reads
+  the day again, then asks you to check the list, because the edit may
+  have landed. An older 元に戻す is turned off then, so it cannot undo the
+  wrong state. A server that gave up before saving still says to try again.
+- If reading the day again fails too, the sheet says the rows may be out of
+  date, and it clears that as soon as a later read of the day succeeds (on
+  returning to the tab, for example).
+- The message after an edit is refused because the day or the record
+  changed no longer blames another device. It now says the record changed
+  and the latest state is shown, which is also true after a double tap or
+  this device's own late edit.
+- A refusal that can never succeed (the session ended, or a request the app
+  should not have sent) turns 元に戻す off instead of leaving it armed.
+
+### Fixed
+
+- A day's message clears once a later read shows the day has moved on, for
+  example after a tap on ホーム, instead of staying until the next press.
+- 元に戻す turns off once any read of the day shows that pressing it could
+  only be refused, even after another change was put back. That includes
+  the edit's own re-read, which lands before 元に戻す is offered. It still
+  survives a settings change made while its sheet is closed, and a time
+  zone change that only moves its record out of the listed day.
+- An answer the API itself did not write (a page for an unknown address,
+  for example) no longer reads as "the record changed": the sheet says it
+  was not saved and keeps 元に戻す.
+- When the session ends during an edit, the sign-in screen brings you back
+  to the same day's correction sheet, and signing in again (in another tab,
+  too) clears the sign-in message.
+- Screen readers announce the sheet's waiting and offline lines more
+  reliably: the polite status region stays in place, empty and taking no
+  room, instead of appearing together with its text.
+
 ## [0.11.0.0] - 2026-09-25
 
 ### Changed

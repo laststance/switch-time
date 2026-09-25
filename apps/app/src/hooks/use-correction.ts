@@ -1,29 +1,36 @@
 import { dayBounds, daySchema, type SplitAtInput } from '@switch-time/shared'
 import {
+  hashKey,
   onlineManager,
   useIsMutating,
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
+  type QueryKey,
 } from '@tanstack/react-query'
 import { useState, useSyncExternalStore } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
+import { judgeArmedUndo } from '@/hooks/use-day-reads'
 import { useDelayedFlag } from '@/hooks/use-delayed-flag'
 import { useLocalToday } from '@/hooks/use-local-today'
 import { useSettings } from '@/hooks/use-settings'
+import { authClient } from '@/lib/auth-client'
 import {
   afterUndoFailure,
   correctionRows,
   dayBaseline,
+  dayLine,
   dayTitle,
+  failureKind,
   isDayChangedRefusal,
   landedUndo,
+  nextStamp,
   noteDayClass,
   offeredUndo,
   onPressedDay,
   pickRequest,
-  refusalMessage,
   reselectedRow,
   sheetView,
   statusLine,
@@ -39,13 +46,12 @@ import {
   type TotalsFacts,
   type UndoSlot,
 } from '@/lib/correction'
-import { RequestTimeoutError } from '@/lib/deadline'
 import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { correctionSlice } from '@/store/correction'
 
-const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
+const { armed, dropped, hushed, noticed, lineRaised } = correctionSlice.actions
 
 /**
  * Everything the correction sheet needs for one day: the row model, the selection, the `switches.*` edits and 「元に戻す」.
@@ -63,9 +69,10 @@ const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
  * older slot, and raises the archived notice instead ({@link undoSlotFor}). A failed undo of either kind is sorted by
  * {@link afterUndoFailure}. A slot is offered only while the listed day still reads as it left it ({@link offeredUndo}).
  *
- * `status` is the line under the rows ({@link statusLine}): why the last edit or undo on this day failed ({@link refusalMessage}),
- * shown as soon as the answer arrives, even to a sheet reopened after it closed, and until the next press, selection or undo,
- * else why the panel waits (a write landing, or queued offline).
+ * `status` is the line under the rows ({@link statusLine}): why the panel waits (a write landing, or queued offline), else why
+ * the last edit or undo on this day failed ({@link dayLine}), shown as soon as the answer arrives, even to a sheet reopened
+ * after it closed, until the next press, selection or undo, or until a read shows the day moved on ({@link useDayReads}).
+ * After a failure that may have landed, it says the list is being read again until a read lands.
  * @example const correction = useCorrection(params.day)
  */
 export function useCorrection(dayParam: string | undefined) {
@@ -103,9 +110,10 @@ export function useCorrection(dayParam: string | undefined) {
     bounds,
     rows: correctionRows(list.data, activities.data, bounds),
     pending: list.isFetching || writesInFlight > 0,
-    // A write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both; a quick one says nothing.
-    // After a timeout the refetch runs on its own: it dims the panel through `pending`, without a line.
-    status: statusLine({ refusal: state.refusal, waiting, online }),
+    // A landed or refused write stays in flight until its refetch lands (`onSettled` awaits it), so the line covers both; a
+    // quick one says nothing. An uncertain one's refetch runs on its own: it dims the panel through `pending`, and the day's
+    // line speaks.
+    status: statusLine({ line: state.line, waiting, online }),
     canUndo: slot !== undefined,
     selectedId: state.selectedId,
     noticeId: state.noticeId,
@@ -131,14 +139,14 @@ type Pressed = { day: string; epoch: string }
 function useCorrectionState(day: string) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
-  const refusal = useAppSelector((s) => s.correction.refusal[day])
+  const line = useAppSelector((s) => s.correction.line[day])
   const notice = useAppSelector((s) => s.correction.notice[day])
   const [sheet, setSheet] = useState<CorrectionSheet>({
     day,
     selectedId: null,
     focusId: null,
   })
-  const view = sheetView(sheet, day, { refusal, notice })
+  const view = sheetView(sheet, day, { line, notice })
   const current = view.sheet
   // A new day started the sheet over ("adjusting state when a prop changes"); `current` already covers this render.
   if (current !== sheet) setSheet(current)
@@ -149,7 +157,7 @@ function useCorrectionState(day: string) {
     selectedId: view.selectedId,
     noticeId: view.noticeId,
     focusId: current.focusId,
-    refusal: view.refusal,
+    line: view.line,
     // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice. The row the
     // notice selected becomes the sheet's own first, so clearing the notice leaves its panel open under the press.
     hush: (notice: boolean): void => {
@@ -162,7 +170,7 @@ function useCorrectionState(day: string) {
       setSheet({ ...current, selectedId: id })
       dispatch(hushed({ epoch, day, notice: id !== view.noticeId }))
     },
-    // A row the sheet selects by itself (an undo's reselect): a refusal a concurrent write raised stays.
+    // A row the sheet selects by itself (an undo's reselect): a line a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
       answer(pressedDay, { selectedId: id })
     },
@@ -179,10 +187,10 @@ function useCorrectionState(day: string) {
 }
 
 // The hook-level callbacks of every mutation here and in the undo. `onMutate` takes the day and the store's epoch at the press
-// (`mutate()` calls it synchronously). `onError` sets the day's status line at once: TanStack runs it before `onSettled`,
-// which waits for the re-read, and when the connection drops during that re-read its retry waits for the network with no
-// deadline. It runs even once the sheet has closed (the options stay on the mutation when its observer unsubscribes), and the
-// line lives in the store, so reopening that day's sheet says why.
+// (`mutate()` calls it synchronously). `onError` sets the day's line at once ({@link dayLine}). It runs even once the sheet has
+// closed (the options stay on the mutation when its observer unsubscribes), and the line lives in the store, so reopening
+// that day's sheet says why. An UNAUTHORIZED answer also reads the session again: once it reads empty, the (app) guard sends
+// the user to sign-in with `next` back here, since the sheet has no control for the sign-in its line asks for.
 // Every mutation refetches `switches.*` and `stats.*` once it settles. A day-changed refusal also refetches `settings.*`, since
 // the stored zone may be what changed on another device, and the next edit would otherwise send the stale cached zone again.
 // Never while a settings update is in flight: its answer could roll back the optimistic value, and that update refetches
@@ -191,6 +199,7 @@ function useEditLifecycle(day: string) {
   const queryClient = useQueryClient()
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
+  const { refetch: readSessionAgain } = authClient.useSession()
   return {
     onMutate: (): Pressed => ({ day, epoch }),
     onError: (
@@ -198,29 +207,75 @@ function useEditLifecycle(day: string) {
       _variables: unknown,
       pressed: Pressed | undefined,
     ): void => {
-      if (pressed)
-        dispatch(
-          refused({
-            ...pressed,
-            text: refusalMessage(error),
-          }),
-        )
+      const line = dayLine(error, nextStamp())
+      if (pressed) dispatch(lineRaised({ ...pressed, line }))
+      if (line.kind === 'unauthorized') void readSessionAgain()
     },
-    onSettled: async (_data: unknown, error: unknown): Promise<void> => {
-      const refetchZone =
-        isDayChangedRefusal(error) &&
-        queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
-      const refetch = invalidateKeys(queryClient, [
-        orpc.switches.key(),
-        orpc.stats.key(),
-        ...(refetchZone ? [orpc.settings.key()] : []),
-      ])
-      // The mutation stays pending until this settles, so the panel waits for the rows the edit left. A timeout arms nothing,
-      // so its refetch runs on its own (a hung API stalls it too, another 30 s and a retry); the list's fetch still holds the
-      // panel until it settles.
-      if (!(error instanceof RequestTimeoutError)) await refetch
+    onSettled: async (
+      _data: unknown,
+      error: unknown,
+      _variables: unknown,
+      pressed: Pressed | undefined,
+    ): Promise<void> => {
+      const others = othersToRefetch(queryClient, error)
+      // A landed write: the mutation stays pending until the refetch settles, so the panel waits for the rows the edit left.
+      if (!error)
+        return invalidateKeys(queryClient, [orpc.switches.key(), ...others])
+      return readsAfterFailure(queryClient, error, pressed?.day ?? day, others)
     },
   }
+}
+
+// A failed edit's reads: it arms nothing. A refusal waits for them as a landed write does: a day-changed one refetches the
+// stored zone, and the next edit needs it. A failure that may have landed lets them run on its own (a hung API stalls them
+// too, another 30 s and a retry, and a dropped connection's retry waits for the network); the list's fetch still dims the
+// panel.
+async function readsAfterFailure(
+  queryClient: QueryClient,
+  error: unknown,
+  day: string,
+  others: QueryKey[],
+): Promise<void> {
+  const reads = Promise.all([
+    reReadAfterFailure(queryClient, day),
+    invalidateKeys(queryClient, others),
+  ])
+  if (failureKind(error) !== 'uncertain') await reads
+}
+
+// The keys a settled edit refetches besides `switches.*`: `stats.*`, and `settings.*` after a day-changed refusal while no
+// settings update is in flight ({@link useEditLifecycle}).
+function othersToRefetch(queryClient: QueryClient, error: unknown): QueryKey[] {
+  const refetchZone =
+    isDayChangedRefusal(error) &&
+    queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
+  return refetchZone
+    ? [orpc.stats.key(), orpc.settings.key()]
+    : [orpc.stats.key()]
+}
+
+// A failed edit's re-read of `switches.*`. The pressed day's list is read again even once its sheet has closed, so
+// {@link useDayReads} can settle the line; the rest only where a screen watches it. A sheet that closes while that read is in
+// flight cancels it with no action to judge, and the list stays invalidated, so reopening the sheet reads the day again. The
+// two calls match disjoint queries, since a second invalidation of the same query would cancel the first one's fetch.
+async function reReadAfterFailure(
+  queryClient: QueryClient,
+  day: string,
+): Promise<void> {
+  const pressedList = hashKey(
+    orpc.switches.listByDay.queryKey({ input: { day } }),
+  )
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: orpc.switches.key(),
+      predicate: (query) => query.queryHash === pressedList,
+      refetchType: 'all',
+    }),
+    queryClient.invalidateQueries({
+      queryKey: orpc.switches.key(),
+      predicate: (query) => query.queryHash !== pressedList,
+    }),
+  ])
 }
 
 // The sheet's edits. Each sends the day's baseline and arms 元に戻す through {@link undoSlotFor} once it succeeds.
@@ -264,8 +319,8 @@ function useCorrectionEdits(
   // a slot never replays into another day's window. Each press settles through its own `mutateAsync` promise, so every
   // edit's answer counts, a second tap's included, and so does one that lands after the sheet closed (per-call `mutate()`
   // callbacks fire for the latest call only, and only while mounted). The store's `epoch` at the press keeps an answer that
-  // lands after sign-out away from the next account. A timed-out edit arms nothing, though it may have landed: the refetch
-  // shows what the day now holds. The failure's line comes from `onError` ({@link useEditLifecycle}). `day` here is the day
+  // lands after sign-out away from the next account. An uncertain failure ({@link failureKind}) arms nothing, though it may have
+  // landed: the refetch shows what the day now holds. The failure's line comes from `onError` ({@link useEditLifecycle}). `day` here is the day
   // pressed on: an answer that lands once the sheet shows another day selects nothing there ({@link useCorrectionState}).
   const press = (row: CorrectionRow) => {
     state.hush(true)
@@ -281,12 +336,13 @@ function useCorrectionEdits(
           undoSlotFor({ kind, returned }, row, baseline, bounds),
         )
         dispatch(slot ? armed({ epoch, slot }) : dropped({ epoch, day }))
+        // The edit's own re-read landed before the slot existed, so the slot meets that read now.
+        judgeArmedUndo(day)
         if (archived) state.showNotice({ day, epoch }, row.id)
       }
     const failed = (error: unknown): void => {
-      // A timed-out edit may have landed, so no older undo knows what the day now holds.
-      if (error instanceof RequestTimeoutError)
-        dispatch(dropped({ epoch, day }))
+      // An edit that may have landed leaves no older undo that knows what the day now holds.
+      if (failureKind(error) === 'uncertain') dispatch(dropped({ epoch, day }))
     }
     return { baseline, landed, failed }
   }
@@ -361,8 +417,8 @@ function useCorrectionUndo(
       else edit.onError(error, variables, pressed)
     },
   })
-  // A refused undo that can never succeed (the day or record changed elsewhere, an archived activity) turns 元に戻す off; a
-  // passing failure (offline, server error, a timeout) keeps it armed for another try.
+  // A refused undo that can never succeed (the day or record changed elsewhere, an archived activity, an ended session) turns
+  // 元に戻す off; a failure that may pass (offline, a 5xx, a timeout) keeps it armed for another try.
   const failed = (error: unknown): void => {
     if (afterUndoFailure(error) !== 'keep') dispatch(dropped({ epoch, day }))
   }

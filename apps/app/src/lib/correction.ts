@@ -3,6 +3,7 @@ import type { AppRouterClient } from '@switch-time/api'
 import {
   DAY_ROWS_MAX,
   clampStart,
+  daySchema,
   localDay,
   MIN_SEGMENT_MS,
   REFUSAL,
@@ -13,8 +14,9 @@ import {
   type RefusalReason,
   type ReplaceDayInput,
 } from '@switch-time/shared'
+import type { QueryState } from '@tanstack/react-query'
+import { z } from 'zod'
 
-import { RequestTimeoutError } from './deadline'
 import { DETOX } from './detox'
 import { formatDay, formatDuration, formatMonthDay, formatTime } from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
@@ -746,18 +748,18 @@ export type SheetPatch = Partial<Omit<CorrectionSheet, 'day'>>
  * @returns
  * - `sheet`: the same object on the same day, else a fresh state for `day`
  * - `selectedId`: the selected row, else the notice's row, else null
- * - `noticeId`, `refusal`: the store's, null when absent
+ * - `noticeId`, `line`: the store's, null when absent
  * @example sheetView({ day: '2026-09-08', selectedId: 'r', focusId: null }, '2026-09-09', {}) // { sheet: { day: '2026-09-09', selectedId: null, focusId: null }, selectedId: null, … }
  */
 export function sheetView(
   sheet: CorrectionSheet,
   day: string,
-  said: { refusal?: string; notice?: string },
+  said: { line?: DayLine; notice?: string },
 ): {
   sheet: CorrectionSheet
   selectedId: string | null
   noticeId: string | null
-  refusal: string | null
+  line: DayLine | null
 } {
   const current =
     sheet.day === day ? sheet : { day, selectedId: null, focusId: null }
@@ -766,7 +768,7 @@ export function sheetView(
     sheet: current,
     selectedId: current.selectedId ?? noticeId,
     noticeId,
-    refusal: said.refusal ?? null,
+    line: said.line ?? null,
   }
 }
 
@@ -867,28 +869,77 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
 }
 
 /**
+ * How a failed edit or undo failed, as far as the user can act on it:
+ * - `uncertain`: the write may have landed. No answer (a {@link RequestTimeoutError}, a dropped connection, a page no API
+ *   wrote), or any 5xx but TIMEOUT: a connection lost during COMMIT reaches the app as a plain 500, a proxy answers 502–504,
+ *   and GATEWAY_TIMEOUT is a write cut off during COMMIT.
+ * - `refused`: the API refused before writing, with a {@link REFUSAL} reason, or NOT_FOUND (the record is gone).
+ * - `unauthorized`: the session has ended.
+ * - `invalid`: BAD_REQUEST without a reason, which this app never sends on purpose.
+ * - `failed`: nothing was written: TIMEOUT (the API gave up before writing; it answers 500, since Chromium resends a POST answered
+ *   408) or any other 4xx.
+ * The code decides, not the HTTP status: TIMEOUT and INTERNAL_SERVER_ERROR both answer 500.
+ * @param error - The error the mutation failed with.
+ * @returns The kind; {@link failureMessage} and {@link afterUndoFailure} build on it.
+ * @example failureKind(new ORPCError('GATEWAY_TIMEOUT')) // 'uncertain'
+ */
+export function failureKind(error: unknown): FailureKind {
+  if (!(error instanceof ORPCError)) return 'uncertain'
+  if (error.code === 'TIMEOUT') return 'failed'
+  if (error.status >= 500) return 'uncertain'
+  // A 4xx no procedure wrote (a route the API does not have, a proxy's answer): nothing ran, so nothing can have landed.
+  if (isMalformedAnswer(error)) return 'failed'
+  return answeredKind(error)
+}
+
+// A 4xx a procedure answered, as {@link failureKind} sorts it.
+function answeredKind(error: ORPCError<string, unknown>): FailureKind {
+  if (refusalReason(error) || error.code === 'NOT_FOUND') return 'refused'
+  if (error.code === 'UNAUTHORIZED') return 'unauthorized'
+  return error.code === 'BAD_REQUEST' ? 'invalid' : 'failed'
+}
+
+// The `data` oRPC's link gives an answer whose body is not an oRPC error: the HTTP response itself, so its code only
+// mirrors the status (a Hono 404 for an unknown route reads as NOT_FOUND).
+const malformedAnswerSchema = z.object({
+  status: z.number(),
+  headers: z.record(z.string(), z.unknown()),
+})
+
+// Whether an oRPC error was built from an answer no procedure wrote ({@link malformedAnswerSchema}).
+function isMalformedAnswer(error: ORPCError<string, unknown>): boolean {
+  return malformedAnswerSchema.safeParse(error.data).success
+}
+
+/** The kinds {@link failureKind} tells apart. */
+export type FailureKind =
+  'uncertain' | 'refused' | 'unauthorized' | 'invalid' | 'failed'
+
+/**
  * What a failed undo of either kind does to 「元に戻す」: an answer that can never succeed turns it off (the day or the record
- * changed elsewhere, or is gone; the previous activity was archived, with the notice), and the status line says why. A
- * passing failure (network, server error, an expired sign-in, a timeout) keeps it for another try: a timed-out undo may not
+ * changed elsewhere, or is gone; the previous activity was archived, with the notice; the session ended; the request was
+ * malformed), and the status line says why. A failure that may pass keeps it for another try: an uncertain undo may not
  * have landed, and a replay writes only while the day still holds what the edit left (`expected`, or the pick's `revision`),
  * so it cannot undo twice.
  * @param error - The error the undo's mutation failed with.
  * @returns
- * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision) or NOT_FOUND
  * - 'archived': BAD_REQUEST with `data.reason === 'archived'` (`changeActivity` refuses an archived target; `replaceDay` refuses
  *   a day whose current state would name one)
- * - 'keep': anything else, another BAD_REQUEST and a {@link RequestTimeoutError} included
+ * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision), NOT_FOUND, UNAUTHORIZED, or a
+ *   BAD_REQUEST without a reason
+ * - 'keep': anything else: uncertain, TIMEOUT, busy, or a 4xx no procedure wrote
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
  */
 export function afterUndoFailure(
   error: unknown,
 ): 'keep' | 'clear' | 'archived' {
-  if (!(error instanceof ORPCError)) return 'keep'
+  if (!(error instanceof ORPCError) || isMalformedAnswer(error)) return 'keep'
+  const reason = refusalReason(error)
+  if (error.code === 'BAD_REQUEST' && reason === REFUSAL.archived.reason)
+    return 'archived'
   if (error.code === 'CONFLICT' || error.code === 'NOT_FOUND') return 'clear'
-  return error.code === 'BAD_REQUEST' &&
-    refusalReason(error) === REFUSAL.archived.reason
-    ? 'archived'
-    : 'keep'
+  const kind = failureKind(error)
+  return kind === 'unauthorized' || kind === 'invalid' ? 'clear' : 'keep'
 }
 
 /**
@@ -915,9 +966,9 @@ function refusalReason(error: unknown): RefusalReason | null {
 
 /** What the correction sheet's status line says for each refusal reason the API sends; the pen file's 状態行 board lists them. */
 const REFUSAL_MESSAGES = {
-  'day-changed': '別の端末で記録が変わったため、最新の状態を表示しました',
-  'record-changed':
-    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+  // Neutral on purpose: another device, another tab, a double tap and this device's own late write all read the same here.
+  'day-changed': '記録が変わっていたため、最新の状態を表示しました',
+  'record-changed': 'この記録が変わっていたため、最新の状態を表示しました',
   archived: 'アーカイブ済みの活動になるため、変更できません',
   'no-room': 'これ以上動かせません',
   'no-neighbour': '統合できる記録がありません',
@@ -927,37 +978,87 @@ const REFUSAL_MESSAGES = {
 } as const satisfies Record<RefusalReason, string>
 
 /**
- * The status line after a call that gave no answer in time. The write may still have landed, even after the list was read
- * again (its transaction can commit late, and a hung API fails the refetch too), so the line asks the user to check the rows
- * rather than claiming they are current.
+ * What the status line says for each kind of failure but a refusal ({@link failureKind}). `uncertain` is shown once the list
+ * was read again: the write may have landed, even after that read (its transaction can commit late), so it asks the user to
+ * check the rows rather than claiming they are current, and it does not say that nothing came back, since a 5xx did answer.
  */
-const TIMEOUT_MESSAGE =
-  '応答がありませんでした。反映されたか一覧で確かめてください'
-
-/** The status line after any other failure (offline mid-request, a server error). */
-const FAILED_MESSAGE = '保存できませんでした。もう一度お試しください'
+const KIND_MESSAGES = {
+  uncertain: '反映されたか分かりませんでした。一覧で確かめてください',
+  unauthorized: 'サインインが切れました。サインインし直してください',
+  invalid: 'この変更はできません',
+  failed: '保存できませんでした。もう一度お試しください',
+} as const satisfies Record<Exclude<FailureKind, 'refused'>, string>
 
 /**
- * The status line's text for a failed edit or 「元に戻す」. Every mutation of the sheet calls it from its `onError`, so no
- * failure is silent: before, the buttons re-enabled and nothing said why.
+ * The status line's text for a failed edit or 「元に戻す」. Every mutation of the sheet stores it from its `onError`
+ * ({@link dayLine}), so no failure is silent: before, the buttons re-enabled and nothing said why.
  * @param error - The error the mutation failed with.
  * @returns
  * - the reason's message ({@link REFUSAL_MESSAGES}) when the API sent one
- * - the record-changed message for NOT_FOUND (the record is gone, merged away on another device)
- * - {@link TIMEOUT_MESSAGE} for a {@link RequestTimeoutError}
- * - {@link FAILED_MESSAGE} for anything else
- * @example refusalMessage(new ORPCError('CONFLICT', { data: REFUSAL.nextOnLaterDay })) // '次の記録は翌日なので統合できません'
+ * - the record-changed message for NOT_FOUND (the record is gone, merged away elsewhere)
+ * - the kind's message ({@link KIND_MESSAGES}) for anything else
+ * @example failureMessage(new ORPCError('CONFLICT', { data: REFUSAL.nextOnLaterDay })) // '次の記録は翌日なので統合できません'
  */
-export function refusalMessage(error: unknown): string {
-  if (error instanceof RequestTimeoutError) return TIMEOUT_MESSAGE
-  const reason = refusalReason(error)
-  if (reason) return REFUSAL_MESSAGES[reason]
-  if (error instanceof ORPCError && error.code === 'NOT_FOUND')
-    return REFUSAL_MESSAGES['record-changed']
-  return FAILED_MESSAGE
+export function failureMessage(error: unknown): string {
+  const kind = failureKind(error)
+  if (kind !== 'refused') return KIND_MESSAGES[kind]
+  return REFUSAL_MESSAGES[refusalReason(error) ?? 'record-changed']
 }
 
-/** The status line shown under the sheet's rows: a refusal to read (`alert`), or why the panel waits (`quiet`). */
+/**
+ * The status line kept for one day after its last failed edit or undo, in the store per day ({@link correctionSlice}), with
+ * what the reads of that day since have shown ({@link afterDayRead}).
+ */
+export type DayLine = {
+  /** When the failure was answered ({@link nextStamp}): only a read stamped later counts. */
+  at: number
+  kind: FailureKind
+  /** {@link failureMessage}'s text. */
+  text: string
+  /** An uncertain failure whose day has not been read since: the line says the list is being read again. */
+  reading: boolean
+  /** {@link dayFingerprint} of the first read after the failure: the line expires once a later read differs. */
+  seen: string | null
+  /** The last read after the failure failed: the line says the rows may be old, until a read succeeds. */
+  stale: boolean
+}
+
+// The last stamp {@link nextStamp} handed out.
+let lastStamp = 0
+
+/**
+ * A strictly increasing clock for the correction sheet's failures and the reads that judge them: epoch ms, but never equal
+ * to or below the previous stamp, so a read that lands in the same tick as the failure (a coarse `Date.now()`, a fast
+ * local answer) or after the system clock stepped back still counts as later. Called by the sheet's `onError` and by
+ * {@link useDayReads} for every read.
+ * @returns epoch ms, or one more than the previous stamp when the clock has not moved past it
+ * @example [nextStamp(), nextStamp()] // [1790000000000, 1790000000001] within one millisecond
+ */
+export function nextStamp(): number {
+  lastStamp = Math.max(Date.now(), lastStamp + 1)
+  return lastStamp
+}
+
+/**
+ * The day's line for a failure just answered. Called by every sheet mutation's `onError`, which stores it for the pressed day.
+ * @param error - The error the mutation failed with.
+ * @param at - When it was answered ({@link nextStamp}).
+ * @returns A line that has seen no read yet; reading only for an uncertain failure.
+ * @example dayLine(new RequestTimeoutError(), 1000) // { at: 1000, kind: 'uncertain', text: '反映されたか…', reading: true, seen: null, stale: false }
+ */
+export function dayLine(error: unknown, at: number): DayLine {
+  const kind = failureKind(error)
+  return {
+    at,
+    kind,
+    text: failureMessage(error),
+    reading: kind === 'uncertain',
+    seen: null,
+    stale: false,
+  }
+}
+
+/** The status line shown under the sheet's rows: a failure the user should read (`alert`), or why the panel waits (`quiet`). */
 export type SheetStatus = { tone: 'alert' | 'quiet'; text: string }
 
 /** The status line while the panel waits for a write that has not landed. */
@@ -969,31 +1070,232 @@ export const WRITING_LINE_DELAY_MS = 400
 /** The status line while a write waits for the connection (web only: native never reports offline). */
 const OFFLINE_MESSAGE = 'オフラインです。接続が戻ると反映されます'
 
+/** The status line after an uncertain failure, until a read of the day lands (a read that waits for the connection included). */
+const READING_MESSAGE = '一覧を読み直しています…'
+
+/** The status line once a read of the day after the failure failed too: the rows shown may be old. */
+const STALE_MESSAGE = '一覧を読み直せませんでした。表示が古いかもしれません'
+
 /**
- * What the sheet's status line says: the viewed day's last refusal wins, then why the panel is dim, else nothing (the line
- * takes no height). Refusals are kept per day in the store ({@link correctionSlice}), so one said about another day, after
- * midnight or a `?day=` change, never reaches this line. Offline is read from the connection, not from a mutation's
- * `isPaused`: a tap queued behind another in its scope is paused while online, and a refetch after a landed write pauses
- * offline while its mutation reads as running.
- * @param facts.refusal - The viewed day's last failure ({@link refusalMessage}), until the next press, selection or undo on it.
+ * What the sheet's status line says: why the panel is dim while a write is in flight (a write started after the day's line
+ * speaks over it), then the viewed day's line: quiet while an uncertain failure's day is read again, else the failure's text,
+ * or that the rows may be old once a read failed too. Else nothing (the line takes no height). Lines are kept per day in the
+ * store ({@link correctionSlice}), so one said about another day, after midnight or a `?day=` change, never reaches this line.
+ * Offline is read from the connection, not from a mutation's `isPaused`: a tap queued behind another in its scope is paused
+ * while online, and a refetch after a landed write pauses offline while its mutation reads as running.
+ * @param facts.line - The viewed day's line ({@link dayLine}), until the next press, selection or undo on it, or until a read
+ * shows the day moved on.
  * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
- * (its refetch included, since `onSettled` awaits it, except after a timeout, whose refetch runs on its own). A refetch alone
- * dims the panel without a line.
+ * (a landed or refused write's refetch included, since `onSettled` awaits it; an uncertain one's refetch runs on its own).
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
- * @example statusLine({ refusal: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
+ * @example statusLine({ line: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
  */
 export function statusLine(facts: {
-  refusal: string | null
+  line: DayLine | null
   waiting: boolean
   online: boolean
 }): SheetStatus | null {
-  if (facts.refusal !== null) return { tone: 'alert', text: facts.refusal }
-  if (!facts.waiting) return null
+  if (facts.waiting)
+    return {
+      tone: 'quiet',
+      text: facts.online ? WRITING_MESSAGE : OFFLINE_MESSAGE,
+    }
+  if (facts.line === null) return null
+  if (facts.line.reading) return { tone: 'quiet', text: READING_MESSAGE }
   return {
-    tone: 'quiet',
-    text: facts.online ? WRITING_MESSAGE : OFFLINE_MESSAGE,
+    tone: 'alert',
+    text: facts.line.stale ? STALE_MESSAGE : facts.line.text,
   }
+}
+
+/**
+ * Which of the status line's two nodes carries the text: an alert mounts a fresh keyed node (announced at once), anything
+ * quiet goes into the polite region, which stays mounted so a screen reader hears its first message too. Called by the
+ * sheet's status line on every render.
+ * @param status - {@link statusLine}'s answer.
+ * @returns The text for each node, null for the one that shows nothing (the polite region then takes no room).
+ * @example statusSlots({ tone: 'quiet', text: '反映しています…' }) // { alert: null, polite: '反映しています…' }
+ */
+export function statusSlots(status: SheetStatus | null): {
+  alert: string | null
+  polite: string | null
+} {
+  if (status === null) return { alert: null, polite: null }
+  if (status.tone === 'alert') return { alert: status.text, polite: null }
+  return { alert: null, polite: status.text }
+}
+
+/**
+ * What a day's list says, as far as a kept line cares: the day's own rows (id, activity, start, revision), the carried-in
+ * record (id, activity, revision) and the switch the day runs into. Two reads with the same fingerprint show the same day.
+ * @param listed - A `switches.listByDay` answer.
+ * @returns A string that changes whenever any of those fields does.
+ * @example dayFingerprint({ carriedIn: null, rows: [], carriedOut: null }) // '[[],null,null]'
+ */
+export function dayFingerprint(listed: ListedDay): string {
+  const { carriedIn, rows, carriedOut } = listed
+  return JSON.stringify([
+    rows.map((row) => [
+      row.id,
+      row.activityId,
+      row.startedAt.getTime(),
+      row.revision,
+    ]),
+    carriedIn && [carriedIn.id, carriedIn.activityId, carriedIn.revision],
+    carriedOut?.id ?? null,
+  ])
+}
+
+/**
+ * A read of one day's list that landed: whether it succeeded, and the list cached for the day (a failed read may leave an
+ * older answer there, which counts for nothing). `at` is when it landed (epoch ms).
+ */
+export type DayRead = { at: number; ok: boolean; listed: ListedDay | undefined }
+
+/**
+ * What a read does to the day's line: nothing, expire it, mark it stale (the read failed), or record what it showed
+ * (`seen`, which also ends reading and staleness).
+ */
+export type LineAfterRead = 'keep' | 'expire' | 'unread' | { seen: string }
+
+/**
+ * What a read of a day's list does to that day's kept line and armed 「元に戻す」. Called by {@link useDayReads} for every read of
+ * a `switches.listByDay` query that lands, sheet open or not, so a line or a slot the day has moved past is gone before the
+ * sheet reopens. Paused reads (offline) never land, so they count for nothing.
+ * @param facts.line - The day's kept line, if any.
+ * @param facts.slot - The day's armed undo, if any.
+ * @param facts.read - The read that landed.
+ * @param facts.zoneWriting - Whether a `settings.*` write is in flight: the cached zone may be one the API has not stored, so
+ *   the slot waits until that write settles ({@link useDayReads} judges it then). The line does not use the zone, so it is judged
+ *   regardless.
+ * @param facts.timeZone - The stored zone from the cached settings; undefined before they arrived.
+ * @returns
+ * - `line`: 'keep' with no line, a read no later than the failure, or nothing new; `{ seen }` for the first good read (a reading
+ *   line shows its text then) and for a good read after a failed one; 'expire' once a good read differs from the one seen;
+ *   'unread' for a failed read, except on a sign-in line (the read fails for the same reason) or one already stale; any good
+ *   read expires a sign-in line, since the session is back
+ * - `retireUndo`: true once the day no longer reads as the slot left it ({@link offeredUndo}); false with no slot, a failed
+ *   read, an unknown zone or a zone write in flight
+ * @example afterDayRead({ line, slot: undefined, read: { at: line.at + 1, ok: true, listed }, zoneWriting: false, timeZone: 'Asia/Tokyo' }) // { line: { seen: '…' }, retireUndo: false }
+ */
+export function afterDayRead(facts: {
+  line: DayLine | undefined
+  slot: UndoSlot | undefined
+  read: DayRead
+  zoneWriting: boolean
+  timeZone: string | undefined
+}): { line: LineAfterRead; retireUndo: boolean } {
+  const listed = facts.read.ok ? (facts.read.listed ?? null) : null
+  return {
+    line: lineAfterRead(facts.line, facts.read.at, listed),
+    retireUndo:
+      !facts.zoneWriting && undoOutlived(facts.slot, listed, facts.timeZone),
+  }
+}
+
+// The line half of {@link afterDayRead}.
+function lineAfterRead(
+  line: DayLine | undefined,
+  at: number,
+  listed: ListedDay | null,
+): LineAfterRead {
+  if (!line || at <= line.at) return 'keep'
+  if (listed === null) return lineAfterFailedRead(line)
+  return lineAfterGoodRead(line, dayFingerprint(listed))
+}
+
+// A failed read: a sign-in line stays (the read fails for the same reason), and so does a line already stale.
+function lineAfterFailedRead(line: DayLine): LineAfterRead {
+  return line.kind === 'unauthorized' || line.stale ? 'keep' : 'unread'
+}
+
+// A good read: expire a sign-in line (the session is back, a tab signed in again) or once the day differs from the one seen,
+// else record it when nothing was seen yet or the line was stale.
+function lineAfterGoodRead(line: DayLine, fingerprint: string): LineAfterRead {
+  if (line.kind === 'unauthorized') return 'expire'
+  if (line.seen !== null && line.seen !== fingerprint) return 'expire'
+  return line.seen === null || line.stale ? { seen: fingerprint } : 'keep'
+}
+
+// The undo half of {@link afterDayRead}: the slot goes only on proof that its write would be refused, not because the day
+// lists it differently. A zone change re-windows the day, and the undo holds again if the zone comes back.
+function undoOutlived(
+  slot: UndoSlot | undefined,
+  listed: ListedDay | null,
+  timeZone: string | undefined,
+): boolean {
+  if (!slot || !listed || timeZone === undefined) return false
+  if (offeredUndo(slot, listed, timeZone)) return false
+  return slotRefutedBy(slot, listed, timeZone)
+}
+
+// Whether a day that no longer offers the slot proves it stale: a day slot's day read in the slot's own zone, or the picked
+// record listed at another revision. A record the day does not list may only sit outside its window now.
+function slotRefutedBy(
+  slot: UndoSlot,
+  listed: ListedDay,
+  timeZone: string,
+): boolean {
+  if (slot.kind === 'day') return slot.timeZone === timeZone
+  return pickedRecord(listed, slot.id) !== undefined
+}
+
+// A `switches.listByDay` query key: `[['switches', 'listByDay'], { input: { day }, type: 'query' }]`.
+const listByDayKeySchema = z.tuple([
+  z.tuple([z.literal('switches'), z.literal('listByDay')]),
+  z.object({ input: z.object({ day: daySchema }) }),
+])
+
+/**
+ * Which day a query-cache update read, if it is a read of a day's list that landed. Called by {@link useDayReads} for every
+ * `updated` event of the query cache.
+ * @param action - The update's action: `success` or `error` for a fetch that landed (a `setQueryData` success is `manual`, not a read).
+ * @param queryKey - The updated query's key.
+ * @returns
+ * - `{ day, ok }` for a `switches.listByDay` fetch that succeeded (`ok`) or failed
+ * - null for any other query, action, or a manual write
+ * @example dayOfRead({ type: 'error' }, [['switches', 'listByDay'], { input: { day: '2026-09-08' }, type: 'query' }]) // { day: '2026-09-08', ok: false }
+ */
+export function dayOfRead(
+  action: { type: string; manual?: boolean },
+  queryKey: readonly unknown[],
+): { day: string; ok: boolean } | null {
+  if (action.type !== 'success' && action.type !== 'error') return null
+  if (action.manual) return null
+  const day = listByDayKeySchema.safeParse(queryKey).data?.[1].input.day
+  return day === undefined ? null : { day, ok: action.type === 'success' }
+}
+
+/**
+ * Whether a mutation-cache update is a write that just settled: its `success` or `error` lands once its `onSettled` has run,
+ * so the reads that callback awaited are in the cache. Called by {@link useDayReads} for every mutation-cache event.
+ * @param event - The mutation-cache event.
+ * @returns true for an `updated` event carrying `success` or `error`; false for the rest (a write starting, pausing, retrying)
+ * @example isSettledWrite({ type: 'updated', action: { type: 'success' } }) // true
+ */
+export function isSettledWrite(event: {
+  type: string
+  action?: { type: string }
+}): boolean {
+  if (event.type !== 'updated') return false
+  return event.action?.type === 'success' || event.action?.type === 'error'
+}
+
+/**
+ * Whether a day's cached list can judge an armed 「元に戻す」 without a new read: its last fetch succeeded, none is running, and
+ * nothing has marked it stale since. Called by {@link useDayReads} once a settings write settles, since that write re-reads
+ * only the lists a screen watches; a closed sheet's list may still hold the rows from before its last edit.
+ * @param state - The list query's state, undefined before it was first fetched.
+ * @returns true only for a settled, successful list that is not invalidated
+ * @example isFreshList({ status: 'success', fetchStatus: 'idle', isInvalidated: true }) // false
+ */
+export function isFreshList(
+  state:
+    Pick<QueryState, 'status' | 'fetchStatus' | 'isInvalidated'> | undefined,
+): boolean {
+  if (!state || state.isInvalidated) return false
+  return state.status === 'success' && state.fetchStatus === 'idle'
 }
 
 /**
