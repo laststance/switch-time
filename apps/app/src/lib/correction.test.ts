@@ -2297,6 +2297,108 @@ test('only a landed fetch of a day’s list counts as a read of that day', () =>
   ])
 })
 
+test('a good read after a failed one takes back the stale warning when the day is as last seen, and expires the line when it moved', () => {
+  // Arrange: a refusal whose day was read once, then a read of it failed, so the line says the rows may be old.
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const moved: ListedDay = {
+    ...day,
+    rows: [{ ...work, activityId: 'rest' }],
+  }
+  const stale: DayLine = {
+    at: 1000,
+    kind: 'refused',
+    text: 'これ以上動かせません',
+    reading: false,
+    seen: '[[["w","work",1788825600000,0]],null,null]',
+    stale: true,
+  }
+  const judge = (listed: ListedDay) =>
+    afterDayRead({
+      line: stale,
+      slot: undefined,
+      read: { at: 3000, ok: true, listed },
+      zoneWriting: false,
+      timeZone: TZ,
+    }).line
+
+  // Act
+  const sameDay = judge(day)
+  const movedDay = judge(moved)
+
+  // Assert
+  expect(sameDay).toEqual({
+    seen: '[[["w","work",1788825600000,0]],null,null]',
+  })
+  expect(movedDay).toBe('expire')
+})
+
+test('a read reported as landed with no list in the cache counts as a failed read, so the line turns stale and 元に戻す stays', () => {
+  // Arrange
+  const reading: DayLine = {
+    at: 1000,
+    kind: 'uncertain',
+    text: '反映されたか分かりませんでした。一覧で確かめてください',
+    reading: true,
+    seen: null,
+    stale: false,
+  }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'sleep',
+    revision: 4,
+  }
+
+  // Act
+  const outcome = afterDayRead({
+    line: reading,
+    slot,
+    read: { at: 2000, ok: true, listed: undefined },
+    zoneWriting: false,
+    timeZone: TZ,
+  })
+
+  // Assert
+  expect(outcome).toEqual({ line: 'unread', retireUndo: false })
+})
+
+test('a day list key whose day is not a calendar day is not read as any day', () => {
+  // Arrange
+  const malformed = [
+    ['switches', 'listByDay'],
+    { input: { day: '2026-9-8' }, type: 'query' },
+  ]
+  const impossible = [
+    ['switches', 'listByDay'],
+    { input: { day: '2026-02-30' }, type: 'query' },
+  ]
+
+  // Act
+  const reads = [
+    dayOfRead({ type: 'success' }, malformed),
+    dayOfRead({ type: 'success' }, impossible),
+  ]
+
+  // Assert
+  expect(reads).toEqual([null, null])
+})
+
+test('an undo the API gave up on before writing, or whose answer a gateway cut off, keeps 元に戻す armed for another try', () => {
+  // Arrange: the API's own TIMEOUT answers 500; a proxy's GATEWAY_TIMEOUT answers 504.
+  const answers = [
+    new ORPCError('TIMEOUT', { status: 500 }),
+    new ORPCError('GATEWAY_TIMEOUT'),
+  ]
+
+  // Act
+  const outcomes = answers.map(afterUndoFailure)
+
+  // Assert
+  expect(outcomes).toEqual(['keep', 'keep'])
+})
+
 test('元に戻す stays on while the listed day still reads as the edit left it', () => {
   // Arrange: a merge left 仕事 9:00 and 娯楽 12:00, running into tomorrow's 7:00.
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))

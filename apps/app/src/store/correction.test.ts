@@ -540,3 +540,118 @@ test('a read’s answer becomes the line’s action for the failure it judged, t
   ])
   expect(nothing).toEqual([])
 })
+
+test('a read judged under the previous account neither settles the next account’s line nor retires its 元に戻す', () => {
+  // Arrange: account B, signed in after account A, has an uncertain line and an armed undo on the same day.
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const before = sheet.getState().epoch
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
+  const after = sheet.getState().epoch
+  const { lineRead, lineUnread, lineExpired, undoRetired } =
+    correctionSlice.actions
+  const uncertain: DayLine = {
+    at: 1000,
+    kind: 'uncertain',
+    text: '反映されたか分かりませんでした。一覧で確かめてください',
+    reading: true,
+    seen: null,
+    stale: false,
+  }
+  const slot = pickUndo('2026-09-24')
+  sheet.dispatch(refused({ epoch: after, day: '2026-09-24', line: uncertain }))
+  sheet.dispatch(armed({ epoch: after, slot }))
+
+  // Act
+  sheet.dispatch(
+    lineRead({ epoch: before, day: '2026-09-24', at: 1000, seen: 'day-a' }),
+  )
+  sheet.dispatch(lineUnread({ epoch: before, day: '2026-09-24', at: 1000 }))
+  sheet.dispatch(lineExpired({ epoch: before, day: '2026-09-24', at: 1000 }))
+  sheet.dispatch(undoRetired({ epoch: before, day: '2026-09-24', slot }))
+
+  // Assert
+  expect(sheet.getState().line).toEqual({
+    '2026-09-24': {
+      at: 1000,
+      kind: 'uncertain',
+      text: '反映されたか分かりませんでした。一覧で確かめてください',
+      reading: true,
+      seen: null,
+      stale: false,
+    },
+  })
+  expect(sheet.getState().undo).toEqual({
+    '2026-09-24': {
+      kind: 'activity',
+      day: '2026-09-24',
+      id: 'carried-in',
+      to: 'work',
+      revision: 4,
+    },
+  })
+})
+
+test('a read of a day with no line and no 元に戻す leaves the other days alone', () => {
+  // Arrange: only 2026-09-25 has a line and an armed undo.
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  const { epoch } = sheet.getState()
+  const { lineRead, lineUnread, lineExpired, undoRetired } =
+    correctionSlice.actions
+  sheet.dispatch(
+    refused({
+      epoch,
+      day: '2026-09-25',
+      line: refusal('これ以上動かせません'),
+    }),
+  )
+  sheet.dispatch(armed({ epoch, slot: pickUndo('2026-09-25') }))
+
+  // Act
+  sheet.dispatch(
+    lineRead({ epoch, day: '2026-09-24', at: 1000, seen: 'day-a' }),
+  )
+  sheet.dispatch(lineUnread({ epoch, day: '2026-09-24', at: 1000 }))
+  sheet.dispatch(lineExpired({ epoch, day: '2026-09-24', at: 1000 }))
+  sheet.dispatch(
+    undoRetired({ epoch, day: '2026-09-24', slot: pickUndo('2026-09-24') }),
+  )
+
+  // Assert
+  expect(sheet.getState().line).toEqual({
+    '2026-09-25': refusal('これ以上動かせません'),
+  })
+  expect(sheet.getState().undo).toEqual({
+    '2026-09-25': {
+      kind: 'activity',
+      day: '2026-09-25',
+      id: 'carried-in',
+      to: 'work',
+      revision: 4,
+    },
+  })
+})
+
+test('a read that keeps the line can still retire 元に戻す, and a verdict on a line nobody kept dispatches nothing', () => {
+  // Arrange
+  const epoch = 'epoch-1'
+  const day = '2026-09-24'
+  const line = refusal('これ以上動かせません')
+  const slot = pickUndo(day)
+
+  // Act
+  const retireOnly = afterReadActions(
+    { line: 'keep', retireUndo: true },
+    { epoch, day, line, slot },
+  )
+  const noLine = afterReadActions(
+    { line: 'expire', retireUndo: false },
+    { epoch, day, line: undefined, slot },
+  )
+
+  // Assert
+  expect(retireOnly).toEqual([
+    { type: 'correction/undoRetired', payload: { epoch, day, slot } },
+  ])
+  expect(noLine).toEqual([])
+})
