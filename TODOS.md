@@ -14,6 +14,30 @@
 **Priority:** P3
 **Depends on:** None
 
+### Give the first-launch screen Home's hotkeys
+
+**What:** Let the digit keys pick an activity and `0` start detox on the first-launch screen, as they do on Home, by moving the `useWebKeydown` handler (`hotkeyIndex`, `isDetoxHotkey` in `apps/app/src/lib/hotkeys.ts`) out of `HomeBody` so `FirstLaunch` gets it too.
+
+**Why:** Since 0.20.0.0 a new account can start on detox by pressing the detox row on the first-launch screen, but the keys still do nothing there: the handler lives in `HomeBody` in `apps/app/src/app/(app)/(tabs)/index.tsx`, which only mounts once `switches.current` is non-null.
+
+**Context:** What is left of "Start detox from the first-launch screen", which named both the row and the `0` hotkey; the PR that shipped 0.20.0.0 added the row only. Home's handler also gates the detox re-tap on `detoxRenewable`, which has no meaning before the first switch.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Roll a refused tap back to what the server last confirmed
+
+**What:** Make `useSwitchTo`'s `onError` restore the last state the server confirmed, not the `previous` it saved, when taps were queued: give each optimistic row its own token, restore only while the cache still holds this tap's row, and never restore another tap's optimistic row (invalidate instead).
+
+**Why:** TanStack runs `onMutate` before a scoped mutation waits its turn, so a queued tap saves the earlier tap's optimistic row as its `previous`. If both fail (an outage fails them together) and the refetch fails too, the second rollback brings back the first tap's row: Home shows a switch the server never recorded, with no error, until a refetch succeeds. A first tap failing while a second waits also wipes the second's row, so first launch flashes back. Reachable since the first tap, and easier since first launch offers detox (0.20.0.0).
+
+**Context:** `apps/app/src/hooks/use-switch-to.ts` (`onMutate`, `onError`, one `scope`). Use a token object, not a module `let` alias: the React Compiler folds such an alias into a comparison with itself. An e2e can hold two `switchTo` routes and fail both while holding `switches.current`. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Keep a detox span's outline whole when it is narrower than the bar's rounded end
 
 **What:** Draw a detox span that touches an end of the 24-h bar (or the correction sheet's day bar) but is narrower than that end's corner radius so its outline stays closed, for example by capping the lent radius at half the span's width or giving such a span a minimum width.
@@ -27,6 +51,18 @@
 **Depends on:** None
 
 ## Settings
+
+### Say in the unused-day hint that an untapped day ends the streak
+
+**What:** Reword the first sentence of the hint under 「使わなかった日を除外」 (`/excluded-days`), 「一度も切り替えなかった日は、平均と連続記録から外します。」, so it says the day leaves the averages and ends the streak there, instead of reading as if the streak skips it. Pen first.
+
+**Why:** `streak()` in `packages/shared/src/stats.ts` skips only manually excluded days (`status.excluded === 'manual'`); an automatically excluded day is not measured, so the streak stops at it. 「連続記録から外します」 reads like the manual case, so a user expects an untapped day to keep the streak going.
+
+**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx`; the pen board is 設定＋除外シート (hint `GOOSV`). The wording predates 0.20.0.0, which only dropped 「計測なし」 from it. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Say why the 活動項目 editor refused an add, a reorder or an archive
 

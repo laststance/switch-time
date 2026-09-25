@@ -18,8 +18,7 @@ All notable changes to this project are documented here. The format follows
 
 - The hint in 未使用日の扱い now says how a detox counts again after its
   week: pressing デトックス again past the 7 days measures that day and the
-  7 days after it. The hint also says what leaving a day out means (the
-  averages and the streak) instead of 「計測なし」.
+  7 days after it. The hint no longer calls an untapped day 「計測なし」.
 
 ## [0.19.0.0] - 2026-09-25
 
