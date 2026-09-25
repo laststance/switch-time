@@ -1493,39 +1493,60 @@ test('a cut of a detox past its measured week says the untapped day becomes 計�
 test('the 計測 note never asks about today, so a sheet left open over midnight fetches the day afresh', () => {
   // Arrange: an answer cached for the day, as if it had been fetched earlier
   const query = {
-    isFetching: false,
+    isError: false,
+    isPaused: false,
     data: { days: [{ excluded: 'auto_unused' as const }] },
   }
 
   // Act
-  const dayClass = noteDayClass(false, query)
+  const dayClass = noteDayClass({ isPast: false, hasOwnRows: false }, query)
 
   // Assert
   expect(dayClass).toBeNull()
 })
 
-test('the 計測 note waits while the past day’s class is loading or refetching after an edit', () => {
-  // Arrange: an answer from before an edit that is still being read again
-  const refetching = {
-    isFetching: true,
+test('after a cut lands, the 計測 note stops promising 計測 even while the day’s class is still the old one', () => {
+  // Arrange: the list already shows the cut's row, the stats answer is from before the cut
+  const query = {
+    isError: false,
+    isPaused: false,
     data: { days: [{ excluded: 'auto_unused' as const }] },
   }
-  const loading = { isFetching: true, data: undefined }
+
+  // Act
+  const dayClass = noteDayClass({ isPast: true, hasOwnRows: true }, query)
+
+  // Assert
+  expect(dayClass).toBeNull()
+})
+
+test('the 計測 note waits while no trusted class is at hand: not loaded yet, a failed refetch, or a fetch paused offline', () => {
+  // Arrange: a failed or paused refetch keeps the answer from before the last edit
+  const day = { isPast: true, hasOwnRows: false }
+  const stale = { days: [{ excluded: 'auto_unused' as const }] }
 
   // Act & Assert
-  expect(noteDayClass(true, refetching)).toBeUndefined()
-  expect(noteDayClass(true, loading)).toBeUndefined()
+  expect(
+    noteDayClass(day, { isError: false, isPaused: false, data: undefined }),
+  ).toBeUndefined()
+  expect(
+    noteDayClass(day, { isError: true, isPaused: false, data: stale }),
+  ).toBeUndefined()
+  expect(
+    noteDayClass(day, { isError: false, isPaused: true, data: stale }),
+  ).toBeUndefined()
 })
 
 test('the 計測 note reads a past day’s class as the server reports it', () => {
   // Arrange
   const query = {
-    isFetching: false,
+    isError: false,
+    isPaused: false,
     data: { days: [{ excluded: 'auto_unused' as const }] },
   }
 
   // Act
-  const dayClass = noteDayClass(true, query)
+  const dayClass = noteDayClass({ isPast: true, hasOwnRows: false }, query)
 
   // Assert
   expect(dayClass).toBe('auto_unused')
