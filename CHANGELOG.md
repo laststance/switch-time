@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.18.0.0] - 2026-09-25
+
+### Added
+
+- Pressing デトックス again once its week is over starts a new week of
+  counting. Home's detox row says 「押し直すと新しく始まります」 then,
+  and the press (or the `0` key) starts the detox over from now, so the
+  untapped days after it count again for up to 7 days. Inside the week
+  the press still changes nothing, and a double tap starts one week, not
+  two.
+- On the last day a detox measures, Home says 「明日から計測に入りません」
+  and how to keep counting, instead of only telling you after the days
+  have stopped counting.
+
+### Changed
+
+- The notice on a day a detox no longer measures now names both ways
+  back: press デトックス again, or switch to an activity.
+- A detox that a cut split still counts its week from the day it
+  started, on Home too.
+- Edits and 「元に戻す」 keep a renewed week: undoing an edit on that
+  day, or merging the renewed record into the detox split from it or
+  into the detox before it on the same day, no longer folds it back
+  into the earlier week.
+- Renewing is offered only while 「使わなかった日を除外」 is on, since
+  every day counts while it is off.
+
 ## [0.17.0.0] - 2026-09-25
 
 ### Changed
