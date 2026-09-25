@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.19.0.0] - 2026-09-25
+
+### Added
+
+- A screen reader now reads each History day's times, not just its date:
+  every activity that ran that day, then its detox time
+  (「9月9日（水）・仕事 9h 00m・detox 6h 00m」). Times under half a minute
+  are left out rather than read as 0m.
+
+### Changed
+
+- A dashed History day is read as 「平均から除外」, the words of the
+  footnote under the calendar, followed by the times it still holds,
+  instead of 「計測なし」 before those times.
+- An outlined detox day is read as 「detox の日」 with its time, so it can be
+  told apart from a worked day that also held some detox; the wind glyph
+  is not read out.
+
+### Fixed
+
+- On the 25-hour day when summer time ends, History's bar stops at the top
+  of its 24-hour track instead of spilling out of the cell. The day's full
+  times are still read out.
+- A tap only seconds long no longer squares off the top of the bar under
+  it: the rounded ends stay on the slices you can see, while several short
+  activities still add up on the bar.
+
 ## [0.17.0.0] - 2026-09-25
 
 ### Changed
