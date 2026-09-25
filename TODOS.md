@@ -192,7 +192,7 @@
 
 **Why:** No screen calls it since 0.23.0.0, which gave every row 区切る時刻 and 「ここで分割」 (`splitAt`). It stays one release so a tab or app still running 0.22 can finish a split it shows.
 
-**Context:** `apps/api/src/rpc/switches.ts` (the procedure's comment says the same), the mention on `rowEditInputSchema` in `packages/shared/src/schemas.ts` (the merges keep using the schema), the `splitInHalf` cases in `apps/api/src/rpc/*.test.ts`, and the `cannot-split` wording in README's API section if nothing else answers it.
+**Context:** `apps/api/src/rpc/switches.ts` (the procedure's comment says the same), the mention on `rowEditInputSchema` in `packages/shared/src/schemas.ts` (the merges keep using the schema), the `splitInHalf` cases in `apps/api/src/rpc/*.test.ts`.
 
 **Effort:** S
 **Priority:** P4
@@ -370,6 +370,18 @@
 
 **Effort:** S
 **Priority:** P4
+**Depends on:** None
+
+### Give the plain Pressables the focus ring and pressed look `Control` has
+
+**What:** Draw the pen's 「Control の押下とフォーカス」 look (2 px `ink` ring at a 2 px offset on keyboard focus, 70 % while pressed) on the Pressables that are not `Control`s: the correction sheet's row headers, `ActivityPill`, the sheet's 完了 and ✕, and any others a sweep finds. The pen first, for the ones whose shape the ring would change.
+
+**Why:** Since 0.23.0.0 the sheet's buttons show where keyboard focus is and answer a press, but a keyboard user tabbing from a merge button to the row header next to it loses the ring, and a tap on a pill gives no feedback.
+
+**Context:** `apps/app/src/components/control.tsx` holds the classes; `RowHeader` and the footer's 完了 in `apps/app/src/app/(app)/correction.tsx`, `apps/app/src/components/activity-pill.tsx`, and the ✕ in `apps/app/src/components/sheet.tsx`. Raised by the design pass of the ship review of 0.23.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
 **Depends on:** None
 
 ## Auth

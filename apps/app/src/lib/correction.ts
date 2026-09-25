@@ -36,12 +36,16 @@ export type DaySnapshot = ReplaceDayInput['rows']
 /**
  * Where 「ここで分割」 may cut a row, in epoch ms on the stored zone's quarter hours; `initial` is where 区切る時刻 opens.
  * `middleMinute`: no quarter hour fits, so the range is the one whole minute in the row's middle (min = max = initial).
+ * `earliest` – `latest`: every whole minute `switches.splitAt` takes, so a time already on the readout stays while it
+ * is still one of them, even once today's clock moves the range (a middle minute, then quarter hours).
  */
 export type CutRange = {
   min: number
   max: number
   initial: number
   middleMinute: boolean
+  earliest: number
+  latest: number
 }
 
 export type CorrectionRow = {
@@ -188,8 +192,8 @@ const CLOCK_SKEW_MARGIN_MS = 15 * 60_000
  * - the quarter hours in reach, opening at the middle one
  * - `middleMinute`: the one whole minute in the middle, when no quarter hour fits
  * - null when not even a whole minute keeps a minute from both ends (a fresh current state: until 17 min past its start)
- * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15, middleMinute: false }
- * @example cutRange(nineOhOne, nineFourteen, bounds) // { min: 9:07, max: 9:07, initial: 9:07, middleMinute: true }
+ * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15, middleMinute: false, earliest: 0:00, latest: 6:59 }
+ * @example cutRange(nineOhOne, nineFourteen, bounds) // { min: 9:07, max: 9:07, initial: 9:07, middleMinute: true, earliest: 9:02, latest: 9:13 }
  */
 function cutRange(
   startedAt: number,
@@ -204,6 +208,10 @@ function cutRange(
     first: bounds.start + Math.ceil((floor - bounds.start) / step) * step,
     last: bounds.start + Math.floor((ceiling - bounds.start) / step) * step,
   })
+  const minutes = stepsInside(MINUTE_MS)
+  // Not even a whole minute keeps a minute from both ends: 「ここで分割」 is disabled.
+  if (minutes.first > minutes.last) return null
+  const reach = { earliest: minutes.first, latest: minutes.last }
   const quarters = stepsInside(QUARTER_MS)
   if (quarters.first <= quarters.last) {
     const count = (quarters.last - quarters.first) / QUARTER_MS
@@ -212,15 +220,19 @@ function cutRange(
       max: quarters.last,
       initial: quarters.first + Math.floor(count / 2) * QUARTER_MS,
       middleMinute: false,
+      ...reach,
     }
   }
-  const minutes = stepsInside(MINUTE_MS)
-  // Not even a whole minute keeps a minute from both ends: 「ここで分割」 is disabled.
-  if (minutes.first > minutes.last) return null
   const middle =
     minutes.first +
     Math.floor((minutes.last - minutes.first) / MINUTE_MS / 2) * MINUTE_MS
-  return { min: middle, max: middle, initial: middle, middleMinute: true }
+  return {
+    min: middle,
+    max: middle,
+    initial: middle,
+    middleMinute: true,
+    ...reach,
+  }
 }
 
 const NO_TRUE_START = { trueStartDate: '', trueStartLabel: '' }
@@ -430,6 +442,27 @@ export function openedCut(row: CorrectionRow): ChosenCut | null {
   return row.cut ? { id: row.id, at: row.cut.initial } : null
 }
 
+/**
+ * The choice a cut panel should hold so the readout never follows today's clock: what the stepper shows, whenever the kept
+ * choice is not already that (a row that had no cut when its panel opened, or a choice a cut or an undo left outside).
+ * Called by the panel's cut group at every render, which stores the answer.
+ * @param row - The selected row.
+ * @param chosen - The choice the panel holds now.
+ * @param shown - The stepper drawn from them ({@link cutStepper}).
+ * @returns
+ * - The time on the readout as a {@link ChosenCut}, when the panel holds another or none
+ * - null when the panel already holds it, or the row has no cut
+ * @example cutToHold(carriedIn, null, cutStepper(carriedIn, null, TZ)) // { id: 'w', at: 3:15 }
+ */
+export function cutToHold(
+  row: CorrectionRow,
+  chosen: ChosenCut | null,
+  shown: CutStepper,
+): ChosenCut | null {
+  if (shown.at === null || shown.at === chosen?.at) return null
+  return { id: row.id, at: shown.at }
+}
+
 /** What the 区切る時刻 row draws: the cut time (null = no cut), its readout, and where each step lands (null = disabled). */
 export type CutStepper = {
   at: number | null
@@ -438,9 +471,10 @@ export type CutStepper = {
 }
 
 /**
- * The 区切る時刻 stepper of the selected row: a chosen time stays while it is inside the row's current range (so today's
- * clock never moves it), and anything else (another row's choice, a time a cut or an undo left outside) opens at `initial`.
- * Steps clamp to the range; a step that cannot move is disabled. Read by either panel's cut group at every render.
+ * The 区切る時刻 stepper of the selected row: a chosen time stays while `splitAt` still takes it (`earliest` – `latest`, so
+ * today's clock never moves it), and anything else (another row's choice, a time a cut or an undo left outside) opens at
+ * `initial`. Steps land on the range's quarter hours, clamped to it; a step that cannot move its way is disabled, and so
+ * is every step on a middle-minute row. Read by either panel's cut group at every render.
  * @param row - The selected row.
  * @param chosen - The last stepped time, or null before any step.
  * @param timeZone - The stored zone the readout is written in.
@@ -463,11 +497,22 @@ export function cutStepper(
       targets: { [-60]: null, [-15]: null, [15]: null, [60]: null },
     }
   const kept =
-    chosen?.id === row.id && chosen.at >= cut.min && chosen.at <= cut.max
+    chosen?.id === row.id &&
+    chosen.at >= cut.earliest &&
+    chosen.at <= cut.latest
   const at = kept ? chosen.at : cut.initial
   const step = (minutes: CutStepMinutes): number | null => {
-    const target = Math.min(Math.max(at + minutes * 60_000, cut.min), cut.max)
-    return target === at ? null : target
+    // A middle-minute row cuts only at its one minute.
+    if (cut.middleMinute) return null
+    // Round toward `at` onto the quarter hours, so a kept minute off them (a middle minute before the clock made room for
+    // a quarter) steps onto the grid.
+    const quarters = (at + minutes * MINUTE_MS - cut.min) / QUARTER_MS
+    const onGrid =
+      cut.min +
+      (minutes > 0 ? Math.floor(quarters) : Math.ceil(quarters)) * QUARTER_MS
+    const target = Math.min(Math.max(onGrid, cut.min), cut.max)
+    const movesItsWay = minutes > 0 ? target > at : target < at
+    return movesItsWay ? target : null
   }
   return {
     at,

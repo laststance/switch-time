@@ -142,9 +142,10 @@ type CorrectionState = ReturnType<typeof useCorrectionState>
 type Pressed = { day: string; epoch: string }
 
 // The sheet's own state ({@link CorrectionSheet}): the selected row, and the row whose header takes focus once a cut or a
-// merge lands (the part the cut created, the row the merge kept), since the pressed button left with its panel. It belongs to the day shown: a new day (midnight on today's sheet,
-// a `?day=` change) starts it over during render ({@link sheetView}), so an answer from a press on the day before, which
-// applies only while `day` is still its own ({@link onPressedDay}), selects nothing there. What the sheet said about a day
+// merge lands (the part the cut created, the row the merge kept), since the pressed button left with its panel. It belongs
+// to the day shown: a new day (midnight on today's sheet, a `?day=` change) starts it over during render ({@link sheetView}),
+// so an answer from a press on the day before, which applies only while `day` is still its own ({@link onPressedDay}),
+// selects nothing there. What the sheet said about a day
 // (the last failure's line, the archived notice) lives in the store with the undo slot, so a press whose answer lands after
 // the sheet closed still says it when that day's sheet reopens; the notice's row is selected then, so its panel shows it.
 function useCorrectionState(day: string) {

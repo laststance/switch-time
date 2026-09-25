@@ -11,6 +11,7 @@ import {
   archivedBox,
   correctionRows,
   cutStepper,
+  cutToHold,
   cutNotes,
   cutTotalsEffects,
   dayBaseline,
@@ -142,24 +143,32 @@ test('a past day lists the carried-in record last, selectable but without move o
       max: at(day, 23, 45).getTime(),
       initial: at(day, 21).getTime(),
       middleMinute: false,
+      earliest: at(day, 18, 1).getTime(),
+      latest: at(day, 23, 59).getTime(),
     },
     {
       min: at(day, 12, 15).getTime(),
       max: at(day, 17, 45).getTime(),
       initial: at(day, 15).getTime(),
       middleMinute: false,
+      earliest: at(day, 12, 1).getTime(),
+      latest: at(day, 17, 59).getTime(),
     },
     {
       min: at(day, 9, 15).getTime(),
       max: at(day, 11, 45).getTime(),
       initial: at(day, 10, 30).getTime(),
       middleMinute: false,
+      earliest: at(day, 9, 1).getTime(),
+      latest: at(day, 11, 59).getTime(),
     },
     {
       min: bounds.start,
       max: at(day, 8, 45).getTime(),
       initial: at(day, 4, 15).getTime(),
       middleMinute: false,
+      earliest: bounds.start,
+      latest: at(day, 8, 59).getTime(),
     },
   ])
 })
@@ -589,6 +598,8 @@ test('区切る時刻 reaches 0:00 on a record that began the night before and s
     max: at(day, 6, 45).getTime(),
     initial: at(day, 3, 15).getTime(),
     middleMinute: false,
+    earliest: at(day, 0).getTime(),
+    latest: at(day, 6, 59).getTime(),
   })
 })
 
@@ -642,6 +653,8 @@ test('区切る時刻 on a record that covers the whole past day ends at 23:45, 
     max: at(day, 23, 45).getTime(),
     initial: at(day, 11, 45).getTime(),
     middleMinute: false,
+    earliest: at(day, 0).getTime(),
+    latest: at(day, 23, 59).getTime(),
   })
 })
 
@@ -670,6 +683,8 @@ test('区切る時刻 on today’s current record stays a quarter hour and a min
     max: at(day, 9, 45).getTime(),
     initial: at(day, 4, 45).getTime(),
     middleMinute: false,
+    earliest: at(day, 0).getTime(),
+    latest: at(day, 9, 51).getTime(),
   })
 })
 
@@ -698,6 +713,8 @@ test('区切る時刻 on a record too short for any quarter hour cuts it at its 
     max: at(day, 0, 7).getTime(),
     initial: at(day, 0, 7).getTime(),
     middleMinute: true,
+    earliest: at(day, 0, 1).getTime(),
+    latest: at(day, 0, 13).getTime(),
   })
 })
 
@@ -749,6 +766,8 @@ test('区切る時刻 on a 13-minute row of the day’s own cuts it at 9:07, the
     max: at(day, 9, 7).getTime(),
     initial: at(day, 9, 7).getTime(),
     middleMinute: true,
+    earliest: at(day, 9, 2).getTime(),
+    latest: at(day, 9, 13).getTime(),
   })
 })
 
@@ -778,7 +797,215 @@ test('区切る時刻 on today’s current row waits until it is 17 minutes old,
     max: at(day, 10, 1).getTime(),
     initial: at(day, 10, 1).getTime(),
     middleMinute: true,
+    earliest: at(day, 10, 1).getTime(),
+    latest: at(day, 10, 1).getTime(),
   })
+})
+
+test('区切る時刻 on a short row that still holds one quarter hour cuts at that quarter, not at its middle minute', () => {
+  // Arrange: 仕事 9:13 – 9:17 on a past day; 9:15 is the one quarter hour a minute in from both ends (9:14 – 9:16).
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [row('w', 'work', at(day, 9, 13)), row('h', 'home', at(day, 9, 17))],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const work = correctionRows(list, activities, bounds).at(-1)
+
+  // Assert
+  expect(work?.name).toBe('仕事')
+  expect(work?.cut).toEqual({
+    min: at(day, 9, 15).getTime(),
+    max: at(day, 9, 15).getTime(),
+    initial: at(day, 9, 15).getTime(),
+    middleMinute: false,
+    earliest: at(day, 9, 14).getTime(),
+    latest: at(day, 9, 16).getTime(),
+  })
+})
+
+test('the cut stepper on a row cut at its middle minute opens there with every step disabled', () => {
+  // Arrange: 仕事 9:01 – 9:14 on a past day, cut only at 9:07.
+  const day = '2026-09-08'
+  const work = correctionRows(
+    {
+      carriedInRunStart: null,
+      carriedIn: null,
+      rows: [row('w', 'work', at(day, 9, 1)), row('h', 'home', at(day, 9, 14))],
+      carriedOut: null,
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  ).at(-1)
+  if (!work) throw new Error('no row')
+
+  // Act
+  const opened = openedCut(work)
+  const stepper = cutStepper(work, opened, TZ)
+
+  // Assert
+  expect(opened).toEqual({ id: 'w', at: at(day, 9, 7).getTime() })
+  expect(stepper).toEqual({
+    at: at(day, 9, 7).getTime(),
+    label: '9:07',
+    targets: { [-60]: null, [-15]: null, [15]: null, [60]: null },
+  })
+})
+
+test('the cut time on today’s current short row stays at the minute it opened with while the clock moves on', () => {
+  // Arrange: 仕事 tapped at 10:00 today; the panel opens at 10:17, when 10:01 is the only minute in reach.
+  const day = '2026-09-09'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [row('w', 'work', at(day, 10))],
+    carriedOut: null,
+  }
+  const boundsAt = (minute: number) => ({
+    ...dayBounds(day, TZ),
+    now: at(day, 10, minute).getTime(),
+    timeZone: TZ,
+  })
+  const whenOpened = correctionRows(list, activities, boundsAt(17))[0]
+  if (!whenOpened) throw new Error('no row')
+  const opened = openedCut(whenOpened)
+
+  // Act: two minutes later the middle of 10:01 – 10:03 is 10:02, and 10:01 is still a minute splitAt takes.
+  const later = correctionRows(list, activities, boundsAt(19))[0]
+  if (!later) throw new Error('no row')
+  const stepper = cutStepper(later, opened, TZ)
+
+  // Assert
+  expect(later.cut?.initial).toBe(at(day, 10, 2).getTime())
+  expect(stepper.label).toBe('10:01')
+  expect(stepper.targets).toEqual({
+    [-60]: null,
+    [-15]: null,
+    [15]: null,
+    [60]: null,
+  })
+})
+
+test('a middle minute on the readout stays once the clock makes room for quarter hours, and the steps move onto them', () => {
+  // Arrange: 仕事 tapped at 10:00 today; the panel opens at 10:18, when only whole minutes 10:01 – 10:02 fit.
+  const day = '2026-09-09'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [row('w', 'work', at(day, 10))],
+    carriedOut: null,
+  }
+  const boundsAt = (minute: number) => ({
+    ...dayBounds(day, TZ),
+    now: at(day, 10, minute).getTime(),
+    timeZone: TZ,
+  })
+  const whenOpened = correctionRows(list, activities, boundsAt(18))[0]
+  if (!whenOpened) throw new Error('no row')
+  const opened = openedCut(whenOpened)
+
+  // Act: at 10:31 the 10:15 quarter fits, a minute in from 10:15, the latest the clock margin allows.
+  const later = correctionRows(list, activities, boundsAt(31))[0]
+  if (!later) throw new Error('no row')
+  const stepper = cutStepper(later, opened, TZ)
+
+  // Assert
+  expect(opened).toEqual({ id: 'w', at: at(day, 10, 1).getTime() })
+  expect(later.cut?.middleMinute).toBe(false)
+  expect(stepper.label).toBe('10:01')
+  expect(stepper.targets).toEqual({
+    [-60]: null,
+    [-15]: null,
+    [15]: at(day, 10, 15).getTime(),
+    [60]: at(day, 10, 15).getTime(),
+  })
+})
+
+test('a panel opened before its row could be cut holds the first cut time it shows, so the clock cannot move it later', () => {
+  // Arrange: 仕事 tapped at 10:00 today; the panel opened at 10:16 with no cut, and at 10:19 the row has 10:01 – 10:03.
+  const day = '2026-09-09'
+  const later = correctionRows(
+    {
+      carriedInRunStart: null,
+      carriedIn: null,
+      rows: [row('w', 'work', at(day, 10))],
+      carriedOut: null,
+    },
+    activities,
+    { ...dayBounds(day, TZ), now: at(day, 10, 19).getTime(), timeZone: TZ },
+  )[0]
+  if (!later) throw new Error('no row')
+
+  // Act
+  const held = cutToHold(later, null, cutStepper(later, null, TZ))
+
+  // Assert
+  expect(held).toEqual({ id: 'w', at: at(day, 10, 2).getTime() })
+})
+
+test('a panel already holding the time on its readout, or showing no cut, holds nothing new', () => {
+  // Arrange
+  const { carriedIn } = carriedWork()
+  const opened = openedCut(carriedIn)
+  const uncuttable = { ...carriedIn, cut: null }
+
+  // Act
+  const heldWhenShown = cutToHold(
+    carriedIn,
+    opened,
+    cutStepper(carriedIn, opened, TZ),
+  )
+  const heldWithoutCut = cutToHold(
+    uncuttable,
+    null,
+    cutStepper(uncuttable, null, TZ),
+  )
+
+  // Assert
+  expect(heldWhenShown).toBeNull()
+  expect(heldWithoutCut).toBeNull()
+})
+
+test('the lines under ここで分割 on a short row of the day’s own say only that it is cut at its middle, never promising 計測', () => {
+  // Arrange: 仕事 9:01 – 9:14 on a past day, with the class forced to auto_unused to prove an own row ignores it.
+  const day = '2026-09-08'
+  const work = correctionRows(
+    {
+      carriedInRunStart: null,
+      carriedIn: null,
+      rows: [row('w', 'work', at(day, 9, 1)), row('h', 'home', at(day, 9, 14))],
+      carriedOut: null,
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  ).at(-1)
+  if (!work) throw new Error('no row')
+
+  // Act
+  const notes = cutNotes(
+    work,
+    { idleThresholdMs: 12 * 3_600_000, dayExcluded: 'auto_unused' },
+    at(day, 9, 7).getTime(),
+  )
+
+  // Assert
+  expect(notes).toEqual(['短い記録のため、真ん中で区切ります'])
 })
 
 test('the origin note names a record started two days earlier by that day’s date', () => {
@@ -941,8 +1168,8 @@ test('the cut time the panel opened with stays put on today’s current record a
   expect(cutStepper(later, null, TZ).label).toBe('6:00')
 })
 
-test('a carried-in panel with no quarter hour to cut at opens with no cut time', () => {
-  // Arrange: 睡眠 from 30 s before midnight, and the clock at 0:14 leaves no quarter hour.
+test('a carried-in panel with no whole minute to cut at opens with no cut time', () => {
+  // Arrange: 睡眠 from 30 s before midnight, and the clock at 0:14 keeps every minute inside the quarter hour of clock margin.
   const day = '2026-09-09'
   const carriedIn = correctionRows(
     {
@@ -1201,7 +1428,7 @@ test('a cut of the day’s own row arms the day undo that selects that row again
   })
 })
 
-test('after an undo the sheet selects the cut’s carried-in row by id and the split’s halved row by its rewritten start', () => {
+test('after an undo the sheet selects a cut carried-in row by id and a cut own row by its rewritten start', () => {
   // Arrange
   const day = '2026-09-08'
   const written = [
@@ -1211,11 +1438,11 @@ test('after an undo the sheet selects the cut’s carried-in row by id and the s
 
   // Act
   const afterCut = reselectedRow({ id: 'carried-in' }, written)
-  const afterSplit = reselectedRow(
+  const afterOwnRowCut = reselectedRow(
     { startedAt: at(day, 18).getTime() },
     written,
   )
-  const afterSplitOfAGoneRow = reselectedRow(
+  const afterCutOfAGoneRow = reselectedRow(
     { startedAt: at(day, 12).getTime() },
     written,
   )
@@ -1223,8 +1450,8 @@ test('after an undo the sheet selects the cut’s carried-in row by id and the s
 
   // Assert
   expect(afterCut).toBe('carried-in')
-  expect(afterSplit).toBe('new-home')
-  expect(afterSplitOfAGoneRow).toBeNull()
+  expect(afterOwnRowCut).toBe('new-home')
+  expect(afterCutOfAGoneRow).toBeNull()
   expect(afterMove).toBeNull()
 })
 
@@ -1983,6 +2210,8 @@ test('区切る時刻 lands on the wall clock’s quarter hours in a zone offset
     max: new Date('2026-09-08T06:45:00+05:45').getTime(),
     initial: new Date('2026-09-08T03:15:00+05:45').getTime(),
     middleMinute: false,
+    earliest: new Date('2026-09-08T00:00:00+05:45').getTime(),
+    latest: new Date('2026-09-08T06:59:00+05:45').getTime(),
   })
   expect(stepper.label).toBe('3:15')
 })
@@ -2014,6 +2243,8 @@ test('区切る時刻 stays on quarter hours across the spring-forward gap of a 
     max: new Date('2026-03-08T06:45:00-04:00').getTime(),
     initial: new Date('2026-03-08T03:45:00-04:00').getTime(),
     middleMinute: false,
+    earliest: new Date('2026-03-08T00:00:00-05:00').getTime(),
+    latest: new Date('2026-03-08T06:59:00-04:00').getTime(),
   })
   expect(stepper.label).toBe('3:45')
 })
@@ -2073,8 +2304,8 @@ test('the idle line names a threshold that is not whole hours in minutes', () =>
   ])
 })
 
-test('the day’s own rows never report a totals effect of a cut', () => {
-  // Arrange: 9/8's own 家事 row, with facts under which a carried-in record would report both effects.
+test('a cut that leaves both parts of an own row over the idle threshold reports no totals effect, even on an auto_unused day', () => {
+  // Arrange: 9/8's own 家事 row, with a 1-minute threshold both parts exceed, and facts under which a carried-in record reports 計測.
   const { rows } = carriedWork()
   const ownRow = rows[0]
   if (!ownRow) throw new Error('no own row')

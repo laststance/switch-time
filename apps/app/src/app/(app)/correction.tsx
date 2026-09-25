@@ -20,6 +20,7 @@ import {
   archivedBox,
   CUT_STEPS,
   cutStepper,
+  cutToHold,
   cutNotes,
   openedCut,
   revealOffset,
@@ -338,6 +339,9 @@ function CutControls({
 }: CutControlsProps) {
   const [chosen, setChosen] = useState(() => openedCut(row))
   const stepper = cutStepper(row, chosen, timeZone)
+  // Hold what the readout shows, so today's clock never moves it.
+  const held = cutToHold(row, chosen, stepper)
+  if (held) setChosen(held)
   const step = (target: number): void => {
     setChosen({ id: row.id, at: target })
     // Android and web read the readout's live region; iOS needs the announcement.

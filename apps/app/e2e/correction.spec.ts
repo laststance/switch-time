@@ -2514,6 +2514,26 @@ test('次の記録に統合 moves keyboard focus to the row that absorbed the me
   ).toBeFocused()
 })
 
+test('前の記録に統合 on the day’s first row moves keyboard focus to the carried-in record it joined, leaving its panel closed', async ({
+  page,
+}) => {
+  // Arrange: 仕事 from 22:00 the day before, 食事 from 7:00.
+  const { dialog } = await openCarriedInWork(page)
+  await dialog
+    .getByRole('button', { name: '食事 7:00 – 24:00 17h 00m' })
+    .click()
+
+  // Act
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert
+  const joined = dialog.getByRole('button', {
+    name: '仕事 0:00 – 24:00 24h 00m',
+  })
+  await expect(joined).toBeFocused()
+  await expect(joined).toHaveAttribute('aria-expanded', 'false')
+})
+
 test('a control shows a 2 px ink ring 2 px outside it on keyboard focus, and none after a mouse click', async ({
   page,
 }) => {
