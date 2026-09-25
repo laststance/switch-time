@@ -198,6 +198,10 @@ function ActionButton({
 type ActionsProps = {
   row: CorrectionRow
   pending: boolean
+  /** Which untapped days switching the row between detox and an activity may count differently; null: none. */
+  pickNote: string | null
+  /** Which untapped days a merge the row allows may count differently; null: none. */
+  mergeNote: string | null
   onMove: (deltaMinutes: 15 | -15) => void
   /** The activity picker, built by the caller. */
   picker: ReactNode
@@ -210,6 +214,8 @@ type ActionsProps = {
 function Actions({
   row,
   pending,
+  pickNote,
+  mergeNote,
   onMove,
   picker,
   onMergePrevious,
@@ -239,7 +245,10 @@ function Actions({
         />
       </View>
       <View className="gap-1.75">
-        <Text className="text-sub text-xs font-medium">活動を変える</Text>
+        <View className="gap-1">
+          <Text className="text-sub text-xs font-medium">活動を変える</Text>
+          {pickNote && <Text className={NOTE}>{pickNote}</Text>}
+        </View>
         {picker}
       </View>
       <View className="gap-2">
@@ -257,6 +266,7 @@ function Actions({
             className="flex-1"
           />
         </View>
+        {mergeNote && <Text className={NOTE}>{mergeNote}</Text>}
         <ActionButton
           title="半分で分割"
           disabled={!can(row.canSplit)}
@@ -317,6 +327,8 @@ type CarriedInActionsProps = {
   timeZone: string
   totalsFacts: TotalsFacts
   noticeId: string | null
+  /** Which untapped days switching the record between detox and an activity may count differently; null: none. */
+  pickNote: string | null
   /** The activity picker, built by the caller. */
   picker: ReactNode
   onCut: (at: number) => void
@@ -330,6 +342,7 @@ function CarriedInActions({
   timeZone,
   totalsFacts,
   noticeId,
+  pickNote,
   picker,
   onCut,
 }: CarriedInActionsProps) {
@@ -398,6 +411,7 @@ function CarriedInActions({
           <Text className={NOTE}>
             {`記録全体（${row.trueStartLabel}〜）が変わり、${row.trueStartDate}の集計にも反映されます`}
           </Text>
+          {pickNote && <Text className={NOTE}>{pickNote}</Text>}
         </View>
         <ArchivedBox kind={archivedBox(row, noticeId)} />
         {picker}
@@ -431,6 +445,7 @@ type RowPanelProps = {
 
 // The selected row's panel: the carried-in record cuts or changes its activity, the day's own rows get every edit.
 function RowPanel({ row, correction }: RowPanelProps) {
+  const notes = correction.untappedNotes(row)
   const picker = (
     <ActivityPicker
       row={row}
@@ -446,6 +461,7 @@ function RowPanel({ row, correction }: RowPanelProps) {
         timeZone={correction.bounds.timeZone}
         totalsFacts={correction.totalsFacts}
         noticeId={correction.noticeId}
+        pickNote={notes.pick}
         picker={picker}
         onCut={(at) => correction.cut(row, at)}
       />
@@ -454,6 +470,8 @@ function RowPanel({ row, correction }: RowPanelProps) {
     <Actions
       row={row}
       pending={correction.pending}
+      pickNote={notes.pick}
+      mergeNote={notes.merge}
       onMove={(deltaMinutes) => correction.move(row, deltaMinutes)}
       picker={picker}
       onMergePrevious={() => correction.mergePrevious(row)}
@@ -589,6 +607,10 @@ export default function CorrectionSheet() {
         })}
       </ScrollView>
       <StatusLine status={correction.status} />
+      {/* Shown while an undo is offered, even while a write holds the button, so the footer never jumps under a finger. */}
+      {correction.undoNote && (
+        <Text className={NOTE}>{correction.undoNote}</Text>
+      )}
       <Footer
         canUndo={correction.canUndo && !correction.pending}
         onUndo={correction.undo}

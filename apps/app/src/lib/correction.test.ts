@@ -91,6 +91,7 @@ test('a past day lists the carried-in record last, selectable but without move, 
   // Arrange: 睡眠 from the night before, three rows on 9/8, the next switch on 9/9 (so 娯楽 really ends at 24:00).
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-07', 23)),
     rows: [
       row('w', 'work', at(day, 9)),
@@ -145,6 +146,7 @@ test('the running record cannot merge into a previous record whose activity is a
   // Arrange: today 旧仕事 (archived) at 9:00, then 仕事 at 12:00, which runs
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: [row('o', 'old', at(day, 9)), row('w', 'work', at(day, 12))],
     carriedOut: null,
@@ -169,6 +171,7 @@ test('a past record may still merge into a previous record whose activity is arc
   // Arrange: today 旧仕事 (archived) at 9:00, 仕事 at 12:00, then 休息 at 14:00, which runs
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: [
       row('o', 'old', at(day, 9)),
@@ -198,6 +201,7 @@ test('the last row cannot merge into the next day’s switch even when that swit
   // Arrange: 仕事 9:00 and 娯楽 18:00 on 9/8 (the first states ever); 家事 at 9/9 0:00 sharp closes 娯楽 on the day's very end.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: [row('w', 'work', at(day, 9)), row('f', 'fun', at(day, 18))],
     carriedOut: row('h', 'home', at('2026-09-09', 0)),
@@ -223,6 +227,7 @@ test('a detox row names itself, has no colour and keeps every correction', () =>
   // Arrange: 仕事 9:00, detox 12:00, 娯楽 18:00 on a past day; the detox span is the one in the middle.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: [
       row('w', 'work', at(day, 9)),
@@ -268,6 +273,7 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
   // Arrange: 仕事 since midnight (so the carried-in 睡眠 has nothing left to show), 家事 tapped one minute ago.
   const day = '2026-09-09'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
     rows: [row('w', 'work', at(day, 0)), row('h', 'home', at(day, 9, 59))],
     carriedOut: null,
@@ -294,6 +300,7 @@ test('today keeps the first row at or after 0:00 and the current row out of the 
 test('the title names the day unless it is today, and the baseline an edit sends holds the day’s own rows with their ids, the carried-in record at its revision and the switch its last row runs into', () => {
   // Arrange
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: { ...row('s', 'sleep', at('2026-09-07', 23)), revision: 3 },
     rows: [row('w', 'work', at('2026-09-08', 9))],
     carriedOut: row('t', 'home', at('2026-09-09', 8)),
@@ -315,6 +322,7 @@ test('the day undo writes a detox re-tap back as one, so the run it started does
   // Arrange: a detox re-tap at 9:00 that started a new run, then 仕事 at 12:00
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('c', null, at('2026-09-01', 20)),
     rows: [
       { ...row('d', null, at(day, 9)), startsRun: true },
@@ -342,6 +350,7 @@ test('undoing a pick on a detox re-tap writes the re-tap back with its mark, so 
   // Arrange: a detox re-tap at 9:00 that started a new run, re-activitied to 仕事 (the stored row keeps its mark)
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('c', null, at('2026-09-01', 20)),
     rows: [{ ...row('d', null, at(day, 9)), startsRun: true }],
     carriedOut: null,
@@ -387,6 +396,7 @@ test('undoing a pick on a detox re-tap writes the re-tap back with its mark, so 
 test('a day with no switch before it sends a baseline that says so, so a record appearing before the day is caught', () => {
   // Arrange
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: [row('w', 'work', at('2026-09-08', 9))],
     carriedOut: null,
@@ -402,6 +412,7 @@ test('a day with no switch before it sends a baseline that says so, so a record 
 
 // A day of 301 one-minute switches from 9:00: one more than a baseline lists.
 const busyDay = (): ListedDay => ({
+  carriedInRunStart: null,
   carriedIn: row('c', 'sleep', at('2026-09-07', 23)),
   rows: Array.from({ length: 301 }, (_, index) =>
     row(`r${index}`, 'work', at('2026-09-08', 9, index)),
@@ -428,6 +439,7 @@ test('a day busier than a baseline can list is still corrected: the edit sends t
 test('a day of exactly 300 switches, the most a baseline lists, still sends its rows, so its edits keep 元に戻す', () => {
   // Arrange: 300 one-minute switches from 9:00
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: null,
     rows: Array.from({ length: 300 }, (_, index) =>
       row(`r${index}`, 'work', at('2026-09-08', 9, index)),
@@ -534,6 +546,7 @@ test('区切る時刻 reaches 0:00 on a record that began the night before and s
   // Arrange: 仕事 from 9/7 22:00 runs into 9/8 until 家事 at 7:00 (the e2e fixture's shape).
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-07', 22)),
     rows: [row('h', 'home', at(day, 7))],
     carriedOut: null,
@@ -559,6 +572,7 @@ test('区切る時刻 keeps a minute from the record’s true start and from the
   // Arrange: one record began 30 s before midnight and the next switch comes at 7:01.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', new Date(at(day, 0).getTime() - 30_000)),
     rows: [row('h', 'home', at(day, 7, 1))],
     carriedOut: null,
@@ -581,6 +595,7 @@ test('区切る時刻 on a record that covers the whole past day ends at 23:45, 
   // Arrange: 仕事 from 9/7 22:00 until 家事 on 9/9 at 9:00; 9/8 has no row of its own.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-07', 22)),
     rows: [],
     carriedOut: row('h', 'home', at('2026-09-09', 9)),
@@ -609,6 +624,7 @@ test('区切る時刻 on today’s current record stays a quarter hour and a min
   // Arrange: 睡眠 since last night is still running at 10:07 today.
   const day = '2026-09-09'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
     rows: [],
     carriedOut: null,
@@ -635,6 +651,7 @@ test('区切る時刻 is not offered when no quarter hour keeps a minute from bo
   // Arrange: a record from 30 s before midnight to 0:14.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', new Date(at(day, 0).getTime() - 30_000)),
     rows: [row('h', 'home', at(day, 0, 14))],
     carriedOut: null,
@@ -657,6 +674,7 @@ test('the origin note names a record started two days earlier by that day’s da
   // Arrange: 睡眠 from 9/6 22:00 runs through 9/7 into 9/8.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-06', 22)),
     rows: [row('w', 'work', at(day, 9))],
     carriedOut: null,
@@ -679,6 +697,7 @@ test('the origin note names a record started two days earlier by that day’s da
 const carriedWork = () => {
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-07', 22)),
     rows: [row('h', 'home', at(day, 7))],
     carriedOut: null,
@@ -715,6 +734,7 @@ test('the cut stepper goes back to the middle after a cut shrinks the record pas
   // Arrange: after a cut at 3:00 the carried-in record ends at 3:00 (range 0:00 – 2:45).
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-07', 22)),
     rows: [row('c', 'work', at(day, 3)), row('h', 'home', at(day, 7))],
     carriedOut: null,
@@ -757,6 +777,7 @@ test('the cut stepper keeps a chosen time on today’s current record as the clo
   // Arrange: 睡眠 since last night; 10:00 was chosen at 10:22, and the clock now reads 10:36 (the range ends a quarter and a minute before now).
   const day = '2026-09-09'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
     rows: [],
     carriedOut: null,
@@ -786,6 +807,7 @@ test('the cut time the panel opened with stays put on today’s current record a
   // Arrange: 睡眠 since last night; the panel opened at 10:36 (range 0:00 – 10:15) and the clock now reads 12:36 (0:00 – 12:15).
   const day = '2026-09-09'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
     rows: [],
     carriedOut: null,
@@ -813,6 +835,7 @@ test('a carried-in panel with no quarter hour to cut at opens with no cut time',
   const day = '2026-09-09'
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('s', 'sleep', new Date(at(day, 0).getTime() - 30_000)),
       rows: [],
       carriedOut: null,
@@ -866,6 +889,7 @@ test('without a cut range the stepper shows a dash and every step is disabled', 
   // Arrange: a record from 30 s before midnight to 0:14 leaves no quarter hour.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', new Date(at(day, 0).getTime() - 30_000)),
     rows: [row('h', 'home', at(day, 0, 14))],
     carriedOut: null,
@@ -916,6 +940,7 @@ test('a pick on a carried-in detox record arms an undo back to detox', () => {
   // Arrange
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('d', null, at('2026-09-07', 22)),
     rows: [row('h', 'home', at(day, 7))],
     carriedOut: null,
@@ -951,6 +976,7 @@ test('a pick away from an archived activity on the carried-in record arms no und
   // Arrange: the carried-in record holds 旧仕事, archived since.
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('o', 'old', at('2026-09-07', 22)),
     rows: [row('h', 'home', at(day, 7))],
     carriedOut: null,
@@ -1360,6 +1386,7 @@ test('the carried-in panel warns before a pick away from an archived activity an
   }
   const before = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('o', 'old', at('2026-09-07', 22)),
       rows: [row('h', 'home', at(day, 7))],
       carriedOut: null,
@@ -1369,6 +1396,7 @@ test('the carried-in panel warns before a pick away from an archived activity an
   )
   const after = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('o', 'sleep', at('2026-09-07', 22)),
       rows: [row('h', 'home', at(day, 7))],
       carriedOut: null,
@@ -1429,6 +1457,7 @@ test('a pick on the carried-in record only writes if no other write reached the 
 const wholeDayWork = () => {
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-07', 22)),
     rows: [],
     carriedOut: row('h', 'home', at('2026-09-09', 0)),
@@ -1492,6 +1521,7 @@ test('a cut of a record longer than twice the threshold never frees idle time', 
   const day = '2026-09-08'
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('s', 'sleep', at('2026-09-06', 22)),
       rows: [],
       carriedOut: row('h', 'home', at('2026-09-09', 22)),
@@ -1521,6 +1551,7 @@ test('a carried-in detox record never reports idle time, since detox is never id
   const day = '2026-09-08'
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('d', null, at('2026-09-07', 22)),
       rows: [],
       carriedOut: row('h', 'home', at('2026-09-09', 0)),
@@ -1553,6 +1584,7 @@ test('a cut of a detox past its measured week says the untapped day becomes 計�
   // so the server counts 9/8 as unused and the cut's own switch is what measures it.
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('d', null, at('2026-08-31', 22)),
       rows: [],
       carriedOut: row('h', 'home', at('2026-09-09', 0)),
@@ -1728,6 +1760,7 @@ test('the lines under ここで分割 spell each totals effect, or why no cut is
   const day = '2026-09-08'
   const tooShort = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('w', 'work', new Date(at(day, 0).getTime() - 30_000)),
       rows: [row('h', 'home', at(day, 0, 14))],
       carriedOut: null,
@@ -1758,6 +1791,7 @@ test('the lines under ここで分割 spell each totals effect, or why no cut is
 test('a day that has not begun yet lists nothing, so the running record offers no cut in the future', () => {
   // Arrange: 仕事 has run since 9/9 9:00; the sheet is opened for 9/10 while the clock reads 9/9 10:00.
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', at('2026-09-09', 9)),
     rows: [],
     carriedOut: null,
@@ -1780,6 +1814,7 @@ test('区切る時刻 lands on the wall clock’s quarter hours in a zone offset
   const zone = 'Asia/Kathmandu'
   const day = '2026-09-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', new Date('2026-09-07T22:00:00+05:45')),
     rows: [row('h', 'home', new Date('2026-09-08T07:00:00+05:45'))],
     carriedOut: null,
@@ -1809,6 +1844,7 @@ test('区切る時刻 stays on quarter hours across the spring-forward gap of a 
   const zone = 'America/New_York'
   const day = '2026-03-08'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('w', 'work', new Date('2026-03-07T22:00:00-05:00')),
     rows: [row('h', 'home', new Date('2026-03-08T07:00:00-04:00'))],
     carriedOut: null,
@@ -1837,6 +1873,7 @@ test('the idle line appears only once the running record is longer than the thre
   // Arrange: 睡眠 since 9/8 23:00 is still running on 9/9, which already has no row of its own.
   const day = '2026-09-09'
   const list: ListedDay = {
+    carriedInRunStart: null,
     carriedIn: row('s', 'sleep', at('2026-09-08', 23)),
     rows: [],
     carriedOut: null,
@@ -1912,6 +1949,7 @@ test('a pick on a carried-in record names the revision the day list reported for
   const day = '2026-09-08'
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: { ...row('d', null, at('2026-09-07', 22)), revision: 2 },
       rows: [row('h', 'home', at(day, 7))],
       carriedOut: null,
@@ -1937,6 +1975,7 @@ test('a carried-in record whose activity the cached list does not know yet shows
   const day = '2026-09-08'
   const carriedIn = correctionRows(
     {
+      carriedInRunStart: null,
       carriedIn: row('n', 'new-elsewhere', at('2026-09-07', 22)),
       rows: [row('h', 'home', at(day, 7))],
       carriedOut: null,
@@ -2173,7 +2212,12 @@ test('a day’s fingerprint changes with any row, the carried-in record or the n
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
   const carried = row('c', 'sleep', new Date('2026-09-07T23:00:00+09:00'))
   const next = row('n', 'sleep', new Date('2026-09-09T07:00:00+09:00'))
-  const day: ListedDay = { carriedIn: carried, rows: [work], carriedOut: next }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: carried,
+    rows: [work],
+    carriedOut: next,
+  }
 
   // Act
   const same = dayFingerprint({ ...day, rows: [{ ...work }] })
@@ -2191,15 +2235,25 @@ test('a day’s fingerprint changes with any row, the carried-in record or the n
   // Assert
   expect(same).toBe(dayFingerprint(day))
   expect(new Set([dayFingerprint(day), ...variants]).size).toBe(9)
-  expect(dayFingerprint({ carriedIn: null, rows: [], carriedOut: null })).toBe(
-    '[[],null,null]',
-  )
+  expect(
+    dayFingerprint({
+      carriedInRunStart: null,
+      carriedIn: null,
+      rows: [],
+      carriedOut: null,
+    }),
+  ).toBe('[[],null,null]')
 })
 
 test('a read of the day ends the reading line and records what it showed, and a later read that differs expires the line', () => {
   // Arrange
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [work],
+    carriedOut: null,
+  }
   const moved: ListedDay = {
     ...day,
     rows: [{ ...work, startedAt: at('2026-09-08', 9, 15) }],
@@ -2236,7 +2290,12 @@ test('a read of the day ends the reading line and records what it showed, and a 
 test('a read that landed no later than the failure decides nothing, and a zone write in flight holds 元に戻す but not the line', () => {
   // Arrange
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [work],
+    carriedOut: null,
+  }
   const line: DayLine = {
     at: 1000,
     kind: 'refused',
@@ -2285,7 +2344,12 @@ test('a read that landed no later than the failure decides nothing, and a zone w
 test('a failed read marks the line stale, except a sign-in line or one already stale, and the next good read clears it', () => {
   // Arrange
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [work],
+    carriedOut: null,
+  }
   const reading: DayLine = {
     at: 1000,
     kind: 'uncertain',
@@ -2329,7 +2393,12 @@ test('a failed read marks the line stale, except a sign-in line or one already s
 test('a good read takes the sign-in line away, since the session is back (signed in again in another tab)', () => {
   // Arrange
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [work],
+    carriedOut: null,
+  }
   const signedOut: DayLine = {
     at: 1000,
     kind: 'unauthorized',
@@ -2355,7 +2424,12 @@ test('a good read takes the sign-in line away, since the session is back (signed
 test('a read retires 元に戻す once the day no longer reads as the slot left it, but not on a failed read or an unknown zone', () => {
   // Arrange: the pick left the carried-in record at revision 4; another device has since moved it to 5.
   const carried = { ...row('c', 'work', at('2026-09-07', 23)), revision: 5 }
-  const listed: ListedDay = { carriedIn: carried, rows: [], carriedOut: null }
+  const listed: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: carried,
+    rows: [],
+    carriedOut: null,
+  }
   const slot: UndoSlot = {
     kind: 'activity',
     day: '2026-09-08',
@@ -2395,7 +2469,12 @@ test('a zone change that only moves the undo’s record or day out of view keeps
   // Arrange: the pick left the record at revision 4, and it is still there, but a new zone lists another record carried in;
   // the day slot was armed in Asia/Tokyo and the day is now read in another zone.
   const other = { ...row('o', 'home', at('2026-09-07', 22)), revision: 1 }
-  const listed: ListedDay = { carriedIn: other, rows: [], carriedOut: null }
+  const listed: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: other,
+    rows: [],
+    carriedOut: null,
+  }
   const activitySlot: UndoSlot = {
     kind: 'activity',
     day: '2026-09-08',
@@ -2556,7 +2635,12 @@ test('a read of a day’s list is still recognised under the key oRPC builds for
 test('a good read after a failed one takes back the stale warning when the day is as last seen, and expires the line when it moved', () => {
   // Arrange: a refusal whose day was read once, then a read of it failed, so the line says the rows may be old.
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const day: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [work],
+    carriedOut: null,
+  }
   const moved: ListedDay = {
     ...day,
     rows: [{ ...work, activityId: 'rest' }],
@@ -2673,7 +2757,12 @@ test('元に戻す stays on while the listed day still reads as the edit left it
     reselect: null,
     account: 'u',
   }
-  const listed = { rows: [work, fun], carriedIn: null, carriedOut: next }
+  const listed = {
+    rows: [work, fun],
+    carriedIn: null,
+    carriedInRunStart: null,
+    carriedOut: next,
+  }
 
   // Act
   const offered = offeredUndo(slot, listed, 'Asia/Tokyo')
@@ -2703,22 +2792,42 @@ test('元に戻す turns off once the list shows the day changed: a tap added a 
   // Act
   const afterTap = offeredUndo(
     slot,
-    { rows: [work, tapped], carriedIn: null, carriedOut: next },
+    {
+      carriedInRunStart: null,
+      rows: [work, tapped],
+      carriedIn: null,
+      carriedOut: next,
+    },
     'Asia/Tokyo',
   )
   const afterMove = offeredUndo(
     slot,
-    { rows: [moved], carriedIn: null, carriedOut: next },
+    {
+      carriedInRunStart: null,
+      rows: [moved],
+      carriedIn: null,
+      carriedOut: next,
+    },
     'Asia/Tokyo',
   )
   const afterNextChanged = offeredUndo(
     slot,
-    { rows: [work], carriedIn: null, carriedOut: otherNext },
+    {
+      carriedInRunStart: null,
+      rows: [work],
+      carriedIn: null,
+      carriedOut: otherNext,
+    },
     'Asia/Tokyo',
   )
   const afterZoneChanged = offeredUndo(
     slot,
-    { rows: [work], carriedIn: null, carriedOut: next },
+    {
+      carriedInRunStart: null,
+      rows: [work],
+      carriedIn: null,
+      carriedOut: next,
+    },
     'America/New_York',
   )
   const beforeList = offeredUndo(slot, undefined, 'Asia/Tokyo')
@@ -2745,12 +2854,22 @@ test('a carried-in pick’s 元に戻す stays on at the revision the pick left 
   // Act
   const atItsRevision = offeredUndo(
     slot,
-    { rows: [], carriedIn: { ...carried, revision: 4 }, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [],
+      carriedIn: { ...carried, revision: 4 },
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
   const writtenAgain = offeredUndo(
     slot,
-    { rows: [], carriedIn: { ...carried, revision: 5 }, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [],
+      carriedIn: { ...carried, revision: 5 },
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
 
@@ -2841,7 +2960,12 @@ test('an answer to a press selects its row while the sheet shows the day it was 
 test('a day with nothing armed offers no 元に戻す, even once its list has arrived', () => {
   // Arrange
   const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
-  const listed = { rows: [work], carriedIn: null, carriedOut: null }
+  const listed = {
+    rows: [work],
+    carriedIn: null,
+    carriedInRunStart: null,
+    carriedOut: null,
+  }
 
   // Act
   const offered = offeredUndo(undefined, listed, 'Asia/Tokyo')
@@ -2868,7 +2992,12 @@ test('元に戻す turns off once another device changed a row’s activity, eve
   // Act
   const offered = offeredUndo(
     slot,
-    { rows: [repicked], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [repicked],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
 
@@ -2894,7 +3023,12 @@ test('元に戻す turns off once the day’s rows were written back under new i
   // Act
   const offered = offeredUndo(
     slot,
-    { rows: [rewritten], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [rewritten],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
 
@@ -2920,12 +3054,22 @@ test('today’s 元に戻す stays on while no switch follows the day, and turns
   // Act
   const whileRunning = offeredUndo(
     slot,
-    { rows: [work], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [work],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
   const onceFollowed = offeredUndo(
     slot,
-    { rows: [work], carriedIn: null, carriedOut: nextMorning },
+    {
+      carriedInRunStart: null,
+      rows: [work],
+      carriedIn: null,
+      carriedOut: nextMorning,
+    },
     'Asia/Tokyo',
   )
 
@@ -2953,6 +3097,7 @@ test('a day’s 元に戻す stays on when only the carried-in record changed, s
   const offered = offeredUndo(
     slot,
     {
+      carriedInRunStart: null,
       rows: [work],
       carriedIn: { ...carried, activityId: 'rest', revision: 7 },
       carriedOut: null,
@@ -2978,12 +3123,17 @@ test('a carried-in pick’s 元に戻す turns off once the day no longer lists 
   // Act
   const noneCarried = offeredUndo(
     slot,
-    { rows: [], carriedIn: null, carriedOut: null },
+    { carriedInRunStart: null, rows: [], carriedIn: null, carriedOut: null },
     'Asia/Tokyo',
   )
   const anotherCarried = offeredUndo(
     slot,
-    { rows: [], carriedIn: { ...other, revision: 4 }, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [],
+      carriedIn: { ...other, revision: 4 },
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
 
@@ -3006,12 +3156,22 @@ test('a carried-in pick’s 元に戻す stays on when a zone change lists the s
   // Act
   const atItsRevision = offeredUndo(
     slot,
-    { rows: [{ ...picked, revision: 4 }], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [{ ...picked, revision: 4 }],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Australia/Sydney',
   )
   const writtenAgain = offeredUndo(
     slot,
-    { rows: [{ ...picked, revision: 5 }], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [{ ...picked, revision: 5 }],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Australia/Sydney',
   )
 
@@ -3037,12 +3197,17 @@ test('an edit that left its day with no rows keeps 元に戻す while the day st
   // Act
   const whileEmpty = offeredUndo(
     slot,
-    { rows: [], carriedIn: null, carriedOut: null },
+    { carriedInRunStart: null, rows: [], carriedIn: null, carriedOut: null },
     'Asia/Tokyo',
   )
   const afterTap = offeredUndo(
     slot,
-    { rows: [tapped], carriedIn: null, carriedOut: null },
+    {
+      carriedInRunStart: null,
+      rows: [tapped],
+      carriedIn: null,
+      carriedOut: null,
+    },
     'Asia/Tokyo',
   )
 

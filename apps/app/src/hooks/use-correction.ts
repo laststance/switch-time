@@ -48,6 +48,7 @@ import {
 } from '@/lib/correction'
 import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
+import { untappedSheetNotes } from '@/lib/untapped'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { correctionSlice } from '@/store/correction'
 
@@ -73,10 +74,13 @@ const { armed, dropped, hushed, noticed, lineRaised } = correctionSlice.actions
  * the last edit or undo on this day failed ({@link dayLine}), shown as soon as the answer arrives, even to a sheet reopened
  * after it closed, until the next press, selection or undo, or until a read shows the day moved on ({@link useDayReads}).
  * After a failure that may have landed, it says the list is being read again until a read lands.
+ *
+ * `untappedNotes` (per row) and `undoNote` say which untapped days a pick, a merge or 元に戻す may count differently
+ * ({@link untappedSheetNotes}); null when none would.
  * @example const correction = useCorrection(params.day)
  */
 export function useCorrection(dayParam: string | undefined) {
-  const { today, timeZone, ready } = useLocalToday()
+  const { today, timeZone, ready, autoExcludeUnusedDays } = useLocalToday()
   const day = daySchema.safeParse(dayParam).data ?? today
   const now = useAppSelector((s) => s.clock.now)
   const list = useQuery(
@@ -119,6 +123,13 @@ export function useCorrection(dayParam: string | undefined) {
     noticeId: state.noticeId,
     focusId: state.focusId,
     totalsFacts: useTotalsFacts(day, today, list.data, ready),
+    ...untappedSheetNotes(list.data, slot, {
+      day,
+      today,
+      timeZone,
+      autoExcludeUnusedDays,
+      ready,
+    }),
     select: state.select,
     ...edits,
     undo,
