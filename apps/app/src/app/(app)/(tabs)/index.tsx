@@ -69,7 +69,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
     }),
   )
   const notice = detoxNotice({ ...homeToday, stats: todayStats })
-  const renewable = detoxRenewable({ current, today })
+  const renewable = detoxRenewable(homeToday)
   const ink = useTokenColor('ink')
   const pathname = usePathname()
   const pick = (activityId: string | null): void => {

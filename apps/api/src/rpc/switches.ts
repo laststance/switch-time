@@ -3,10 +3,9 @@ import {
   changeActivityInputSchema,
   clampStart,
   MIN_SEGMENT_MS,
-  addDays,
   dayBounds,
   daySchema,
-  DETOX_MEASURED_DAYS_MAX,
+  detoxRunPastWeek,
   detoxRunStartDay,
   localDay,
   moveStartInputSchema,
@@ -121,15 +120,6 @@ async function runStartOf(
   )
   return detoxRunStartDay(rows, timeZone)
 }
-
-/**
- * Whether a detox press on a running detox starts a new run: the run's measured week ({@link DETOX_MEASURED_DAYS_MAX} days
- * after its start day) is over by `today`. Inside the week the press stays a no-op, so a double tap never cuts a run.
- * Called by switchTo under the user's lock; Home's {@link detoxRenewable} applies the same rule to decide whether to send it.
- * @example isPastRunWeek('2026-09-01', '2026-09-09') // true: 09-08 was the week's last day
- */
-const isPastRunWeek = (runStartDay: string | null, today: string) =>
-  runStartDay !== null && addDays(runStartDay, DETOX_MEASURED_DAYS_MAX) < today
 
 /**
  * Rejects an id that is not the user's (null = detox, nothing to check) in one query however many ids arrive; returns one
@@ -608,7 +598,8 @@ export const switchesRouter = {
           if (input.activityId !== null) return current
           const { timeZone } = await getSettings(userId, tx)
           const runStartDay = await runStartOf(tx, userId, current, timeZone)
-          if (!isPastRunWeek(runStartDay, localDay(new Date(now), timeZone)))
+          // Inside the week the press stays a no-op, so a double tap never cuts a run.
+          if (!detoxRunPastWeek(runStartDay, localDay(new Date(now), timeZone)))
             return current
           startsRun = true
         }
@@ -693,7 +684,17 @@ export const switchesRouter = {
         if (!prev) throw conflict('no previous state', REFUSAL.noNeighbour)
         // Merging the running record makes the previous one the current state, which an archived activity can never be.
         if (!next) await assertLiveActivities(tx, userId, [prev.activityId])
-        return mergeInto(tx, row.id, prev.id)
+        // A detox that takes over a re-tap on the same day takes over its renewal too; from an earlier day it would move the
+        // run's start back, so the renewal goes with the merged row there.
+        let startsRun = prev.startsRun
+        const isReTap = row.startsRun && row.activityId === null
+        if (isReTap && prev.activityId === null && !prev.startsRun) {
+          const { timeZone } = await getSettings(userId, tx)
+          startsRun =
+            localDay(prev.startedAt, timeZone) ===
+            localDay(row.startedAt, timeZone)
+        }
+        return mergeInto(tx, row.id, prev.id, { startsRun })
       })
     }),
 
@@ -717,7 +718,14 @@ export const switchesRouter = {
         const end = window?.end ?? (await rowDayEnd(tx, userId, row.startedAt))
         if (next.startedAt.getTime() >= end)
           throw conflict('next state is on a later day', REFUSAL.nextOnLaterDay)
-        return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt })
+        // A detox that takes over a re-tap's start takes over its renewal too, or the days after it would fold into the old run.
+        const startsRun =
+          next.startsRun ||
+          (row.startsRun && row.activityId === null && next.activityId === null)
+        return mergeInto(tx, row.id, next.id, {
+          startedAt: row.startedAt,
+          startsRun,
+        })
       })
     }),
 

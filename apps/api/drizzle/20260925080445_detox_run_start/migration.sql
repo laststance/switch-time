@@ -2,8 +2,9 @@
 -- the latest run boundary (an activity, or such a row) without reading the account's whole history. Every existing row
 -- keeps false, so every existing run reads as before.
 -- The previous API stays live while the PRE_DEPLOY job runs this. The constant default makes ADD COLUMN a catalogue change,
--- and the index build reads the table once; each still holds writes to switches until the commit, so each lock waits at
--- most 5 s and each statement runs at most 10 s: past that the deployment fails and the previous API keeps serving.
+-- and the index build reads the table once, but ADD COLUMN takes the table's exclusive lock: reads of switches wait with the
+-- writes until the commit. So each lock waits at most 5 s and each statement runs at most 10 s: past that the deployment
+-- fails and the previous API keeps serving.
 SET LOCAL lock_timeout = '5s';--> statement-breakpoint
 SET LOCAL statement_timeout = '10s';--> statement-breakpoint
 ALTER TABLE "switches" ADD COLUMN "starts_run" boolean DEFAULT false NOT NULL;--> statement-breakpoint

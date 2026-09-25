@@ -1,6 +1,7 @@
 import {
-  addDays,
   DETOX_MEASURED_DAYS_MAX,
+  detoxRunLastDay,
+  detoxRunPastWeek,
   type DayStats,
 } from '@switch-time/shared'
 
@@ -126,10 +127,6 @@ type HomeToday = {
   autoExcludeUnusedDays: boolean
 }
 
-// The last day a detox run measures: the week after the day it started ends here.
-const lastMeasuredDay = (runStartDay: string) =>
-  addDays(runStartDay, DETOX_MEASURED_DAYS_MAX)
-
 /**
  * Whether a detox runs whose run started more than {@link DETOX_MEASURED_DAYS_MAX} days before today, with no switch today: the
  * only state that can be past the detox week. Home asks `stats.day` for today only then, and {@link detoxStopped} reads the answer
@@ -144,11 +141,7 @@ const lastMeasuredDay = (runStartDay: string) =>
  * @example detoxPastWeek({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-25', switchCountToday: 0, autoExcludeUnusedDays: true }) // true
  */
 export function detoxPastWeek(input: HomeToday): boolean {
-  const { current } = input
-  if (!input.autoExcludeUnusedDays) return false
-  if (current.activityId !== null || input.switchCountToday > 0) return false
-  if (current.runStartDay === null) return false
-  return lastMeasuredDay(current.runStartDay) < input.today
+  return input.switchCountToday === 0 && detoxRenewable(input)
 }
 
 /**
@@ -165,25 +158,27 @@ export function detoxLastDay(
   const { current } = input
   if (!input.autoExcludeUnusedDays || current.activityId !== null) return false
   if (current.runStartDay === null) return false
-  return lastMeasuredDay(current.runStartDay) === input.today
+  return detoxRunLastDay(current.runStartDay) === input.today
 }
 
 /**
- * Whether pressing detox again starts a new run: detox runs and its run's measured week ended before today. It is the only rule
- * that lets a press on the active state through (the detox row and the `0` hotkey), and it switches the detox row's hint. The
- * server applies the same rule under its lock (switchTo) and keeps the running record otherwise, so a press sent from a stale
- * `today` changes nothing. The optimistic row a press writes has no run start, so a second press before the refetch is dropped.
+ * Whether pressing detox again starts a new run: detox runs, its run's measured week ended before today, and auto-exclusion
+ * is on (while it is off every day is measured, so a new run would change nothing). It is the only rule that lets a press on
+ * the active state through (the detox row and the `0` hotkey), and it switches the detox row's hint. The server applies the
+ * same week rule under its lock ({@link detoxRunPastWeek} in switchTo) and keeps the running record otherwise, so a press sent
+ * from a stale `today` changes nothing. The optimistic row a press writes has no run start, so a second press before the
+ * refetch is dropped.
  * @returns
- * - true for a detox run started on `today - 8` or earlier
- * - false for an activity, a detox inside its week, and the optimistic row
- * @example detoxRenewable({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-24' }) // true
+ * - true for a detox run started on `today - 8` or earlier, with auto-exclusion on
+ * - false for an activity, a detox inside its week, the optimistic row, and while auto-exclusion is off
+ * @example detoxRenewable({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-24', autoExcludeUnusedDays: true }) // true
  */
 export function detoxRenewable(
-  input: Pick<HomeToday, 'current' | 'today'>,
+  input: Pick<HomeToday, 'current' | 'today' | 'autoExcludeUnusedDays'>,
 ): boolean {
   const { current } = input
-  if (current.activityId !== null || current.runStartDay === null) return false
-  return lastMeasuredDay(current.runStartDay) < input.today
+  if (!input.autoExcludeUnusedDays || current.activityId !== null) return false
+  return detoxRunPastWeek(current.runStartDay, input.today)
 }
 
 /**

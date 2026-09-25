@@ -153,6 +153,30 @@ export function detoxRunStartDay(
 }
 
 /**
+ * The last day a detox run measures: {@link DETOX_MEASURED_DAYS_MAX} days after the day it started. {@link detoxCarriedDays}
+ * caps a run's untapped days here, and Home warns on it.
+ * @example detoxRunLastDay('2026-09-16') // '2026-09-23'
+ */
+export const detoxRunLastDay = (runStartDay: string): string =>
+  addDays(runStartDay, DETOX_MEASURED_DAYS_MAX)
+
+/**
+ * Whether a detox run's measured week ended before `today`, so a detox re-tap starts a new run. switchTo applies it under the
+ * user's lock and Home's `detoxRenewable` before sending the press, so both read the same boundary.
+ * @param runStartDay - {@link detoxRunStartDay} of the running record; null while an activity runs.
+ * @param today - Today in the stored zone.
+ * @returns
+ * - true from the day after {@link detoxRunLastDay}
+ * - false on and before that day, and for null (an activity, or the optimistic row before its refetch)
+ * @example detoxRunPastWeek('2026-09-16', '2026-09-24') // true
+ * @example detoxRunPastWeek('2026-09-16', '2026-09-23') // false: the week's last measured day
+ */
+export const detoxRunPastWeek = (
+  runStartDay: string | null,
+  today: string,
+): boolean => runStartDay !== null && detoxRunLastDay(runStartDay) < today
+
+/**
  * The days a detox runs through without a tap of their own, clipped to `window` and to {@link DETOX_MEASURED_DAYS_MAX}
  * days after the day its run started; {@link classifyDay} measures them, so a detox left on over a weekend neither
  * breaks 連続記録 nor lists as 切替なし. A run is consecutive detox records, so cutting a detox never renews its
@@ -186,7 +210,7 @@ export function detoxCarriedDays(
     const untilNext = next
       ? addDays(localDay(new Date(next.startedAt), timeZone), -1)
       : window.to
-    const capDay = addDays(runStartDay, DETOX_MEASURED_DAYS_MAX)
+    const capDay = detoxRunLastDay(runStartDay)
     const lastCovered = untilNext < capDay ? untilNext : capDay
     const dayAfterTap = addDays(tapDay, 1)
     const from = dayAfterTap > window.from ? dayAfterTap : window.from

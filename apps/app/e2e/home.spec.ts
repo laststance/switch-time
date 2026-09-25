@@ -393,8 +393,13 @@ test('pressing detox again past its week starts a new run: the notice goes and t
     page.getByText('押し直すと新しく始まります', { exact: true }),
   ).toBeVisible()
 
-  // Act
+  // Act: the optimistic row alone would pass the checks below, so wait for the server and read its answer after a reload
+  const renewal = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
   await detox.click()
+  expect((await renewal).ok()).toBe(true)
+  await page.reload()
 
   // Assert: a new detox record runs from now (a bare time, no date), today is measured, and the row stays pressed
   await expect(
@@ -419,8 +424,13 @@ test('digit 0 past a detox’s week starts a new run, like pressing the detox ro
     page.getByText('今日は計測に入りません', { exact: true }),
   ).toBeVisible()
 
-  // Act
+  // Act: wait for the server and read its answer after a reload, as the optimistic row alone would pass
+  const renewal = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
   await page.keyboard.press('0')
+  expect((await renewal).ok()).toBe(true)
+  await page.reload()
 
   // Assert
   await expect(

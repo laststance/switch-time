@@ -293,6 +293,22 @@ describe('detoxLastDay', () => {
     expect(eighthDay).toBe(false)
   })
 
+  test('warns on the right day when the run’s week crosses into the next month', () => {
+    // Arrange: a detox run from 9/26, whose seventh day is 10/3
+    const base = {
+      current: { activityId: null, runStartDay: '2026-09-26' },
+      autoExcludeUnusedDays: true,
+    }
+
+    // Act
+    const seventhDay = detoxLastDay({ ...base, today: '2026-10-03' })
+    const renewable = detoxRenewable({ ...base, today: '2026-10-04' })
+
+    // Assert
+    expect(seventhDay).toBe(true)
+    expect(renewable).toBe(true)
+  })
+
   test('does not warn while auto-exclusion is off, for an activity, or for the optimistic row a tap writes', () => {
     // Arrange: the seventh day of a run from 9/16
     const today = '2026-09-23'
@@ -327,12 +343,32 @@ describe('detoxRenewable', () => {
     const current = { activityId: null, runStartDay: '2026-09-16' }
 
     // Act
-    const seventhDay = detoxRenewable({ current, today: '2026-09-23' })
-    const eighthDay = detoxRenewable({ current, today: '2026-09-24' })
+    const seventhDay = detoxRenewable({
+      current,
+      today: '2026-09-23',
+      autoExcludeUnusedDays: true,
+    })
+    const eighthDay = detoxRenewable({
+      current,
+      today: '2026-09-24',
+      autoExcludeUnusedDays: true,
+    })
 
     // Assert
     expect(seventhDay).toBe(false)
     expect(eighthDay).toBe(true)
+  })
+
+  test('offers no renewal while auto-exclusion is off, since every day is measured anyway', () => {
+    // Act
+    const renewable = detoxRenewable({
+      current: { activityId: null, runStartDay: '2026-09-16' },
+      today: '2026-09-25',
+      autoExcludeUnusedDays: false,
+    })
+
+    // Assert
+    expect(renewable).toBe(false)
   })
 
   test('drops a second press before the refetch, and never renews an activity', () => {
@@ -343,10 +379,12 @@ describe('detoxRenewable', () => {
     const optimistic = detoxRenewable({
       current: { activityId: null, runStartDay: null },
       today,
+      autoExcludeUnusedDays: true,
     })
     const activity = detoxRenewable({
       current: { activityId: 'work', runStartDay: null },
       today,
+      autoExcludeUnusedDays: true,
     })
 
     // Assert
@@ -605,6 +643,26 @@ describe('detoxNotice', () => {
     // Assert
     expect(unknown).toBeNull()
     expect(sixthDay).toBeNull()
+  })
+
+  test('shows nothing on the last day for an activity or while auto-exclusion is off', () => {
+    // Act
+    const activity = detoxNotice({
+      ...base,
+      current: { activityId: 'work', runStartDay: null },
+      today: '2026-09-23',
+      stats: { ...settled, data: undefined },
+    })
+    const autoExcludeOff = detoxNotice({
+      ...base,
+      autoExcludeUnusedDays: false,
+      today: '2026-09-23',
+      stats: { ...settled, data: undefined },
+    })
+
+    // Assert
+    expect(activity).toBeNull()
+    expect(autoExcludeOff).toBeNull()
   })
 })
 

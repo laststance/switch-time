@@ -338,6 +338,52 @@ test('the day undo writes a detox re-tap back as one, so the run it started does
   ])
 })
 
+test('undoing a pick on a detox re-tap writes the re-tap back with its mark, so its run is renewed again', () => {
+  // Arrange: a detox re-tap at 9:00 that started a new run, re-activitied to 仕事 (the stored row keeps its mark)
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-01', 20)),
+    rows: [{ ...row('d', null, at(day, 9)), startsRun: true }],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+  const retap = correctionRows(list, activities, bounds).find(
+    (listed) => listed.id === 'd',
+  )
+  if (!retap) throw new Error('no re-tap row')
+  const picked = {
+    ...row('d', 'work', at(day, 9)),
+    startsRun: true,
+    revision: 1,
+  }
+
+  // Act
+  const slot = undoSlotFor(
+    { kind: 'pick', returned: picked },
+    retap,
+    dayBaseline(day, TZ, list),
+    bounds,
+  )
+
+  // Assert
+  expect(slot).toEqual({
+    kind: 'day',
+    day,
+    timeZone: TZ,
+    rows: [{ activityId: null, startedAt: at(day, 9), startsRun: true }],
+    expected: [
+      { id: 'd', activityId: 'work', startedAt: at(day, 9), startsRun: true },
+    ],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  })
+})
+
 test('a day with no switch before it sends a baseline that says so, so a record appearing before the day is caught', () => {
   // Arrange
   const list: ListedDay = {
