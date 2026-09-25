@@ -31,8 +31,9 @@ const DETOX_SLICE_MIN_PX = 2
 // An excluded cell's slices stack inside its 1 px dashed border (`border` in history.tsx's CELL.excluded; the track is
 // border-box), so a whole day's top slice is not clipped. Change it together with that class.
 const EXCLUDED_BORDER_PX = 1
-// Room left on a track after subtracting slices can be a float residue (1e-14 px) rather than 0; below this it counts as full.
-const SLICE_EPSILON_PX = 1e-6
+// An activity slice under half a pixel is not drawn: it would show nothing yet take the rounded top from the slice below
+// it. This also covers the float residue (1e-14 px) left on a full track.
+const SLICE_MIN_PX = 0.5
 
 export type Slice = {
   /** `null` for the day's detox part, which belongs to no activity. */
@@ -118,8 +119,8 @@ function chartTitle(
 }
 
 /**
- * A day cell's slices, bottom-up: the activities in `position` order (those without time, or with no room left on the track,
- * skipped), then the detox part on top.
+ * A day cell's slices, bottom-up: the activities in `position` order (those under {@link SLICE_MIN_PX}, or with no room left
+ * on the track, skipped), then the detox part on top.
  * Called by {@link dayCell}, which passes `detoxMs` 0 for a detox day, since that cell's outline already is the detox mark.
  * @param totals - The day's activity time by activity id.
  * @param detoxMs - The day's detox time to draw on top of the activities.
@@ -147,8 +148,8 @@ function stackSlices(
       ((totals[activity.id] ?? 0) / DAY_MS) * barHeight,
       room,
     )
-    // No time, or no room left: the activity draws nothing (its time is still in the cell's label).
-    if (height < SLICE_EPSILON_PX) continue
+    // Too little time to see, or no room left: the activity draws nothing (its time is still in the cell's label).
+    if (height < SLICE_MIN_PX) continue
     room -= height
     slices.push({
       activityId: activity.id,

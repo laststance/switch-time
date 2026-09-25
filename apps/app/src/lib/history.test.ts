@@ -794,9 +794,12 @@ test('a day cell does not read out times under half a minute as 0m', () => {
     activities,
   })
 
-  // Assert: the month cell reads in the same format as the week's
+  // Assert: the month cell reads in the same format as the week's, and the tap too short to see leaves 仕事 its rounded top
   const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
   expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 3h 00m')
+  expect(cell?.slices.map((slice) => [slice.activityId, slice.top])).toEqual([
+    ['work', true],
+  ])
 })
 
 test('half an hour of detox too short to outline in a month cell is still read out', () => {
