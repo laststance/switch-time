@@ -1016,7 +1016,7 @@ export function dayLine(error: unknown, at: number): DayLine {
   }
 }
 
-/** The status line shown under the sheet's rows: a failure to read (`alert`), or why the panel waits (`quiet`). */
+/** The status line shown under the sheet's rows: a failure the user should read (`alert`), or why the panel waits (`quiet`). */
 export type SheetStatus = { tone: 'alert' | 'quiet'; text: string }
 
 /** The status line while the panel waits for a write that has not landed. */

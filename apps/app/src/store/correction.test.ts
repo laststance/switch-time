@@ -7,7 +7,7 @@ import { accountChange, afterReadActions, correctionSlice } from './correction'
 
 import { resetApp, store } from './index'
 
-const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
+const { armed, dropped, hushed, noticed, lineRaised } = correctionSlice.actions
 
 // A refusal's line, answered at 1000 ms and not yet read.
 const refusal = (text: string): DayLine => ({
@@ -189,7 +189,7 @@ test('a failure that lands after its sheet closed is kept for that day only, so 
 
   // Act
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -207,7 +207,7 @@ test('a new press on the day clears its line and its archived notice, while an u
   const sheet = configureStore({ reducer: correctionSlice.reducer })
   const { epoch } = sheet.getState()
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -215,7 +215,7 @@ test('a new press on the day clears its line and its archived notice, while an u
   )
   sheet.dispatch(noticed({ epoch, day: '2026-09-24', id: 'carried-in' }))
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-25',
       line: refusal('統合できる記録がありません'),
@@ -245,7 +245,7 @@ test('a failure or notice that lands after sign-out, or after another account si
   sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
   const before = sheet.getState().epoch
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch: before,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -258,7 +258,7 @@ test('a failure or notice that lands after sign-out, or after another account si
   // Act
   sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch: before,
       day: '2026-09-25',
       line: refusal('統合できる記録がありません'),
@@ -268,7 +268,7 @@ test('a failure or notice that lands after sign-out, or after another account si
     noticed({ epoch: before, day: '2026-09-25', id: 'carried-in' }),
   )
   store.dispatch(
-    refused({
+    lineRaised({
       epoch: store.getState().correction.epoch,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -298,7 +298,7 @@ test('a press from before sign-out cannot clear the next account’s line or not
   sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
   const after = sheet.getState().epoch
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch: after,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -322,7 +322,7 @@ test('a session refetch for the same account keeps each day’s line and notice'
   sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
   const { epoch } = sheet.getState()
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -345,7 +345,7 @@ test('a second failure on the same day replaces its line, so the line names the 
   const sheet = configureStore({ reducer: correctionSlice.reducer })
   const { epoch } = sheet.getState()
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-24',
       line: refusal('これ以上動かせません'),
@@ -354,7 +354,7 @@ test('a second failure on the same day replaces its line, so the line names the 
 
   // Act
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-24',
       line: refusal('統合できる記録がありません'),
@@ -407,9 +407,9 @@ test('a read settles the failure it judged: it records what it saw, marks the li
     seen: null,
     stale: false,
   }
-  sheet.dispatch(refused({ epoch, day: '2026-09-24', line: uncertain }))
-  sheet.dispatch(refused({ epoch, day: '2026-09-25', line: uncertain }))
-  sheet.dispatch(refused({ epoch, day: '2026-09-26', line: uncertain }))
+  sheet.dispatch(lineRaised({ epoch, day: '2026-09-24', line: uncertain }))
+  sheet.dispatch(lineRaised({ epoch, day: '2026-09-25', line: uncertain }))
+  sheet.dispatch(lineRaised({ epoch, day: '2026-09-26', line: uncertain }))
 
   // Act
   sheet.dispatch(
@@ -438,7 +438,7 @@ test('a read that judged an older failure leaves the newer failure’s line alon
     seen: null,
     stale: false,
   }
-  sheet.dispatch(refused({ epoch, day: '2026-09-24', line: newer }))
+  sheet.dispatch(lineRaised({ epoch, day: '2026-09-24', line: newer }))
 
   // Act
   sheet.dispatch(
@@ -559,7 +559,9 @@ test('a read judged under the previous account neither settles the next account�
     stale: false,
   }
   const slot = pickUndo('2026-09-24')
-  sheet.dispatch(refused({ epoch: after, day: '2026-09-24', line: uncertain }))
+  sheet.dispatch(
+    lineRaised({ epoch: after, day: '2026-09-24', line: uncertain }),
+  )
   sheet.dispatch(armed({ epoch: after, slot }))
 
   // Act
@@ -599,7 +601,7 @@ test('a read of a day with no line and no 元に戻す leaves the other days alo
   const { lineRead, lineUnread, lineExpired, undoRetired } =
     correctionSlice.actions
   sheet.dispatch(
-    refused({
+    lineRaised({
       epoch,
       day: '2026-09-25',
       line: refusal('これ以上動かせません'),

@@ -1778,6 +1778,7 @@ test('the sheet keeps an empty polite region that takes no room while nothing is
   await expect(polite).toHaveCount(1)
   await expect(polite).toHaveText('')
   await expect(polite).toHaveCSS('position', 'absolute')
+  expect((await polite.boundingBox())?.height).toBeLessThanOrEqual(1)
 })
 
 test('a merge that lands after its sheet closed can still be undone from that day’s sheet', async ({

@@ -1,5 +1,6 @@
 import { dayBounds, daySchema, type SplitAtInput } from '@switch-time/shared'
 import {
+  hashKey,
   onlineManager,
   useIsMutating,
   useMutation,
@@ -46,7 +47,7 @@ import { invalidateKeys } from '@/lib/query'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { correctionSlice } from '@/store/correction'
 
-const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
+const { armed, dropped, hushed, noticed, lineRaised } = correctionSlice.actions
 
 /**
  * Everything the correction sheet needs for one day: the row model, the selection, the `switches.*` edits and 「元に戻す」.
@@ -164,7 +165,7 @@ function useCorrectionState(day: string) {
       setSheet({ ...current, selectedId: id })
       dispatch(hushed({ epoch, day, notice: id !== view.noticeId }))
     },
-    // A row the sheet selects by itself (an undo's reselect): a refusal a concurrent write raised stays.
+    // A row the sheet selects by itself (an undo's reselect): a line a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
       answer(pressedDay, { selectedId: id })
     },
@@ -202,10 +203,15 @@ function useEditLifecycle(day: string) {
       pressed: Pressed | undefined,
     ): void => {
       const line = dayLine(error, Date.now())
-      if (pressed) dispatch(refused({ ...pressed, line }))
+      if (pressed) dispatch(lineRaised({ ...pressed, line }))
       if (line.kind === 'unauthorized') void readSessionAgain()
     },
-    onSettled: async (_data: unknown, error: unknown): Promise<void> => {
+    onSettled: async (
+      _data: unknown,
+      error: unknown,
+      _variables: unknown,
+      pressed: Pressed | undefined,
+    ): Promise<void> => {
       const refetchZone =
         isDayChangedRefusal(error) &&
         queryClient.isMutating({ mutationKey: orpc.settings.key() }) === 0
@@ -217,11 +223,22 @@ function useEditLifecycle(day: string) {
       if (!error)
         return invalidateKeys(queryClient, [orpc.switches.key(), ...others])
       // A failed one arms nothing, so its refetch runs on its own (a hung API stalls it too, another 30 s and a retry); the
-      // list's fetch still dims the panel. Every cached day list is read again, the closed sheet's day included, so
-      // {@link useDayReads} can settle the line; one call, since a second invalidation would cancel the first one's fetches.
+      // list's fetch still dims the panel. The pressed day's list is read again even once its sheet has closed, so
+      // {@link useDayReads} can settle the line; the rest of `switches.*` only where a screen watches it. The two calls match
+      // disjoint queries, since a second invalidation of the same query would cancel the first one's fetch.
+      const pressedList = hashKey(
+        orpc.switches.listByDay.queryKey({
+          input: { day: pressed?.day ?? day },
+        }),
+      )
       void queryClient.invalidateQueries({
         queryKey: orpc.switches.key(),
+        predicate: (query) => query.queryHash === pressedList,
         refetchType: 'all',
+      })
+      void queryClient.invalidateQueries({
+        queryKey: orpc.switches.key(),
+        predicate: (query) => query.queryHash !== pressedList,
       })
       void invalidateKeys(queryClient, others)
     },

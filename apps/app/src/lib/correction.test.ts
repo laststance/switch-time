@@ -1,4 +1,7 @@
-import { ORPCError } from '@orpc/client'
+import { createORPCClient, ORPCError } from '@orpc/client'
+import { RPCLink } from '@orpc/client/fetch'
+import { createTanstackQueryUtils } from '@orpc/tanstack-query'
+import type { AppRouterClient } from '@switch-time/api'
 import { dayBounds } from '@switch-time/shared'
 import { expect, test } from 'vitest'
 
@@ -2295,6 +2298,23 @@ test('only a landed fetch of a day’s list counts as a read of that day', () =>
     null,
     null,
   ])
+})
+
+test('a read of a day’s list is still recognised under the key oRPC builds for it, so kept lines keep settling', () => {
+  // Arrange
+  const client = createORPCClient<AppRouterClient>(
+    new RPCLink({ url: 'http://localhost/api/rpc' }),
+  )
+  const utils = createTanstackQueryUtils(client)
+  const dayKey = utils.switches.listByDay.queryKey({
+    input: { day: '2026-09-08' },
+  })
+
+  // Act
+  const read = dayOfRead({ type: 'success' }, dayKey)
+
+  // Assert
+  expect(read).toEqual({ day: '2026-09-08', ok: true })
 })
 
 test('a good read after a failed one takes back the stale warning when the day is as last seen, and expires the line when it moved', () => {

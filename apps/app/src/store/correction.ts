@@ -70,7 +70,7 @@ export const correctionSlice = createSlice({
         delete state.undo[action.payload.day]
     },
     // A failed edit or undo: the day's status line says why, whether or not its sheet is still open.
-    refused(state, action: Stamped<{ day: string; line: DayLine }>) {
+    lineRaised(state, action: Stamped<{ day: string; line: DayLine }>) {
       if (action.payload.epoch !== state.epoch) return
       state.line[action.payload.day] = action.payload.line
     },

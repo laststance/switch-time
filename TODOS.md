@@ -162,6 +162,18 @@
 **Priority:** P4
 **Depends on:** None
 
+### Announce the correction sheet's status line with VoiceOver on iOS
+
+**What:** On iOS, call `AccessibilityInfo.announceForAccessibility` whenever the correction sheet's status line gets new text: the failure lines (alert) and 「反映しています…」, 「一覧を読み直しています…」 and the offline line (polite).
+
+**Why:** React Native has no live region on iOS: `aria-live` and `role="alert"` are read on the web and Android only, so a VoiceOver user never hears why an edit failed or that it is waiting. The cut's 区切る時刻 readout already announces itself this way on iOS.
+
+**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx` (its slots come from `statusSlots` in `apps/app/src/lib/correction.ts`); the pattern is in `CarriedInActions` in the same file. The web keeps the mounted polite region and the keyed alert. Found by the pre-landing review of the PR that settled the correction status line by later reads (2026-09-25). Only matters once the native build ships.
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ## Stats
 
 ### Say when an edit changes whether the untapped days around it count
