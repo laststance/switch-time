@@ -469,17 +469,17 @@ test('an excluded day still draws its detox part, stacked inside the dashed bord
     activities,
   })
 
-  // Assert: the 132 px track keeps 128 px inside its border and 1 px gap
+  // Assert: the 132 px track keeps 130 px inside its 1 px border
   expect(view.rows[0]?.[6]?.kind).toBe('excluded')
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 32,
+      height: 32.5,
       top: false,
       bottom: true,
     },
-    { activityId: null, color: null, height: 16, top: true, bottom: false },
+    { activityId: null, color: null, height: 16.25, top: true, bottom: false },
   ])
 })
 
@@ -514,16 +514,16 @@ test('a whole excluded day fits inside its dashed border, so the top of its deto
     activities,
   })
 
-  // Assert: 96 + 32 = the 128 px inside the border, not the 132 px track
+  // Assert: 97.5 + 32.5 = the 130 px inside the border, not the 132 px track
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 96,
+      height: 97.5,
       top: false,
       bottom: true,
     },
-    { activityId: null, color: null, height: 32, top: true, bottom: false },
+    { activityId: null, color: null, height: 32.5, top: true, bottom: false },
   ])
 })
 

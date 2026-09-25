@@ -28,9 +28,9 @@ const BAR_PX = { week: 132, month: 48 }
 const DETOX_GLYPH_PX = { week: 14, month: 12 }
 // A detox part shorter than its own two 1 px border lines is not drawn: the outline would paint more time than it holds.
 const DETOX_SLICE_MIN_PX = 2
-// An excluded cell's slices stack inside its 1 px dashed border and a 1 px gap (`p-px` in history.tsx), per side, so a full day
-// is not clipped at the top and a detox outline never lies against the dash and hides it.
-const EXCLUDED_INSET_PX = 2
+// An excluded cell's slices stack inside its 1 px dashed border (`border` in history.tsx's CELL.excluded; the track is
+// border-box), so a whole day's top slice is not clipped. Change it together with that class.
+const EXCLUDED_BORDER_PX = 1
 
 export type Slice = {
   /** `null` for the day's detox part, which belongs to no activity. */
@@ -235,9 +235,9 @@ function dayCell(
       ? formatWeekday(stat.day)
       : String(Number(stat.day.slice(8)))
   const kind = cellKind(stat, isToday)
-  // Only an excluded cell draws slices inside a border, so only it loses the inset from both ends of its track.
+  // Only an excluded cell draws slices inside a border, so only it loses the border's width at both ends of its track.
   const trackHeight =
-    kind === 'excluded' ? BAR_PX[range] - 2 * EXCLUDED_INSET_PX : BAR_PX[range]
+    kind === 'excluded' ? BAR_PX[range] - 2 * EXCLUDED_BORDER_PX : BAR_PX[range]
   const slices = stackSlices(
     stat.totals,
     activities,
