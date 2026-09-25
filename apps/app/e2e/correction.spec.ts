@@ -1027,15 +1027,70 @@ test('the lines under ここで分割 follow the cut time and the day’s exclus
 
   // Act: the day is excluded by hand from another device.
   await api.excludedDays.exclude({ day })
-  // The 計測 line also hides while the day's exclusion is loading, so wait for that answer before looking.
-  const excludedAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/excludedDays/list'),
+  // The 計測 line also hides while the day's class is loading, so wait for that answer before looking.
+  const dayClassAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/stats/week'),
   )
   await page.reload()
-  expect((await excludedAnswer).ok()).toBe(true)
+  expect((await dayClassAnswer).ok()).toBe(true)
   await carriedIn.click()
 
   // Assert: a manual exclusion outranks a switch, so the 計測 line is gone.
+  await expect(readout).toHaveText('11:45')
+  await expect(measuredNote).toHaveCount(0)
+})
+
+test('ここで分割 on a detox says the day becomes measured only after the detox’s first week', async ({
+  page,
+}) => {
+  // Arrange: detox from D−12 20:00 until 食事 at D−1 0:00. Its week measures D−11 … D−5; D−4 … D−2 are unused days.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const recordStart = shift(today(), -12)
+  const recordEnd = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: recordStart,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(recordStart, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: recordEnd,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(recordEnd, 0) }],
+  })
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const carriedIn = dialog.getByRole('button', {
+    name: 'detox 0:00 – 24:00 24h 00m',
+  })
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  const measuredNote = dialog.getByText(
+    '区切ると、この日は計測できた日になります',
+  )
+
+  // Act: a day past the detox's week
+  const pastWeekAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/stats/week'),
+  )
+  await page.goto(`/correction?day=${shift(today(), -3)}`)
+  expect((await pastWeekAnswer).ok()).toBe(true)
+  await carriedIn.click()
+
+  // Assert: the cut's own switch is what would measure it
+  await expect(readout).toHaveText('11:45')
+  await expect(measuredNote).toBeVisible()
+
+  // Act: a day inside the detox's week
+  const inWeekAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/stats/week'),
+  )
+  await page.goto(`/correction?day=${shift(today(), -6)}`)
+  expect((await inWeekAnswer).ok()).toBe(true)
+  await carriedIn.click()
+
+  // Assert: the detox already measures it, so there is no 計測 line
   await expect(readout).toHaveText('11:45')
   await expect(measuredNote).toHaveCount(0)
 })
