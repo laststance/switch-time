@@ -1,0 +1,112 @@
+import type { QueryClient, QueryKey } from '@tanstack/react-query'
+
+import type { CurrentSwitch } from '@/lib/orpc'
+
+/** What `switches.current` can hold: the running record, `null` before the first switch, `undefined` before it ever loaded. */
+type CurrentShown = CurrentSwitch | null | undefined
+
+/** The mutation scope every tap runs in, one after another ({@link useSwitchTo}). */
+export const SWITCH_TO_SCOPE = 'switches.switchTo'
+
+/** The id of the row a tap shows before the server answers; never sent back to the server. */
+export const OPTIMISTIC_ID = 'optimistic'
+
+/** What a tap's `onMutate` hands to its `onError`: the cached row it placed, to tell whether the display is still its own. */
+export type TapContext = { placed: CurrentShown }
+
+// The last state the server confirmed, per client: an object held in a WeakMap, not a module `let` (the React Compiler folds such
+// an alias into a comparison with itself).
+const confirmedStates = new WeakMap<QueryClient, { value: CurrentShown }>()
+
+function confirmedStateOf(client: QueryClient): { value: CurrentShown } {
+  const known = confirmedStates.get(client)
+  if (known) return known
+  const created = { value: undefined }
+  confirmedStates.set(client, created)
+  return created
+}
+
+// Taps that have run `onMutate` and not yet settled, this one included: TanStack marks a mutation pending (paused while an earlier
+// one in its scope runs) before it calls `onMutate`.
+const tapsInFlight = (client: QueryClient): number =>
+  client.isMutating({
+    predicate: (mutation) => mutation.options.scope?.id === SWITCH_TO_SCOPE,
+  })
+
+/**
+ * A tap's `onMutate`: shows the picked state at once and notes the state to fall back to. At the first tap of a burst the cache is
+ * the server's state, so it becomes the confirmed one, unless it is the placeholder of a tap the server accepted whose refetch has
+ * not landed yet (that tap's {@link confirmTap} already recorded its row).
+ * @param client - The app's query client.
+ * @param queryKey - `switches.current`'s key.
+ * @param activityId - The picked activity, or `null` for detox.
+ * @returns The context {@link rollBackTap} needs.
+ * @example onMutate: async ({ activityId }) => placeTap(queryClient, queryKey, activityId)
+ */
+export function placeTap(
+  client: QueryClient,
+  queryKey: QueryKey,
+  activityId: string | null,
+): TapContext {
+  const previous = client.getQueryData<CurrentShown>(queryKey)
+  if (tapsInFlight(client) === 1 && previous?.id !== OPTIMISTIC_ID)
+    confirmedStateOf(client).value = previous
+  // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call restarts
+  // the counter right now. `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
+  // No run start until the refetch: the detox notices stay away and a second re-tap is dropped meanwhile.
+  const next: CurrentSwitch = {
+    userId: '',
+    source: 'tap',
+    createdAt: new Date(),
+    ...previous,
+    id: OPTIMISTIC_ID,
+    revision: 0,
+    activityId,
+    startedAt: new Date(),
+    startsRun: false,
+    runStartDay: null,
+  }
+  client.setQueryData(queryKey, next)
+  // Structural sharing stores a copy, so the cached object, not `next`, is what a later read compares against.
+  return { placed: client.getQueryData<CurrentShown>(queryKey) }
+}
+
+/**
+ * A tap's `onSuccess`: the server's row becomes the state a later refused tap falls back to.
+ * @param client - The app's query client.
+ * @param row - What `switches.switchTo` answered; its run start comes with the refetch.
+ * @example onSuccess: (row) => confirmTap(queryClient, row)
+ */
+export function confirmTap(
+  client: QueryClient,
+  row: Omit<CurrentSwitch, 'runStartDay'>,
+): void {
+  confirmedStateOf(client).value = { ...row, runStartDay: null }
+}
+
+/**
+ * A tap's `onError`: while the display is still this tap's row, puts back the last state the server confirmed. Once a later tap
+ * (or a refetch) has replaced it, the display is not this tap's to change, and another tap's row is never brought back.
+ * @param client - The app's query client.
+ * @param queryKey - `switches.current`'s key.
+ * @param context - What {@link placeTap} returned for this tap.
+ * @example onError: (_error, _input, context) => { if (context) rollBackTap(queryClient, queryKey, context) }
+ */
+export function rollBackTap(
+  client: QueryClient,
+  queryKey: QueryKey,
+  context: TapContext,
+): void {
+  if (client.getQueryData(queryKey) === context.placed)
+    client.setQueryData(queryKey, confirmedStateOf(client).value)
+}
+
+/**
+ * Whether a settling tap is the last of its burst, for {@link useSwitchTo}'s refetch: an earlier tap's refetch would replace the
+ * queued taps' rows (their `onMutate` has already run), so only the last tap refetches.
+ * @param client - The app's query client.
+ * @returns `true` when no other tap is waiting or running.
+ * @example if (isLastTap(queryClient)) await invalidateKeys(...)
+ */
+export const isLastTap = (client: QueryClient): boolean =>
+  tapsInFlight(client) <= 1

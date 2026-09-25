@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, usePathname } from 'expo-router'
+import { Link } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 
 import { DetoxRow } from '@/components/detox-row'
@@ -13,10 +13,10 @@ import { SwitchButton } from '@/components/switch-button'
 import { TodayFlow } from '@/components/today-flow'
 import { useActivities, useAllActivities } from '@/hooks/use-activities'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
+import { useSwitchHotkeys } from '@/hooks/use-switch-hotkeys'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useToday } from '@/hooks/use-today'
 import { useTokenColor } from '@/hooks/use-token-color'
-import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
   detoxNotice,
@@ -28,7 +28,6 @@ import {
   nowLook,
   sendsPick,
 } from '@/lib/home'
-import { hotkeyIndex, isDetoxHotkey } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
 import { orpc } from '@/lib/orpc'
 
@@ -71,22 +70,11 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const notice = detoxNotice({ ...homeToday, stats: todayStats })
   const renewable = detoxRenewable(homeToday)
   const ink = useTokenColor('ink')
-  const pathname = usePathname()
   const pick = (activityId: string | null): void => {
     if (sendsPick({ activityId, current, renewable }))
       switchTo.mutate({ activityId })
   }
-  useWebKeydown((event) => {
-    // A sheet above Home (or another tab, Home stays mounted) owns the keyboard.
-    if (pathname !== '/') return
-    // `0` is detox (the menubar's ⌘0); the other digits pick by position.
-    if (isDetoxHotkey(event)) {
-      pick(null)
-      return
-    }
-    const picked = activities[hotkeyIndex(event)]
-    if (picked) pick(picked.id)
-  })
+  useSwitchHotkeys(activities, pick)
   return (
     <Screen>
       <ScreenHeader title="いま" aside={formatDay(today)}>

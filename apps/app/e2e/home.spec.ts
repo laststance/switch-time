@@ -138,6 +138,113 @@ test('a failed first detox tap brings the first-launch screen back instead of le
   currentAnswer.resolve()
 })
 
+test('two taps refused in a row keep the second on screen until its own answer, then bring the first-launch screen back', async ({
+  page,
+}) => {
+  // Arrange: hold both taps' answers and every refetch of the current switch, so only the rollbacks change the screen
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  const answers = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]
+  let tapRequests = 0
+  await page.route('**/api/rpc/switches/switchTo', async (route) => {
+    const answer = answers[tapRequests]
+    tapRequests += 1
+    await answer?.promise
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        json: {
+          defined: false,
+          code: 'INTERNAL_SERVER_ERROR',
+          status: 500,
+          message: 'INTERNAL_SERVER_ERROR',
+        },
+      }),
+    })
+  })
+  const currentAnswer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/current**', async (route) => {
+    await currentAnswer.promise
+    await route.continue()
+  })
+  await page.getByRole('button', { name: '仕事' }).click()
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.getByRole('button', { name: '休息' }).click()
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  // Act: the server refuses 仕事; 休息 then goes out
+  answers[0]?.resolve()
+  await expect.poll(() => tapRequests).toBe(2)
+
+  // Assert: 休息 is still shown, with no flash of the first-launch screen from the refused 仕事
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(firstLaunch).toHaveCount(0)
+
+  // Act: the server refuses 休息 too
+  answers[1]?.resolve()
+
+  // Assert: back to the first-launch screen, never to the refused 仕事
+  await expect(firstLaunch).toBeVisible()
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(0)
+  expect(tapRequests).toBe(2)
+  currentAnswer.resolve()
+})
+
+test('digit 0 on the first-launch screen starts a new account on detox', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+
+  // Act
+  await page.keyboard.press('0')
+
+  // Assert: Home in detox, as the detox row would have started it
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(firstLaunch).toHaveCount(0)
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+})
+
+test('a digit on the first-launch screen starts the clock on the button at that position', async ({
+  page,
+}) => {
+  // Arrange: the second button is 仕事
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+
+  // Act
+  await page.keyboard.press('2')
+
+  // Assert
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(firstLaunch).toHaveCount(0)
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+  await expect(page.getByText(/^\d+:\d{2} から · 今日 0 回切替$/)).toBeVisible()
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {

@@ -373,6 +373,28 @@ test('pressing detox again inside its week keeps the running record', async () =
   expect((await api.switches.current())?.runStartDay).toBe(tapDay)
 })
 
+test('pressing detox again past its week keeps the running record while the unused-day rule is off', async () => {
+  // Arrange: detox from twenty days ago, and another device turned the rule off (a tab here may still show it on)
+  const api = await signedIn('detox-renew-rule-off@example.com')
+  const tapDay = addDays(today, -20)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  await api.settings.update({ autoExcludeUnusedDays: false })
+  const before = await api.switches.current()
+
+  // Act
+  const again = await api.switches.switchTo({ activityId: null })
+
+  // Assert: no new run, so turning the rule back on still counts the week from the old run's start
+  expect(again.id).toBe(before?.id)
+  expect(again.startsRun).toBe(false)
+  expect((await api.switches.current())?.runStartDay).toBe(tapDay)
+})
+
 test('pressing detox on the eighth day after its run started renews it once, and ends the old record', async () => {
   // Arrange: detox from eight days ago, the first day its run no longer measures
   const api = await signedIn('detox-renew-eighth@example.com')

@@ -6,6 +6,7 @@ import Svg, { Circle, Line } from 'react-native-svg'
 import { DetoxRow } from '@/components/detox-row'
 import { SwitchButton } from '@/components/switch-button'
 import { useActivities } from '@/hooks/use-activities'
+import { useSwitchHotkeys } from '@/hooks/use-switch-hotkeys'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useTokenColor } from '@/hooks/use-token-color'
 
@@ -19,13 +20,15 @@ const ARCS = [
 
 /**
  * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity button, or detox from the
- * {@link DetoxRow} under the buttons), which flips `switches.current` and so swaps this for Home.
+ * {@link DetoxRow} under the buttons, or Home's digit hotkeys on web), which flips `switches.current` and so swaps this for Home.
  * @example {current === null ? <FirstLaunch /> : <HomeBody />}
  */
 export function FirstLaunch() {
   const activities = useActivities().data ?? []
   const switchTo = useSwitchTo()
   const ink = useTokenColor('ink')
+  // Nothing runs yet, so every pick is a change of state (and `0` has no run to renew): send them all.
+  useSwitchHotkeys(activities, (activityId) => switchTo.mutate({ activityId }))
   return (
     <View className="items-center gap-3.5 pt-8">
       <View className="bg-face text-ink h-22 w-22 items-center justify-center rounded-[26px]">
