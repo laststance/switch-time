@@ -52,6 +52,30 @@
 **Priority:** P4
 **Depends on:** None
 
+### Check on a phone that a zone change made in the background reaches 設定
+
+**What:** On an iPhone and an Android phone, put the app in the background, change the phone's time zone in the system settings, bring the app back, and check that the タイムゾーン row and the account's stored zone follow.
+
+**Why:** The app reads the zone with `Intl.DateTimeFormat().resolvedOptions().timeZone` each time it returns to the foreground (`useDeviceZone`). The e2e covers only the web. Hermes may take the zone from a cached system value (Foundation keeps `systemTimeZone` until `resetSystemTimeZone`), so on iOS a zone change while the app stays open may not show until a relaunch.
+
+**Context:** `apps/app/src/hooks/use-device-zone.ts` re-reads on TanStack's `focusManager`, which `src/lib/query.ts` wires to `AppState` on native. If Hermes keeps the old zone, read it from `expo-localization` (`getCalendars()[0].timeZone`) on native instead. Found by the adversarial review of the take-back PR (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
+
+### Bind every settings write to the account it was made for
+
+**What:** Send `forUserId` with every `settings.update`, not only the zone sync and 「この端末に合わせる」, and roll back only the fields a failed write changed.
+
+**Why:** A 外観 or 秒針 tap queued while a sign-in in another tab changes the cookie still lands on the new account. And the rollback puts back the whole row it saved, so when two settings writes fail one after the other, the first one's rollback also erases the second one's optimistic value.
+
+**Context:** `settings.update` already refuses a `forUserId` that is not the session's (`CONFLICT`, `apps/api/src/rpc/settings.ts`). The optimistic update and rollback are in `useUpdateSettings` (`apps/app/src/hooks/use-settings.ts`). `rolledBackSettings` already keeps another account's row. Found by the adversarial review of the take-back PR (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ## Correction
 
 ### Decide what a merge that makes a segment idle should do
