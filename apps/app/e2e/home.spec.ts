@@ -64,15 +64,16 @@ test('a new account can start on detox from the first-launch screen, and a reloa
   expect((await tapAnswer).ok()).toBe(true)
   await page.reload()
 
-  // Assert: Home in detox, no activity pressed, and the since line names no activity
-  await expect(firstLaunch).toHaveCount(0)
-  await expect(
-    page.getByRole('heading', { name: 'いま', exact: true }),
-  ).toBeVisible()
+  // Assert: Home in detox, no activity pressed, and the since line names no activity. The pressed row comes first: Home's
+  // loading frame also has the いま heading and no first-launch heading, so only the row proves Home read the stored switch.
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
+  await expect(firstLaunch).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
   // Only the detox row is pressed: no activity button took the first tap
   await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
   await expect(
@@ -87,12 +88,9 @@ test('a failed first detox tap brings the first-launch screen back instead of le
   await createAccount(page)
   const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
   await expect(firstLaunch).toBeVisible()
-  let answerTap = () => {}
-  const tapAnswered = new Promise<void>((resolve) => {
-    answerTap = resolve
-  })
+  const tapAnswer = Promise.withResolvers<void>()
   await page.route('**/api/rpc/switches/switchTo', async (route) => {
-    await tapAnswered
+    await tapAnswer.promise
     await route.fulfill({
       status: 500,
       contentType: 'application/json',
@@ -119,8 +117,14 @@ test('a failed first detox tap brings the first-launch screen back instead of le
     'true',
   )
 
-  // Act: the server refuses the tap
-  answerTap()
+  // Act: the server refuses the tap, while the refetch of the current switch that follows is held, so only the rollback can
+  // bring the first-launch screen back
+  const currentAnswer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/current**', async (route) => {
+    await currentAnswer.promise
+    await route.continue()
+  })
+  tapAnswer.resolve()
 
   // Assert: the tap is rolled back to the first-launch screen, and the server holds no switch
   await expect(firstLaunch).toBeVisible()
@@ -128,6 +132,7 @@ test('a failed first detox tap brings the first-launch screen back instead of le
     'aria-pressed',
     'false',
   )
+  currentAnswer.resolve()
   expect(await (await apiAs(page)).switches.current()).toBeNull()
 })
 

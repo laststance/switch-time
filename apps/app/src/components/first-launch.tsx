@@ -86,8 +86,8 @@ export function FirstLaunch() {
             onPress={() => switchTo.mutate({ activityId: activity.id })}
           />
         ))}
-        {/* Inside the wrapping row, so it shares its gap; full width puts it on a line of its own under the buttons, where Home
-            also shows it. A new account can start on detox without recording an activity first. */}
+        {/* Inside the wrapping row, as the pen's 初回起動 board draws it: it keeps the buttons' 10px gap (Home leaves 16px), and
+            full width gives it a line of its own under them. A new account can start on detox without recording an activity first. */}
         <DetoxRow
           active={false}
           onPress={() => switchTo.mutate({ activityId: null })}

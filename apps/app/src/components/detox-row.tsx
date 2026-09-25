@@ -16,7 +16,8 @@ type Props = {
 /**
  * The full-width row under the switch buttons that records the time to no activity. Pressed, it inverts to `ink` on `bg` (the
  * design's "no colour = no activity"); otherwise it reads like an unpressed switch. It reports its state with aria-pressed like
- * {@link SwitchButton}, so exactly one of the switch buttons and this row is pressed at any moment. While `renewable`, the hint
+ * {@link SwitchButton}, so on Home exactly one of the switch buttons and this row is pressed at any moment ({@link FirstLaunch}
+ * shows it unpressed under unpressed buttons, since nothing runs yet). While `renewable`, the hint
  * reads 「押し直すと新しく始まります」 (the row stays pressed).
  * @example <DetoxRow active={current.activityId === null} renewable={renewable} onPress={() => pick(null)} />
  */
