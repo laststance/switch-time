@@ -451,6 +451,31 @@ test('a detox cut in two by a correction keeps the week counted from its first p
   ])
 })
 
+test('cutting a detox after its week does not measure the untapped days that follow the cut', () => {
+  // Arrange: detox from 09-01 20:00, cut at 09-12 12:00 (a second detox record past the week), still running on 09-30
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+    { activityId: null, startedAt: at('2026-09-12', 12) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, {
+    from: '2026-09-01',
+    to: '2026-09-30',
+  })
+
+  // Assert: only the first week counts; 09-13 onwards stay unused days, since the cut is not a new run
+  expect([...days]).toEqual([
+    '2026-09-02',
+    '2026-09-03',
+    '2026-09-04',
+    '2026-09-05',
+    '2026-09-06',
+    '2026-09-07',
+    '2026-09-08',
+  ])
+})
+
 test('switching to an activity and back to detox starts a new week', () => {
   // Arrange: detox from 09-01 20:00, 仕事 at 09-10 09:00, detox again from 09-10 10:00, still running on 09-30
   const taps = [

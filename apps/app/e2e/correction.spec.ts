@@ -1095,6 +1095,70 @@ test('ここで分割 on a detox says the day becomes measured only after the de
   await expect(measuredNote).toHaveCount(0)
 })
 
+test('cutting a detox past its first week measures the cut day only, and the next untapped day still offers the 計測 line', async ({
+  page,
+}) => {
+  // Arrange: detox from D−12 20:00 until 食事 at D−1 0:00; D−3 and D−2 are past the detox's week, so both are unused days.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const recordStart = shift(today(), -12)
+  const recordEnd = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: recordStart,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(recordStart, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: recordEnd,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(recordEnd, 0) }],
+  })
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  const measuredNote = dialog.getByText(
+    '区切ると、この日は計測できた日になります',
+  )
+  const cutDayAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/stats/week'),
+  )
+  await page.goto(`/correction?day=${shift(today(), -3)}`)
+  expect((await cutDayAnswer).ok()).toBe(true)
+  await dialog
+    .getByRole('button', { name: 'detox 0:00 – 24:00 24h 00m' })
+    .click()
+  await expect(measuredNote).toBeVisible()
+
+  // Act: cut at 11:45, then reopen the earlier part
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+  await expect(
+    dialog.getByRole('button', { name: 'detox 11:45 – 24:00 12h 15m' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+  await dialog
+    .getByRole('button', { name: 'detox 0:00 – 11:45 11h 45m' })
+    .click()
+
+  // Assert: the cut's own switch measures D−3 now, so its carried-in part no longer promises it
+  await expect(readout).toHaveText('5:45')
+  await expect(measuredNote).toHaveCount(0)
+
+  // Act: the next day, which the second detox record runs through
+  const nextDayAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/stats/week'),
+  )
+  await page.goto(`/correction?day=${shift(today(), -2)}`)
+  expect((await nextDayAnswer).ok()).toBe(true)
+  await dialog
+    .getByRole('button', { name: 'detox 0:00 – 24:00 24h 00m' })
+    .click()
+
+  // Assert: the cut did not start a new week, so D−2 is still unused and a cut there would measure it
+  await expect(readout).toHaveText('11:45')
+  await expect(measuredNote).toBeVisible()
+})
+
 test('a carried-in record with no quarter hour to cut at disables every step and ここで分割 and says why', async ({
   page,
 }) => {
