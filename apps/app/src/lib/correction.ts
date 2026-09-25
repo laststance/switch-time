@@ -9,6 +9,7 @@ import {
   refusalDataSchema,
   type DayBaseline,
   type DayRow,
+  type ExcludedReason,
   type RefusalReason,
   type ReplaceDayInput,
 } from '@switch-time/shared'
@@ -445,14 +446,11 @@ export function cutStepper(
   }
 }
 
-/** The day facts the cut's effect on the totals depends on; the hook reads them from settings and the excluded-day list. */
+/** The day facts the cut's effect on the totals depends on; the hook reads them from settings and the viewed day's stats. */
 export type TotalsFacts = {
   idleThresholdMs: number
-  autoExcludeUnusedDays: boolean
-  /** Null while the excluded-day list is loading: the 計測 note waits rather than guess. */
-  manuallyExcluded: boolean | null
-  hasOwnRows: boolean
-  isToday: boolean
+  /** The viewed day's class as `stats.*` reports it; undefined while that answer loads, so the 計測 note waits rather than guess. */
+  dayExcluded: ExcludedReason | null | undefined
 }
 /** 'idle': the cut turns idle time into counted time; 'unmeasured': the day becomes 計測できた日. */
 export type TotalsEffect = 'idle' | 'unmeasured'
@@ -480,13 +478,13 @@ function cutFreesIdle(
 
 /**
  * How a cut of the carried-in record would change the totals, one line each under 「ここで分割」: a record over the idle
- * threshold counts nowhere until a cut leaves a part under it ({@link cutFreesIdle}), and a past day without a switch
- * of its own is 計測なし under auto-exclusion until the cut adds one ({@link classifyDay}), unless a detox runs through it.
+ * threshold counts nowhere until a cut leaves a part under it ({@link cutFreesIdle}), and a day the server counts as
+ * unused (`auto_unused`, see {@link classifyDay}) becomes 計測できた日 once the cut gives it a switch of its own.
  * @param row - The selected row; the day's own rows have no cut and no effect.
- * @param facts - The settings and day facts the two rules read.
+ * @param facts - The idle threshold and the viewed day's class.
  * @param at - The stepper's cut time, or null when there is none.
  * @returns The effects in display order; empty when the cut changes nothing in the totals.
- * @example cutTotalsEffects(carriedIn, { idleThresholdMs: 43_200_000, autoExcludeUnusedDays: true, manuallyExcluded: false, hasOwnRows: false, isToday: false }, at) // ['idle', 'unmeasured']
+ * @example cutTotalsEffects(carriedIn, { idleThresholdMs: 43_200_000, dayExcluded: 'auto_unused' }, at) // ['idle', 'unmeasured']
  */
 export function cutTotalsEffects(
   row: CorrectionRow,
@@ -496,32 +494,10 @@ export function cutTotalsEffects(
   if (!row.carriedIn) return []
   const effects: TotalsEffect[] = []
   if (cutFreesIdle(row, facts.idleThresholdMs, at)) effects.push('idle')
-  // Today is never 計測なし yet, a detox left on already measures the day, a manual exclusion outranks a switch, and an
-  // unloaded list says nothing.
-  if (
-    row.activityId !== null &&
-    !facts.isToday &&
-    !facts.hasOwnRows &&
-    facts.autoExcludeUnusedDays &&
-    facts.manuallyExcluded === false
-  )
-    effects.push('unmeasured')
+  // The server's class already folds in today, the day's own taps, a detox that still measures it, a manual exclusion
+  // (which outranks a switch) and auto-exclusion being off; a class not loaded yet says nothing.
+  if (facts.dayExcluded === 'auto_unused') effects.push('unmeasured')
   return effects
-}
-
-/**
- * Whether the user excluded `day` by hand, from the excluded-day query for that one day; feeds {@link TotalsFacts}.
- * @param rows - The query's rows, undefined while it loads.
- * @param day - The viewed day, `YYYY-MM-DD`.
- * @returns Null while loading, then whether a manual exclusion covers the day.
- * @example isManuallyExcluded([{ day: '2026-09-08', reason: 'manual' }], '2026-09-08') // true
- */
-export function isManuallyExcluded(
-  rows: readonly { day: string; reason: string }[] | undefined,
-  day: string,
-): boolean | null {
-  if (rows === undefined) return null
-  return rows.some((row) => row.day === day && row.reason === 'manual')
 }
 
 /**

@@ -18,7 +18,6 @@ import {
   dayBaseline,
   dayTitle,
   isDayChangedRefusal,
-  isManuallyExcluded,
   landedUndo,
   offeredUndo,
   onPressedDay,
@@ -110,7 +109,7 @@ export function useCorrection(dayParam: string | undefined) {
     selectedId: state.selectedId,
     noticeId: state.noticeId,
     focusId: state.focusId,
-    totalsFacts: useTotalsFacts(day, today, list.data, ready),
+    totalsFacts: useTotalsFacts(day, ready),
     select: state.select,
     ...edits,
     undo,
@@ -385,27 +384,16 @@ function useCorrectionUndo(
   }
 }
 
-// What the lines under 「ここで分割」 read: the idle threshold, the unused-day rule, and the viewed day's own facts.
-function useTotalsFacts(
-  day: string,
-  today: string,
-  listed: ListedDay | undefined,
-  ready: boolean,
-): TotalsFacts {
+// What the lines under 「ここで分割」 read: the idle threshold and the viewed day's class as the stats answer it.
+function useTotalsFacts(day: string, ready: boolean): TotalsFacts {
   const { settings } = useSettings()
-  // The viewed day alone: the 「除外中の日」 list stops a year back, and a correction can reach further. `ready` waits for the
-  // stored time zone, as the day's list does, so a default-zone "today" is never fetched first.
-  const excluded = useQuery(
-    orpc.excludedDays.list.queryOptions({
-      input: { from: day, to: day },
-      enabled: ready,
-    }),
+  // The server's class for the viewed day alone, so the note follows the day rule (detox cap included) instead of copying
+  // it. `ready` waits for the stored time zone, as the day's list does, so a default-zone "today" is never fetched first.
+  const stats = useQuery(
+    orpc.stats.week.queryOptions({ input: { startDay: day }, enabled: ready }),
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
-    autoExcludeUnusedDays: settings.autoExcludeUnusedDays,
-    manuallyExcluded: isManuallyExcluded(excluded.data, day),
-    hasOwnRows: (listed?.rows.length ?? 0) > 0,
-    isToday: day === today,
+    dayExcluded: stats.data?.days[0]?.excluded,
   }
 }

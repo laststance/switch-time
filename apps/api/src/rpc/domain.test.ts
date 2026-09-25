@@ -201,6 +201,76 @@ test('a month older than the streak window still counts the days a detox ran thr
   ])
 })
 
+test('a detox left running for twenty days keeps its first week measured and the days after it unused', async () => {
+  // Arrange: 仕事 then detox twenty days ago, nothing tapped since
+  const api = await signedIn('detox-abandoned@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const tapDay = addDays(today, -20)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(tapDay, 9) },
+      { activityId: null, startedAt: at(tapDay, 20) },
+    ],
+  })
+
+  // Act
+  const firstWeek = await api.stats.week({ startDay: tapDay })
+  const secondWeek = await api.stats.week({ startDay: addDays(tapDay, 7) })
+
+  // Assert: the tap day and seven detox days count; from the eighth untapped day on, days are unused and the streak is gone
+  expect(firstWeek.days.map((day) => [day.measured, day.excluded])).toEqual(
+    Array.from({ length: 7 }, () => [true, null]),
+  )
+  expect(secondWeek.days.map((day) => [day.measured, day.excluded])).toEqual([
+    [true, null],
+    [false, 'auto_unused'],
+    [false, 'auto_unused'],
+    [false, 'auto_unused'],
+    [false, 'auto_unused'],
+    [false, 'auto_unused'],
+    [false, 'auto_unused'],
+  ])
+  expect(secondWeek.days.map((day) => day.detoxMs)).toEqual(
+    Array.from({ length: 7 }, () => 24 * H),
+  )
+  expect(secondWeek.streak).toBe(0)
+})
+
+test('cutting a running detox does not extend the week it measures', async () => {
+  // Arrange: detox from twenty days ago, cut on its fifth day at 12:00 through 「ここで分割」
+  const api = await signedIn('detox-cut@example.com')
+  const tapDay = addDays(today, -20)
+  const cutDay = addDays(tapDay, 5)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const { carriedIn } = await api.switches.listByDay({ day: cutDay })
+  if (!carriedIn) throw new Error('fixture carries no detox into the cut day')
+
+  // Act
+  await api.switches.splitAt({ id: carriedIn.id, at: at(cutDay, 12) })
+  const week = await api.stats.week({ startDay: addDays(tapDay, 5) })
+
+  // Assert: the cut day has its own tap, the week still ends seven days after the tap, then days are unused
+  expect(week.days.map((day) => [day.day, day.measured, day.excluded])).toEqual(
+    [
+      [cutDay, true, null],
+      [addDays(tapDay, 6), true, null],
+      [addDays(tapDay, 7), true, null],
+      [addDays(tapDay, 8), false, 'auto_unused'],
+      [addDays(tapDay, 9), false, 'auto_unused'],
+      [addDays(tapDay, 10), false, 'auto_unused'],
+      [addDays(tapDay, 11), false, 'auto_unused'],
+    ],
+  )
+})
+
 test('the month and week views refuse days before 1970 at the API boundary', async () => {
   // Arrange
   const api = await signedIn('pre-epoch@example.com')
