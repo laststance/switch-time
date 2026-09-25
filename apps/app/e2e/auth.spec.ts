@@ -101,6 +101,85 @@ test('a wrong password after sign-up replaces the notice with the sign-in error'
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
 })
 
+test('submitting right after sign-up without a password hides the notice, shows the field error and keeps the address', async ({
+  page,
+}) => {
+  // Arrange
+  const email = uniqueEmail()
+  await register(page, email)
+
+  // Act
+  await page.getByRole('button', { name: 'サインイン' }).click()
+
+  // Assert
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(
+    page.getByText('パスワードは8文字以上にしてください'),
+  ).toBeVisible()
+  await expect(page.getByLabel('メールアドレス')).toHaveValue(email)
+  // The notice is gone, so the password field no longer points a screen reader at it.
+  await expect(page.getByLabel('パスワード')).toHaveAccessibleDescription('')
+})
+
+test('a second sign-up in the same tab refills sign-in with the new address and shows the notice again', async ({
+  page,
+}) => {
+  // Arrange: the first registration's notice is dismissed by typing, as a user who changes their mind would.
+  await register(page, uniqueEmail())
+  await page.keyboard.type('corr')
+  await page.getByRole('link', { name: '新規登録はこちら' }).click()
+  const second = uniqueEmail()
+  // Sign-up is pushed over sign-in, which stays mounted (hidden) underneath.
+  const signUpForm = { visible: true }
+
+  // Act
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').filter(signUpForm).fill(second)
+  await page.getByLabel('パスワード').filter(signUpForm).fill(PASSWORD)
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+
+  // Assert
+  await expect(page.getByRole('status')).toHaveText(REGISTERED_NOTICE)
+  await expect(page.getByLabel('メールアドレス')).toHaveValue(second)
+  await expect(page.getByLabel('パスワード')).toHaveValue('')
+})
+
+test('a sign-up that cannot reach the server stays on sign-up with an error and does not claim the account was made', async ({
+  page,
+}) => {
+  // Arrange
+  await page.route('**/api/auth/sign-up/email', async (route) => route.abort())
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+
+  // Act
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+
+  // Assert
+  await expect(page.getByRole('alert')).toHaveText('もう一度お試しください')
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/sign-up/)
+  await expect(
+    page.getByRole('button', { name: 'アカウントを作成' }),
+  ).toBeVisible()
+})
+
+test('signing out after sign-up and sign-in leaves sign-in blank, without the address or the notice', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+
+  // Act
+  await signOut(page)
+
+  // Assert: on a shared device, the next person does not see who registered here last.
+  await expect(page.getByLabel('メールアドレス')).toHaveValue('')
+  await expect(page.getByRole('status')).toHaveCount(0)
+})
+
 test('signing out returns to sign-in and hides the app', async ({ page }) => {
   // Arrange
   await createAccount(page)
