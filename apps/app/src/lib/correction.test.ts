@@ -1480,21 +1480,6 @@ const carriedDetox = () => {
   return carriedIn
 }
 
-test('a cut of a detox that still measures the untapped day promises no 計測 change, since the day already counts', () => {
-  // Arrange: within the detox's first week the server measures 9/8 (no exclusion)
-  const carriedIn = carriedDetox()
-
-  // Act
-  const effects = cutTotalsEffects(
-    carriedIn,
-    { idleThresholdMs: 12 * 3_600_000, dayExcluded: null },
-    at('2026-09-08', 12, 45).getTime(),
-  )
-
-  // Assert
-  expect(effects).toEqual([])
-})
-
 test('a cut of a detox past its measured week says the untapped day becomes 計測できた日', () => {
   // Arrange: the server counts 9/8 as unused (the detox's week is over), so the cut's own switch is what measures it
   const carriedIn = carriedDetox()

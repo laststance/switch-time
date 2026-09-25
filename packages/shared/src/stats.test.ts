@@ -283,7 +283,7 @@ test('a detox left on over a weekend covers the untapped days until the next tap
   expect([...days]).toEqual(['2026-09-05', '2026-09-06'])
 })
 
-test('a detox still running covers every day through today', () => {
+test('a detox still running covers the untapped days through today within its first week', () => {
   // Arrange
   const taps = [
     { activityId: 'work', startedAt: at('2026-09-07', 9) },
