@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.15.0.0] - 2026-09-25
+
+### Added
+
+- 設定 has a タイムゾーン row. It shows the account's zone next to this
+  device's, and when another device (a laptop abroad, a browser that
+  reports UTC) changed the account's zone, 「この端末に合わせる」 takes it
+  back. A take-back that fails says so on the row and can be tried
+  again; it waits while another 設定 change is still being saved.
+
+### Fixed
+
+- Signing in as another account in a second tab no longer lets this tab
+  write its zone into the wrong account, or remember the first account's
+  zone as the new one's: the zone sync acts only on the signed-in
+  account's own settings, and the server refuses a zone change meant for
+  another account. A failed zone save no longer puts the first account's
+  settings back over the next one's.
+- A zone save that failed is not sent again and again while the app is
+  open; the next account, or a device that moved to another zone, saves
+  as usual.
+
 ## [0.13.0.0] - 2026-09-25
 
 ### Changed
