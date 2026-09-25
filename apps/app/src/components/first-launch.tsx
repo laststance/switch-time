@@ -18,8 +18,8 @@ const ARCS = [
 ]
 
 /**
- * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity, or detox from the {@link DetoxRow} under
- * them), which flips `switches.current` and so swaps this for Home.
+ * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity button, or detox from the
+ * {@link DetoxRow} under the buttons), which flips `switches.current` and so swaps this for Home.
  * @example {current === null ? <FirstLaunch /> : <HomeBody />}
  */
 export function FirstLaunch() {
@@ -86,7 +86,8 @@ export function FirstLaunch() {
             onPress={() => switchTo.mutate({ activityId: activity.id })}
           />
         ))}
-        {/* Last in the grid, as under Home's buttons: a new account can start on detox without recording an activity first. */}
+        {/* Inside the wrapping row, so it shares its gap; full width puts it on a line of its own under the buttons, where Home
+            also shows it. A new account can start on detox without recording an activity first. */}
         <DetoxRow
           active={false}
           onPress={() => switchTo.mutate({ activityId: null })}

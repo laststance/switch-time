@@ -80,6 +80,57 @@ test('a new account can start on detox from the first-launch screen, and a reloa
   ).toBeVisible()
 })
 
+test('a failed first detox tap brings the first-launch screen back instead of leaving Home in detox', async ({
+  page,
+}) => {
+  // Arrange: hold the server's answer to the tap, so the optimistic Home can be seen before the failure arrives
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  let answerTap = () => {}
+  const tapAnswered = new Promise<void>((resolve) => {
+    answerTap = resolve
+  })
+  await page.route('**/api/rpc/switches/switchTo', async (route) => {
+    await tapAnswered
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        json: {
+          defined: false,
+          code: 'INTERNAL_SERVER_ERROR',
+          status: 500,
+          message: 'INTERNAL_SERVER_ERROR',
+        },
+      }),
+    })
+  })
+
+  // Act
+  await page.getByRole('button', { name: /^detox/ }).click()
+
+  // Assert: Home shows detox at once, while the answer is still pending
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  // Act: the server refuses the tap
+  answerTap()
+
+  // Assert: the tap is rolled back to the first-launch screen, and the server holds no switch
+  await expect(firstLaunch).toBeVisible()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  expect(await (await apiAs(page)).switches.current()).toBeNull()
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {
