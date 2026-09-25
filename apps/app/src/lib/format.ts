@@ -1,3 +1,5 @@
+import { localDay } from '@switch-time/shared'
+
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`)
 
 /**
@@ -67,4 +69,26 @@ export function formatTime(date: Date, timeZone: string): string {
     timeFormats.set(timeZone, format)
   }
   return format.format(date)
+}
+
+/**
+ * The hero's 「… から」 label: when the current record started, with its day when that was before today, so a detox or an activity
+ * carried over midnight does not read as started today. The date is written as the correction sheet's origin note writes it.
+ * @param date - The record's start.
+ * @param today - Today in the stored zone.
+ * @param timeZone - The stored zone.
+ * @returns
+ * - `H:MM` for a record started today
+ * - `M月D日 H:MM` for one started on an earlier day
+ * @example formatSince(new Date('2026-09-25T00:05:00Z'), '2026-09-25', 'Asia/Tokyo') // '9:05'
+ * @example formatSince(new Date('2026-09-16T12:20:00Z'), '2026-09-25', 'Asia/Tokyo') // '9月16日 21:20'
+ */
+export function formatSince(
+  date: Date,
+  today: string,
+  timeZone: string,
+): string {
+  const day = localDay(date, timeZone)
+  const time = formatTime(date, timeZone)
+  return day === today ? time : `${formatMonthDay(day)} ${time}`
 }

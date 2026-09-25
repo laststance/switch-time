@@ -1,6 +1,12 @@
 import { afterEach, expect, test, vi } from 'vitest'
 
-import { formatDay, formatDuration, formatElapsed, formatTime } from './format'
+import {
+  formatDay,
+  formatDuration,
+  formatElapsed,
+  formatSince,
+  formatTime,
+} from './format'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -72,4 +78,31 @@ test('the since line keeps failing for an unknown time zone instead of caching a
   expect(readUnknownZone).toThrow(RangeError)
   expect(readUnknownZone).toThrow(RangeError)
   expect(formatTime(instant, 'Asia/Tokyo')).toBe('9:05')
+})
+
+test('the since line names the day for a record started before today, and stays a bare time for one started today', () => {
+  // Arrange: a detox from 9/16 21:20 JST and a switch at 9/25 0:05 JST, read on 9/25 in Tokyo
+  const carried = new Date('2026-09-16T12:20:00Z')
+  const sameDay = new Date('2026-09-24T15:05:00Z')
+
+  // Act
+  const carriedLabel = formatSince(carried, '2026-09-25', 'Asia/Tokyo')
+  const sameDayLabel = formatSince(sameDay, '2026-09-25', 'Asia/Tokyo')
+
+  // Assert
+  expect(carriedLabel).toBe('9月16日 21:20')
+  expect(sameDayLabel).toBe('0:05')
+})
+
+test('the since line judges "today" in the stored zone, not in UTC', () => {
+  // Arrange: 9/24 23:30 UTC is already 9/25 8:30 in Tokyo but still 9/24 19:30 in New York
+  const instant = new Date('2026-09-24T23:30:00Z')
+
+  // Act
+  const tokyo = formatSince(instant, '2026-09-25', 'Asia/Tokyo')
+  const newYork = formatSince(instant, '2026-09-25', 'America/New_York')
+
+  // Assert
+  expect(tokyo).toBe('8:30')
+  expect(newYork).toBe('9月24日 19:30')
 })

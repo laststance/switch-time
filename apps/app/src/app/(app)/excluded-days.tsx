@@ -1,3 +1,4 @@
+import { DETOX_MEASURED_DAYS_MAX } from '@switch-time/shared'
 import { ScrollView, Text, View } from 'react-native'
 
 import { Control } from '@/components/control'
@@ -21,7 +22,7 @@ export default function ExcludedDaysSheet() {
   return (
     <Sheet
       title="未使用日の扱い"
-      hint="一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は計測に入ります。"
+      hint={`一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は、始めた翌日から${DETOX_MEASURED_DAYS_MAX}日間は計測に入り、その後は「切替なし」として外します。`}
     >
       {/* Both cards read the same settings row: a failed read would show the defaults as if they were the account's own. */}
       {isError ? (

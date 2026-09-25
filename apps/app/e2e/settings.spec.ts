@@ -194,7 +194,10 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   const sheet = page.getByRole('dialog', { name: '未使用日の扱い' })
   await expect(sheet).toBeVisible()
   await expect(
-    sheet.getByText('デトックスを続けた日は計測に入ります。', { exact: false }),
+    sheet.getByText(
+      'デトックスを続けた日は、始めた翌日から7日間は計測に入り、その後は「切替なし」として外します。',
+      { exact: false },
+    ),
   ).toBeVisible()
   const row = page.getByRole('button', { name: /を戻す$/ })
   await expect(row).toBeVisible()
