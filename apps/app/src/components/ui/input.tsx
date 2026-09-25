@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import { TextInput, type TextInputProps } from 'react-native'
 
 import { cn } from '@/lib/utils'
@@ -6,7 +7,10 @@ import { cn } from '@/lib/utils'
  * Text field on the tokens (radius 10, `surface` face, `line` border); give it `aria-label` so tests and screen readers find it.
  * @example <Input aria-label="メールアドレス" value={email} onChangeText={setEmail} />
  */
-export function Input({ className, ...props }: TextInputProps) {
+export function Input({
+  className,
+  ...props
+}: TextInputProps & { ref?: Ref<TextInput> }) {
   return (
     <TextInput
       {...props}

@@ -141,7 +141,11 @@ test('a second sign-up in the same tab refills sign-in with the new address and 
   // Assert
   await expect(page.getByRole('status')).toHaveText(REGISTERED_NOTICE)
   await expect(page.getByLabel('メールアドレス')).toHaveValue(second)
-  await expect(page.getByLabel('パスワード')).toHaveValue('')
+  // Reached through the sign-in link, the refilled form was hidden under sign-up when it remounted: it still takes the focus.
+  const password = page.getByLabel('パスワード')
+  await expect(password).toHaveValue('')
+  await expect(password).toBeFocused()
+  await expect(password).toHaveAccessibleDescription(REGISTERED_NOTICE)
 })
 
 test('a sign-up that cannot reach the server stays on sign-up with an error and does not claim the account was made', async ({
@@ -269,9 +273,11 @@ test('a signed-in user opening sign-in while the session is still loading never 
   })
 
   // Act
+  const asked = page.waitForRequest('**/api/auth/get-session**')
   await page.goto('/sign-in')
+  await asked
 
-  // Assert
+  // Assert: the app is up and waiting on the held answer, not yet unrendered.
   await expect(page.getByLabel('パスワード')).toHaveCount(0)
   release()
   await expect(page).toHaveURL('/')

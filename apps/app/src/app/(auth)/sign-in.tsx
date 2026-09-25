@@ -10,6 +10,7 @@ import {
   useNativeAnnouncement,
   useRegistration,
 } from '@/hooks/use-registration'
+import { useScreenFocusField } from '@/hooks/use-screen-focus-field'
 import { authClient } from '@/lib/auth-client'
 import { type SignInStart, signInStart } from '@/lib/sign-in'
 
@@ -37,6 +38,7 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
   )
   // Native screen readers stay where they were when the screen changes: say it once. Web reads it with the focused password field.
   useNativeAnnouncement(start.notice)
+  const passwordRef = useScreenFocusField(start.focusPassword)
 
   const set =
     (key: 'email' | 'password') =>
@@ -56,7 +58,7 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
         errors={form.fieldErrors}
         set={set}
         newPassword={false}
-        focusPassword={start.focusPassword}
+        passwordRef={passwordRef}
         passwordDescribedBy={start.notice ? AUTH_NOTICE_ID : undefined}
       />
       <Button title="サインイン" disabled={form.pending} onPress={onSubmit} />

@@ -1,4 +1,5 @@
-import { Platform } from 'react-native'
+import type { Ref } from 'react'
+import { Platform, type TextInput } from 'react-native'
 
 import { Field } from '@/components/auth-card'
 import { Input } from '@/components/ui/input'
@@ -9,8 +10,8 @@ type CredentialFieldsProps = {
   set: (key: 'email' | 'password') => (text: string) => void
   // Switches the browser / keychain autofill hint between a saved and a fresh password.
   newPassword: boolean
-  // Sign-in after sign-up: the address is filled in, so the password takes the focus.
-  focusPassword?: boolean
+  // Sign-in after sign-up: the address is filled in, so the password takes the focus ({@link useScreenFocusField}).
+  passwordRef?: Ref<TextInput>
   // Id of the text that describes the password field (the 登録しました notice), so a screen reader reads it with the focused field.
   passwordDescribedBy?: string
 }
@@ -24,7 +25,7 @@ export function CredentialFields({
   errors,
   set,
   newPassword,
-  focusPassword = false,
+  passwordRef,
   passwordDescribedBy,
 }: CredentialFieldsProps) {
   // react-native-web passes aria-describedby to the <input>; React Native's types have no such prop (native announces instead).
@@ -48,7 +49,7 @@ export function CredentialFields({
         <Input
           aria-label="パスワード"
           autoComplete={newPassword ? 'new-password' : 'current-password'}
-          autoFocus={focusPassword}
+          ref={passwordRef}
           secureTextEntry
           value={values.password}
           onChangeText={set('password')}
