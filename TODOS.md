@@ -190,14 +190,38 @@
 
 ### Say when an edit changes whether the untapped days around it count
 
-**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, and a merge or 元に戻す that removes or adds the tap ending a detox. The rule to state: whether later untapped days count follows the activity of the record carried over them.
+**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
 
-**Why:** Since detox left on over midnight measures the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
+**Why:** Since detox left on over midnight measures up to a week of the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
 
 **Context:** The rule is in `classifyDay` / `detoxCarriedDays` (`packages/shared/src/stats.ts`); `cutTotalsEffects` in `apps/app/src/lib/correction.ts` is the pattern for such a note. New text, so the pen file first. Left out of the PR that let detox days count.
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** None
+
+### Say on Home when a detox has stopped counting days
+
+**What:** Show on Home (and decide whether History's today cell follows) that a detox running past `DETOX_MEASURED_DAYS_MAX` (7) days after its run started no longer measures the untapped days, or let a detox re-tap on a day past the week start a new run (a new detox row the stats treat as a tap, which cut and rewrite rows are not).
+
+**Why:** From the eighth day after a detox run started, the untapped days it runs through are 計測なし and 連続記録 breaks, but DetoxRow stays pressed and nothing says so; tapping detox again is a no-op in `switches.switchTo`, so the only way to keep counting is a tap on an activity and back, which writes a minute of activity time.
+
+**Context:** The cap and the run rule are in `detoxCarriedDays` (`packages/shared/src/stats.ts`); the re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; raised by the red team of that PR's pre-landing review. New text or state on Home, so the pen file first.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** None
+
+### Say the detox week in the 未使用日の扱い hint
+
+**What:** Change the hint on the 未使用日の扱い sheet, 「…デトックスを続けた日は計測に入ります。」, to state the week limit (for example 「デトックスを続けた日は7日まで計測に入ります。」), in the pen file first.
+
+**Why:** Since the detox cap (2026-09-25), the untapped days from the eighth day after a detox run started are listed as 切替なし on that same sheet, under a hint that says they count.
+
+**Context:** `hint` in `apps/app/src/app/(app)/excluded-days.tsx`; the board is `ST Phone / 設定＋除外シート` in `design/switch-time.pen`. Raised by the red team of the cap's pre-landing review; left out because only one session edits the pen file at a time.
+
+**Effort:** S
+**Priority:** P2
 **Depends on:** None
 
 ### Fit a 25-hour day's activity time on History's 24-hour bar
@@ -219,18 +243,6 @@
 **Why:** A stacked cell's label is the date alone, so a screen-reader user hears nothing of the bars. Since History draws a day's partial detox time as an outline, that outline also has no text equivalent, while a detox day's label ends in ・detox.
 
 **Context:** `SUFFIX` and `dayCell` in `apps/app/src/lib/history.ts`; `formatDuration` gives the durations. Month cells are 31 links in a row, so keep the label short. Raised by the design pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Decide whether a detox left running for weeks keeps measuring days
-
-**What:** Choose whether a detox with no later tap measures every day up to today (the current rule), or stops after a limit (for example a week, or a setting), and add a test for a detox left running for a month.
-
-**Why:** Someone who taps detox and then stops using the app gets a 連続記録 that grows by one each day and a zero-total measured day that pulls every 1日あたり average down, which is the dilution the auto exclusion exists to prevent. An activity left running is read as a forgotten tap instead, and the idle threshold does not apply to detox.
-
-**Context:** `detoxCarriedDays` in `packages/shared/src/stats.ts` covers up to `window.to` (today). A deliberate choice in the PR that let detox days count; found in its review.
 
 **Effort:** S
 **Priority:** P3

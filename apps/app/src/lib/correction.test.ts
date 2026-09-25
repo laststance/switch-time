@@ -23,13 +23,13 @@ import {
   failureMessage,
   isDayChangedRefusal,
   isFreshList,
-  isManuallyExcluded,
   isSettledWrite,
   landedUndo,
   nextStamp,
   offeredUndo,
   onPressedDay,
   openedCut,
+  noteDayClass,
   pickRequest,
   reselectedRow,
   revealOffset,
@@ -42,6 +42,7 @@ import {
   type CorrectionSheet,
   type DayLine,
   type ListedDay,
+  type TotalsFacts,
   type UndoSlot,
 } from './correction'
 import { RequestTimeoutError } from './deadline'
@@ -1372,12 +1373,9 @@ test('the idle line appears only for a cut that leaves a part within the thresho
   // Arrange: 26 h (9/7 22:00 – 9/9 0:00) against a 12 h threshold, on a past day with no row, auto-exclusion on.
   const carriedIn = wholeDayWork()
   const day = '2026-09-08'
-  const facts = {
+  const facts: TotalsFacts = {
     idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: false,
-    isToday: false,
+    dayExcluded: 'auto_unused',
   }
 
   // Act & Assert
@@ -1394,7 +1392,7 @@ test('the idle line appears only for a cut that leaves a part within the thresho
   expect(
     cutTotalsEffects(
       carriedIn,
-      { ...facts, hasOwnRows: true },
+      { ...facts, dayExcluded: null },
       at(day, 9, 45).getTime(),
     ),
   ).toEqual(['idle'])
@@ -1403,12 +1401,9 @@ test('the idle line appears only for a cut that leaves a part within the thresho
 test('a cut that leaves a part of exactly the threshold brings that part into the totals, as the totals judge idle', () => {
   // Arrange: the 26 h whole-day record (9/7 22:00 – 9/9 0:00) against a 12 h threshold, on a day with its own rows.
   const carriedIn = wholeDayWork()
-  const facts = {
+  const facts: TotalsFacts = {
     idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: true,
-    isToday: false,
+    dayExcluded: null,
   }
   const tenOClock = at('2026-09-08', 10).getTime()
 
@@ -1435,12 +1430,9 @@ test('a cut of a record longer than twice the threshold never frees idle time', 
     },
   )[0]
   if (!carriedIn) throw new Error('no carried-in row')
-  const facts = {
+  const facts: TotalsFacts = {
     idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: true,
-    isToday: false,
+    dayExcluded: null,
   }
 
   // Act & Assert: both parts stay over 12 h at the day's first and last quarter.
@@ -1473,10 +1465,7 @@ test('a carried-in detox record never reports idle time, since detox is never id
     carriedIn,
     {
       idleThresholdMs: 12 * 3_600_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: false,
-      hasOwnRows: true,
-      isToday: false,
+      dayExcluded: null,
     },
     at(day, 12, 45).getTime(),
   )
@@ -1485,18 +1474,18 @@ test('a carried-in detox record never reports idle time, since detox is never id
   expect(effects).toEqual([])
 })
 
-test('a cut of a detox running through an untapped past day promises no 計測 change, since the day already counts', () => {
-  // Arrange: detox from 9/7 22:00 until 9/9 0:00, viewed on 9/8, which has no row of its own.
-  const day = '2026-09-08'
+test('a cut of a detox past its measured week says the untapped day becomes 計測できた日', () => {
+  // Arrange: detox from 8/31 22:00 until 9/9 0:00, carried into 9/8 with no row of its own. Its week measured 9/1 … 9/7,
+  // so the server counts 9/8 as unused and the cut's own switch is what measures it.
   const carriedIn = correctionRows(
     {
-      carriedIn: row('d', null, at('2026-09-07', 22)),
+      carriedIn: row('d', null, at('2026-08-31', 22)),
       rows: [],
       carriedOut: row('h', 'home', at('2026-09-09', 0)),
     },
     activities,
     {
-      ...dayBounds(day, TZ),
+      ...dayBounds('2026-09-08', TZ),
       now: at('2026-09-09', 10).getTime(),
       timeZone: TZ,
     },
@@ -1504,36 +1493,86 @@ test('a cut of a detox running through an untapped past day promises no 計測 c
   if (!carriedIn) throw new Error('no carried-in row')
 
   // Act
-  const effects = cutTotalsEffects(
+  const notes = cutNotes(
     carriedIn,
-    {
-      idleThresholdMs: 12 * 3_600_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: false,
-      hasOwnRows: false,
-      isToday: false,
-    },
-    at(day, 12, 45).getTime(),
+    { idleThresholdMs: 12 * 3_600_000, dayExcluded: 'auto_unused' },
+    at('2026-09-08', 12, 45).getTime(),
   )
 
   // Assert
-  expect(effects).toEqual([])
+  expect(notes).toEqual(['区切ると、この日は計測できた日になります'])
 })
 
-test('the 計測 line waits while the excluded-day list is still loading', () => {
+test('the 計測 note never asks about today, so a sheet left open over midnight fetches the day afresh', () => {
+  // Arrange: an answer cached for the day, as if it had been fetched earlier
+  const query = {
+    isError: false,
+    isPaused: false,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+
+  // Act
+  const dayClass = noteDayClass({ isPast: false, hasOwnRows: false }, query)
+
+  // Assert
+  expect(dayClass).toBeNull()
+})
+
+test('after a cut lands, the 計測 note stops promising 計測 even while the day’s class is still the old one', () => {
+  // Arrange: the list already shows the cut's row, the stats answer is from before the cut
+  const query = {
+    isError: false,
+    isPaused: false,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+
+  // Act
+  const dayClass = noteDayClass({ isPast: true, hasOwnRows: true }, query)
+
+  // Assert
+  expect(dayClass).toBeNull()
+})
+
+test('the 計測 note waits while no trusted class is at hand: not loaded yet, a failed refetch, or a fetch paused offline', () => {
+  // Arrange: a failed or paused refetch keeps the answer from before the last edit
+  const day = { isPast: true, hasOwnRows: false }
+  const stale = { days: [{ excluded: 'auto_unused' as const }] }
+
+  // Act & Assert
+  expect(
+    noteDayClass(day, { isError: false, isPaused: false, data: undefined }),
+  ).toBeUndefined()
+  expect(
+    noteDayClass(day, { isError: true, isPaused: false, data: stale }),
+  ).toBeUndefined()
+  expect(
+    noteDayClass(day, { isError: false, isPaused: true, data: stale }),
+  ).toBeUndefined()
+})
+
+test('the 計測 note reads a past day’s class as the server reports it', () => {
+  // Arrange
+  const query = {
+    isError: false,
+    isPaused: false,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+
+  // Act
+  const dayClass = noteDayClass({ isPast: true, hasOwnRows: false }, query)
+
+  // Assert
+  expect(dayClass).toBe('auto_unused')
+})
+
+test('the 計測 line waits while the viewed day’s stats are still loading', () => {
   // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
   const carriedIn = wholeDayWork()
 
   // Act
   const effects = cutTotalsEffects(
     carriedIn,
-    {
-      idleThresholdMs: 48 * 3_600_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: null,
-      hasOwnRows: false,
-      isToday: false,
-    },
+    { idleThresholdMs: 48 * 3_600_000, dayExcluded: undefined },
     at('2026-09-08', 11, 45).getTime(),
   )
 
@@ -1541,46 +1580,39 @@ test('the 計測 line waits while the excluded-day list is still loading', () =>
   expect(effects).toEqual([])
 })
 
-test('a manual exclusion of the viewed day is found, and is unknown until the list loads', () => {
-  // Arrange
-  const rows = [
-    { day: '2026-09-07', reason: 'manual' },
-    { day: '2026-09-08', reason: 'auto' },
-  ]
-
-  // Act & Assert
-  expect(isManuallyExcluded(undefined, '2026-09-08')).toBeNull()
-  expect(isManuallyExcluded(rows, '2026-09-08')).toBe(false)
-  expect(isManuallyExcluded(rows, '2026-09-07')).toBe(true)
-})
-
-test('the cut says nothing about 計測 on today, on a manually excluded day or without auto-exclusion', () => {
-  // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
+test('the cut says nothing about 計測 on a day the server already measures or that was excluded by hand', () => {
+  // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test; null covers today, a day with its
+  // own taps and auto-exclusion turned off, which the server all reports as not excluded.
   const carriedIn = wholeDayWork()
-  const facts = {
-    idleThresholdMs: 48 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: false,
-    isToday: false,
-  }
-
+  const idleThresholdMs = 48 * 3_600_000
   const cutAt = at('2026-09-08', 11, 45).getTime()
 
   // Act & Assert
   expect(
-    cutTotalsEffects(carriedIn, { ...facts, isToday: true }, cutAt),
-  ).toEqual([])
-  expect(
-    cutTotalsEffects(carriedIn, { ...facts, manuallyExcluded: true }, cutAt),
+    cutTotalsEffects(carriedIn, { idleThresholdMs, dayExcluded: null }, cutAt),
   ).toEqual([])
   expect(
     cutTotalsEffects(
       carriedIn,
-      { ...facts, autoExcludeUnusedDays: false },
+      { idleThresholdMs, dayExcluded: 'manual' },
       cutAt,
     ),
   ).toEqual([])
+})
+
+test('the cut promises 計測 on a day the server counts as unused', () => {
+  // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
+  const carriedIn = wholeDayWork()
+
+  // Act
+  const effects = cutTotalsEffects(
+    carriedIn,
+    { idleThresholdMs: 48 * 3_600_000, dayExcluded: 'auto_unused' },
+    at('2026-09-08', 11, 45).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual(['unmeasured'])
 })
 
 test('a short carried-in record on a day with its own rows changes nothing in the totals', () => {
@@ -1592,10 +1624,7 @@ test('a short carried-in record on a day with its own rows changes nothing in th
     carriedIn,
     {
       idleThresholdMs: 12 * 3_600_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: false,
-      hasOwnRows: true,
-      isToday: false,
+      dayExcluded: null,
     },
     carriedIn.cut?.initial ?? null,
   )
@@ -1637,12 +1666,9 @@ test('the lines under ここで分割 spell each totals effect, or why no cut is
     },
   ).at(-1)
   if (!tooShort) throw new Error('no carried-in row')
-  const facts = {
+  const facts: TotalsFacts = {
     idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: false,
-    isToday: false,
+    dayExcluded: 'auto_unused',
   }
 
   // Act & Assert: at 12:45 the 11h15 after the cut counts.
@@ -1746,12 +1772,9 @@ test('the idle line appears only once the running record is longer than the thre
     now,
     timeZone: TZ,
   })
-  const facts = {
+  const facts: TotalsFacts = {
     idleThresholdMs: 12 * 3_600_000,
-    autoExcludeUnusedDays: true,
-    manuallyExcluded: false,
-    hasOwnRows: false,
-    isToday: true,
+    dayExcluded: null,
   }
   const exactly = correctionRows(
     list,
@@ -1779,10 +1802,7 @@ test('the idle line names a threshold that is not whole hours in minutes', () =>
     carriedIn,
     {
       idleThresholdMs: 90 * 60_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: false,
-      hasOwnRows: true,
-      isToday: false,
+      dayExcluded: null,
     },
     at('2026-09-08', 23, 45).getTime(),
   )
@@ -1804,10 +1824,7 @@ test('the day’s own rows never report a totals effect of a cut', () => {
     ownRow,
     {
       idleThresholdMs: 60_000,
-      autoExcludeUnusedDays: true,
-      manuallyExcluded: false,
-      hasOwnRows: false,
-      isToday: false,
+      dayExcluded: 'auto_unused',
     },
     at('2026-09-08', 8).getTime(),
   )

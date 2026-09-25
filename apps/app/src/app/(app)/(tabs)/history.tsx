@@ -54,9 +54,9 @@ function StepButton({
 
 // Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `sub` border on both platforms
 // (ponytail: the native hatch is skipped, as in TodayFlow), in `sub` so the dash clears 3:1; `EXCLUDED_BORDER_PX` in lib/history
-// mirrors its width. Dashed is kept for 「点線の日」 alone: a day that was mostly detox is outlined solid in `sub`, the detox tone,
-// and carries the wind glyph, so it never reads as an excluded day. Any other day draws its detox part as a solid `sub` outline
-// on top of its activity fills.
+// mirrors its width. Dashed is kept for 「点線の日」 alone: a measured day that was mostly detox is outlined solid in `sub`, the
+// detox tone, and carries the wind glyph, so it never reads as an excluded day. Any other day, an excluded one included (a day
+// past a detox's measured week, or excluded by hand), draws its detox part as a solid `sub` outline on top of its fills.
 const CELL = {
   stack: 'bg-chip',
   detox: 'border border-sub bg-chip',

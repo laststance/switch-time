@@ -25,9 +25,9 @@ import {
   dayTitle,
   failureKind,
   isDayChangedRefusal,
-  isManuallyExcluded,
   landedUndo,
   nextStamp,
+  noteDayClass,
   offeredUndo,
   onPressedDay,
   pickRequest,
@@ -441,7 +441,7 @@ function useCorrectionUndo(
   }
 }
 
-// What the lines under 「ここで分割」 read: the idle threshold, the unused-day rule, and the viewed day's own facts.
+// What the lines under 「ここで分割」 read: the idle threshold and the viewed day's class as the stats answer it.
 function useTotalsFacts(
   day: string,
   today: string,
@@ -449,19 +449,20 @@ function useTotalsFacts(
   ready: boolean,
 ): TotalsFacts {
   const { settings } = useSettings()
-  // The viewed day alone: the 「除外中の日」 list stops a year back, and a correction can reach further. `ready` waits for the
-  // stored time zone, as the day's list does, so a default-zone "today" is never fetched first.
-  const excluded = useQuery(
-    orpc.excludedDays.list.queryOptions({
-      input: { from: day, to: day },
-      enabled: ready,
-    }),
+  // Today is never 計測なし yet, so only a past day asks. Its first fetch comes once the day is past: a sheet left open
+  // over midnight asks then, rather than keeping the answer it had while the day was today.
+  const isPast = day < today
+  // `stats.day` gives the server's class for the viewed day, so the note follows the day rule (detox cap included)
+  // instead of copying it. `ready` waits for the stored time zone, as the day's list does, so a default-zone "today" is
+  // never fetched first.
+  const stats = useQuery(
+    orpc.stats.day.queryOptions({ input: { day }, enabled: ready && isPast }),
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
-    autoExcludeUnusedDays: settings.autoExcludeUnusedDays,
-    manuallyExcluded: isManuallyExcluded(excluded.data, day),
-    hasOwnRows: (listed?.rows.length ?? 0) > 0,
-    isToday: day === today,
+    dayExcluded: noteDayClass(
+      { isPast, hasOwnRows: (listed?.rows.length ?? 0) > 0 },
+      stats,
+    ),
   }
 }

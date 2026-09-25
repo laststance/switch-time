@@ -95,18 +95,31 @@ export type ExcludedReason = 'auto_unused' | 'manual'
 /** How far back {@link streak} walks (~10 years); {@link detoxCarriedDays} needs no older day for it. */
 export const STREAK_CAP_DAYS = 3650
 
+/**
+ * How many calendar days after the day a detox run started it measures, those without a tap of their own (a day a
+ * cut gave a tap still uses one of them). Past that, a day with no tap is an ordinary unused day again: a week off the
+ * clock keeps 連続記録, an app left on detox and abandoned stops counting.
+ */
+export const DETOX_MEASURED_DAYS_MAX = 7
+
 /** What {@link detoxCarriedDays} reads from a `switches` row. */
 export type TapLike = Pick<SwitchLike, 'activityId' | 'startedAt'>
 
 /**
- * The days a detox record runs through without a tap of their own, clipped to `window`; {@link classifyDay} measures
- * them, so a detox left on over a weekend neither breaks 連続記録 nor lists as 切替なし. The `stats.*` handler calls it
- * with every tap the account made. An activity left running gets no such day: it is usually a forgotten tap.
+ * The days a detox runs through without a tap of their own, clipped to `window` and to {@link DETOX_MEASURED_DAYS_MAX}
+ * days after the day its run started; {@link classifyDay} measures them, so a detox left on over a weekend neither
+ * breaks 連続記録 nor lists as 切替なし. A run is consecutive detox records, so cutting a detox never renews its
+ * allowance; switching to an activity and back does. A tap never makes two in a row, but a correction can (a cut, a
+ * rewrite, detox picked for the record between two detoxes, or a merge that removes it), and then the later run counts
+ * from the earlier one's start. The `stats.*`
+ * handler calls it with every tap the account made. An activity left running gets no such day: it is usually a forgotten tap.
  * @param taps - Every tap of the account, in any order; `activityId` null is detox.
  * @param timeZone - The user's stored zone.
  * @param window - The first and last day to report (inclusive); records reaching past it are clipped.
- * @returns The covered days: from the day after the detox tap to the day before the next tap, or to `window.to` while it runs.
+ * @returns The covered days: from the day after each detox record's start to the day before the next tap (or `window.to`
+ *   while it runs), never past the run's start day + {@link DETOX_MEASURED_DAYS_MAX}.
  * @example detoxCarriedDays([{ activityId: null, startedAt: fri22h }, { activityId: work, startedAt: mon9h }], 'Asia/Tokyo', { from: '2026-09-01', to: '2026-09-30' }) // Set { sat, sun }
+ * @example detoxCarriedDays([{ activityId: null, startedAt: sep1_20h }], 'Asia/Tokyo', { from: '2026-09-01', to: '2026-09-30' }) // Set { 09-02 … 09-08 }
  */
 export function detoxCarriedDays(
   taps: readonly TapLike[],
@@ -115,17 +128,27 @@ export function detoxCarriedDays(
 ): Set<string> {
   const ordered = [...taps].sort((a, b) => a.startedAt - b.startedAt)
   const days = new Set<string>()
+  let runStartDay: string | null = null
   ordered.forEach((tap, index) => {
-    if (tap.activityId !== null) return
+    // An activity ends the run; the next detox starts a new one.
+    if (tap.activityId !== null) {
+      runStartDay = null
+      return
+    }
+    const tapDay = localDay(new Date(tap.startedAt), timeZone)
+    runStartDay ??= tapDay
     const next = ordered[index + 1]
-    const dayAfterTap = addDays(localDay(new Date(tap.startedAt), timeZone), 1)
     // A running detox reaches the window's end; one ended by a later tap stops before that tap's own day.
-    const lastCovered = next
+    const untilNext = next
       ? addDays(localDay(new Date(next.startedAt), timeZone), -1)
       : window.to
+    const capDay = addDays(runStartDay, DETOX_MEASURED_DAYS_MAX)
+    const lastCovered = untilNext < capDay ? untilNext : capDay
+    const dayAfterTap = addDays(tapDay, 1)
     const from = dayAfterTap > window.from ? dayAfterTap : window.from
     const to = lastCovered < window.to ? lastCovered : window.to
-    // Records never overlap, so all of them together walk at most the window's length.
+    // Records never overlap and each walk is clipped to the window (and to its run's cap), so all of them together walk
+    // at most the window's length.
     for (let day = from; day <= to; day = addDays(day, 1)) days.add(day)
   })
   return days
