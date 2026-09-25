@@ -110,7 +110,7 @@ export function useCorrection(dayParam: string | undefined) {
     selectedId: state.selectedId,
     noticeId: state.noticeId,
     focusId: state.focusId,
-    totalsFacts: useTotalsFacts(day, today, ready),
+    totalsFacts: useTotalsFacts(day, today, list.data, ready),
     select: state.select,
     ...edits,
     undo,
@@ -389,6 +389,7 @@ function useCorrectionUndo(
 function useTotalsFacts(
   day: string,
   today: string,
+  listed: ListedDay | undefined,
   ready: boolean,
 ): TotalsFacts {
   const { settings } = useSettings()
@@ -403,6 +404,9 @@ function useTotalsFacts(
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
-    dayExcluded: noteDayClass(isPast, stats),
+    dayExcluded: noteDayClass(
+      { isPast, hasOwnRows: (listed?.rows.length ?? 0) > 0 },
+      stats,
+    ),
   }
 }

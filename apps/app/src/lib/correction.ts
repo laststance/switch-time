@@ -450,34 +450,36 @@ export function cutStepper(
 export type TotalsFacts = {
   idleThresholdMs: number
   /**
-   * A past day's class as `stats.day` reports it; null for today (never asked: today is never 計測なし), undefined while
-   * the answer loads or refetches, so the 計測 note waits rather than guess.
+   * A past day's class as `stats.day` reports it ({@link noteDayClass}); null when the day is today or has a switch of its
+   * own, undefined while no answer can be trusted, so the 計測 note waits rather than guess.
    */
   dayExcluded: ExcludedReason | null | undefined
 }
 
 /**
  * The viewed day's class for {@link TotalsFacts}, from the `stats.day` query the correction hook runs for a past day
- * only; kept out of the hook so the three answers are tested.
- * @param isPast - Whether the viewed day is before today in the stored zone.
- * @param query - The `stats.day` query: its answer (undefined until the first one lands) and whether it is fetching.
+ * only, checked against the day's own list; kept out of the hook so each answer is tested.
+ * @param day - Whether the viewed day is before today in the stored zone, and whether its list shows a switch of its own.
+ * @param query - The `stats.day` query: its last answer (undefined until one lands), whether its last fetch failed and
+ *   whether a fetch waits for the network.
  * @returns
- * - null for today, which is never 計測なし yet, so it is never asked
- * - undefined while the answer loads or a refetch is in flight (after an edit, even one that timed out and let the list
- *   land first), so the 計測 note waits rather than repeat a promise the day's new rows no longer hold
- * - otherwise the day's class as the server reports it
- * @example noteDayClass(true, { isFetching: false, data: { days: [{ excluded: 'auto_unused' }] } }) // 'auto_unused'
- * @example noteDayClass(false, { isFetching: false, data: undefined }) // null
+ * - null for today (never 計測なし yet, so never asked) and for a day with a switch of its own, which is measured
+ *   whatever an older answer says: a cut's new row lands in the list before, or without, the stats refetch
+ * - undefined while no answer has landed, or after a failed or paused fetch, whose kept answer may predate the day's rows
+ * - otherwise the last answer, kept while a refetch runs so the line does not blink on every focus refetch
+ * @example noteDayClass({ isPast: true, hasOwnRows: false }, { isError: false, isPaused: false, data: { days: [{ excluded: 'auto_unused' }] } }) // 'auto_unused'
+ * @example noteDayClass({ isPast: true, hasOwnRows: true }, { isError: false, isPaused: false, data: { days: [{ excluded: 'auto_unused' }] } }) // null
  */
 export function noteDayClass(
-  isPast: boolean,
+  day: { isPast: boolean; hasOwnRows: boolean },
   query: {
-    isFetching: boolean
+    isError: boolean
+    isPaused: boolean
     data: { days: readonly { excluded: ExcludedReason | null }[] } | undefined
   },
 ): TotalsFacts['dayExcluded'] {
-  if (!isPast) return null
-  if (query.isFetching) return undefined
+  if (!day.isPast || day.hasOwnRows) return null
+  if (query.isError || query.isPaused) return undefined
   return query.data?.days[0]?.excluded
 }
 
