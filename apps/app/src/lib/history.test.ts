@@ -197,9 +197,9 @@ test('a day whose time all went to detox is outlined and named, instead of looki
     ['empty', '9月4日（金）'],
     ['empty', '9月5日（土）'],
     ['stack', '9月6日（日）・仕事 8h 00m'],
-    ['detox', '9月7日（月）・detox 24h 00m'],
+    ['detox', '9月7日（月）・detox の日 24h 00m'],
     ['stack', '9月8日（火）・仕事 10h 00m・detox 3h 00m'],
-    ['detox', '9月9日（水）・detox 9h 00m'],
+    ['detox', '9月9日（水）・detox の日 9h 00m'],
   ])
   expect(view.rows[0]?.[4]?.slices).toEqual([])
 })
@@ -268,7 +268,7 @@ test('a day with no activity time and as much detox as idle time is outlined as 
 
   // Assert: the outline is the detox mark, so the cell draws no detox slice inside it
   expect(view.rows[0]?.[6]?.kind).toBe('detox')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox 12h 00m')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox の日 12h 00m')
   expect(view.rows[0]?.[6]?.slices).toEqual([])
 })
 
@@ -697,7 +697,47 @@ test('an excluded day that still holds time reads 計測なし, then each activi
   )
 })
 
-test('an outlined detox day with under half a minute of detox is still named detox', () => {
+test('an excluded fall-back day whose lower activities fill the bar exactly keeps the rounded top on its last drawn slice', () => {
+  // Arrange: on the excluded 25-h day 2 h of 仕事 and 22 h of 家事 fill the 130 px inside the border, then 1 h of 旧 has no room;
+  // 130 - 10.83 - 119.17 leaves a 1e-14 px float residue rather than 0
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        excluded: 'manual',
+        totals: { work: 2 * H, home: 22 * H, old: 1 * H },
+      }),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 旧 draws no invisible sliver, so 家事 stays the top slice with the rounded corners
+  expect(
+    view.rows[0]?.[6]?.slices.map((slice) => [slice.activityId, slice.top]),
+  ).toEqual([
+    ['work', false],
+    ['home', true],
+  ])
+})
+
+test('an outlined detox day with under half a minute of detox is still named a detox day', () => {
   // Arrange: today (9/9) just after midnight, 10 seconds of detox carried in from yesterday and nothing else
   const stats: HistoryStats = {
     days: [
@@ -726,7 +766,7 @@ test('an outlined detox day with under half a minute of detox is still named det
 
   // Assert: the cell draws the detox outline, so its label says detox even without a time to read
   expect(view.rows[0]?.[6]?.kind).toBe('detox')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox の日')
 })
 
 test('a day cell does not read out times under half a minute as 0m', () => {

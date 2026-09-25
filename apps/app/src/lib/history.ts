@@ -31,6 +31,8 @@ const DETOX_SLICE_MIN_PX = 2
 // An excluded cell's slices stack inside its 1 px dashed border (`border` in history.tsx's CELL.excluded; the track is
 // border-box), so a whole day's top slice is not clipped. Change it together with that class.
 const EXCLUDED_BORDER_PX = 1
+// Room left on a track after subtracting slices can be a float residue (1e-14 px) rather than 0; below this it counts as full.
+const SLICE_EPSILON_PX = 1e-6
 
 export type Slice = {
   /** `null` for the day's detox part, which belongs to no activity. */
@@ -116,13 +118,15 @@ function chartTitle(
 }
 
 /**
- * A day cell's slices, bottom-up: the activities in `position` order (those without time skipped), then the detox part on top.
+ * A day cell's slices, bottom-up: the activities in `position` order (those without time, or with no room left on the track,
+ * skipped), then the detox part on top.
  * Called by {@link dayCell}, which passes `detoxMs` 0 for a detox day, since that cell's outline already is the detox mark.
  * @param totals - The day's activity time by activity id.
  * @param detoxMs - The day's detox time to draw on top of the activities.
  * @returns
  * - The slices, the first flagged `bottom` and the last flagged `top`
- * - Each slice clamped to the track left below it, so a 25-h fall-back day's top slices are cut rather than overflow the bar
+ * - Each slice clamped to the room left above the ones below it, so a 25-h fall-back day's top slices are cut rather than overflow
+ *   the bar
  * - The detox slice only when it is at least {@link DETOX_SLICE_MIN_PX} tall
  * @example
  * stackSlices({ work: 12 * H }, [work], 132, 6 * H)
@@ -144,7 +148,7 @@ function stackSlices(
       room,
     )
     // No time, or no room left: the activity draws nothing (its time is still in the cell's label).
-    if (height <= 0) continue
+    if (height < SLICE_EPSILON_PX) continue
     room -= height
     slices.push({
       activityId: activity.id,
@@ -227,8 +231,10 @@ function cellKind(stat: DayStat, isToday: boolean): Cell['kind'] {
  * @returns
  * - `empty`: the date alone (the cell is not a link)
  * - `excluded`: the date and `・計測なし`, then the times, since the dashed cell still draws its slices
- * - `stack` / `detox`: the date, each activity's time, then `・detox <time>`
- * - Times that round to 0 min are left out; a detox day whose detox rounds to 0 min still ends in `・detox`
+ * - `detox`: the date and `・detox の日`, then its time, so the outlined day is told apart from a stack day that holds only a
+ *   detox part (the wind glyph is hidden from screen readers)
+ * - `stack`: the date, each activity's time, then `・detox <time>`
+ * - Times that read `0m` are left out
  * @example cellLabel(day('2026-09-09', { measured: true, totals: { work: 9 * H }, detoxMs: 6 * H }), 'stack', [work])
  * // => '9月9日（水）・仕事 9h 00m・detox 6h 00m'
  */
@@ -239,18 +245,26 @@ function cellLabel(
 ): string {
   const date = formatDay(stat.day)
   if (kind === 'empty') return date
+  // Nothing under half a minute is read: formatDuration would print it as 0m.
+  const readable = (ms: number) => {
+    const time = formatDuration(ms)
+    return time === '0m' ? null : time
+  }
+  // A detox day has no activity time by definition; it still names itself when its detox is too short to read (just after midnight).
+  if (kind === 'detox') {
+    const time = readable(stat.detoxMs)
+    return `${date}・${DETOX.name} の日${time ? ` ${time}` : ''}`
+  }
   const times = [
     ...activities.map((activity) => ({
       name: activity.name,
       ms: stat.totals[activity.id] ?? 0,
     })),
     { name: DETOX.name, ms: stat.detoxMs },
-  ]
-    // formatDuration rounds to the minute, so anything under 30 s would read as 0m.
-    .filter(({ ms }) => Math.round(ms / 60_000) > 0)
-    .map(({ name, ms }) => `・${name} ${formatDuration(ms)}`)
-  // An outlined detox day still names itself when its detox is too short to read as a time (just after midnight).
-  if (kind === 'detox' && times.length === 0) return `${date}・${DETOX.name}`
+  ].flatMap(({ name, ms }) => {
+    const time = readable(ms)
+    return time ? [`・${name} ${time}`] : []
+  })
   return `${date}${kind === 'excluded' ? '・計測なし' : ''}${times.join('')}`
 }
 

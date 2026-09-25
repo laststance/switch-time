@@ -65,7 +65,7 @@ const CELL = {
 }
 
 // The wind glyph centred in a detox cell. Its own component so only detox cells read the `sub` token, not all ~31 month cells.
-// Decorative: the link's aria-label already ends in ・detox. `text-sub` feeds currentColor on web.
+// Decorative: the link's aria-label already names the day (`・detox の日`). `text-sub` feeds currentColor on web.
 function DetoxGlyph({ size }: { size: number }) {
   const sub = useTokenColor('sub')
   return (

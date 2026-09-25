@@ -112,11 +112,11 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
   await expect(detoxDays).toHaveCount(2)
   await expect(detoxDays.first()).toBeVisible()
   await expect(detoxDays.first()).toHaveAccessibleName(
-    /^\d+月\d+日（.）・detox 24h 00m$/,
+    /^\d+月\d+日（.）・detox の日 24h 00m$/,
   )
   await expect(detoxDays.last()).toBeVisible()
   await expect(detoxDays.last()).toHaveAccessibleName(
-    /^\d+月\d+日（.）・detox 24h 00m$/,
+    /^\d+月\d+日（.）・detox の日 24h 00m$/,
   )
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   await expect(page.getByText('4 / 7日')).toBeVisible()
@@ -148,7 +148,7 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
   const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
   const detox = page.getByRole('link', {
-    name: new RegExp(`^${dayName}（.）・detox 15h 00m$`),
+    name: new RegExp(`^${dayName}（.）・detox の日 15h 00m$`),
   })
   await expect(detox).toHaveCount(1)
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
