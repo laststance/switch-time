@@ -132,7 +132,9 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   await expect(detox).toHaveCount(1)
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   const track = detox.locator('div').first()
+  // RN-web defaults every View to a solid style, so the width is what proves the outline is drawn.
   await expect(track).toHaveCSS('border-top-style', 'solid')
+  await expect(track).toHaveCSS('border-top-width', '1px')
   await expect(detox.getByTestId('detox-glyph').locator('svg')).toBeVisible()
   const sub = await detox
     .locator('div')

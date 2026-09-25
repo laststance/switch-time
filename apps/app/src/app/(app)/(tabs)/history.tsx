@@ -1,5 +1,5 @@
 import { Link } from 'expo-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { ActivityChip } from '@/components/activity-chip'
@@ -61,16 +61,36 @@ const CELL = {
   empty: 'bg-chip',
 }
 
+// The wind glyph centred in a detox cell. Its own component so only detox cells read the `sub` token, not all ~31 month cells.
+// Decorative: the link's aria-label already ends in ・detox. `text-sub` feeds currentColor on web.
+function DetoxGlyph({ size }: { size: number }) {
+  const sub = useTokenColor('sub')
+  return (
+    <View
+      aria-hidden
+      testID="detox-glyph"
+      className="text-sub absolute inset-0 items-center justify-center"
+    >
+      <StrokeIcon
+        d={activityIcon(DETOX.iconKey)}
+        size={size}
+        strokeWidth={1.8}
+        color={sub}
+      />
+    </View>
+  )
+}
+
 function DayCell({
   cell,
   height,
-  glyphSize,
+  glyph,
 }: {
   cell: Cell
   height: number
-  glyphSize: number
+  /** Drawn centred over the track: the {@link DetoxGlyph} of a detox day, nothing otherwise. */
+  glyph: ReactNode
 }) {
-  const sub = useTokenColor('sub')
   const column = (
     <>
       <View
@@ -87,21 +107,7 @@ function DayCell({
             style={{ height: slice.height, backgroundColor: slice.color }}
           />
         ))}
-        {/* Decorative: the link's aria-label already ends in ・detox. `text-sub` feeds currentColor on web. */}
-        {cell.kind === 'detox' && (
-          <View
-            aria-hidden
-            testID="detox-glyph"
-            className="text-sub absolute inset-0 items-center justify-center"
-          >
-            <StrokeIcon
-              d={activityIcon(DETOX.iconKey)}
-              size={glyphSize}
-              strokeWidth={1.8}
-              color={sub}
-            />
-          </View>
-        )}
+        {glyph}
       </View>
       <Text
         className={cn(
@@ -178,7 +184,11 @@ function Chart({
                 key={cell.day}
                 cell={cell}
                 height={view.barHeight}
-                glyphSize={view.detoxGlyphSize}
+                glyph={
+                  cell.kind === 'detox' && (
+                    <DetoxGlyph size={view.detoxGlyphSize} />
+                  )
+                }
               />
             ) : (
               <View key={`pad-${slot}`} className="flex-1" />

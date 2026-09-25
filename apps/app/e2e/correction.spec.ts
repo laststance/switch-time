@@ -549,7 +549,7 @@ test('splitting the current state shows on Home without a reload', async ({
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
 
-test('a detox row lists as detox and comes back through undo', async ({
+test('a detox row lists as detox with a solid sub chip and comes back through undo', async ({
   page,
 }) => {
   // Arrange: yesterday 仕事 9:00, detox 12:00, 娯楽 18:00
@@ -570,6 +570,14 @@ test('a detox row lists as detox and comes back through undo', async ({
   await page.goto(`/correction?day=${yesterday}`)
   const detox = page.getByRole('button', { name: 'detox 12:00 – 18:00 6h 00m' })
   await expect(detox).toBeVisible()
+  // The row's chip is outlined solid in the `sub` tone of its time range, like every detox mark (dashed means no data).
+  const chip = detox.locator('div').first()
+  const sub = await detox
+    .getByText('12:00 – 18:00')
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(chip).toHaveCSS('border-top-style', 'solid')
+  await expect(chip).toHaveCSS('border-top-width', '1px')
+  await expect(chip).toHaveCSS('border-top-color', sub)
 
   // Act: merge the detox span into 仕事, then undo
   await detox.click()

@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'vitest'
 
+import theme from '../../../../design-system/theme.json'
+
 // The shipped token values, read from the file Uniwind compiles, so a later edit to a colour is checked against WCAG.
 const CSS = readFileSync(new URL('../global.css', import.meta.url), 'utf8')
 
@@ -19,16 +21,22 @@ function band(name: 'dark' | 'light'): Record<string, string> {
   )
 }
 
-/** `#rrggbb` or `rgba(r, g, b, a)` as the opaque colour it shows over `under`. */
-function paint(value: string, under: Rgb): Rgb {
+/** `#rrggbb` or `rgba(r, g, b, a)` as numbers, so copies of a colour written differently (`0.60`, `0.6`) compare equal. */
+function channels(value: string): [number, number, number, number] {
   const hexChannel = (index: number) =>
     parseInt(value.slice(1 + 2 * index, 3 + 2 * index), 16)
   if (value.startsWith('#'))
-    return [hexChannel(0), hexChannel(1), hexChannel(2)]
+    return [hexChannel(0), hexChannel(1), hexChannel(2), 1]
   const [red = 0, green = 0, blue = 0, alpha = 1] = value
     .replace(/[^\d.,]/g, '')
     .split(',')
     .map(Number)
+  return [red, green, blue, alpha]
+}
+
+/** `#rrggbb` or `rgba(r, g, b, a)` as the opaque colour it shows over `under`. */
+function paint(value: string, under: Rgb): Rgb {
+  const [red, green, blue, alpha] = channels(value)
   const mix = (top: number, bottom: number) =>
     top * alpha + bottom * (1 - alpha)
   return [mix(red, under[0]), mix(green, under[1]), mix(blue, under[2])]
@@ -86,4 +94,37 @@ test('secondary text stays readable (WCAG AA) on every dark surface and chip', (
 
   // Assert
   expect(lowest).toBeGreaterThanOrEqual(4.5)
+})
+
+/** A theme.json colour scheme re-keyed like {@link band} (`sheetBg` → `sheet-bg`), each value as {@link channels}. */
+function designBand(name: 'dark' | 'light') {
+  return Object.fromEntries(
+    Object.entries(theme.colorSchemes[name]).map(([key, value]) => [
+      key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+      channels(value),
+    ]),
+  )
+}
+
+/** The same band read from global.css, each value as {@link channels}. */
+function appBand(name: 'dark' | 'light') {
+  return Object.fromEntries(
+    Object.entries(band(name)).map(([key, value]) => [key, channels(value)]),
+  )
+}
+
+test('the app ships the light colour tokens of design-system/theme.json, so a token edit cannot skip the app', () => {
+  // Arrange / Act
+  const app = appBand('light')
+
+  // Assert
+  expect(app).toEqual(designBand('light'))
+})
+
+test('the app ships the dark colour tokens of design-system/theme.json, so a token edit cannot skip the app', () => {
+  // Arrange / Act
+  const app = appBand('dark')
+
+  // Assert
+  expect(app).toEqual(designBand('dark'))
 })

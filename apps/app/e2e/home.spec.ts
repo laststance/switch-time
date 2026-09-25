@@ -122,6 +122,7 @@ test('tapping detox unpresses every activity, dims the readout and outlines the 
     .locator('div')
     .last()
   await expect(span).toHaveCSS('border-top-style', 'solid')
+  await expect(span).toHaveCSS('border-top-width', '1px')
   await expect(span).toHaveCSS('border-top-color', sub)
 })
 
@@ -178,6 +179,7 @@ test('a detox left running overnight stays a solid sub outline on the bar, not a
     .locator('div')
     .first()
   await expect(span).toHaveCSS('border-top-style', 'solid')
+  await expect(span).toHaveCSS('border-top-width', '1px')
   const sub = await page
     .getByText('0:00', { exact: true })
     .evaluate((el) => getComputedStyle(el).color)
@@ -259,6 +261,7 @@ test('a reload while detox lands on Home in detox, not on the first-launch scree
   const label = card.getByText('detox', { exact: true })
   const square = label.locator('xpath=preceding-sibling::div[1]')
   await expect(square).toHaveCSS('border-top-style', 'solid')
+  await expect(square).toHaveCSS('border-top-width', '1px')
   const sub = await label.evaluate((el) => getComputedStyle(el).color)
   await expect(square).toHaveCSS('border-top-color', sub)
 })

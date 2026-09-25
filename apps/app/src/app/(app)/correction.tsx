@@ -69,10 +69,10 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
       {rows.map((row) => (
         <View
           key={row.id}
-          // A detox span has no colour: outlined, like the 24-h bar's idle spans.
+          // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
           className={cn(
             'absolute inset-y-0',
-            row.color === null && 'border-line border border-dashed',
+            row.color === null && 'border-sub border',
           )}
           style={{
             left: percent(row.start - bounds.start),
