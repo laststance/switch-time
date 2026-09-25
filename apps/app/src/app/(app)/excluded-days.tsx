@@ -21,7 +21,7 @@ export default function ExcludedDaysSheet() {
   return (
     <Sheet
       title="未使用日の扱い"
-      hint="一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。"
+      hint="一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は計測に入ります。"
     >
       {/* Both cards read the same settings row: a failed read would show the defaults as if they were the account's own. */}
       {isError ? (

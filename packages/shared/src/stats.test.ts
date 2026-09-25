@@ -3,13 +3,14 @@ import { expect, test } from 'vitest'
 import {
   clampStart,
   classifyDay,
+  detoxCarriedDays,
   segmentsInRange,
   streak,
   sumSegments,
   summarizeDays,
   type DayFacts,
 } from './stats'
-import { dayBounds } from './time'
+import { addDays, dayBounds } from './time'
 
 const H = 3_600_000
 const TZ = 'Asia/Tokyo'
@@ -142,6 +143,7 @@ test('a moved start never crosses its neighbours or the present', () => {
 
 const facts: DayFacts = {
   switchDays: new Set(['2026-09-05', '2026-09-06', '2026-09-08']),
+  detoxDays: new Set(),
   manualExcluded: new Set(),
   firstDay: '2026-09-05',
   today: '2026-09-09',
@@ -211,6 +213,7 @@ test('range totals only include measured days and every excluded day is listed',
     switches,
     facts: {
       switchDays: new Set(['2026-09-06', '2026-09-08', '2026-09-09']),
+      detoxDays: new Set(),
       manualExcluded: new Set(),
       firstDay: '2026-09-06',
       today: '2026-09-09',
@@ -262,4 +265,247 @@ test('range totals only include measured days and every excluded day is listed',
   expect(summary.excludedDays).toEqual([
     { day: '2026-09-07', reason: 'auto_unused' },
   ])
+})
+
+const SEPTEMBER = { from: '2026-09-01', to: '2026-09-09' }
+
+test('a detox left on over a weekend covers the untapped days until the next tap', () => {
+  // Arrange: detox from Friday 22:00, 仕事 on Monday 09:00 (taps out of order, as the query returns them)
+  const taps = [
+    { activityId: 'work', startedAt: at('2026-09-07', 9) },
+    { activityId: null, startedAt: at('2026-09-04', 22) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual(['2026-09-05', '2026-09-06'])
+})
+
+test('a detox still running covers every day through today', () => {
+  // Arrange
+  const taps = [
+    { activityId: 'work', startedAt: at('2026-09-07', 9) },
+    { activityId: null, startedAt: at('2026-09-07', 20) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual(['2026-09-08', '2026-09-09'])
+})
+
+test('a detox ended the same day and an activity left running cover no day', () => {
+  // Arrange: detox 12:00–13:00 on 09-02, then 仕事 left running from 09-02 13:00 over the next days
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-02', 12) },
+    { activityId: 'work', startedAt: at('2026-09-02', 13) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual([])
+})
+
+test('a detox across the New York DST change covers the untapped day in local days', () => {
+  // Arrange: detox from 23:30 on 2026-10-31, the night before clocks fall back, until 08:00 on 11-02
+  const zone = 'America/New_York'
+  const taps = [
+    {
+      activityId: null,
+      startedAt: dayBounds('2026-10-31', zone).start + 23.5 * H,
+    },
+    {
+      activityId: 'work',
+      startedAt: dayBounds('2026-11-02', zone).start + 8 * H,
+    },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, zone, {
+    from: '2026-10-01',
+    to: '2026-11-05',
+  })
+
+  // Assert
+  expect([...days]).toEqual(['2026-11-01'])
+})
+
+test('a detox older than the window reports only the window days it runs through', () => {
+  // Arrange: a detox tapped 4000 days before today and still running
+  const today = '2026-09-09'
+  const taps = [
+    { activityId: null, startedAt: dayBounds(addDays(today, -4000), TZ).start },
+  ]
+
+  // Act
+  const streakWindow = detoxCarriedDays(taps, TZ, {
+    from: addDays(today, -3650),
+    to: today,
+  })
+  const oldMonth = detoxCarriedDays(taps, TZ, {
+    from: addDays(today, -3999),
+    to: today,
+  })
+
+  // Assert
+  expect(streakWindow.size).toBe(3651)
+  expect(streakWindow.has('2026-09-08')).toBe(true)
+  expect(oldMonth.has(addDays(today, -3999))).toBe(true)
+})
+
+test('days a detox runs through are measured, keep the streak and still yield to a manual exclusion', () => {
+  // Arrange: tapped 09-05, detox from 09-05 evening through today 09-09, 09-07 excluded by hand
+  const detoxWeek: DayFacts = {
+    switchDays: new Set(['2026-09-05']),
+    detoxDays: new Set([
+      '2026-09-06',
+      '2026-09-07',
+      '2026-09-08',
+      '2026-09-09',
+    ]),
+    manualExcluded: new Set(['2026-09-07']),
+    firstDay: '2026-09-05',
+    today: '2026-09-09',
+    autoExcludeUnusedDays: true,
+  }
+
+  // Act + Assert
+  expect(classifyDay('2026-09-06', detoxWeek)).toEqual({
+    measured: true,
+    excluded: null,
+  })
+  expect(classifyDay('2026-09-07', detoxWeek)).toEqual({
+    measured: false,
+    excluded: 'manual',
+  })
+  expect(classifyDay('2026-09-09', detoxWeek)).toEqual({
+    measured: true,
+    excluded: null,
+  })
+  expect(streak(detoxWeek)).toBe(4)
+})
+
+test('a detox weekend counts as measured days with nothing added to the totals', () => {
+  // Arrange: 仕事 09-04 09:00, detox from 18:00 until 仕事 on 09-07 09:00, still running at 10:00
+  const switches = [
+    { id: 'a', activityId: 'work', startedAt: at('2026-09-04', 9) },
+    { id: 'b', activityId: null, startedAt: at('2026-09-04', 18) },
+    { id: 'c', activityId: 'work', startedAt: at('2026-09-07', 9) },
+  ]
+
+  // Act
+  const summary = summarizeDays({
+    days: ['2026-09-04', '2026-09-05', '2026-09-06', '2026-09-07'],
+    switches,
+    facts: {
+      switchDays: new Set(['2026-09-04', '2026-09-07']),
+      detoxDays: detoxCarriedDays(switches, TZ, {
+        from: '2026-09-04',
+        to: '2026-09-07',
+      }),
+      manualExcluded: new Set(),
+      firstDay: '2026-09-04',
+      today: '2026-09-07',
+      autoExcludeUnusedDays: true,
+    },
+    timeZone: TZ,
+    now: at('2026-09-07', 10),
+    idleThresholdMs: 12 * H,
+  })
+
+  // Assert
+  expect(
+    summary.days.map((day) => [day.day, day.measured, day.detoxMs]),
+  ).toEqual([
+    ['2026-09-04', true, 6 * H],
+    ['2026-09-05', true, 24 * H],
+    ['2026-09-06', true, 24 * H],
+    ['2026-09-07', true, 9 * H],
+  ])
+  expect(summary.totals).toEqual({ work: 10 * H })
+  expect(summary.measuredDays).toBe(4)
+  expect(summary.streak).toBe(4)
+  expect(summary.excludedDays).toEqual([])
+})
+
+test('a detox tapped again on a later day covers the untapped days on both sides of the second tap', () => {
+  // Arrange: detox from 09-02 20:00, detox tapped again on 09-04 08:00, 仕事 on 09-07 09:00
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-02', 20) },
+    { activityId: 'work', startedAt: at('2026-09-07', 9) },
+    { activityId: null, startedAt: at('2026-09-04', 8) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days].sort()).toEqual(['2026-09-03', '2026-09-05', '2026-09-06'])
+})
+
+test('a detox overnight into the next tapped day covers no day of its own', () => {
+  // Arrange: detox from 09-02 22:00 until 仕事 at 07:00 on 09-03
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-02', 22) },
+    { activityId: 'work', startedAt: at('2026-09-03', 7) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual([])
+})
+
+test('a detox that ended before the viewed window marks none of its days', () => {
+  // Arrange: detox over the last August weekend, ended by 仕事 on 08-31
+  const taps = [
+    { activityId: null, startedAt: at('2026-08-28', 22) },
+    { activityId: 'work', startedAt: at('2026-08-31', 9) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual([])
+})
+
+test('a detox from an earlier month is clipped to the first day of the viewed window', () => {
+  // Arrange: detox from 08-30 22:00 until 仕事 on 09-03 09:00
+  const taps = [
+    { activityId: null, startedAt: at('2026-08-30', 22) },
+    { activityId: 'work', startedAt: at('2026-09-03', 9) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, SEPTEMBER)
+
+  // Assert
+  expect([...days]).toEqual(['2026-09-01', '2026-09-02'])
+})
+
+test('a detox day before the first tap stays unmeasured, and after it is measured with auto-exclusion off', () => {
+  // Arrange: a detox day listed before the first tap (inconsistent data) and one after it, auto-exclusion off
+  const detoxFacts: DayFacts = {
+    switchDays: new Set(['2026-09-05']),
+    detoxDays: new Set(['2026-09-04', '2026-09-06']),
+    manualExcluded: new Set(),
+    firstDay: '2026-09-05',
+    today: '2026-09-09',
+    autoExcludeUnusedDays: false,
+  }
+
+  // Act
+  const beforeFirstTap = classifyDay('2026-09-04', detoxFacts)
+  const afterFirstTap = classifyDay('2026-09-06', detoxFacts)
+
+  // Assert
+  expect(beforeFirstTap).toEqual({ measured: false, excluded: null })
+  expect(afterFirstTap).toEqual({ measured: true, excluded: null })
 })

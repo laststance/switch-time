@@ -224,39 +224,37 @@
 
 ## Stats
 
-### Decide what a detox that runs past midnight does to 連続記録
+### Say when an edit changes whether the untapped days around it count
 
-**What:** Either let `classifyDay` measure a day whose carried-in state is detox, or keep the current rule and soften the wording that calls such a day 「アプリを使わなかった」 / 「切替なし」.
+**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, and a merge or 元に戻す that removes or adds the tap ending a detox. The rule to state: whether later untapped days count follows the activity of the record carried over them.
 
-**Why:** Detox is the feature for deliberately stepping off the clock, yet day 2 of a multi-day detox has no tap, so it is `auto_unused`: the streak breaks, the day joins the 未使用日 list and the History footnote counts it as unused.
+**Why:** Since detox left on over midnight measures the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
 
-**Context:** The rule predates detox and covers every carried-in state (an activity left running over a weekend behaves the same), which is why 0.1.0.0 shipped it unchanged (decision at ship time, option A). `summarizeDays` already has the segments and `detoxMs` per day, so option (a) is local to `classifyDay` in `packages/shared/src/stats.ts`, but it moves `measuredDays`, `streak` and every 1日あたり average for all states, so it needs its own tests. Raised by the adversarial pass during the 0.1.0.0 ship.
-
-**Effort:** M
-**Priority:** P2
-**Depends on:** None
-
-## Shared
-
-### Reuse one `Intl.DateTimeFormat` per time zone
-
-**What:** Cache the formatters that `civil` (`packages/shared/src/time.ts`) and `formatTime` (`apps/app/src/lib/format.ts`) build, keyed by time zone.
-
-**Why:** The correction sheet re-renders on every 1 s clock tick, and each render builds several formatters for `dayBounds` plus one or two per row. A new one costs about 0.02 ms on Node against 0.0003 ms reused: roughly 1 ms a second for a 20-row day on the web, and Hermes is usually slower.
-
-**Context:** The API's stats paths call the same helpers per row. A module-level `Map` in each file is enough; a `useMemo` on the day's bounds in `useCorrection` is optional on top. Pre-existing, raised by the review during the 0.2.0.0 ship.
+**Context:** The rule is in `classifyDay` / `detoxCarriedDays` (`packages/shared/src/stats.ts`); `cutTotalsEffects` in `apps/app/src/lib/correction.ts` is the pattern for such a note. New text, so the pen file first. Left out of the PR that let detox days count.
 
 **Effort:** S
 **Priority:** P3
 **Depends on:** None
 
-### Keep a four-digit year in `localDay`
+### Tell a detox day apart from an excluded day on History
 
-**What:** Pad the year in `localDay` (`String(c.year).padStart(4, '0')`) and add a `time.test.ts` case for a day before the year 1000. Bound `daySchema` as well (a four-digit year, no earlier than, say, 1970-01-01): negative years, and years 0–99, which `Date.UTC` reads as 1900–1999, break `dayBounds` even with the padding.
+**What:** Give the detox cell its own outline (or narrow History's footnote to the excluded outline and add a short legend for detox), so 点線の日 in 「アプリを使わなかった N日 は平均から除外しています（点線の日）」 means only the days left out.
 
-**Why:** `daySchema` accepts `0999-06-01`, so `replaceDay` stores a row on it, but `localDay` returns `999-06-01`, which `dayBounds` cannot parse: `mergeIntoNext` answers 500 instead of CONFLICT for that row. `dayBounds` also puts such days an hour off, because its own `localDay` check never matches.
+**Why:** Both cells are dashed (`CELL.detox` is `border-dashed border-sub`, the excluded cell `border-dashed` in the line tone). Since a detox left on over a weekend measures the days it covers, a week can show three dashed days while the footnote counts one, and the two detox days, which stay in the average, read as excluded.
 
-**Context:** Only rows a client plants in its own account reach it. Raised by the security pass during the 0.2.0.0 ship.
+**Context:** `dayCell` in `apps/app/src/lib/history.ts`, the footnote in `apps/app/src/app/(app)/(tabs)/history.tsx`. A visual change, so the pen file first. Found in review of the PR that let detox days count.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Decide whether a detox left running for weeks keeps measuring days
+
+**What:** Choose whether a detox with no later tap measures every day up to today (the current rule), or stops after a limit (for example a week, or a setting), and add a test for a detox left running for a month.
+
+**Why:** Someone who taps detox and then stops using the app gets a 連続記録 that grows by one each day and a zero-total measured day that pulls every 1日あたり average down, which is the dilution the auto exclusion exists to prevent. An activity left running is read as a forgotten tap instead, and the idle threshold does not apply to detox.
+
+**Context:** `detoxCarriedDays` in `packages/shared/src/stats.ts` covers up to `window.to` (today). A deliberate choice in the PR that let detox days count; found in its review.
 
 **Effort:** S
 **Priority:** P3

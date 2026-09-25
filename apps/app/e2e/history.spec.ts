@@ -70,6 +70,42 @@ test('the week view shows the excluded day dashed and out of the average', async
   )
 })
 
+test('days a detox runs through without a tap are outlined as detox, keep the streak and are not counted as unused', async ({
+  page,
+}) => {
+  // Arrange: 仕事 at 9:00 three days ago, detox from 20:00 that evening; today's 家事 tap (signUp) ends it, so the two days
+  // between have no tap of their own.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const threeDaysAgo = shift(today(), -3)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(threeDaysAgo, 9) },
+      { activityId: null, startedAt: at(threeDaysAgo, 20) },
+    ],
+  })
+
+  // Act
+  await page.getByRole('tab', { name: '記録' }).click()
+
+  // Assert: both untapped days read as detox, not 計測なし, and count toward the measured days and the streak
+  await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
+  const detoxDays = page.getByRole('link', { name: /・detox$/ })
+  await expect(detoxDays).toHaveCount(2)
+  await expect(detoxDays.first()).toBeVisible()
+  await expect(detoxDays.last()).toBeVisible()
+  await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
+  await expect(page.getByText('4 / 7日')).toBeVisible()
+  await expect(page.getByText('4日', { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: /アプリを使わなかった/ }),
+  ).toHaveCount(0)
+})
+
 test('a day spent in detox is outlined in sub, named detox, and opens its correction sheet', async ({
   page,
 }) => {

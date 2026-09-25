@@ -481,7 +481,7 @@ function cutFreesIdle(
 /**
  * How a cut of the carried-in record would change the totals, one line each under 「ここで分割」: a record over the idle
  * threshold counts nowhere until a cut leaves a part under it ({@link cutFreesIdle}), and a past day without a switch
- * of its own is 計測なし under auto-exclusion until the cut adds one (`classifyDay`).
+ * of its own is 計測なし under auto-exclusion until the cut adds one ({@link classifyDay}), unless a detox runs through it.
  * @param row - The selected row; the day's own rows have no cut and no effect.
  * @param facts - The settings and day facts the two rules read.
  * @param at - The stepper's cut time, or null when there is none.
@@ -496,8 +496,10 @@ export function cutTotalsEffects(
   if (!row.carriedIn) return []
   const effects: TotalsEffect[] = []
   if (cutFreesIdle(row, facts.idleThresholdMs, at)) effects.push('idle')
-  // Today is never 計測なし yet, a manual exclusion outranks a switch, and an unloaded list says nothing.
+  // Today is never 計測なし yet, a detox left on already measures the day, a manual exclusion outranks a switch, and an
+  // unloaded list says nothing.
   if (
+    row.activityId !== null &&
     !facts.isToday &&
     !facts.hasOwnRows &&
     facts.autoExcludeUnusedDays &&

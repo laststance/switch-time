@@ -116,6 +116,133 @@ test('a day without switches counts as unmeasured and breaks the streak', async 
   ])
 })
 
+test('a detox left on for two days keeps the streak and lists no unused day', async () => {
+  // Arrange: 仕事 at 09:00 three days ago, detox from 20:00 that evening, 仕事 again at midnight today
+  const api = await signedIn('detox-streak@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const threeDaysAgo = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(threeDaysAgo, 9) },
+      { activityId: null, startedAt: at(threeDaysAgo, 20) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: today,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(today, 0) }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(today, -6) })
+
+  // Assert
+  expect(week.days.map((day) => [day.measured, day.excluded])).toEqual([
+    [false, null],
+    [false, null],
+    [false, null],
+    [true, null],
+    [true, null],
+    [true, null],
+    [true, null],
+  ])
+  expect(week.days.map((day) => day.detoxMs)).toEqual([
+    0,
+    0,
+    0,
+    4 * H,
+    24 * H,
+    24 * H,
+    0,
+  ])
+  expect(week.streak).toBe(4)
+  expect(week.measuredDays).toBe(4)
+  expect(week.excludedDays).toEqual([])
+})
+
+test('a month older than the streak window still counts the days a detox ran through', async () => {
+  // Arrange: 仕事 then detox on the 1st of a month 4000 days back, 仕事 again on the 4th
+  const api = await signedIn('old-detox@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const month = addDays(today, -4000).slice(0, 7)
+  const first = `${month}-01`
+  const fourth = `${month}-04`
+  await api.switches.replaceDay({
+    day: first,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(first, 9) },
+      { activityId: null, startedAt: at(first, 20) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: fourth,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(fourth, 9) }],
+  })
+
+  // Act
+  const stats = await api.stats.month({ month })
+
+  // Assert
+  expect(
+    stats.days.slice(0, 4).map((day) => [day.day, day.measured, day.excluded]),
+  ).toEqual([
+    [first, true, null],
+    [`${month}-02`, true, null],
+    [`${month}-03`, true, null],
+    [fourth, true, null],
+  ])
+})
+
+test('the month and week views refuse days before 1970 at the API boundary', async () => {
+  // Arrange
+  const api = await signedIn('pre-epoch@example.com')
+
+  // Act + Assert: the floor keeps Date.UTC's 1900s reading of years 0–99 away from the day math
+  await expect(api.stats.month({ month: '1969-12' })).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+  })
+  await expect(
+    api.stats.week({ startDay: '1969-12-31' }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('an activity left on for two days still leaves them unused', async () => {
+  // Arrange: 休息 from 20:00 three days ago until 仕事 at midnight today, nothing tapped between
+  const api = await signedIn('carried-activity@example.com')
+  const list = await api.activities.list()
+  const threeDaysAgo = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: threeDaysAgo,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(threeDaysAgo, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: today,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(today, 0) }],
+  })
+
+  // Act
+  const week = await api.stats.week({ startDay: addDays(today, -6) })
+
+  // Assert
+  expect(week.excludedDays).toEqual([
+    { day: addDays(today, -2), reason: 'auto_unused' },
+    { day: addDays(today, -1), reason: 'auto_unused' },
+  ])
+  expect(week.streak).toBe(1)
+})
+
 test('the week view gets totals over measured days only, with the unused day listed as excluded', async () => {
   // Arrange: 仕事 9 h three days ago, then 休息 through the untouched day (idle), 仕事 10 h + 娯楽 6 h yesterday, 睡眠 since midnight.
   const api = await signedIn('history@example.com')

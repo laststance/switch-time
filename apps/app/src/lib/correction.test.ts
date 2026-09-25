@@ -1472,6 +1472,41 @@ test('a carried-in detox record never reports idle time, since detox is never id
   expect(effects).toEqual([])
 })
 
+test('a cut of a detox running through an untapped past day promises no 計測 change, since the day already counts', () => {
+  // Arrange: detox from 9/7 22:00 until 9/9 0:00, viewed on 9/8, which has no row of its own.
+  const day = '2026-09-08'
+  const carriedIn = correctionRows(
+    {
+      carriedIn: row('d', null, at('2026-09-07', 22)),
+      rows: [],
+      carriedOut: row('h', 'home', at('2026-09-09', 0)),
+    },
+    activities,
+    {
+      ...dayBounds(day, TZ),
+      now: at('2026-09-09', 10).getTime(),
+      timeZone: TZ,
+    },
+  )[0]
+  if (!carriedIn) throw new Error('no carried-in row')
+
+  // Act
+  const effects = cutTotalsEffects(
+    carriedIn,
+    {
+      idleThresholdMs: 12 * 3_600_000,
+      autoExcludeUnusedDays: true,
+      manuallyExcluded: false,
+      hasOwnRows: false,
+      isToday: false,
+    },
+    at(day, 12, 45).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual([])
+})
+
 test('the 計測 line waits while the excluded-day list is still loading', () => {
   // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
   const carriedIn = wholeDayWork()

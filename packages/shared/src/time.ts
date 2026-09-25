@@ -1,5 +1,11 @@
 const DAY_MS = 86_400_000
 
+/** The first day {@link daySchema} accepts: a chosen floor (the Unix epoch) well above years 0–99, which `Date.UTC` reads as 1900–1999 and which would break {@link dayBounds}. */
+export const EARLIEST_DAY = '1970-01-01'
+
+/** The last day {@link daySchema} accepts: a month short of year 10000, so a week or month view plus a day never makes {@link addDays} write a five-digit year. */
+export const LATEST_DAY = '9999-11-30'
+
 type Civil = {
   year: number
   month: number
@@ -9,10 +15,24 @@ type Civil = {
   second: number
 }
 
-// Wall-clock fields of `date` in `timeZone`. formatToParts + h23 (not toLocaleString / hour12) so Hermes and V8 agree.
-function civil(date: Date, timeZone: string): Civil {
-  const fields: Record<string, number> = {}
-  const parts = new Intl.DateTimeFormat('en-US', {
+// A backstop only: keys are lower-cased IANA names and links (about 600), so the cache never reaches it in practice.
+const FORMAT_CACHE_MAX_ZONES = 1000
+
+// The shape of an IANA name or link ('Asia/Tokyo', 'Etc/GMT+5'): ASCII, starting with a letter.
+const IANA_NAME_SHAPE = /^[A-Za-z][A-Za-z0-9_/+-]*$/
+
+// One formatter per zone: building an Intl.DateTimeFormat costs far more than formatting with it, and stats read one per tap.
+const civilFormats = new Map<string, Intl.DateTimeFormat>()
+
+// The zone's cached formatter; an unknown zone throws here, before anything is cached.
+// Only IANA-shaped names are kept, lower-cased (they are case-insensitive): offsets ('+09:30', or with a U+2212 minus sign) come in thousands
+// of spellings, and formatters dropped from a churning cache stay in native memory long after they are unreachable.
+// Non-ASCII input skips the cache too, since toLowerCase folds the Kelvin sign (U+212A) into 'k' and would match a real zone.
+function civilFormat(timeZone: string): Intl.DateTimeFormat {
+  const key = IANA_NAME_SHAPE.test(timeZone) ? timeZone.toLowerCase() : null
+  const cached = key === null ? undefined : civilFormats.get(key)
+  if (cached) return cached
+  const format = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',
     year: 'numeric',
@@ -21,8 +41,19 @@ function civil(date: Date, timeZone: string): Civil {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-  }).formatToParts(date)
-  for (const part of parts) fields[part.type] = Number(part.value)
+  })
+  // Not IANA-shaped: built per call, as every zone was before the cache
+  if (key === null) return format
+  if (civilFormats.size >= FORMAT_CACHE_MAX_ZONES) civilFormats.clear()
+  civilFormats.set(key, format)
+  return format
+}
+
+// Wall-clock fields of `date` in `timeZone`. formatToParts + h23 (not toLocaleString / hour12) so Hermes and V8 agree.
+function civil(date: Date, timeZone: string): Civil {
+  const fields: Record<string, number> = {}
+  for (const part of civilFormat(timeZone).formatToParts(date))
+    fields[part.type] = Number(part.value)
   return fields as Civil
 }
 
@@ -44,7 +75,8 @@ export function tzOffsetMs(date: Date, timeZone: string): number {
  */
 export function localDay(date: Date, timeZone: string): string {
   const c = civil(date, timeZone)
-  return `${c.year}-${pad(c.month)}-${pad(c.day)}`
+  // Four digits even before the year 1000, so days keep sorting as strings.
+  return `${String(c.year).padStart(4, '0')}-${pad(c.month)}-${pad(c.day)}`
 }
 
 const HOUR_MS = 3_600_000
@@ -103,10 +135,13 @@ export function isCalendarDay(day: string): boolean {
 }
 
 /**
- * IANA zone check that also runs on Hermes, which lacks `Intl.supportedValuesOf`.
+ * IANA zone check that also runs on Hermes, which lacks `Intl.supportedValuesOf`. Offsets such as '+09:00', which Intl also
+ * takes, are refused: devices report IANA names, and an offset would skip the formatter cache on every stats read.
  * @example isTimeZone('Asia/Tokyo') // true
+ * @example isTimeZone('+09:00') // false
  */
 export function isTimeZone(timeZone: string): boolean {
+  if (!IANA_NAME_SHAPE.test(timeZone)) return false
   try {
     Intl.DateTimeFormat('en-US', { timeZone })
     return true

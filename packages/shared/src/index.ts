@@ -42,8 +42,10 @@ export {
 } from './schemas'
 export {
   clampStart,
+  detoxCarriedDays,
   MIN_SEGMENT_MS,
   segmentsInRange,
+  STREAK_CAP_DAYS,
   summarizeDays,
   type DayFacts,
   type DayStats,

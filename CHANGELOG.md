@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.9.0.0] - 2026-09-25
+
+### Changed
+
+- A day spent entirely in detox now counts. When detox stays on past
+  midnight, the days it runs through keep 連続記録 going, count toward
+  計測できた日 and the 1日あたり averages, and show on 記録 as detox
+  days instead of 計測なし. An activity left running over a day with no
+  switch still leaves that day out, as before. The 未使用日の扱い sheet
+  says so.
+
+### Fixed
+
+- 「ここで分割」 on a detox carried in from an earlier day no longer says
+  the cut makes an untapped day measured, since that day already counts.
+- Stats read every switch at once, so an edit from another device that
+  lands mid-read can no longer count the same record as both work and
+  detox.
+- Days and months outside 1970-01-01 to 9999-11-30 are refused instead
+  of producing wrong day boundaries, and a day before the year 1000
+  keeps a four-digit year.
+- A time zone written as an offset such as `+09:00` is refused; the
+  device's named zone is kept.
+- Stats and the timeline build each time zone's clock once instead of
+  once per switch, which makes long histories faster to read.
+
 ## [0.8.0.0] - 2026-09-25
 
 ### Added

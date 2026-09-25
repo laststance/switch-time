@@ -46,15 +46,25 @@ export function formatDuration(ms: number): string {
   return hours ? `${hours}h ${pad(minutes % 60)}m` : `${minutes}m`
 }
 
+// One formatter per zone: the timeline and the correction sheet format every row's start on each render.
+// No cap: the app only formats the signed-in account's stored zone, unlike the API's cache in the shared time module.
+const timeFormats = new Map<string, Intl.DateTimeFormat>()
+
 /**
  * Wall-clock `H:MM` of an instant in the user's stored time zone (the 「9:05 から」 line).
  * @example formatTime(new Date('2026-09-09T00:05:00Z'), 'Asia/Tokyo') // '9:05'
  */
 export function formatTime(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone,
-  }).format(date)
+  let format = timeFormats.get(timeZone)
+  // First use of this zone: build it once (an unknown zone throws here, before anything is cached).
+  if (!format) {
+    format = new Intl.DateTimeFormat('ja-JP', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone,
+    })
+    timeFormats.set(timeZone, format)
+  }
+  return format.format(date)
 }
