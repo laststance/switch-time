@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.9.1.0] - 2026-09-25
+
+### Changed
+
+- Detox has one look everywhere: a solid outline in the secondary text
+  tone, never filled. 記録 marks a detox day with that outline and a
+  wind glyph in the middle; the 24-h bar, its legend and the correction
+  sheet's bar and detox row use the same outline. A dashed border now
+  means only that there is no data (a 計測なし day, or time left idle
+  on the bar), so detox no longer looks like either.
+
+### Fixed
+
+- Secondary text in the light theme is darker, enough to read at the
+  WCAG AA contrast ratio on every surface.
+- An outlined span at either end of the 24-h bar or the correction
+  sheet's bar keeps its rounded corner, so its outline is no longer cut
+  open.
+- A day worked on an activity this device has not loaded yet is no
+  longer shown as a detox day on 記録.
+- A device whose clock runs behind no longer draws a stray line on the
+  correction sheet's bar for the record it just started.
+
 ## [0.9.0.0] - 2026-09-25
 
 ### Changed
