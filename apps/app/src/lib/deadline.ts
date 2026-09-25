@@ -1,6 +1,6 @@
 /**
  * How long one API call may take, its answer's body included, before the app gives up on it. It sits above the API's own
- * waits (10 s for a pool connection, then 10 s for the account's lock), so a call reaches it only when something hangs.
+ * 25 s deadline (`REQUEST_DEADLINE_MS`), so a call reaches it only when the answer itself is lost or hangs in transit.
  */
 export const REQUEST_TIMEOUT_MS = 30_000
 

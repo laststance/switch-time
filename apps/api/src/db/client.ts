@@ -20,6 +20,9 @@ const POOL_CONNECTION_TIMEOUT_MS = 10_000
  */
 const IDLE_IN_TRANSACTION_TIMEOUT_MS = 15_000
 
+/** How long a pool connection sits idle before the OS sends its first TCP keepalive probe. */
+const KEEPALIVE_INITIAL_DELAY_MS = 10_000
+
 export const pool = new Pool({
   connectionString: url.href,
   ssl: dbEnv.DATABASE_CA_CERT ? { ca: dbEnv.DATABASE_CA_CERT } : false,
@@ -27,7 +30,7 @@ export const pool = new Pool({
   // Probes idle sockets so a connection a failover left dead is noticed and dropped before it is lent again. The OS picks the
   // probe interval and count (minutes on Linux), so this does not bound a call: the deadline in inTransaction does.
   keepAlive: true,
-  keepAliveInitialDelayMillis: 10_000,
+  keepAliveInitialDelayMillis: KEEPALIVE_INITIAL_DELAY_MS,
   idle_in_transaction_session_timeout: IDLE_IN_TRANSACTION_TIMEOUT_MS,
 })
 
@@ -42,7 +45,10 @@ pool.on('error', logConnectionError)
 
 export const db = drizzle({ client: pool, relations })
 
-/** A transaction opened by {@link withUserLock}: it holds the user's lock until it commits or rolls back. */
+/**
+ * A transaction opened by {@link inTransaction}. Opened through {@link withUserLock}, it holds the user's lock until it
+ * commits or rolls back; the reads and `activities.update` open one without the lock.
+ */
 export type LockedTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 /** `db` or a transaction: the reads and writes below run in whichever the procedure opened. */
@@ -72,10 +78,12 @@ export class DeadlineError extends Error {
 
 /**
  * Runs `work` in one transaction on a pool connection the call owns, and gives up at `deadline`: the connection is then
- * destroyed (a stuck socket never returns to the pool, and the server drops the transaction once it notices, or after
- * {@link IDLE_IN_TRANSACTION_TIMEOUT_MS}) and the call rejects with {@link DeadlineError} without waiting for `work`.
+ * destroyed (a stuck socket never returns to the pool), its server session is ended with `pg_terminate_backend` so the
+ * transaction and the lock it holds go at once ({@link IDLE_IN_TRANSACTION_TIMEOUT_MS} is the fallback when that cannot
+ * reach the server), and the call rejects with {@link DeadlineError} without waiting for `work`. A call already past its
+ * deadline takes no connection at all.
  * `db.transaction` cannot do this: it releases its connection itself, only once the transaction settles, and never when
- * BEGIN fails. Used by {@link withUserLock} and by the reads that must hold one connection (`switchesBetween`, `rangeStats`).
+ * BEGIN fails. Called only through {@link boundedTransaction}, which answers the {@link DeadlineError} as an ORPCError.
  * @param deadline - Epoch ms; a call that reaches it before it has a connection releases the late connection unused.
  * @param work - Reads and writes, all through the transaction it is handed.
  * @param config - Isolation level and access mode for BEGIN.
@@ -87,15 +95,17 @@ export async function inTransaction<T>(
   work: (tx: LockedTx) => Promise<T>,
   config?: PgTransactionConfig,
 ): Promise<T> {
+  // A request that spent its budget before this point (a slow session lookup) never takes a connection.
+  if (Date.now() >= deadline) throw new DeadlineError(false)
   let expired = false
   let committing = false
   let release: ((error?: Error) => void) | undefined
+  let abandon: (() => void) | undefined
   const cutOff = Promise.withResolvers<never>()
   const timer = setTimeout(
     () => {
       expired = true
-      // Releasing with an error makes pg-pool end the client, which destroys the socket while a statement is still waiting.
-      release?.(new Error('deadline passed'))
+      abandon?.()
       cutOff.reject(new DeadlineError(committing))
     },
     Math.max(0, deadline - Date.now()),
@@ -108,6 +118,22 @@ export async function inTransaction<T>(
       if (released) return
       released = true
       client.release(error)
+    }
+    abandon = (): void => {
+      if (released) return
+      // The server session's pid, from the connection's startup (`pg` sets it, its types leave it out).
+      const backendPid =
+        'processID' in client && typeof client.processID === 'number'
+          ? client.processID
+          : undefined
+      // Releasing with an error makes pg-pool end the client, which destroys the socket while a statement is still waiting.
+      release?.(new Error('deadline passed'))
+      // The server only notices a closed socket when it next reads or writes on it: a statement still running there would
+      // keep the user's lock until its statement_timeout, past the next write's lock_timeout. End that session now.
+      if (backendPid !== undefined)
+        void pool
+          .query('select pg_terminate_backend($1)', [backendPid])
+          .catch(logConnectionError)
     }
     if (expired) {
       release()

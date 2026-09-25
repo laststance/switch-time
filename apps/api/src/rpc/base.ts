@@ -56,8 +56,10 @@ export const ownSwitch = async (userId: string, id: string, tx: LockedTx) =>
 
 /**
  * {@link inTransaction} with its deadline answered as an ORPCError: TIMEOUT when nothing was committed, GATEWAY_TIMEOUT when
- * the cut-off came during COMMIT, so the write may have landed. For a call that must hold one connection but takes no user
- * lock (a read of several queries, `activities.update`); {@link withUserLock} goes through it too.
+ * the cut-off came during a write's COMMIT, so the write may have landed (a read-only transaction always answers TIMEOUT).
+ * TIMEOUT goes out as status 500, not its default 408: a browser resends a POST answered 408 on a reused connection, which
+ * would replay a cut-off write behind the app's back. For a call that must hold one connection but takes no user lock (a
+ * read of several queries, `activities.update`); {@link withUserLock} goes through it too.
  * @example return boundedTransaction(context.deadline, (tx) => tx.select().from(switches), { accessMode: 'read only' })
  */
 export async function boundedTransaction<T>(
@@ -69,11 +71,15 @@ export async function boundedTransaction<T>(
     return await inTransaction(deadline, work, config)
   } catch (error) {
     if (!(error instanceof DeadlineError)) throw error
-    throw error.committing
-      ? new ORPCError('GATEWAY_TIMEOUT', {
-          message: 'the write may or may not have been saved',
-        })
-      : new ORPCError('TIMEOUT', { message: 'nothing was saved' })
+    // A read commits nothing, so its outcome is never in doubt.
+    if (error.committing && config?.accessMode !== 'read only')
+      throw new ORPCError('GATEWAY_TIMEOUT', {
+        message: 'the write may or may not have been saved',
+      })
+    throw new ORPCError('TIMEOUT', {
+      status: 500,
+      message: 'nothing was saved',
+    })
   }
 }
 
