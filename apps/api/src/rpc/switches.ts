@@ -248,9 +248,9 @@ const insertSplit = async (tx: LockedTx, row: SwitchRow, startedAt: Date) => {
 
 /**
  * Deletes a row and marks the neighbour that takes over its span as merged, or NOT_FOUND if either row is already gone;
- * `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start). Called by the two merge
- * procedures inside their locked transaction.
- * @example return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt }) // the next state, now starting at row.startedAt
+ * `values` moves that neighbour (mergeIntoNext pulls the next state back to the row's start) and sets its `startsRun` (the
+ * re-tap renewal a merge hands over). Called by the two merge procedures inside their locked transaction.
+ * @example return mergeInto(tx, row.id, next.id, { startedAt: row.startedAt, startsRun: true }) // the next state, now starting at row.startedAt and renewing there
  */
 const mergeInto = async (
   tx: LockedTx,
@@ -685,7 +685,8 @@ export const switchesRouter = {
         // Merging the running record makes the previous one the current state, which an archived activity can never be.
         if (!next) await assertLiveActivities(tx, userId, [prev.activityId])
         // A detox that takes over a re-tap on the same day takes over its renewal too; from an earlier day it would move the
-        // run's start back, so the renewal goes with the merged row there.
+        // run's start back, so the renewal goes with the merged row there. A mark left on an activity row (changeActivity
+        // keeps it) renews only once that row is detox again, so merging the row itself hands nothing over.
         let startsRun = prev.startsRun
         const isReTap = row.startsRun && row.activityId === null
         if (isReTap && prev.activityId === null && !prev.startsRun) {
@@ -719,6 +720,7 @@ export const switchesRouter = {
         if (next.startedAt.getTime() >= end)
           throw conflict('next state is on a later day', REFUSAL.nextOnLaterDay)
         // A detox that takes over a re-tap's start takes over its renewal too, or the days after it would fold into the old run.
+        // As in mergeIntoPrevious, a mark left on an activity row hands nothing over.
         const startsRun =
           next.startsRun ||
           (row.startsRun && row.activityId === null && next.activityId === null)

@@ -446,6 +446,36 @@ test('merging a re-tap into the detox before it on the same day keeps the run re
   })
 })
 
+test('merging a re-tap into a detox from an earlier day hands the renewal nothing', async () => {
+  // Arrange: detox from twenty days ago, re-tapped three days ago with nothing between them
+  const api = await signedIn('detox-renew-merge-earlier@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(today, -3)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  const [renewal] = await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(renewDay, 12), startsRun: true }],
+  })
+  if (!renewal) throw new Error('fixture wrote no re-tap')
+
+  // Act: the re-tap hands its time to the detox from twenty days ago
+  await api.switches.mergeIntoPrevious({ id: renewal.id })
+
+  // Assert: the old detox keeps running unmarked, so its run still starts on its own day
+  expect(await api.switches.current()).toMatchObject({
+    startedAt: at(tapDay, 20),
+    startsRun: false,
+    runStartDay: tapDay,
+  })
+})
+
 test('merging an activity that was once a re-tap into the detox after it renews nothing', async () => {
   // Arrange: detox from twenty days ago; three days ago a 仕事 row still marked from a re-tap, then detox
   const api = await signedIn('detox-mark-activity-merge@example.com')
