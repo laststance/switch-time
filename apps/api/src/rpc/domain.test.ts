@@ -1022,6 +1022,157 @@ test('reorder rejects a position set that is not a permutation', async () => {
   ])
 })
 
+test('a reorder that still names an activity archived before it is refused, and the order stays as it was', async () => {
+  // Arrange: the ids as the editor listed them, then 休息 archived from another device
+  const api = await signedIn('reorder-archived@example.com')
+  const list = await api.activities.list()
+  const ids = list.map((row) => row.id)
+  await api.activities.archive({ id: idOf(list, '休息') })
+
+  // Act
+  const reorder = api.activities.reorder({ ids: [...ids].reverse() })
+
+  // Assert
+  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => [row.name, row.position])).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['娯楽', 5],
+  ])
+})
+
+test('unarchiving an activity whose slot a reorder gave away brings it back at the end of the grid', async () => {
+  // Arrange: 休息 (slot 2) archived, then a reorder hands slot 2 to 娯楽
+  const api = await signedIn('unarchive@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.activities.archive({ id: rest })
+  await api.activities.reorder({
+    ids: ['家事', '仕事', '娯楽', '睡眠', '食事'].map((name) =>
+      idOf(list, name),
+    ),
+  })
+
+  // Act
+  const unarchived = await api.activities.unarchive({ id: rest })
+
+  // Assert
+  expect(unarchived).toMatchObject({
+    id: rest,
+    name: '休息',
+    archivedAt: null,
+    position: 5,
+  })
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => [row.name, row.position])).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['娯楽', 2],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['休息', 5],
+  ])
+})
+
+test('an unarchived activity can be tapped again', async () => {
+  // Arrange: 仕事 is the current state, so 休息 can be archived; a tap on it is then refused
+  const api = await signedIn('unarchive-tap@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await api.activities.archive({ id: rest })
+  await expect(
+    api.switches.switchTo({ activityId: rest }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+
+  // Act
+  await api.activities.unarchive({ id: rest })
+  const tapped = await api.switches.switchTo({ activityId: rest })
+
+  // Assert
+  expect(tapped).toMatchObject({ activityId: rest, source: 'tap' })
+})
+
+test('unarchiving an activity that is already live, as a retried request would, leaves it where it is', async () => {
+  // Arrange
+  const api = await signedIn('unarchive-live@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+
+  // Act
+  const again = await api.activities.unarchive({ id: work })
+
+  // Assert
+  expect(again).toMatchObject({ id: work, archivedAt: null, position: 1 })
+  expect(
+    (await api.activities.list()).map((row) => [row.name, row.position]),
+  ).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['休息', 2],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['娯楽', 5],
+  ])
+})
+
+test('unarchiving another account’s activity or an unknown id is refused as not found, and that activity stays archived', async () => {
+  // Arrange: the owner's 休息 archived (仕事 is its current state)
+  const owner = await signedIn('unarchive-owner@example.com')
+  const stranger = await signedIn('unarchive-stranger@example.com')
+  const ownerList = await owner.activities.list()
+  const rest = idOf(ownerList, '休息')
+  await owner.switches.switchTo({ activityId: idOf(ownerList, '仕事') })
+  await owner.activities.archive({ id: rest })
+
+  // Act + Assert: each awaited before the next is sent, so neither refusal lands unobserved
+  await expect(
+    stranger.activities.unarchive({ id: rest }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  await expect(
+    owner.activities.unarchive({ id: '00000000-0000-4000-8000-000000000000' }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const [row] = await db
+    .select({ archivedAt: activities.archivedAt })
+    .from(activities)
+    .where(eq(activities.id, rest))
+  expect(row?.archivedAt).toBeInstanceOf(Date)
+})
+
+test('adding an activity and unarchiving another at the same moment both land, each in its own slot', async () => {
+  // Arrange: 休息 archived, leaving five live activities
+  const api = await signedIn('unarchive-create-race@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.activities.archive({ id: rest })
+
+  // Act
+  const [created, unarchived] = await Promise.all([
+    api.activities.create({
+      name: '読書',
+      color: '#2BA3B5',
+      iconKey: 'book',
+      targetHours: 1,
+    }),
+    api.activities.unarchive({ id: rest }),
+  ])
+
+  // Assert: slots 6 and 7 in whichever order the lock let them in
+  expect(
+    [created.position, unarchived.position].toSorted((a, b) => a - b),
+  ).toEqual([6, 7])
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live).toHaveLength(7)
+})
+
 test('a color outside the palette is rejected', async () => {
   // Arrange
   const api = await signedIn('palette@example.com')
