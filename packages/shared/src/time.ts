@@ -18,15 +18,19 @@ type Civil = {
 // A backstop only: keys are lower-cased IANA names and links (about 600), so the cache never reaches it in practice.
 const FORMAT_CACHE_MAX_ZONES = 1000
 
+// The shape of an IANA name or link ('Asia/Tokyo', 'Etc/GMT+5'): ASCII, starting with a letter.
+const IANA_NAME_SHAPE = /^[A-Za-z][A-Za-z0-9_/+-]*$/
+
 // One formatter per zone: building an Intl.DateTimeFormat costs far more than formatting with it, and stats read one per tap.
 const civilFormats = new Map<string, Intl.DateTimeFormat>()
 
 // The zone's cached formatter; an unknown zone throws here, before anything is cached.
-// Keyed lower-cased (IANA names are case-insensitive), and offset zones ('+09:30') are never kept: a client can spell those
-// thousands of ways, and formatters dropped from a churning cache stay in native memory long after they are unreachable.
+// Only IANA-shaped names are kept, lower-cased (they are case-insensitive): offsets ('+09:30', or with a U+2212 minus sign) come in thousands
+// of spellings, and formatters dropped from a churning cache stay in native memory long after they are unreachable.
+// Non-ASCII input skips the cache too, since toLowerCase folds the Kelvin sign (U+212A) into 'k' and would match a real zone.
 function civilFormat(timeZone: string): Intl.DateTimeFormat {
-  const key = timeZone.toLowerCase()
-  const cached = civilFormats.get(key)
+  const key = IANA_NAME_SHAPE.test(timeZone) ? timeZone.toLowerCase() : null
+  const cached = key === null ? undefined : civilFormats.get(key)
   if (cached) return cached
   const format = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -38,8 +42,8 @@ function civilFormat(timeZone: string): Intl.DateTimeFormat {
     minute: '2-digit',
     second: '2-digit',
   })
-  // An offset zone is built per call, as every zone was before the cache
-  if (/^[+-]/.test(key)) return format
+  // Not IANA-shaped: built per call, as every zone was before the cache
+  if (key === null) return format
   if (civilFormats.size >= FORMAT_CACHE_MAX_ZONES) civilFormats.clear()
   civilFormats.set(key, format)
   return format

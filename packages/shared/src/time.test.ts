@@ -145,16 +145,33 @@ test('a client cycling the case of a zone name reuses one formatter instead of g
 })
 
 test('an offset zone still reads right but is built per call, never kept in the cache', () => {
-  // Arrange: '+05:45', '+0545' and '+05' are thousands of spellings a client could cycle through
+  // Arrange: '+05:45', '+0545', '+05' and the U+2212 minus sign forms are thousands of spellings a client could cycle through
   const construct = vi.spyOn(Intl, 'DateTimeFormat')
   const instant = new Date('2026-09-09T00:00:00Z')
 
   // Act
-  const days = [localDay(instant, '-05:45'), localDay(instant, '-05:45')]
+  const days = [
+    localDay(instant, '-05:45'),
+    localDay(instant, '-05:45'),
+    localDay(instant, '\u221205:45'),
+    localDay(instant, '\u221205:45'),
+  ]
 
   // Assert
-  expect(days).toEqual(['2026-09-08', '2026-09-08'])
-  expect(construct).toHaveBeenCalledTimes(2)
+  expect(days).toEqual(['2026-09-08', '2026-09-08', '2026-09-08', '2026-09-08'])
+  expect(construct).toHaveBeenCalledTimes(4)
+})
+
+test('a zone name with a look-alike Kelvin sign still fails after the real zone is cached', () => {
+  // Arrange: 'Asia/\u212Aarachi' lower-cases to 'asia/karachi', but Intl rejects it
+  const instant = new Date('2026-09-09T00:00:00Z')
+  localDay(instant, 'Asia/Karachi')
+
+  // Act
+  const readLookAlike = () => localDay(instant, 'Asia/\u212Aarachi')
+
+  // Assert
+  expect(readLookAlike).toThrow(RangeError)
 })
 
 test('an alias zone such as Asia/Kolkata is cached under the name it was given', () => {
