@@ -106,21 +106,26 @@ type HomeToday = {
   timeZone: string
   /** Today's switches from the day's own list, which lands before a stats refetch does. */
   switchCountToday: number
+  /** The stored unused-day rule: while it is off the server measures every day, so no detox stops counting. */
+  autoExcludeUnusedDays: boolean
 }
 
 /**
  * Whether a detox runs whose record started more than {@link DETOX_MEASURED_DAYS_MAX} days before today, with no switch today: the
  * only state that can be past the detox week. Home asks `stats.day` for today only then, and {@link detoxStopped} reads the answer
- * only then. It also keeps the server's answer for a day still in its future (a device clock ahead at midnight, read as neither
- * measured nor excluded) from passing for a stopped detox. Counting from the record's start is conservative: a cut can start the
+ * only then. The server answers a day still in its future (a device clock ahead at midnight) as neither measured nor excluded, the
+ * same as a stopped day; the week and the unused-day rule let that answer through only for a day past the week with auto-exclusion
+ * on, which the server classes the same once it gets there. Counting from the record's start is conservative: a cut can start the
  * record after its run did, and such a run stays quiet (TODOS.md, the last-day warning, needs the run's start from the server).
  * @returns
  * - true for a detox record started on `today - 8` or earlier with no tap today
- * - false for an activity, a detox inside its week (started today included), and any day with a switch
- * @example detoxPastWeek({ current: { activityId: null, startedAt: new Date('2026-09-16T12:20:00Z') }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0 }) // true
+ * - false for an activity, a detox inside its week (started today included), any day with a switch, and while auto-exclusion is
+ *   off (the server then measures every day)
+ * @example detoxPastWeek({ current: { activityId: null, startedAt: new Date('2026-09-16T12:20:00Z') }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0, autoExcludeUnusedDays: true }) // true
  */
 export function detoxPastWeek(input: HomeToday): boolean {
   const { current } = input
+  if (!input.autoExcludeUnusedDays) return false
   if (current.activityId !== null || input.switchCountToday > 0) return false
   const startDay = localDay(current.startedAt, input.timeZone)
   return addDays(startDay, DETOX_MEASURED_DAYS_MAX) < input.today
@@ -135,7 +140,7 @@ export function detoxPastWeek(input: HomeToday): boolean {
  *   off always measures)
  * - false for an activity, a detox started today, a day with a switch, a manual exclusion, a measured day, and while no answer
  *   can be trusted (none yet, a failed or paused fetch, an answer for another day): unknown is not "stopped"
- * @example detoxStopped({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
+ * @example detoxStopped({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
  */
 export function detoxStopped(
   input: HomeToday & {

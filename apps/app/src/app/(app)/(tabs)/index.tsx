@@ -42,9 +42,23 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const activities = gridActivities(useActivities().data ?? [], activity)
   const allActivities = useAllActivities().data ?? []
   const switchTo = useSwitchTo()
-  const { today, timeZone, ready, start, end, segments, switchCount } =
-    useToday()
-  const homeToday = { current, today, timeZone, switchCountToday: switchCount }
+  const {
+    today,
+    timeZone,
+    autoExcludeUnusedDays,
+    ready,
+    start,
+    end,
+    segments,
+    switchCount,
+  } = useToday()
+  const homeToday = {
+    current,
+    today,
+    timeZone,
+    switchCountToday: switchCount,
+    autoExcludeUnusedDays,
+  }
   // The server's class for today says whether a detox past its week still measures it; only a detox record older than the week
   // with no tap today can be past it, so nothing else asks (stats.day scans the whole history).
   const todayStats = useQuery(

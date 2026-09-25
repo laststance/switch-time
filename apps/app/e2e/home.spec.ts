@@ -306,9 +306,14 @@ test('a detox on the seventh day after it started names its start day and says n
     if (request.url().includes('/api/rpc/stats/day'))
       dayClassRequests.push(request.url())
   })
+  // The gate reads the stored unused-day rule, so an empty list only means something once settings have answered
+  const settingsAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/settings/get'),
+  )
 
   // Act
   await page.reload()
+  await settingsAnswer
 
   // Assert: the since line carries the date; inside its week Home neither asks the server about today nor shows the notice
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
@@ -321,6 +326,8 @@ test('a detox on the seventh day after it started names its start day and says n
       { exact: true },
     ),
   ).toBeVisible()
+  // Every query the rendered screen enables has gone out and come back before the list is read
+  await page.waitForLoadState('networkidle')
   expect(dayClassRequests).toEqual([])
   await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
 })

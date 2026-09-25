@@ -184,7 +184,12 @@ describe('detoxPastWeek', () => {
       activityId: null,
       startedAt: new Date('2026-09-16T12:20:00Z'),
     }
-    const base = { current, timeZone: 'Asia/Tokyo', switchCountToday: 0 }
+    const base = {
+      current,
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
+      autoExcludeUnusedDays: true,
+    }
 
     // Act
     const seventhDay = detoxPastWeek({ ...base, today: '2026-09-23' })
@@ -193,6 +198,23 @@ describe('detoxPastWeek', () => {
     // Assert
     expect(seventhDay).toBe(false)
     expect(eighthDay).toBe(true)
+  })
+
+  test('does not ask while auto-exclusion is off, since the server then measures every day', () => {
+    // Act: nine days after a detox from 9/16 21:20 JST
+    const carried = detoxPastWeek({
+      current: {
+        activityId: null,
+        startedAt: new Date('2026-09-16T12:20:00Z'),
+      },
+      today: '2026-09-25',
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
+      autoExcludeUnusedDays: false,
+    })
+
+    // Assert
+    expect(carried).toBe(false)
   })
 
   test('does not ask once today has a tap, or for an activity', () => {
@@ -205,11 +227,13 @@ describe('detoxPastWeek', () => {
       ...base,
       current: { activityId: null, startedAt },
       switchCountToday: 1,
+      autoExcludeUnusedDays: true,
     })
     const activity = detoxPastWeek({
       ...base,
       current: { activityId: 'work', startedAt },
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
     })
 
     // Assert
@@ -223,7 +247,12 @@ describe('detoxPastWeek', () => {
       activityId: null,
       startedAt: new Date('2026-09-16T23:30:00Z'),
     }
-    const base = { current, today: '2026-09-24', switchCountToday: 0 }
+    const base = {
+      current,
+      today: '2026-09-24',
+      switchCountToday: 0,
+      autoExcludeUnusedDays: true,
+    }
 
     // Act
     const tokyo = detoxPastWeek({ ...base, timeZone: 'Asia/Tokyo' })
@@ -253,6 +282,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -260,16 +290,35 @@ describe('detoxStopped', () => {
     expect(stopped).toBe(true)
   })
 
-  test('stays quiet while the detox is still inside its week (today measured)', () => {
+  test('does not read the answer while the detox is still inside its week', () => {
     // Act
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-23',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: {
         ...settled,
         data: { days: [{ day: '2026-09-23', measured: true, excluded: null }] },
+      },
+    })
+
+    // Assert
+    expect(stopped).toBe(false)
+  })
+
+  test('stays quiet past the week when the server still measures today', () => {
+    // Act
+    const stopped = detoxStopped({
+      current: carriedDetox,
+      today: '2026-09-25',
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
+      autoExcludeUnusedDays: true,
+      stats: {
+        ...settled,
+        data: { days: [{ day: '2026-09-25', measured: true, excluded: null }] },
       },
     })
 
@@ -284,6 +333,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: {
         ...settled,
         data: {
@@ -303,6 +353,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -320,6 +371,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -334,6 +386,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 1,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -351,6 +404,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -365,6 +419,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { isError: true, isPaused: false, data: unmeasuredToday },
     })
 
@@ -379,6 +434,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { isError: false, isPaused: true, data: unmeasuredToday },
     })
 
@@ -393,6 +449,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: undefined },
     })
     const yesterdays = detoxStopped({
@@ -400,6 +457,7 @@ describe('detoxStopped', () => {
       today: '2026-09-26',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
 
@@ -415,6 +473,7 @@ describe('detoxStopped', () => {
       today: '2026-09-25',
       timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
+      autoExcludeUnusedDays: true,
       stats: { ...settled, data: { days: [] } },
     })
 
