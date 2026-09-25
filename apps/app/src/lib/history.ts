@@ -230,7 +230,8 @@ function cellKind(stat: DayStat, isToday: boolean): Cell['kind'] {
  * its slice is.
  * @returns
  * - `empty`: the date alone (the cell is not a link)
- * - `excluded`: the date and `・計測なし`, then the times, since the dashed cell still draws its slices
+ * - `excluded`: the date and `・平均から除外` (the footnote's words for a dashed day), then the times, since the dashed cell
+ *   still draws its slices
  * - `detox`: the date and `・detox の日`, then its time, so the outlined day is told apart from a stack day that holds only a
  *   detox part (the wind glyph is hidden from screen readers)
  * - `stack`: the date, each activity's time, then `・detox <time>`
@@ -265,7 +266,7 @@ function cellLabel(
     const time = readable(ms)
     return time ? [`・${name} ${time}`] : []
   })
-  return `${date}${kind === 'excluded' ? '・計測なし' : ''}${times.join('')}`
+  return `${date}${kind === 'excluded' ? '・平均から除外' : ''}${times.join('')}`
 }
 
 function dayCell(

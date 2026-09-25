@@ -61,7 +61,9 @@ test('the week view shows the excluded day dashed and out of the average', async
   await expect(
     page.getByRole('link', { name: /アプリを使わなかった 1日/ }),
   ).toBeVisible()
-  const excluded = page.getByRole('link', { name: /計測なし/ })
+  const excluded = page.getByRole('link', {
+    name: /^\d+月\d+日（.）・平均から除外/,
+  })
   await expect(excluded).toBeVisible()
   await expect(excluded).toHaveCount(1)
   await expect(excluded.locator('div').first()).toHaveCSS(
@@ -118,7 +120,9 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
   await expect(detoxDays.last()).toHaveAccessibleName(
     /^\d+月\d+日（.）・detox の日 24h 00m$/,
   )
-  await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
+  await expect(
+    page.getByRole('link', { name: /^\d+月\d+日（.）・平均から除外/ }),
+  ).toHaveCount(0)
   await expect(page.getByText('4 / 7日')).toBeVisible()
   await expect(page.getByText('4日', { exact: true })).toBeVisible()
   await expect(
@@ -151,7 +155,9 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
     name: new RegExp(`^${dayName}（.）・detox の日 15h 00m$`),
   })
   await expect(detox).toHaveCount(1)
-  await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
+  await expect(
+    page.getByRole('link', { name: /^\d+月\d+日（.）・平均から除外/ }),
+  ).toHaveCount(0)
   const track = detox.locator('div').first()
   // RN-web defaults every View to a solid style, so the width is what proves the outline is drawn.
   await expect(track).toHaveCSS('border-top-style', 'solid')

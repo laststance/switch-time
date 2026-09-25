@@ -250,7 +250,7 @@
 
 ### Check how screen readers speak the `9h 00m` durations
 
-**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in every aria-label that carries a duration. While listening, also judge the day cell's `・` separators (one per activity, a pause or 中黒 read aloud?) and its length when swiping through the 31 month cells; if it is too long, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
+**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in the day cell's aria-label; the correction row (`apps/app/src/app/(app)/correction.tsx`) and the 状態別 row are read from their visible text today, so they need an aria-label of their own to carry it. While listening, also judge the day cell's `・` separators (one per activity, a pause or 中黒 read aloud?) and its length when swiping through the 31 month cells; if it is too long, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
 
 **Why:** History's day cells now read each activity's time and the detox time (`9月9日（水）・仕事 9h 00m・detox 6h 00m`), and the correction rows already read `detox 9:00 – 24:00 15h 00m`. The tests check these labels as strings only, so nobody has heard how a Japanese voice reads `h` and `m`.
 
@@ -272,11 +272,11 @@
 **Priority:** P3
 **Depends on:** None
 
-### Keep an activity's name from reading as detox or 計測なし in History's labels
+### Keep an activity's name from reading as detox or 平均から除外 in History's labels
 
-**What:** Decide whether `activityNameSchema` (`packages/shared/src/schemas.ts`) should refuse the names `detox` and `計測なし` and the `・` character, or whether History's day cell label should mark the detox part and 計測なし in a way no activity name can copy. Existing accounts may already hold such names, so a schema change needs a plan for them.
+**What:** Decide whether `activityNameSchema` (`packages/shared/src/schemas.ts`) should refuse the names `detox` and `平均から除外` and the `・` character, or whether History's day cell label should mark the detox part and 平均から除外 in a way no activity name can copy. Two activities can also share a name (an archived 仕事 and a new 仕事 both hold time on a day), and the label then reads the same name twice with nothing to tell them apart. Existing accounts may already hold such names, so a schema change needs a plan for them.
 
-**Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・計測なし` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `計測なし` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
+**Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
 
 **Context:** `activityNameSchema` is `z.string().trim().min(1).max(20)`; `cellLabel` in `apps/app/src/lib/history.ts`. Raised by the Red Team of the ship review of the PR that made History's day cells read their times (2026-09-25).
 

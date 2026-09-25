@@ -105,7 +105,7 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
     ['金', 'empty', '9月4日（金）'],
     ['土', 'empty', '9月5日（土）'],
     ['日', 'stack', '9月6日（日）・仕事 8h 00m'],
-    ['月', 'excluded', '9月7日（月）・計測なし'],
+    ['月', 'excluded', '9月7日（月）・平均から除外'],
     ['火', 'stack', '9月8日（火）・仕事 10h 00m・旧 3h 00m'],
     ['今日', 'stack', '9月9日（水）'],
   ])
@@ -659,7 +659,7 @@ test('a 25-hour fall-back day cuts its top activity at the end of the 24-hour ba
   )
 })
 
-test('an excluded day that still holds time reads 計測なし, then each activity and its detox', () => {
+test('an excluded day that still holds time reads 平均から除外, then each activity and its detox', () => {
   // Arrange: 9/9 was excluded by hand after 6 h of 仕事 and 2 h of detox
   const stats: HistoryStats = {
     days: [
@@ -693,7 +693,7 @@ test('an excluded day that still holds time reads 計測なし, then each activi
   // Assert
   expect(view.rows[0]?.[6]?.kind).toBe('excluded')
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・計測なし・仕事 6h 00m・detox 2h 00m',
+    '9月9日（水）・平均から除外・仕事 6h 00m・detox 2h 00m',
   )
 })
 
@@ -1262,7 +1262,7 @@ test('an excluded 25-hour fall-back day is cut at the inside of its dashed borde
     },
   ])
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・計測なし・仕事 25h 00m',
+    '9月9日（水）・平均から除外・仕事 25h 00m',
   )
 })
 
