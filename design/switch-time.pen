@@ -2562,79 +2562,28 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "Q8xJD7",
-                              "name": "div",
-                              "context": "div",
+                              "id": "NL9kp",
+                              "name": "detox track",
                               "width": "fill_container",
+                              "height": 132,
+                              "fill": "$chip",
+                              "cornerRadius": 6,
+                              "stroke": "$sub",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
                               "layout": "vertical",
-                              "gap": 1.5,
-                              "justifyContent": "end",
+                              "justifyContent": "center",
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "rectangle",
-                                  "cornerRadius": [
-                                    6,
-                                    6,
-                                    0,
-                                    0
-                                  ],
-                                  "id": "Dthn3",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-6",
-                                  "width": "fill_container",
-                                  "height": 14.44
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "id": "D6Vr1q",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-5",
-                                  "width": "fill_container",
-                                  "height": 9.3
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "id": "mPGSB",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-4",
-                                  "width": "fill_container",
-                                  "height": 39.97
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "id": "FLhFl",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-3",
-                                  "width": "fill_container",
-                                  "height": 13.2
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "id": "UAdzb",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-2",
-                                  "width": "fill_container",
-                                  "height": 41.08
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": [
-                                    0,
-                                    0,
-                                    6,
-                                    6
-                                  ],
-                                  "id": "hiAY2",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-1",
-                                  "width": "fill_container",
-                                  "height": 6.52
+                                  "type": "icon",
+                                  "id": "tk5BQ",
+                                  "name": "wind",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "wind",
+                                  "library": "lucide",
+                                  "fill": "$sub"
                                 }
                               ]
                             },
@@ -23022,6 +22971,41 @@
                                           "fontWeight": "500"
                                         }
                                       ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "NmL0H",
+                                      "name": "detox",
+                                      "context": "span",
+                                      "height": 18,
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 2,
+                                          "id": "Hb0I6",
+                                          "name": "span",
+                                          "context": "span",
+                                          "width": 8,
+                                          "height": 8,
+                                          "stroke": "$sub",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "x9N7e",
+                                          "name": "detox",
+                                          "context": "span",
+                                          "fill": "$sub",
+                                          "content": "detox",
+                                          "lineHeight": 1.25,
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
                                     }
                                   ]
                                 }
@@ -23111,11 +23095,13 @@
                                 {
                                   "type": "rectangle",
                                   "id": "Ym7Tp",
-                                  "name": "div",
+                                  "name": "detox span",
                                   "context": "div",
-                                  "fill": "$activity-5",
                                   "width": 22.92,
-                                  "height": 14
+                                  "height": 14,
+                                  "stroke": "$sub",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner"
                                 },
                                 {
                                   "type": "rectangle",
@@ -46351,7 +46337,7 @@
       "type": "color",
       "value": [
         {
-          "value": "#1B1A178C",
+          "value": "#1B1A17A3",
           "theme": {
             "mode": "light"
           }
