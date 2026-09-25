@@ -44,6 +44,7 @@ export {
   clampStart,
   DETOX_MEASURED_DAYS_MAX,
   detoxCarriedDays,
+  detoxRunStartDay,
   MIN_SEGMENT_MS,
   segmentsInRange,
   STREAK_CAP_DAYS,

@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest'
 
 import {
   badgeRing,
+  detoxLastDay,
   detoxPastWeek,
+  detoxRenewable,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -125,7 +127,7 @@ describe('nowLook', () => {
     const work = { name: '仕事', color: '#3B7BD9' }
 
     // Act
-    const look = nowLook(work, '9:05', 3, false)
+    const look = nowLook(work, '9:05', 3, null)
 
     // Assert
     expect(look).toEqual({
@@ -138,7 +140,7 @@ describe('nowLook', () => {
 
   test('detox has no colour and says nothing accumulates', () => {
     // Act
-    const look = nowLook(null, '21:20', 3, false)
+    const look = nowLook(null, '21:20', 3, null)
 
     // Assert
     expect(look).toEqual({
@@ -149,9 +151,25 @@ describe('nowLook', () => {
     })
   })
 
-  test('a detox past its week says today does not count, the 7-day rule and how to count today', () => {
+  test('on a detox’s last measured day, warns that tomorrow will not count and how to renew it', () => {
     // Act
-    const look = nowLook(null, '9月16日 21:20', 0, true)
+    const look = nowLook(null, '9月16日 21:20', 0, 'last-day')
+
+    // Assert: the since line stays; the notice states the rule without an ordinal day
+    expect(look).toEqual({
+      name: 'detox',
+      color: null,
+      subtext: '9月16日 21:20 から · どの行動にも積み上がりません',
+      notice: {
+        title: '明日から計測に入りません',
+        body: 'デトックスの計測は始めた翌日から7日間まで。明日はデトックスを押し直すと、また7日間計測に入ります。',
+      },
+    })
+  })
+
+  test('a detox past its week says today does not count, the 7-day rule and that a re-tap counts today', () => {
+    // Act
+    const look = nowLook(null, '9月16日 21:20', 0, 'stopped')
 
     // Assert: the since line stays; the notice states the rule without an ordinal day
     expect(look).toEqual({
@@ -160,33 +178,30 @@ describe('nowLook', () => {
       subtext: '9月16日 21:20 から · どの行動にも積み上がりません',
       notice: {
         title: '今日は計測に入りません',
-        body: 'デトックスの計測は始めた翌日から7日間まで。今日中に行動へ切り替えると、今日も計測に入ります。',
+        body: 'デトックスの計測は始めた翌日から7日間まで。デトックスを押し直すか行動へ切り替えると、今日も計測に入ります。',
       },
     })
   })
 
-  test('an activity never carries the detox notice', () => {
+  test('an activity never carries a detox notice', () => {
     // Arrange
     const work = { name: '仕事', color: '#3B7BD9' }
 
     // Act
-    const look = nowLook(work, '9月24日 23:10', 0, true)
+    const stopped = nowLook(work, '9月24日 23:10', 0, 'stopped')
+    const lastDay = nowLook(work, '9月24日 23:10', 0, 'last-day')
 
     // Assert
-    expect(look.notice).toBeNull()
+    expect(stopped.notice).toBeNull()
+    expect(lastDay.notice).toBeNull()
   })
 })
 
 describe('detoxPastWeek', () => {
-  test('asks about today from the eighth day after a detox record started, and not on the seventh', () => {
-    // Arrange: a detox from 9/16 21:20 JST, read in Tokyo
-    const current = {
-      activityId: null,
-      startedAt: new Date('2026-09-16T12:20:00Z'),
-    }
+  test('asks about today from the eighth day after a detox run started, and not on the seventh', () => {
+    // Arrange: a detox run from 9/16
     const base = {
-      current,
-      timeZone: 'Asia/Tokyo',
+      current: { activityId: null, runStartDay: '2026-09-16' },
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
     }
@@ -200,15 +215,27 @@ describe('detoxPastWeek', () => {
     expect(eighthDay).toBe(true)
   })
 
+  test('counts from the run’s start, so a cut that started the running record later does not hide a stopped day', () => {
+    // Arrange: the run started 9/16; a cut on 9/20 started the running record, which the run start does not follow
+    const cutRun = { activityId: null, runStartDay: '2026-09-16' }
+
+    // Act
+    const eighthDay = detoxPastWeek({
+      current: cutRun,
+      today: '2026-09-24',
+      switchCountToday: 0,
+      autoExcludeUnusedDays: true,
+    })
+
+    // Assert
+    expect(eighthDay).toBe(true)
+  })
+
   test('does not ask while auto-exclusion is off, since the server then measures every day', () => {
-    // Act: nine days after a detox from 9/16 21:20 JST
+    // Act: nine days after a detox run from 9/16
     const carried = detoxPastWeek({
-      current: {
-        activityId: null,
-        startedAt: new Date('2026-09-16T12:20:00Z'),
-      },
+      current: { activityId: null, runStartDay: '2026-09-16' },
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: false,
     })
@@ -217,59 +244,118 @@ describe('detoxPastWeek', () => {
     expect(carried).toBe(false)
   })
 
-  test('does not ask once today has a tap, or for an activity', () => {
-    // Arrange: nine days after a record from 9/16 21:20 JST
-    const startedAt = new Date('2026-09-16T12:20:00Z')
-    const base = { today: '2026-09-25', timeZone: 'Asia/Tokyo' }
+  test('does not ask once today has a tap, for an activity, or for the optimistic row a tap writes', () => {
+    // Arrange: nine days after a run from 9/16
+    const base = { today: '2026-09-25', autoExcludeUnusedDays: true }
 
     // Act
     const tappedToday = detoxPastWeek({
       ...base,
-      current: { activityId: null, startedAt },
+      current: { activityId: null, runStartDay: '2026-09-16' },
       switchCountToday: 1,
-      autoExcludeUnusedDays: true,
     })
     const activity = detoxPastWeek({
       ...base,
-      current: { activityId: 'work', startedAt },
+      current: { activityId: 'work', runStartDay: null },
       switchCountToday: 0,
-      autoExcludeUnusedDays: true,
+    })
+    const optimistic = detoxPastWeek({
+      ...base,
+      current: { activityId: null, runStartDay: null },
+      switchCountToday: 0,
     })
 
     // Assert
     expect(tappedToday).toBe(false)
     expect(activity).toBe(false)
+    expect(optimistic).toBe(false)
   })
+})
 
-  test('counts the week from the start day in the stored zone', () => {
-    // Arrange: 9/16 23:30 UTC is 9/17 8:30 in Tokyo but 9/16 19:30 in New York
-    const current = {
-      activityId: null,
-      startedAt: new Date('2026-09-16T23:30:00Z'),
-    }
+describe('detoxLastDay', () => {
+  test('warns on the seventh day after a detox run started, and on no other day', () => {
+    // Arrange: a detox run from 9/16
     const base = {
-      current,
-      today: '2026-09-24',
-      switchCountToday: 0,
+      current: { activityId: null, runStartDay: '2026-09-16' },
       autoExcludeUnusedDays: true,
     }
 
     // Act
-    const tokyo = detoxPastWeek({ ...base, timeZone: 'Asia/Tokyo' })
-    const newYork = detoxPastWeek({ ...base, timeZone: 'America/New_York' })
+    const sixthDay = detoxLastDay({ ...base, today: '2026-09-22' })
+    const seventhDay = detoxLastDay({ ...base, today: '2026-09-23' })
+    const eighthDay = detoxLastDay({ ...base, today: '2026-09-24' })
 
     // Assert
-    expect(tokyo).toBe(false)
-    expect(newYork).toBe(true)
+    expect(sixthDay).toBe(false)
+    expect(seventhDay).toBe(true)
+    expect(eighthDay).toBe(false)
+  })
+
+  test('does not warn while auto-exclusion is off, for an activity, or for the optimistic row a tap writes', () => {
+    // Arrange: the seventh day of a run from 9/16
+    const today = '2026-09-23'
+
+    // Act
+    const autoExcludeOff = detoxLastDay({
+      current: { activityId: null, runStartDay: '2026-09-16' },
+      today,
+      autoExcludeUnusedDays: false,
+    })
+    const activity = detoxLastDay({
+      current: { activityId: 'work', runStartDay: null },
+      today,
+      autoExcludeUnusedDays: true,
+    })
+    const optimistic = detoxLastDay({
+      current: { activityId: null, runStartDay: null },
+      today,
+      autoExcludeUnusedDays: true,
+    })
+
+    // Assert
+    expect(autoExcludeOff).toBe(false)
+    expect(activity).toBe(false)
+    expect(optimistic).toBe(false)
+  })
+})
+
+describe('detoxRenewable', () => {
+  test('lets a detox press through from the eighth day after its run started, so it starts a new run', () => {
+    // Arrange: a detox run from 9/16
+    const current = { activityId: null, runStartDay: '2026-09-16' }
+
+    // Act
+    const seventhDay = detoxRenewable({ current, today: '2026-09-23' })
+    const eighthDay = detoxRenewable({ current, today: '2026-09-24' })
+
+    // Assert
+    expect(seventhDay).toBe(false)
+    expect(eighthDay).toBe(true)
+  })
+
+  test('drops a second press before the refetch, and never renews an activity', () => {
+    // Arrange: the optimistic row the first press wrote has no run start yet
+    const today = '2026-09-25'
+
+    // Act
+    const optimistic = detoxRenewable({
+      current: { activityId: null, runStartDay: null },
+      today,
+    })
+    const activity = detoxRenewable({
+      current: { activityId: 'work', runStartDay: null },
+      today,
+    })
+
+    // Assert
+    expect(optimistic).toBe(false)
+    expect(activity).toBe(false)
   })
 })
 
 describe('detoxStopped', () => {
-  // A detox from 9/16 21:20 JST, read on 9/25 (Tokyo), the server's answer for today and a settled fetch
-  const carriedDetox = {
-    activityId: null,
-    startedAt: new Date('2026-09-16T12:20:00Z'),
-  }
+  // A detox run from 9/16, read on 9/25, the server's answer for today and a settled fetch
+  const carriedDetox = { activityId: null, runStartDay: '2026-09-16' }
   const unmeasuredToday = {
     days: [{ day: '2026-09-25', measured: false, excluded: null }],
   }
@@ -280,7 +366,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -295,7 +380,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-23',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
@@ -313,7 +397,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
@@ -331,7 +414,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
@@ -349,9 +431,8 @@ describe('detoxStopped', () => {
   test('stays quiet for an activity, whatever the answer says', () => {
     // Act
     const stopped = detoxStopped({
-      current: { activityId: 'work', startedAt: carriedDetox.startedAt },
+      current: { activityId: 'work', runStartDay: null },
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -362,14 +443,10 @@ describe('detoxStopped', () => {
   })
 
   test('stays quiet for a detox started today', () => {
-    // Act: 9/25 08:00 JST
+    // Act
     const stopped = detoxStopped({
-      current: {
-        activityId: null,
-        startedAt: new Date('2026-09-24T23:00:00Z'),
-      },
+      current: { activityId: null, runStartDay: '2026-09-25' },
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -384,7 +461,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 1,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -395,14 +471,10 @@ describe('detoxStopped', () => {
   })
 
   test('stays quiet on the first day of a detox when the server answers for a day still in its future', () => {
-    // Act: a detox from 9/24 21:00 JST; the device reached 9/25 before the server did, which classes a future day unmeasured
+    // Act: a detox run from 9/24; the device reached 9/25 before the server did, which classes a future day unmeasured
     const stopped = detoxStopped({
-      current: {
-        activityId: null,
-        startedAt: new Date('2026-09-24T12:00:00Z'),
-      },
+      current: { activityId: null, runStartDay: '2026-09-24' },
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -417,7 +489,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { isError: true, isPaused: false, data: unmeasuredToday },
@@ -432,7 +503,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { isError: false, isPaused: true, data: unmeasuredToday },
@@ -447,7 +517,6 @@ describe('detoxStopped', () => {
     const loading = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: undefined },
@@ -455,7 +524,6 @@ describe('detoxStopped', () => {
     const yesterdays = detoxStopped({
       current: carriedDetox,
       today: '2026-09-26',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
@@ -471,7 +539,6 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      timeZone: 'Asia/Tokyo',
       switchCountToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: { days: [] } },

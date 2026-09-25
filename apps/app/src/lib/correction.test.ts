@@ -58,6 +58,7 @@ const row = (id: string, activityId: string | null, startedAt: Date) => ({
   startedAt,
   source: 'tap' as const,
   revision: 0,
+  startsRun: false,
   createdAt: startedAt,
 })
 const activities = [
@@ -308,6 +309,33 @@ test('the title names the day unless it is today, and the baseline an edit sends
     carriedIn: { id: 's', revision: 3 },
     carriedOutId: 't',
   })
+})
+
+test('the day undo writes a detox re-tap back as one, so the run it started does not fold into the one before it', () => {
+  // Arrange: a detox re-tap at 9:00 that started a new run, then 仕事 at 12:00
+  const day = '2026-09-08'
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-01', 20)),
+    rows: [
+      { ...row('d', null, at(day, 9)), startsRun: true },
+      row('w', 'work', at(day, 12)),
+    ],
+    carriedOut: null,
+  }
+
+  // Act
+  const baseline = dayBaseline(day, TZ, list)
+  const snapshot = daySnapshot(baseline.rows ?? [])
+
+  // Assert: only the re-tap carries the mark
+  expect(baseline.rows).toEqual([
+    { id: 'd', activityId: null, startedAt: at(day, 9), startsRun: true },
+    { id: 'w', activityId: 'work', startedAt: at(day, 12) },
+  ])
+  expect(snapshot).toEqual([
+    { activityId: null, startedAt: at(day, 9), startsRun: true },
+    { activityId: 'work', startedAt: at(day, 12) },
+  ])
 })
 
 test('a day with no switch before it sends a baseline that says so, so a record appearing before the day is caught', () => {

@@ -294,23 +294,34 @@ function ownRowFlags(
  * @example const previous = daySnapshot(baseline.rows)
  */
 export function daySnapshot(
-  rows: readonly Pick<DayRow, 'activityId' | 'startedAt'>[],
+  rows: readonly Pick<DayRow, 'activityId' | 'startedAt' | 'startsRun'>[],
 ): DaySnapshot {
-  return rows.map(({ activityId, startedAt }) => ({
+  return rows.map(({ activityId, startedAt, startsRun }) => ({
     activityId,
     startedAt,
+    ...runMark(startsRun),
   }))
 }
 
-// A row as a baseline or 「元に戻す」's `expected` compares it: id, activity and start.
+// A detox re-tap's mark, and nothing for any other row: written back as a plain detox row, a re-tap would fold its run into
+// the one before it, and leaving the mark off every other row keeps the baseline and the undo as small as before.
+const runMark = (startsRun: boolean | undefined) =>
+  startsRun ? { startsRun } : {}
+
+// A row as a baseline or 「元に戻す」's `expected` compares it (id, activity and start), with the re-tap mark the undo writes back.
 const listedRow = ({
   id,
   activityId,
   startedAt,
-}: Pick<SwitchRow, 'id' | 'activityId' | 'startedAt'>): DayRow => ({
+  startsRun,
+}: Pick<
+  SwitchRow,
+  'id' | 'activityId' | 'startedAt' | 'startsRun'
+>): DayRow => ({
   id,
   activityId,
   startedAt,
+  ...runMark(startsRun),
 })
 
 /**
@@ -598,7 +609,7 @@ export type CorrectionEdit = {
   kind: 'move' | 'pick' | 'merge' | 'split' | 'cut'
   returned: Pick<
     SwitchRow,
-    'id' | 'activityId' | 'startedAt' | 'revision' | 'userId'
+    'id' | 'activityId' | 'startedAt' | 'startsRun' | 'revision' | 'userId'
   >
 }
 

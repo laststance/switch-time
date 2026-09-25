@@ -3,8 +3,11 @@ import {
   changeActivityInputSchema,
   clampStart,
   MIN_SEGMENT_MS,
+  addDays,
   dayBounds,
   daySchema,
+  DETOX_MEASURED_DAYS_MAX,
+  detoxRunStartDay,
   localDay,
   moveStartInputSchema,
   REFUSAL,
@@ -60,6 +63,73 @@ export async function latestSwitch(
     .limit(1)
   return row ?? null
 }
+
+// What a run's boundary rows are read for: enough for detoxRunStartDay.
+const runColumns = {
+  activityId: switches.activityId,
+  startedAt: switches.startedAt,
+  startsRun: switches.startsRun,
+}
+
+/**
+ * The day the detox run that `latest` belongs to started, in `timeZone`, or null while an activity runs. Two reads on the
+ * partial `switches_run_boundary_idx` and the timeline index decide it, however long the account's history is: the latest
+ * boundary (an activity row, or a detox row that starts a run) and the row right after it (the run's first row when the
+ * boundary is an activity). {@link detoxRunStartDay} applies the run rule to them. Called by `current` for Home's notices,
+ * and by switchTo to tell a detox re-tap past the run's week from a repeat press.
+ * @example await runStartOf(tx, userId, latest, 'Asia/Tokyo') // '2026-09-01' for a detox from 09-01 that a cut split on 09-05
+ */
+async function runStartOf(
+  executor: Executor,
+  userId: string,
+  latest: SwitchRow,
+  timeZone: string,
+): Promise<string | null> {
+  if (latest.activityId !== null) return null
+  // The same predicate as the index, so the planner can use it.
+  const [boundary] = await executor
+    .select(runColumns)
+    .from(switches)
+    .where(
+      and(
+        own(userId),
+        sql`${switches.activityId} is not null or ${switches.startsRun}`,
+      ),
+    )
+    .orderBy(desc(switches.startedAt))
+    .limit(1)
+  const [first] = await executor
+    .select(runColumns)
+    .from(switches)
+    .where(
+      boundary
+        ? and(own(userId), gt(switches.startedAt, boundary.startedAt))
+        : own(userId),
+    )
+    .orderBy(asc(switches.startedAt))
+    .limit(1)
+  const rows = [boundary, first, latest].flatMap((row) =>
+    row
+      ? [
+          {
+            activityId: row.activityId,
+            startedAt: row.startedAt.getTime(),
+            startsRun: row.startsRun,
+          },
+        ]
+      : [],
+  )
+  return detoxRunStartDay(rows, timeZone)
+}
+
+/**
+ * Whether a detox press on a running detox starts a new run: the run's measured week ({@link DETOX_MEASURED_DAYS_MAX} days
+ * after its start day) is over by `today`. Inside the week the press stays a no-op, so a double tap never cuts a run.
+ * Called by switchTo under the user's lock; Home's {@link detoxRenewable} applies the same rule to decide whether to send it.
+ * @example isPastRunWeek('2026-09-01', '2026-09-09') // true: 09-08 was the week's last day
+ */
+const isPastRunWeek = (runStartDay: string | null, today: string) =>
+  runStartDay !== null && addDays(runStartDay, DETOX_MEASURED_DAYS_MAX) < today
 
 /**
  * Rejects an id that is not the user's (null = detox, nothing to check) in one query however many ids arrive; returns one
@@ -502,7 +572,25 @@ const outsideWindow = (window: DayWindow | null, time: number) =>
   window !== null && (time < window.start || time >= window.end)
 
 export const switchesRouter = {
-  current: authed.handler(async ({ context }) => latestSwitch(context.user.id)),
+  // The running record plus the day its detox run started (null while an activity runs), for Home's detox notices. The
+  // settings are read first (a half-seeded account gets its row written); the two reads after share one snapshot, so a
+  // write landing between them cannot pair a record with another run's start.
+  current: authed.handler(async ({ context }) => {
+    const userId = context.user.id
+    const { timeZone } = await getSettings(userId)
+    return boundedTransaction(
+      context.deadline,
+      async (tx) => {
+        const latest = await latestSwitch(userId, tx)
+        if (!latest) return null
+        return {
+          ...latest,
+          runStartDay: await runStartOf(tx, userId, latest, timeZone),
+        }
+      },
+      { isolationLevel: 'repeatable read', accessMode: 'read only' },
+    )
+  }),
 
   switchTo: authed
     // null = detox: from now on the time is recorded to no activity, until the next real one.
@@ -512,8 +600,18 @@ export const switchesRouter = {
       return withUserLock(userId, context.deadline, async (tx) => {
         await assertLiveActivities(tx, userId, [input.activityId])
         const current = await latestSwitch(userId, tx)
-        // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
-        if (current?.activityId === input.activityId) return current
+        const now = Date.now()
+        // Tapping the active state again keeps it (no zero-length segment, and the clock never drops its state), except
+        // detox pressed again after its run's measured week: a new run starts here, and the days after it count again.
+        let startsRun = false
+        if (current !== null && current.activityId === input.activityId) {
+          if (input.activityId !== null) return current
+          const { timeZone } = await getSettings(userId, tx)
+          const runStartDay = await runStartOf(tx, userId, current, timeZone)
+          if (!isPastRunWeek(runStartDay, localDay(new Date(now), timeZone)))
+            return current
+          startsRun = true
+        }
         // The running record now ends here.
         if (current) await bumpRevision(tx, current.id)
         return one(
@@ -522,7 +620,8 @@ export const switchesRouter = {
             .values({
               userId,
               activityId: input.activityId,
-              startedAt: nextSwitchStart(current, Date.now()),
+              startedAt: nextSwitchStart(current, now),
+              startsRun,
             })
             .returning(),
         )

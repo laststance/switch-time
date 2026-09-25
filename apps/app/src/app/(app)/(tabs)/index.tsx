@@ -19,7 +19,9 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
+  detoxLastDay,
   detoxPastWeek,
+  detoxRenewable,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -55,11 +57,10 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const homeToday = {
     current,
     today,
-    timeZone,
     switchCountToday: switchCount,
     autoExcludeUnusedDays,
   }
-  // The server's class for today says whether a detox past its week still measures it; only a detox record older than the week
+  // The server's class for today says whether a detox past its week still measures it; only a detox run older than the week
   // with no tap today can be past it, so nothing else asks (stats.day scans the whole history).
   const todayStats = useQuery(
     orpc.stats.day.queryOptions({
@@ -68,12 +69,21 @@ function HomeBody({ current, activity }: HomeBodyProps) {
     }),
   )
   const stopped = detoxStopped({ ...homeToday, stats: todayStats })
+  const detoxNotice = stopped
+    ? 'stopped'
+    : detoxLastDay(homeToday)
+      ? 'last-day'
+      : null
+  const renewable = detoxRenewable({ current, today })
   const ink = useTokenColor('ink')
   const pathname = usePathname()
   // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
-  // Skipping the call also saves the three refetches the mutation triggers.
+  // Skipping the call also saves the three refetches the mutation triggers. The one exception is detox past its run's week,
+  // where the press starts a new run.
   const pick = (activityId: string | null): void => {
-    if (activityId !== current.activityId) switchTo.mutate({ activityId })
+    const isRenewal = activityId === null && renewable
+    if (activityId !== current.activityId || isRenewal)
+      switchTo.mutate({ activityId })
   }
   useWebKeydown((event) => {
     // A sheet above Home (or another tab, Home stays mounted) owns the keyboard.
@@ -101,7 +111,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
           activity,
           formatSince(current.startedAt, today, timeZone),
           switchCount,
-          stopped,
+          detoxNotice,
         )}
         startedAt={current.startedAt.getTime()}
       />
@@ -123,6 +133,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       </View>
       <DetoxRow
         active={current.activityId === null}
+        renewable={renewable}
         onPress={() => pick(null)}
       />
       <TodayFlow

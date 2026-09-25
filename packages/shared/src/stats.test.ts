@@ -4,6 +4,7 @@ import {
   clampStart,
   classifyDay,
   detoxCarriedDays,
+  detoxRunStartDay,
   segmentsInRange,
   streak,
   sumSegments,
@@ -506,6 +507,108 @@ test('switching to an activity and back to detox starts a new week', () => {
     '2026-09-16',
     '2026-09-17',
   ])
+})
+
+test('a detox re-tap past the week starts a new week from the re-tap day', () => {
+  // Arrange: detox from 09-01 20:00, re-tapped on 09-12 12:00 (a startsRun row), still running on 09-30
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+    { activityId: null, startedAt: at('2026-09-12', 12), startsRun: true },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, {
+    from: '2026-09-01',
+    to: '2026-09-30',
+  })
+
+  // Assert: 09-02..09-08 from the first run; 09-12 is a tapped day; 09-13..09-19 from the re-tap
+  expect([...days].sort()).toEqual([
+    '2026-09-02',
+    '2026-09-03',
+    '2026-09-04',
+    '2026-09-05',
+    '2026-09-06',
+    '2026-09-07',
+    '2026-09-08',
+    '2026-09-13',
+    '2026-09-14',
+    '2026-09-15',
+    '2026-09-16',
+    '2026-09-17',
+    '2026-09-18',
+    '2026-09-19',
+  ])
+})
+
+test('a cut after a detox re-tap keeps the week counted from the re-tap', () => {
+  // Arrange: detox from 09-01, re-tapped on 09-12, then cut on 09-15 (a detox row without startsRun), still running
+  const taps = [
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+    { activityId: null, startedAt: at('2026-09-12', 12), startsRun: true },
+    { activityId: null, startedAt: at('2026-09-15', 8) },
+  ]
+
+  // Act
+  const days = detoxCarriedDays(taps, TZ, {
+    from: '2026-09-12',
+    to: '2026-09-30',
+  })
+
+  // Assert: the cut on 09-15 is a tapped day and adds nothing past 09-19
+  expect([...days].sort()).toEqual([
+    '2026-09-13',
+    '2026-09-14',
+    '2026-09-16',
+    '2026-09-17',
+    '2026-09-18',
+    '2026-09-19',
+  ])
+})
+
+test('Home counts a detox week from the start of its run, not from a cut inside it', () => {
+  // Arrange: 仕事, then detox from 09-01 20:00, cut on 09-05 (a second detox row); rows arrive out of order
+  const rows = [
+    { activityId: null, startedAt: at('2026-09-05', 12) },
+    { activityId: 'work', startedAt: at('2026-08-31', 9) },
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+  ]
+
+  // Act
+  const runStart = detoxRunStartDay(rows, TZ)
+
+  // Assert
+  expect(runStart).toBe('2026-09-01')
+})
+
+test('Home counts a detox week from the re-tap that renewed it', () => {
+  // Arrange: detox from 09-01, re-tapped on 09-12 past its week
+  const rows = [
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+    { activityId: null, startedAt: at('2026-09-12', 12), startsRun: true },
+  ]
+
+  // Act
+  const runStart = detoxRunStartDay(rows, TZ)
+
+  // Assert
+  expect(runStart).toBe('2026-09-12')
+})
+
+test('Home reads no detox run while an activity runs or before the first tap', () => {
+  // Arrange
+  const activityLatest = [
+    { activityId: null, startedAt: at('2026-09-01', 20) },
+    { activityId: 'work', startedAt: at('2026-09-02', 9) },
+  ]
+
+  // Act
+  const whileActivity = detoxRunStartDay(activityLatest, TZ)
+  const beforeFirstTap = detoxRunStartDay([], TZ)
+
+  // Assert
+  expect(whileActivity).toBeNull()
+  expect(beforeFirstTap).toBeNull()
 })
 
 test('a month left on detox counts its first week as measured and the rest as unused', () => {
