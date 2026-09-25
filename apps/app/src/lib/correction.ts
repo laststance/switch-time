@@ -683,11 +683,15 @@ function slotMatchesDay(
   listed: ListedDay,
   timeZone: string,
 ): boolean {
-  if (slot.kind === 'activity')
-    return (
-      listed.carriedIn?.id === slot.id &&
-      listed.carriedIn.revision === slot.revision
-    )
+  // The record is looked for among the day's own rows too: a zone change can list it there, and the undo still lands while
+  // its revision holds.
+  if (slot.kind === 'activity') {
+    const record =
+      listed.carriedIn?.id === slot.id
+        ? listed.carriedIn
+        : listed.rows.find((row) => row.id === slot.id)
+    return record?.revision === slot.revision
+  }
   // The carried-in record is left out, as `replaceDay` leaves it out: the undo never rewrites it.
   if (slot.timeZone !== timeZone) return false
   if ((listed.carriedOut?.id ?? null) !== slot.carriedOutId) return false

@@ -2224,6 +2224,34 @@ test('a carried-in pick’s 元に戻す turns off once the day no longer lists 
   expect(anotherCarried).toBeUndefined()
 })
 
+test('a carried-in pick’s 元に戻す stays on when a zone change lists the same record among the day’s own rows', () => {
+  // Arrange: the pick left record 'c' at revision 4; the new zone starts the day before it, so it is no longer carried in.
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'rest',
+    revision: 4,
+  }
+  const picked = row('c', 'work', new Date('2026-09-07T23:30:00+09:00'))
+
+  // Act
+  const atItsRevision = offeredUndo(
+    slot,
+    { rows: [{ ...picked, revision: 4 }], carriedIn: null, carriedOut: null },
+    'Australia/Sydney',
+  )
+  const writtenAgain = offeredUndo(
+    slot,
+    { rows: [{ ...picked, revision: 5 }], carriedIn: null, carriedOut: null },
+    'Australia/Sydney',
+  )
+
+  // Assert
+  expect(atItsRevision).toBe(slot)
+  expect(writtenAgain).toBeUndefined()
+})
+
 test('an edit that left its day with no rows keeps 元に戻す while the day stays empty, and turns it off once a tap adds a row', () => {
   // Arrange: the edit left 2026-09-08 with no row of its own and nothing carried out.
   const slot: UndoSlot = {

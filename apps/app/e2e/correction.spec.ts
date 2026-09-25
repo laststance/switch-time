@@ -1952,6 +1952,45 @@ test('a pick on the record a kept notice opened keeps its panel open while the p
   await expect(dialog.getByRole('alert')).toBeHidden()
 })
 
+test('an archived notice that lands while another row is selected shows once its record is tapped', async ({
+  page,
+}) => {
+  // Arrange: 睡眠 picked on the carried-in record, 仕事 archived from another device, 元に戻す pressed with its answer held,
+  // and the sheet closed and opened again from History before the answer lands.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  await expect(slept).toBeVisible()
+  await api.activities.archive({ id: idOf(list, '仕事') })
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/changeActivity', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.getByRole('button', { name: '元に戻す' }).click()
+  await page.getByRole('button', { name: '完了' }).click()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, day).click()
+  const meal = dialog.getByRole('button', { name: /^食事 7:00 – / })
+  await meal.click()
+  await expect(meal).toHaveAttribute('aria-expanded', 'true')
+  const writing = dialog.getByText('反映しています…')
+  await expect(writing).toBeVisible()
+  answer.resolve()
+  await expect(writing).toBeHidden()
+
+  // Act
+  await slept.click()
+
+  // Assert: the record's panel opens on the notice the refusal raised.
+  await expect(slept).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.getByRole('alert')).toHaveText(
+    '前の活動はアーカイブ済みのため、元に戻せません',
+  )
+})
+
 test('a split whose answer lands after midnight selects nothing on the new day, even the half that runs into it', async ({
   page,
 }) => {

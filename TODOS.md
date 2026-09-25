@@ -66,6 +66,42 @@
 **Priority:** P3
 **Depends on:** None
 
+### Let a day's kept failure line expire once the day moved on
+
+**What:** Hide a day's kept refusal line once a later read of that day has succeeded (keep when it was set, compare with the list's `dataUpdatedAt`), or clear it when a `switches.*` write on that day succeeds, and let the offline or writing line show over an old refusal.
+
+**Why:** Since the line moved to the store (`refused` in `apps/app/src/store/correction.ts`) it lasts until the next press, selection or undo on that day. Reopen a day hours after a refusal, when a tap on ホーム or another sheet's merge has long since changed it, and the sheet still says the edit failed, even naming 別の端末 for this device's own double tap. `statusLine` puts the refusal first, so it also hides 「オフラインです…」 and 「反映しています…」 on reopening.
+
+**Context:** `statusLine` in `apps/app/src/lib/correction.ts`, `useCorrectionState` in `apps/app/src/hooks/use-correction.ts`. Related: "Stop naming another device when this device's own late write changed the day". Raised by the Claude adversarial pass during the 0.8.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Drop a day's 元に戻す once a settled read shows the day moved on
+
+**What:** Dispatch `dropped` for the day when `offeredUndo` turns a slot off on a settled, successful read (no fetch or `switches.*` write in flight), instead of only hiding it.
+
+**Why:** A slot that no longer matches stays in the store. If another device later puts the day back exactly as the edit left it (merging away the switch this device tapped), 元に戻す shows again and would undo an edit made long before; the API accepts it, since the day reads as the undo expects. A read that fails while stale data is shown must not drop it.
+
+**Context:** `offeredUndo` in `apps/app/src/lib/correction.ts`, `useCorrection` in `apps/app/src/hooks/use-correction.ts`. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep the user's own selection when today's sheet passes midnight
+
+**What:** When the sheet's day changes, keep the row the user selected if the new day still lists it (the running record becomes the carried-in one under the same id), and drop only the selection and focus an answer set.
+
+**Why:** `sheetView` starts the sheet's own state over whenever the day changes, so a panel open at midnight closes under the user's finger, with its picker and 区切る時刻. Before 0.8.0.0 the selection stayed. `onPressedDay` alone already keeps a late answer off the new day.
+
+**Context:** `sheetView` and `onPressedDay` in `apps/app/src/lib/correction.ts`; the e2e "a split whose answer lands after midnight selects nothing on the new day" must keep passing. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Rebuild a merged-away record of an archived activity
 
 **What:** Give the user a way to bring back a record of an archived activity once 「元に戻す」 is gone. Either `changeActivity` accepts the user's archived activity on a past row (and 活動を変える offers it there), or an `activities.unarchive` route with a control in 設定 brings the activity back so the usual edits can rebuild the row.

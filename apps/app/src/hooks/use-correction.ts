@@ -156,10 +156,11 @@ function useCorrectionState(day: string) {
       setSheet({ ...current, selectedId: view.selectedId })
       dispatch(hushed({ epoch, day, notice }))
     },
-    // A tap on a row: what the line or the notice said was about another moment.
+    // A tap on a row: what the line or the notice said was about another moment, except the notice of the row tapped, which
+    // may have landed while another row was selected and is seen only now.
     select: (id: string | null): void => {
       setSheet({ ...current, selectedId: id })
-      dispatch(hushed({ epoch, day, notice: true }))
+      dispatch(hushed({ epoch, day, notice: id !== view.noticeId }))
     },
     // A row the sheet selects by itself (an undo's reselect): a refusal a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
