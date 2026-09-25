@@ -22,7 +22,7 @@ export function useRegistration() {
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>()
 
   const register = (email: string): void => {
-    // Left through a link while the request ran (sign-up stays mounted underneath): moving on would replace the form now in front.
+    // Left while the request ran (a link keeps sign-up mounted underneath, going back removes it): moving on would replace the form now in front.
     if (!navigation.isFocused()) return
     dispatch(registrationSlice.actions.registered(email))
     // Back to the sign-in screen underneath when there is one, else in place of sign-up: the filled form is not left behind.

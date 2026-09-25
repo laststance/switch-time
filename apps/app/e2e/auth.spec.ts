@@ -221,6 +221,44 @@ test('a sign-up left pending while the user goes to sign in does not take over t
   await expect(page.getByRole('status')).toHaveCount(0)
 })
 
+test('a sign-up left pending while the user tries to sign in does not clear the sign-in error when it answers late', async ({
+  page,
+}) => {
+  // Arrange: the sign-up hangs; the user goes to sign-in and sends a password that does not match.
+  let release = (): void => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/auth/sign-up/email', async (route) => {
+    await held
+    await route.continue()
+  })
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  // The sign-up stays mounted (hidden) under sign-in.
+  const shown = { visible: true }
+  await page.getByLabel('メールアドレス').filter(shown).fill(uniqueEmail())
+  await page.getByLabel('パスワード').filter(shown).fill('not the password')
+  await page.getByRole('button', { name: 'サインイン' }).filter(shown).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  const lateAnswer = page.waitForResponse('**/api/auth/sign-up/email')
+
+  // Act
+  release()
+  await lateAnswer
+
+  // Assert: sign-in still shows its error and no registration notice.
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByLabel('パスワード').filter(shown)).toHaveValue(
+    'not the password',
+  )
+})
+
 test('a wrong password after sign-up replaces the notice with the sign-in error', async ({
   page,
 }) => {

@@ -48,15 +48,19 @@ export function keptFormKey(current: string, next: string): string {
  * Whether sign-in's button waits: while the request runs, and after it went through until the session lands (the (auth) layout
  * then leaves sign-in). A second tap in between would open a second session and spend the sign-in rate limit.
  * @param request - The form's request: running, or through.
- * @param sessionPending - Better Auth's session query has no answer yet (it refetches after sign-in).
+ * @param session - Better Auth's session query: `pending` while it has no answer, `reloadStarted` once it has begun the reload
+ * that follows a sign-in that went through (Better Auth starts it a moment after the request answers).
  * @returns
- * - true while the request runs, or once it went through and the session is still loading
+ * - true while the request runs, and once it went through until the session reload has started and answered
  * - false otherwise, so a sign-in whose session never loads can be sent again
- * @example signInBusy({ pending: false, succeeded: true }, true) // => true
+ * @example signInBusy({ pending: false, succeeded: true }, { pending: false, reloadStarted: false }) // => true
  */
 export function signInBusy(
   request: { pending: boolean; succeeded: boolean },
-  sessionPending: boolean,
+  session: { pending: boolean; reloadStarted: boolean },
 ): boolean {
-  return request.pending || (request.succeeded && sessionPending)
+  return (
+    request.pending ||
+    (request.succeeded && (!session.reloadStarted || session.pending))
+  )
 }

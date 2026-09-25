@@ -8,13 +8,17 @@ import * as schema from './db/schema/auth'
 import { seedUser } from './db/seed-user'
 import { env } from './env'
 
-// Postgres text refuses NUL. On sign-up that would fail only for an unused address (422) while a taken one answers 200,
-// telling them apart in one request, so a NUL anywhere in the body is refused for both before Better Auth looks the address up.
-const containsNul = (body: unknown): boolean =>
+// Text Postgres cannot store as sent. A new address stores its row and answers with it, a taken one echoes what was sent, so
+// on sign-up either would tell them apart in one request: NUL fails only the insert (422 against 200), and a lone UTF-16
+// surrogate is stored as U+FFFD (a different name in the answer). A top-level field holding either is refused for both
+// before Better Auth looks the address up.
+const hasUnstorableText = (body: unknown): boolean =>
   typeof body === 'object' &&
   body !== null &&
   Object.values(body).some(
-    (value) => typeof value === 'string' && value.includes('\u0000'),
+    (value) =>
+      typeof value === 'string' &&
+      (value.includes('\u0000') || !value.isWellFormed()),
   )
 
 export const auth = betterAuth({
@@ -44,7 +48,7 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path === '/sign-up/email' && containsNul(ctx.body))
+      if (ctx.path === '/sign-up/email' && hasUnstorableText(ctx.body))
         throw new APIError('BAD_REQUEST', { message: 'Invalid input' })
     }),
   },

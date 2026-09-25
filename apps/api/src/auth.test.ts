@@ -111,6 +111,31 @@ test('a sign-up with a character the database refuses is turned away alike for a
   expect(taken.status).toBe(400)
 })
 
+test('a sign-up with half of a UTF-16 pair in its name is turned away alike for a taken and an unused address', async () => {
+  // Arrange: Postgres would store the lone surrogate as U+FFFD, while a taken address echoes the name as sent.
+  await signUp('surrogate-taken@example.com')
+  const withLoneSurrogate = async (email: string) => {
+    const response = await app.request('/api/auth/sign-up/email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Lone\uD800Surrogate',
+        email,
+        password: 'another password entirely',
+      }),
+    })
+    return { status: response.status, body: await response.text() }
+  }
+
+  // Act
+  const taken = await withLoneSurrogate('surrogate-taken@example.com')
+  const unused = await withLoneSurrogate('surrogate-unused@example.com')
+
+  // Assert
+  expect(taken).toEqual(unused)
+  expect(taken.status).toBe(400)
+})
+
 test('a second sign-up for an address creates no second account and no second set of activities', async () => {
   // Arrange
   const accountIds = async () =>
