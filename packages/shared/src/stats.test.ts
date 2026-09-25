@@ -6,6 +6,8 @@ import {
   detoxCarriedDays,
   detoxRunPastWeek,
   detoxRunStartDay,
+  mergedIntoNextMark,
+  mergedIntoPreviousMark,
   segmentsInRange,
   streak,
   sumSegments,
@@ -953,4 +955,96 @@ test('a detox day before the first tap stays unmeasured, and after it is measure
   // Assert
   expect(beforeFirstTap).toEqual({ measured: false, excluded: null })
   expect(afterFirstTap).toEqual({ measured: true, excluded: null })
+})
+
+test('前の記録に統合 hands a detox re-tap renewal to a plain detox on the same day only', () => {
+  // Arrange: a 09-12 21:00 re-tap merged into a plain detox from 09-12 9:00, and into one from 09-11 22:00
+  const reTap = {
+    activityId: null,
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+  const sameDayDetox = { activityId: null, startedAt: at('2026-09-12', 9) }
+  const earlierDayDetox = { activityId: null, startedAt: at('2026-09-11', 22) }
+
+  // Act
+  const sameDay = mergedIntoPreviousMark(reTap, sameDayDetox, TZ)
+  const earlierDay = mergedIntoPreviousMark(reTap, earlierDayDetox, TZ)
+
+  // Assert: from an earlier day the renewal would move the run's start back, so it goes with the merged row
+  expect(sameDay).toBe(true)
+  expect(earlierDay).toBe(false)
+})
+
+test('前の記録に統合 keeps the previous row own mark when the merged row is no detox re-tap', () => {
+  // Arrange: a marked detox kept, a plain detox merged, a re-tap picked to 仕事 merged, a re-tap merged into 仕事
+  const markedDetox = {
+    activityId: null,
+    startedAt: at('2026-09-12', 9),
+    startsRun: true,
+  }
+  const plainDetox = { activityId: null, startedAt: at('2026-09-12', 21) }
+  const pickedReTap = {
+    activityId: 'work',
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+  const reTap = {
+    activityId: null,
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+  const work = { activityId: 'work', startedAt: at('2026-09-12', 9) }
+
+  // Act
+  const plainKeepsMark = mergedIntoPreviousMark(plainDetox, markedDetox, TZ)
+  const markedKeepsMark = mergedIntoPreviousMark(reTap, markedDetox, TZ)
+  const pickedHandsNothing = mergedIntoPreviousMark(
+    pickedReTap,
+    { activityId: null, startedAt: at('2026-09-12', 9) },
+    TZ,
+  )
+  const activityGetsNothing = mergedIntoPreviousMark(reTap, work, TZ)
+
+  // Assert
+  expect(plainKeepsMark).toBe(true)
+  expect(markedKeepsMark).toBe(true)
+  expect(pickedHandsNothing).toBe(false)
+  expect(activityGetsNothing).toBe(false)
+})
+
+test('次の記録に統合 keeps the next row mark, or takes a detox re-tap renewal into a detox', () => {
+  // Arrange: a re-tap folded into a plain detox and into 仕事, a plain detox into a marked one, a picked re-tap into a detox
+  const reTap = {
+    activityId: null,
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+  const plainDetox = { activityId: null, startedAt: at('2026-09-12', 22) }
+  const markedDetox = {
+    activityId: null,
+    startedAt: at('2026-09-12', 22),
+    startsRun: true,
+  }
+  const work = { activityId: 'work', startedAt: at('2026-09-12', 22) }
+  const pickedReTap = {
+    activityId: 'work',
+    startedAt: at('2026-09-12', 21),
+    startsRun: true,
+  }
+
+  // Act
+  const detoxTakesRenewal = mergedIntoNextMark(reTap, plainDetox)
+  const activityTakesNothing = mergedIntoNextMark(reTap, work)
+  const nextKeepsMark = mergedIntoNextMark(
+    { activityId: null, startedAt: at('2026-09-12', 21) },
+    markedDetox,
+  )
+  const pickedHandsNothing = mergedIntoNextMark(pickedReTap, plainDetox)
+
+  // Assert
+  expect(detoxTakesRenewal).toBe(true)
+  expect(activityTakesNothing).toBe(false)
+  expect(nextKeepsMark).toBe(true)
+  expect(pickedHandsNothing).toBe(false)
 })

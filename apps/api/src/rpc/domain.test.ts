@@ -302,6 +302,76 @@ test('Home reads the start of a detox run from its first record, even after a cu
   })
 })
 
+test('the correction sheet reads where the carried-in detox run started, not only where its record did', async () => {
+  // Arrange: 仕事 then detox from twenty days ago, cut on its fifth day, 仕事 again on its eighth; open the day after the cut
+  const api = await signedIn('detox-carried-run-start@example.com')
+  const work = idOf(await api.activities.list(), '仕事')
+  const tapDay = addDays(today, -20)
+  const cutDay = addDays(tapDay, 5)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: work, startedAt: at(tapDay, 9) },
+      { activityId: null, startedAt: at(tapDay, 20) },
+    ],
+  })
+  const { carriedIn } = await api.switches.listByDay({ day: cutDay })
+  if (!carriedIn) throw new Error('fixture carries no detox into the cut day')
+  await api.switches.splitAt({ id: carriedIn.id, at: at(cutDay, 12) })
+  await api.switches.replaceDay({
+    day: addDays(tapDay, 8),
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(addDays(tapDay, 8), 9) }],
+  })
+
+  // Act
+  const dayAfterCut = await api.switches.listByDay({ day: addDays(cutDay, 1) })
+  const dayAfterWork = await api.switches.listByDay({
+    day: addDays(tapDay, 9),
+  })
+  const tapDayItself = await api.switches.listByDay({ day: tapDay })
+
+  // Assert: the cut's record carries the run from the tap day; an activity or nothing carried in reads none
+  expect(dayAfterCut.carriedIn?.startedAt).toEqual(new Date(at(cutDay, 12)))
+  expect(dayAfterCut.carriedInRunStart).toBe(tapDay)
+  expect(dayAfterWork.carriedIn?.activityId).toBe(work)
+  expect(dayAfterWork.carriedInRunStart).toBeNull()
+  expect(tapDayItself.carriedIn).toBeNull()
+  expect(tapDayItself.carriedInRunStart).toBeNull()
+})
+
+test('the correction sheet reads a detox re-tap as the start of the run it carries in', async () => {
+  // Arrange: detox from twenty days ago, re-tapped (a startsRun row) on its twelfth day
+  const api = await signedIn('detox-carried-re-tap@example.com')
+  const tapDay = addDays(today, -20)
+  const renewDay = addDays(tapDay, 12)
+  await api.switches.replaceDay({
+    day: tapDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(tapDay, 20) }],
+  })
+  await api.switches.replaceDay({
+    day: renewDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(renewDay, 12), startsRun: true }],
+  })
+
+  // Act
+  const beforeReTap = await api.switches.listByDay({ day: addDays(tapDay, 3) })
+  const afterReTap = await api.switches.listByDay({
+    day: addDays(renewDay, 2),
+  })
+
+  // Assert: before the re-tap the first tap's day; after it, the re-tap's own day
+  expect(beforeReTap.carriedInRunStart).toBe(tapDay)
+  expect(afterReTap.carriedInRunStart).toBe(renewDay)
+})
+
 test('Home reads no detox run while an activity runs', async () => {
   // Arrange
   const api = await signedIn('detox-run-activity@example.com')
