@@ -239,8 +239,8 @@ function othersToRefetch(queryClient: QueryClient, error: unknown): QueryKey[] {
 
 // A failed edit's re-read of `switches.*`. The pressed day's list is read again even once its sheet has closed, so
 // {@link useDayReads} can settle the line; the rest only where a screen watches it. A sheet that closes while that read is in
-// flight cancels it with no action to judge, and the list stays invalidated, so reopening the sheet reads the day again. The two calls match disjoint queries,
-// since a second invalidation of the same query would cancel the first one's fetch.
+// flight cancels it with no action to judge, and the list stays invalidated, so reopening the sheet reads the day again. The
+// two calls match disjoint queries, since a second invalidation of the same query would cancel the first one's fetch.
 function reReadAfterFailure(queryClient: QueryClient, day: string): void {
   const pressedList = hashKey(
     orpc.switches.listByDay.queryKey({ input: { day } }),

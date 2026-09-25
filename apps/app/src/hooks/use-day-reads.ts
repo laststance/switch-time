@@ -8,6 +8,7 @@ import { useEffect } from 'react'
 import {
   afterDayRead,
   dayOfRead,
+  isFreshList,
   isSettledWrite,
   type DayRead,
 } from '@/lib/correction'
@@ -50,27 +51,33 @@ function judgeDayRead(event: QueryCacheNotifyEvent): void {
   })
 }
 
-// One mutation-cache update: once the last settings write settles, every armed slot is judged by its day's cached list, which
-// that write's settle re-read. Lines are left alone: a cached list is not a new read.
+// One mutation-cache update: once the last settings write settles, every armed slot whose day's cached list is fresh (that
+// write re-read it, or nothing has touched it since) is judged by it. Other days wait for their next read. Lines are left
+// alone: a cached list is not a new read.
 function judgeAfterSettingsWrite(event: MutationCacheNotifyEvent): void {
   const { mutation } = event
   if (!isSettledWrite(event) || !mutation) return
   if (!matchMutation({ mutationKey: orpc.settings.key() }, mutation)) return
   const { correction } = store.getState()
-  Object.keys(correction.undo).forEach((day) =>
-    judgeDay(
-      day,
-      { at: Date.now(), ok: true, listed: cachedList(day) },
-      { withLine: false },
-    ),
-  )
+  Object.keys(correction.undo)
+    .filter((day) => isFreshList(queryClient.getQueryState(listKey(day))))
+    .forEach((day) =>
+      judgeDay(
+        day,
+        { at: Date.now(), ok: true, listed: cachedList(day) },
+        { withLine: false },
+      ),
+    )
+}
+
+// The query key of a day's list.
+function listKey(day: string) {
+  return orpc.switches.listByDay.queryKey({ input: { day } })
 }
 
 // A day's list as the cache holds it, undefined before it was read.
 function cachedList(day: string) {
-  return queryClient.getQueryData(
-    orpc.switches.listByDay.queryKey({ input: { day } }),
-  )
+  return queryClient.getQueryData(listKey(day))
 }
 
 // Runs {@link afterDayRead} for one day against the store and dispatches its actions.

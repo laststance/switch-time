@@ -22,6 +22,7 @@ import {
   failureKind,
   failureMessage,
   isDayChangedRefusal,
+  isFreshList,
   isManuallyExcluded,
   isSettledWrite,
   landedUndo,
@@ -2342,6 +2343,24 @@ test('only a write that just settled, landed or failed, sends the armed 元に�
 
   // Assert
   expect(settled).toEqual([true, true, false, false, false])
+})
+
+test('a settled settings write judges 元に戻す only by a day list that is settled, successful and not marked stale', () => {
+  // Arrange
+  const fresh = { status: 'success', fetchStatus: 'idle', isInvalidated: false }
+  const states = [
+    fresh,
+    { ...fresh, isInvalidated: true },
+    { ...fresh, fetchStatus: 'fetching' },
+    { ...fresh, status: 'error' },
+    undefined,
+  ]
+
+  // Act
+  const judged = states.map((state) => isFreshList(state))
+
+  // Assert
+  expect(judged).toEqual([true, false, false, false, false])
 })
 
 test('a read of a day’s list is still recognised under the key oRPC builds for it, so kept lines keep settling', () => {

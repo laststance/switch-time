@@ -1815,6 +1815,42 @@ test('a merge that lands after its sheet closed can still be undone from that da
   await expect(undo).toBeDisabled()
 })
 
+test('a settings change made while a day’s sheet is closed keeps that day’s 元に戻す', async ({
+  page,
+}) => {
+  // Arrange: a merge of 休息 into 仕事 lands after its sheet closed, so the day's cached list still predates it.
+  const { yesterday } = await seedYesterday(page)
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/mergeIntoPrevious', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  await rest.click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await page.getByRole('button', { name: '完了' }).click()
+  const landed = page.waitForResponse('**/api/rpc/switches/mergeIntoPrevious')
+  answer.resolve()
+  await landed
+
+  // Act: change the appearance in 設定 and wait for the server to store it, then open the day again from History.
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('button', { name: '暗' }).click()
+  const api = await apiAs(page)
+  await expect.poll(async () => (await api.settings.get()).theme).toBe('dark')
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, yesterday).click()
+
+  // Assert: the merge can still be undone.
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  await undo.click()
+  await expect(rest).toBeVisible()
+})
+
 test('an undo that lands after its sheet closed leaves nothing to undo when that day is reopened', async ({
   page,
 }) => {

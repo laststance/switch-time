@@ -1131,8 +1131,8 @@ export type LineAfterRead = 'keep' | 'expire' | 'unread' | { seen: string }
  * @returns
  * - `line`: 'keep' with no line, a read no later than the failure, or nothing new; `{ seen }` for the first good read (a reading
  *   line shows its text then) and for a good read after a failed one; 'expire' once a good read differs from the one seen;
- *   'unread' for a failed read, except on a sign-in line (the read fails for the same reason) or one already stale; a good read expires a sign-in line, since the
- *   session is back
+ *   'unread' for a failed read, except on a sign-in line (the read fails for the same reason) or one already stale; any good
+ *   read expires a sign-in line, since the session is back
  * - `retireUndo`: true once the day no longer reads as the slot left it ({@link offeredUndo}); false with no slot, a failed
  *   read, an unknown zone or a zone write in flight
  * @example afterDayRead({ line, slot: undefined, read: { at: line.at + 1, ok: true, listed }, zoneWriting: false, timeZone: 'Asia/Tokyo' }) // { line: { seen: '…' }, retireUndo: false }
@@ -1225,6 +1225,22 @@ export function isSettledWrite(event: {
 }): boolean {
   if (event.type !== 'updated') return false
   return event.action?.type === 'success' || event.action?.type === 'error'
+}
+
+/**
+ * Whether a day's cached list can judge an armed 「元に戻す」 without a new read: its last fetch succeeded, none is running, and
+ * nothing has marked it stale since. Called by {@link useDayReads} once a settings write settles, since that write re-reads
+ * only the lists a screen watches; a closed sheet's list may still hold the rows from before its last edit.
+ * @param state - The list query's state, undefined before it was first fetched.
+ * @returns true only for a settled, successful list that is not invalidated
+ * @example isFreshList({ status: 'success', fetchStatus: 'idle', isInvalidated: true }) // false
+ */
+export function isFreshList(
+  state:
+    { status: string; fetchStatus: string; isInvalidated: boolean } | undefined,
+): boolean {
+  if (!state || state.isInvalidated) return false
+  return state.status === 'success' && state.fetchStatus === 'idle'
 }
 
 /**
