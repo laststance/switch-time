@@ -349,6 +349,58 @@ test('the detox part is drawn as a sub outline with no fill, and each end of the
   })
 })
 
+test('a slice between two others is drawn square, and the floor slice rounds only its bottom corners', () => {
+  // Arrange: 仕事 on the floor, 家事 in the middle of a stack that detox tops
+  const floor = {
+    activityId: 'work',
+    color: '#3B7BD9',
+    height: 44,
+    top: false,
+    bottom: true,
+  }
+  const middle = {
+    activityId: 'home',
+    color: '#E0A431',
+    height: 22,
+    top: false,
+    bottom: false,
+  }
+
+  // Act
+  const floorLook = sliceLook(floor)
+  const middleLook = sliceLook(middle)
+
+  // Assert
+  expect(floorLook).toEqual({
+    className: 'rounded-b-md',
+    backgroundColor: '#3B7BD9',
+  })
+  expect(middleLook).toEqual({
+    className: '',
+    backgroundColor: '#E0A431',
+  })
+})
+
+test('a detox part alone on the track is outlined with all four corners rounded, so the track does not clip its outline', () => {
+  // Arrange: an idle-heavy day whose only drawn slice is its detox part
+  const detoxAlone = {
+    activityId: null,
+    color: null,
+    height: 60.5,
+    top: true,
+    bottom: true,
+  }
+
+  // Act
+  const look = sliceLook(detoxAlone)
+
+  // Assert
+  expect(look).toEqual({
+    className: 'rounded-t-md rounded-b-md border-sub border',
+    backgroundColor: 'transparent',
+  })
+})
+
 test('a few minutes of detox draw no stray line in the short month cells', () => {
   // Arrange: 9/9 had 8 h of 仕事 and 30 min of detox; a month cell is 48 px, so 30 min is 1 px
   const stats: HistoryStats = {
@@ -465,6 +517,138 @@ test('the detox part of a 25-hour fall-back day stays inside the 24-hour bar', (
   // Assert: 仕事 takes 110 px of the 132 px track, so the detox part gets the 22 px left rather than 27.5 px
   expect(view.rows[0]?.[6]?.slices?.map((slice) => slice.height)).toEqual([
     110, 22,
+  ])
+})
+
+test('a fall-back day whose activities fill the whole 24-hour bar draws no detox part above them', () => {
+  // Arrange: the fall-back day had 24 h of 仕事 and 1 h of detox, so 仕事 alone fills the 132 px track
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 24 * H },
+        detoxMs: 1 * H,
+      }),
+    ],
+    totals: { work: 24 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 仕事 keeps both rounded ends and nothing overflows the track
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 132,
+      top: true,
+      bottom: true,
+    },
+  ])
+})
+
+test('an hour of detox in a month cell is just tall enough to draw its outline', () => {
+  // Arrange: 9/9 had 8 h of 仕事 and 1 h of detox; a month cell is 48 px, so 1 h is exactly the 2 px floor
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H },
+        detoxMs: 1 * H,
+      }),
+    ],
+    totals: { work: 8 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'month',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert
+  expect(view.rows.flat().find((cell) => cell?.today)?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 16,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 2, top: true, bottom: false },
+  ])
+})
+
+test('a day of two activities and detox rounds only the floor and the top, leaving the middle slice square', () => {
+  // Arrange: 9/9 had 8 h of 仕事, 4 h of 家事 and 6 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H, home: 4 * H },
+        detoxMs: 6 * H,
+      }),
+    ],
+    totals: { work: 8 * H, home: 4 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 44,
+      top: false,
+      bottom: true,
+    },
+    {
+      activityId: 'home',
+      color: '#E0A431',
+      height: 22,
+      top: false,
+      bottom: false,
+    },
+    { activityId: null, color: null, height: 33, top: true, bottom: false },
   ])
 })
 
