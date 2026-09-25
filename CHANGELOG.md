@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.21.0.0] - 2026-09-25
+
+### Added
+
+- The correction sheet says when an edit may change which untapped days
+  count, and names them: 「detox と活動を切り替えると、タップのない日
+  （9月19日〜9月20日）の計測が変わることがあります」 under 活動を変える,
+  the same line under the merge buttons when a merge would, and
+  「元に戻すと、…の計測も変わることがあります」 above 元に戻す. A detox
+  left on over a weekend, a merge that removes the tap ending a detox, or a
+  pick that joins two detox runs no longer moves 計測なし, the streak and the
+  daily averages for days the sheet is not showing without saying so. No
+  line shows while 使わなかった日を除外 is off.
+
 ## [0.20.0.0] - 2026-09-25
 
 ### Added
