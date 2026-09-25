@@ -103,12 +103,21 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
   // Act
   await page.getByRole('tab', { name: '記録' }).click()
 
-  // Assert: both untapped days read as detox, not 計測なし, and count toward the measured days and the streak
+  // Assert: both untapped days read as detox, not 計測なし, and count toward the measured days and the streak. Picked by the wind
+  // glyph, since the worked day's label also reads its detox part.
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
-  const detoxDays = page.getByRole('link', { name: /・detox$/ })
+  const detoxDays = page
+    .getByRole('link')
+    .filter({ has: page.getByTestId('detox-glyph') })
   await expect(detoxDays).toHaveCount(2)
   await expect(detoxDays.first()).toBeVisible()
+  await expect(detoxDays.first()).toHaveAccessibleName(
+    /^\d+月\d+日（.）・detox 24h 00m$/,
+  )
   await expect(detoxDays.last()).toBeVisible()
+  await expect(detoxDays.last()).toHaveAccessibleName(
+    /^\d+月\d+日（.）・detox 24h 00m$/,
+  )
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   await expect(page.getByText('4 / 7日')).toBeVisible()
   await expect(page.getByText('4日', { exact: true })).toBeVisible()
@@ -135,9 +144,12 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   await page.getByRole('tab', { name: '記録' }).click()
 
   // Assert: the day reads as detox rather than 計測なし: a solid outline (dashed is kept for 「点線の日」) in the `sub` tone of
-  // its own weekday label, with the wind glyph inside
+  // its own weekday label, with the wind glyph inside, and its label reads the 15 h of detox
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
-  const detox = page.getByRole('link', { name: /・detox$/ })
+  const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
+  const detox = page.getByRole('link', {
+    name: new RegExp(`^${dayName}（.）・detox 15h 00m$`),
+  })
   await expect(detox).toHaveCount(1)
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   const track = detox.locator('div').first()
@@ -187,10 +199,13 @@ test('a day worked then spent in detox draws its detox part as a sub outline on 
   // Act
   await page.getByRole('tab', { name: '記録' }).click()
 
-  // Assert: yesterday stays a plain day (no detox outline or glyph on the cell); its slices run bottom-up, 仕事 then detox
+  // Assert: yesterday stays a plain day (no detox outline or glyph on the cell); its slices run bottom-up, 仕事 then detox, and
+  // its label reads both times in that order
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
   const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
-  const cell = page.getByRole('link', { name: new RegExp(`^${dayName}（.）$`) })
+  const cell = page.getByRole('link', {
+    name: new RegExp(`^${dayName}（.）・仕事 9h 00m・detox 6h 00m$`),
+  })
   await expect(cell).toBeVisible()
   await expect(cell.getByTestId('detox-glyph')).toHaveCount(0)
   const track = cell.locator('div').first()

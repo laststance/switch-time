@@ -122,7 +122,8 @@ function chartTitle(
  * @param detoxMs - The day's detox time to draw on top of the activities.
  * @returns
  * - The slices, the first flagged `bottom` and the last flagged `top`
- * - The detox slice only when it is at least {@link DETOX_SLICE_MIN_PX} tall, clamped to the track left above the activities
+ * - Each slice clamped to the track left below it, so a 25-h fall-back day's top slices are cut rather than overflow the bar
+ * - The detox slice only when it is at least {@link DETOX_SLICE_MIN_PX} tall
  * @example
  * stackSlices({ work: 12 * H }, [work], 132, 6 * H)
  * // => [{ activityId: 'work', color: '#3B7BD9', height: 66, top: false, bottom: true },
@@ -134,26 +135,26 @@ function stackSlices(
   barHeight: number,
   detoxMs: number,
 ): Slice[] {
-  const slices: Slice[] = activities.flatMap((activity) => {
-    const ms = totals[activity.id] ?? 0
-    return ms > 0
-      ? [
-          {
-            activityId: activity.id,
-            color: activity.color,
-            height: (ms / DAY_MS) * barHeight,
-            top: false,
-            bottom: false,
-          },
-        ]
-      : []
-  })
-  const activityHeight = slices.reduce((sum, slice) => sum + slice.height, 0)
-  // A 25-h fall-back day can hold more than the 24-h track, so the detox part takes only the room left above the activities.
-  const detoxHeight = Math.min(
-    (detoxMs / DAY_MS) * barHeight,
-    barHeight - activityHeight,
-  )
+  const slices: Slice[] = []
+  // A 25-h fall-back day can hold more than the 24-h track, so every part takes at most the room left above the ones below it.
+  let room = barHeight
+  for (const activity of activities) {
+    const height = Math.min(
+      ((totals[activity.id] ?? 0) / DAY_MS) * barHeight,
+      room,
+    )
+    // No time, or no room left: the activity draws nothing (its time is still in the cell's label).
+    if (height <= 0) continue
+    room -= height
+    slices.push({
+      activityId: activity.id,
+      color: activity.color,
+      height,
+      top: false,
+      bottom: false,
+    })
+  }
+  const detoxHeight = Math.min((detoxMs / DAY_MS) * barHeight, room)
   if (detoxHeight >= DETOX_SLICE_MIN_PX)
     slices.push({
       activityId: null,
@@ -194,14 +195,6 @@ export function sliceLook(slice: Slice): {
   }
 }
 
-// What the cell's aria-label adds to the date, so the outline's meaning is read out too.
-const SUFFIX = {
-  stack: '',
-  detox: `・${DETOX.name}`,
-  excluded: '・計測なし',
-  empty: '',
-}
-
 /**
  * What a day cell is drawn as. Called by {@link dayCell} before the slices, since a detox day draws no detox slice.
  * @param stat - The day's stats.
@@ -221,6 +214,42 @@ function cellKind(stat: DayStat, isToday: boolean): Cell['kind'] {
   // An idle-heavy day is not claimed as a whole day of detox; it stays a stack and draws its detox part as a slice.
   const isMostlyDetox = stat.detoxMs > 0 && stat.detoxMs >= stat.idleMs
   return !hasActivityTime && isMostlyDetox ? 'detox' : 'stack'
+}
+
+/**
+ * A day cell's aria-label: the date, then the times its bars stand for, so a screen reader hears what the cell draws.
+ * Called by {@link dayCell}. The times are the day's real ones, not the pixels: a 25-h day's cut slice and a detox part too
+ * short to draw are read in full.
+ * @param stat - The day's stats.
+ * @param kind - The cell's kind from {@link cellKind}.
+ * @param activities - The list in `position` order (the slices' bottom-up order); an activity missing from it is left out, as
+ * its slice is.
+ * @returns
+ * - `empty`: the date alone (the cell is not a link)
+ * - `excluded`: the date and `・計測なし`, then the times, since the dashed cell still draws its slices
+ * - `stack` / `detox`: the date, each activity's time, then `・detox <time>`
+ * - Times that round to 0 min are left out
+ * @example cellLabel(day('2026-09-09', { measured: true, totals: { work: 9 * H }, detoxMs: 6 * H }), 'stack', [work])
+ * // => '9月9日（水）・仕事 9h 00m・detox 6h 00m'
+ */
+function cellLabel(
+  stat: DayStat,
+  kind: Cell['kind'],
+  activities: HistoryActivity[],
+): string {
+  const date = formatDay(stat.day)
+  if (kind === 'empty') return date
+  const times = [
+    ...activities.map((activity) => ({
+      name: activity.name,
+      ms: stat.totals[activity.id] ?? 0,
+    })),
+    { name: DETOX.name, ms: stat.detoxMs },
+  ]
+    // formatDuration rounds to the minute, so anything under 30 s would read as 0m.
+    .filter(({ ms }) => Math.round(ms / 60_000) > 0)
+    .map(({ name, ms }) => `・${name} ${formatDuration(ms)}`)
+  return `${date}${kind === 'excluded' ? '・計測なし' : ''}${times.join('')}`
 }
 
 function dayCell(
@@ -249,7 +278,7 @@ function dayCell(
     label: isToday ? '今日' : weekLabel,
     today: isToday,
     kind,
-    ariaLabel: `${formatDay(stat.day)}${SUFFIX[kind]}`,
+    ariaLabel: cellLabel(stat, kind, activities),
     slices,
   }
 }

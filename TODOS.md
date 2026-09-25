@@ -248,29 +248,17 @@
 **Priority:** P3
 **Depends on:** None
 
-### Fit a 25-hour day's activity time on History's 24-hour bar
+### Check how screen readers speak the `9h 00m` durations
 
-**What:** Decide how a fall-back day that holds more than 24 h of activity time fits History's bar, for example by scaling that day's slices to its own length or clamping the top activity slice as the detox part is, and add a `history.test.ts` case.
+**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in every aria-label that carries a duration.
 
-**Why:** `stackSlices` sizes every slice as a share of 24 h, so on the one day a year the clocks go back, 25 h of activity asks for more than the 132 px (week) or 48 px (month) track and the top slice is clipped by the track's rounded end.
+**Why:** History's day cells now read each activity's time and the detox time (`9月9日（水）・仕事 9h 00m・detox 6h 00m`), and the correction rows already read `detox 9:00 – 24:00 15h 00m`. The tests check these labels as strings only, so nobody has heard how a Japanese voice reads `h` and `m`.
 
-**Context:** `stackSlices` in `apps/app/src/lib/history.ts`; `dayBounds` in `packages/shared/src/stats.ts` gives the day its real length. The detox part is already clamped to the room left above the activities. 「1本 = 24時間」 is the chart's label, so scaling one day changes what a pixel means on it. Raised by the outside voice of the eng review of the PR that drew a day's detox part on History (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
-### Read a History day's activity and detox time to screen readers
-
-**What:** Add what a stacked day cell draws to its `aria-label` (each activity's time, then detox when the cell has a detox part), and assert it in `history.test.ts`.
-
-**Why:** A stacked cell's label is the date alone, so a screen-reader user hears nothing of the bars. Since History draws a day's partial detox time as an outline, that outline also has no text equivalent, while a detox day's label ends in ・detox.
-
-**Context:** `SUFFIX` and `dayCell` in `apps/app/src/lib/history.ts`; `formatDuration` gives the durations. Month cells are 31 links in a row, so keep the label short. Raised by the design pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
+**Context:** `formatDuration` in `apps/app/src/lib/format.ts` makes the visible and the spoken durations; `cellLabel` in `apps/app/src/lib/history.ts` builds the day cell's label. Keep one format across the labels. Raised by Codex in the eng review of the PR that made History's day cells read their times (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
-**Depends on:** None
+**Depends on:** None (the macOS check needs no native build)
 
 ## Database
 
