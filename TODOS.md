@@ -386,6 +386,30 @@
 **Priority:** P3
 **Depends on:** The copy on a pen board
 
+### Keep the sign-in card still when the 登録しました notice goes
+
+**What:** Decide on the pen board 「ST Phone / サインイン（登録後）」 what happens to the space of the notice once it goes, and make sign-in match: keep the chip's space, top-align the card on this screen, or keep the notice until the sign-in lands.
+
+**Why:** The first keystroke in the focused password field dismisses the notice. `AuthCard` centres the card vertically, so losing the chip and its gap (about 50px) moves the whole card by about 25px while the user types.
+
+**Context:** `dismissNotice()` runs in sign-in's `set` wrapper (`apps/app/src/app/(auth)/sign-in.tsx`); the card is centred by `items-center justify-center` in `apps/app/src/components/auth-card.tsx`. The board's caption says the notice goes on input but does not draw the card after it. Raised by the design review of 0.16.0.0.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** The after-input state on the pen board
+
+### Draw the auth screens with the keyboard open
+
+**What:** Add a keyboard-open state of the sign-in and sign-up boards to the pen file, then keep the focused field and the submit button above the keyboard on iOS and Android (a `KeyboardAvoidingView` or a scrollable card).
+
+**Why:** Since 0.16.0.0 sign-in focuses the password field after 登録, so the keyboard opens as soon as the screen mounts. The auth screens have nothing that moves out of its way: on a phone the keyboard (about 336pt) can cover the サインイン button, and the password field on a short one.
+
+**Context:** `useScreenFocusField` (`apps/app/src/hooks/use-screen-focus-field.ts`) focuses the password from `sign-in.tsx`; `AuthCard` has no keyboard handling. The web build is not affected. Raised by the design review of 0.16.0.0.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** Starting native builds; the keyboard-open state on the pen board
+
 ## Infrastructure
 
 ### Install Node 26 in the Cloud Agent environment

@@ -37,7 +37,9 @@ export function useRegistration() {
 
 /**
  * Says `text` once through the native screen reader when it appears; on web it does nothing (react-native-web's
- * announceForAccessibility is a no-op), where the field it describes carries it through aria-describedby instead.
+ * announceForAccessibility is a no-op), where the field it describes carries it through aria-describedby instead. Android is
+ * included, unlike the correction sheet's iOS-only readout: a live region is read when its text changes, and this notice is already
+ * there when sign-in mounts.
  * @example useNativeAnnouncement(notice) // notice: '登録しました…' | null
  */
 export function useNativeAnnouncement(text: string | null): void {

@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 
+import { resetApp, store } from './index'
 import { registrationSlice } from './registration'
 
 const { registered, noticeDismissed } = registrationSlice.actions
@@ -54,6 +55,17 @@ test('a second registration after a store reset gets a new form key, so sign-in 
   // Assert
   expect(second.current?.email).toBe('second@example.com')
   expect(second.current?.id).not.toBe(first.current?.id)
+})
+
+test('a store reset on sign-in or sign-out forgets the registered address and its notice', () => {
+  // Arrange
+  store.dispatch(registered('left-behind@example.com'))
+
+  // Act
+  store.dispatch(resetApp())
+
+  // Assert
+  expect(store.getState().registration.current).toBeNull()
 })
 
 test('dismissing with nothing registered leaves sign-in blank', () => {

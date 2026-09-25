@@ -41,10 +41,8 @@ export async function register(
  * @returns the account's address
  * @example const email = await createAccount(page)
  */
-export async function createAccount(
-  page: Page,
-  email = uniqueEmail(),
-): Promise<string> {
+export async function createAccount(page: Page): Promise<string> {
+  const email = uniqueEmail()
   await register(page, email)
   await page.getByLabel('パスワード').fill(PASSWORD)
   await page.getByRole('button', { name: 'サインイン' }).click()

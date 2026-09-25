@@ -14,7 +14,8 @@ export default function SignUpScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>()
   const { register } = useRegistration()
   // Sign-up opens no session (`autoSignIn: false`, so an address that already has an account gets the same answer):
-  // the (auth) layout moves on to sign-in with the address filled in, and follows `next` from there.
+  // `register` ({@link useRegistration}) moves on to sign-in with the address filled in, keeping `next`, which the (auth) layout
+  // follows once that sign-in lands.
   const form = useAuthForm(
     signUpSchema,
     { name: '', email: '', password: '' },
