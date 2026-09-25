@@ -23,6 +23,7 @@ import {
   cutNotes,
   openedCut,
   revealOffset,
+  statusSlots,
   type CorrectionRow,
   type CutStepMinutes,
   type DayBounds,
@@ -462,24 +463,33 @@ function RowPanel({ row, correction }: RowPanelProps) {
   )
 }
 
-// The line between the rows and the footer: why the last edit or undo failed, else why the panel is dim. Nothing, and no
-// height, when idle. A refusal is announced (a new message mounts a fresh node, as ArchivedBox does); the waiting line is polite.
+// The polite region while it has nothing to say: mounted, but out of the column's flow, so the gap-4 column gains no height.
+const OUT_OF_FLOW = 'absolute h-px w-px overflow-hidden opacity-0'
+
+// The line between the rows and the footer: why the panel is dim, else why the last edit or undo failed. No height when idle.
+// A failure is announced (a new message mounts a fresh node, as ArchivedBox does). The polite region stays mounted in its
+// own slot, so a screen reader that starts watching it before the first quiet line hears that line too.
 function StatusLine({ status }: { status: SheetStatus | null }) {
-  if (!status) return null
-  if (status.tone === 'alert')
-    return (
-      <Text
-        key={status.text}
-        role="alert"
-        className="text-ink text-xs leading-4.5 font-medium"
-      >
-        {status.text}
-      </Text>
-    )
+  const { alert, polite } = statusSlots(status)
   return (
-    <Text role="status" aria-live="polite" className={NOTE}>
-      {status.text}
-    </Text>
+    <>
+      {alert === null ? null : (
+        <Text
+          key={alert}
+          role="alert"
+          className="text-ink text-xs leading-4.5 font-medium"
+        >
+          {alert}
+        </Text>
+      )}
+      <Text
+        role="status"
+        aria-live="polite"
+        className={polite === null ? OUT_OF_FLOW : NOTE}
+      >
+        {polite}
+      </Text>
+    </>
   )
 }
 

@@ -78,30 +78,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Let a day's kept failure line expire once the day moved on
-
-**What:** Hide a day's kept refusal line once a later read of that day has succeeded (keep when it was set, compare with the list's `dataUpdatedAt`), or clear it when a `switches.*` write on that day succeeds, and let the offline or writing line show over an old refusal.
-
-**Why:** Since the line moved to the store (`refused` in `apps/app/src/store/correction.ts`) it lasts until the next press, selection or undo on that day. Reopen a day hours after a refusal, when a tap on ホーム or another sheet's merge has long since changed it, and the sheet still says the edit failed, even naming 別の端末 for this device's own double tap. `statusLine` puts the refusal first, so it also hides 「オフラインです…」 and 「反映しています…」 on reopening.
-
-**Context:** `statusLine` in `apps/app/src/lib/correction.ts`, `useCorrectionState` in `apps/app/src/hooks/use-correction.ts`. Related: "Stop naming another device when this device's own late write changed the day". Raised by the Claude adversarial pass during the 0.8.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Drop a day's 元に戻す once a settled read shows the day moved on
-
-**What:** Dispatch `dropped` for the day when `offeredUndo` turns a slot off on a settled, successful read (no fetch or `switches.*` write in flight), instead of only hiding it.
-
-**Why:** A slot that no longer matches stays in the store. If another device later puts the day back exactly as the edit left it (merging away the switch this device tapped), 元に戻す shows again and would undo an edit made long before; the API accepts it, since the day reads as the undo expects. A read that fails while stale data is shown must not drop it.
-
-**Context:** `offeredUndo` in `apps/app/src/lib/correction.ts`, `useCorrection` in `apps/app/src/hooks/use-correction.ts`. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Keep the user's own selection when today's sheet passes midnight
 
 **What:** When the sheet's day changes, keep the row the user selected if the new day still lists it (the running record becomes the carried-in one under the same id), and drop only the selection and focus an answer set.
@@ -180,58 +156,10 @@
 
 **Why:** Since 0.5.0.0, such a day sends a baseline without `rows`: its zone and the records carried in and out are still checked, and an edit on a row of another day is refused, but an edit another device made to one of the day's own rows is not noticed, and no day 「元に戻す」 is offered. `DAY_ROWS_MAX` comes from the 100 KB body limit on `/api/*`: 300 rows twice (`expected` and `rows`) serialize to about 87 KB.
 
-**Context:** `dayBaseline` and `undoSlotFor` in `apps/app/src/lib/correction.ts`, `checkBaseline` and `checkOwnRowBaseline` in `apps/api/src/rpc/switches.ts`, `DAY_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit test in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 300 switches in a day. The API also accepts a baseline without `rows` on a day that holds 300 rows or fewer (the app never sends one, but a busy day another device has since thinned out still passes); refusing that as a changed day, by counting the day's rows, belongs with the same fix. Left over from "Let a day with more than 500 switches still be corrected", which 0.5.0.0 closed.
+**Context:** `dayBaseline` and `undoSlotFor` in `apps/app/src/lib/correction.ts`, `checkBaseline` and `checkOwnRowBaseline` in `apps/api/src/rpc/switches.ts`, `DAY_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit test in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 300 switches in a day. The API also accepts a baseline without `rows` on a day that holds 300 rows or fewer (the app never sends one, but a busy day another device has since thinned out still passes); refusing that as a changed day, by counting the day's rows, belongs with the same fix. Left over from "Let a day with more than 500 switches still be corrected", which 0.5.0.0 closed. Since the correction status PR (2026-09-25), a failure that may have landed (a timeout, a lost answer, a 5xx) says 「反映されたか分かりませんでした。一覧で確かめてください」 once the list is read again, but on such a day redoing a ±15分 move or a split that did land passes the rowless baseline and applies twice.
 
 **Effort:** M
 **Priority:** P4
-**Depends on:** None
-
-### Say the list is being read again after a timeout
-
-**What:** While the correction sheet re-reads the day after an edit timed out, say so under the rows (for example 「一覧を読み直しています…」), and show 「応答がありませんでした。反映されたか一覧で確かめてください」 only once that read settles. If the read fails as well, say the rows may be out of date rather than asking the user to check them.
-
-**Why:** Against a hung API the re-read hits the same 30 s deadline plus the one query retry (about 61 s). The panel is dim that whole time, but the line already asks the user to check rows that still show the day before the edit. If the read fails, the panel is released on those stale rows, and redoing the edit is refused with the day-changed text, which blames another device for this device's late write. Nothing is lost there (the API's baseline check holds), but the line points at the wrong rows. On a day over `DAY_ROWS_MAX` (300 rows) the baseline carries no row list, so redoing a ±15分 move or a split that did land late passes the check and applies twice.
-
-**Context:** `useEditLifecycle` in `apps/app/src/hooks/use-correction.ts` does not await the refetch after a `RequestTimeoutError`, so the timeout line shows at 30 s; `statusLine` in `apps/app/src/lib/correction.ts` puts a refusal ahead of any waiting text, and `waiting` follows writes only, not `list.isFetching`. New text needs the pen file's 訂正シート・状態行 board first. Left over from the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep the correction sheet's polite status region mounted
-
-**What:** Keep an empty `role="status"` / `aria-live="polite"` region mounted under the correction sheet's rows while the sheet is open, and change only its text, so screen readers announce 「反映しています…」 and the offline line.
-
-**Why:** `StatusLine` renders nothing when idle, so the polite region only appears together with its text, and NVDA, JAWS and VoiceOver on the web often skip a live region that arrives already filled. The offline line is the only thing that tells a screen-reader user an edit is queued. The refusal line is a keyed `role="alert"`, which is announced on insertion, so it is fine.
-
-**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx`. The sheet's column uses `gap-4`, so an always-mounted empty child would add a 16 px gap when idle: keep it out of the flow (visually hidden, absolutely positioned) or settle the idle spacing in the pen file first. Left over from the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Tell a write that may have landed from one that failed before it left
-
-**What:** Treat every failure that is not an `ORPCError` (a `TypeError` "Failed to fetch" after the request went out, a reset or a 502 while App Platform redeploys the API) like a timeout: drop the older 元に戻す in `fail()` and say 「反映されたか一覧で確かめてください」 rather than 「保存できませんでした。もう一度お試しください」. Keep the retry text for answers the server rolled back. For failures a retry cannot fix (UNAUTHORIZED, the input `BAD_REQUEST`s such as a row that is not one of the day's own), say what is wrong and turn 元に戻す off rather than keeping it armed.
-
-**Why:** A connection that drops after the server committed tells the user the edit was not saved. The refetch then shows it landed, and pressing ±15分 again moves the record twice, because the new baseline matches. A request refused for its input fails the same way on every press while the text asks for another try.
-
-**Context:** `failed` and `useEditLifecycle` (its `onError`) in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Stop naming another device when this device's own late write changed the day
-
-**What:** Remember that the last write on the sheet timed out, and until the next success show a neutral day-changed or record-changed text (for example 「記録が変わっていたため、最新の状態を表示しました」) instead of one that names 別の端末.
-
-**Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch, and to the second press of a double tap (two presses before the controls dim), which the first press's edit refuses.
-
-**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `useEditLifecycle` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Since 元に戻す is offered only while the listed day matches its slot (`offeredUndo`, 2026-09-25), the undo turns off once any later read shows the late write, so only a press made before that read is still refused this way. Found by the pre-landing review of the PR that added the status line (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
 **Depends on:** None
 
 ## Stats

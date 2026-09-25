@@ -3,6 +3,7 @@ import { dayBounds } from '@switch-time/shared'
 import { expect, test } from 'vitest'
 
 import {
+  afterDayRead,
   afterUndoFailure,
   archivedBox,
   correctionRows,
@@ -10,8 +11,13 @@ import {
   cutNotes,
   cutTotalsEffects,
   dayBaseline,
+  dayFingerprint,
+  dayLine,
+  dayOfRead,
   daySnapshot,
   dayTitle,
+  failureKind,
+  failureMessage,
   isDayChangedRefusal,
   isManuallyExcluded,
   landedUndo,
@@ -19,15 +25,16 @@ import {
   onPressedDay,
   openedCut,
   pickRequest,
-  refusalMessage,
   reselectedRow,
   revealOffset,
   rowsAfterEdit,
   sheetView,
   statusLine,
+  statusSlots,
   undoRequest,
   undoSlotFor,
   type CorrectionSheet,
+  type DayLine,
   type ListedDay,
   type UndoSlot,
 } from './correction'
@@ -1185,7 +1192,7 @@ test('undo rewrites the day for a day slot and puts the activity back only if no
   })
 })
 
-test('a refused activity undo turns 元に戻す off, and a passing failure keeps it for another try', () => {
+test('an undo that can never succeed turns 元に戻す off (refused, gone, signed out, malformed), and one that may pass keeps it', () => {
   // Arrange
   const answers = [
     new ORPCError('CONFLICT', { message: 'record changed elsewhere' }),
@@ -1210,8 +1217,8 @@ test('a refused activity undo turns 元に戻す off, and a passing failure keep
     'archived',
     'keep',
     'keep',
-    'keep',
-    'keep',
+    'clear',
+    'clear',
   ])
 })
 
@@ -1866,7 +1873,7 @@ test('a card that exactly fills the view, or touches its edges, does not scroll'
   expect(revealOffset({ top: 701, height: 100 }, viewport)).toBe(201)
 })
 
-test('each refusal the API names reads as its own Japanese message in the status line', () => {
+test('each refusal the API names reads as its own Japanese message in the status line, never naming another device', () => {
   // Arrange
   const refusals = [
     new ORPCError('CONFLICT', { data: { reason: 'day-changed' } }),
@@ -1880,12 +1887,12 @@ test('each refusal the API names reads as its own Japanese message in the status
   ]
 
   // Act
-  const messages = refusals.map(refusalMessage)
+  const messages = refusals.map(failureMessage)
 
   // Assert
   expect(messages).toEqual([
-    '別の端末で記録が変わったため、最新の状態を表示しました',
-    '別の端末でこの記録が変わったため、最新の状態を表示しました',
+    '記録が変わっていたため、最新の状態を表示しました',
+    'この記録が変わっていたため、最新の状態を表示しました',
     'アーカイブ済みの活動になるため、変更できません',
     'これ以上動かせません',
     '統合できる記録がありません',
@@ -1895,42 +1902,397 @@ test('each refusal the API names reads as its own Japanese message in the status
   ])
 })
 
-test('a record gone from the server reads as changed elsewhere, a timeout asks the user to check the rows, and anything else says it was not saved', () => {
+test('a failure that may have landed reads as uncertain: no answer, a dropped connection, a proxy page, any 5xx but TIMEOUT', () => {
   // Arrange
-  const gone = new ORPCError('NOT_FOUND')
-  const timedOut = new RequestTimeoutError()
-  const unknownReason = new ORPCError('CONFLICT', { data: { reason: 'new' } })
-  const offline = new TypeError('Failed to fetch')
+  const answers = [
+    new RequestTimeoutError(),
+    new TypeError('Failed to fetch'),
+    new Error('Cannot parse the response body'),
+    new ORPCError('INTERNAL_SERVER_ERROR'),
+    new ORPCError('BAD_GATEWAY', { status: 502 }),
+    new ORPCError('SERVICE_UNAVAILABLE', { status: 503 }),
+    new ORPCError('GATEWAY_TIMEOUT'),
+  ]
 
   // Act
-  const messages = [gone, timedOut, unknownReason, offline].map(refusalMessage)
+  const kinds = answers.map(failureKind)
+
+  // Assert
+  expect(kinds).toEqual([
+    'uncertain',
+    'uncertain',
+    'uncertain',
+    'uncertain',
+    'uncertain',
+    'uncertain',
+    'uncertain',
+  ])
+})
+
+test('a failure that wrote nothing is told apart: a refusal, a gone record, an ended session, a malformed request, TIMEOUT or another 4xx', () => {
+  // Arrange: TIMEOUT answers 500 (Chromium resends a POST answered 408), so the code decides, not the status.
+  const answers = [
+    new ORPCError('CONFLICT', { data: { reason: 'day-changed' } }),
+    new ORPCError('TOO_MANY_REQUESTS', { data: { reason: 'busy' } }),
+    new ORPCError('BAD_REQUEST', { data: { reason: 'archived' } }),
+    new ORPCError('NOT_FOUND'),
+    new ORPCError('UNAUTHORIZED'),
+    new ORPCError('BAD_REQUEST', { message: 'input is invalid' }),
+    new ORPCError('TIMEOUT', { status: 500 }),
+    new ORPCError('CONFLICT', { data: { reason: 'new' } }),
+    new ORPCError('PAYLOAD_TOO_LARGE'),
+  ]
+
+  // Act
+  const kinds = answers.map(failureKind)
+
+  // Assert
+  expect(kinds).toEqual([
+    'refused',
+    'refused',
+    'refused',
+    'refused',
+    'unauthorized',
+    'invalid',
+    'failed',
+    'failed',
+    'failed',
+  ])
+})
+
+test('each kind of failure says what the user can do: check the rows, sign in again, or try again', () => {
+  // Arrange
+  const gone = new ORPCError('NOT_FOUND')
+  const uncertain = new ORPCError('INTERNAL_SERVER_ERROR')
+  const signedOut = new ORPCError('UNAUTHORIZED')
+  const invalid = new ORPCError('BAD_REQUEST', { message: 'input is invalid' })
+  const nothingSaved = new ORPCError('TIMEOUT', { status: 500 })
+
+  // Act
+  const messages = [gone, uncertain, signedOut, invalid, nothingSaved].map(
+    failureMessage,
+  )
 
   // Assert
   expect(messages).toEqual([
-    '別の端末でこの記録が変わったため、最新の状態を表示しました',
-    '応答がありませんでした。反映されたか一覧で確かめてください',
-    '保存できませんでした。もう一度お試しください',
+    'この記録が変わっていたため、最新の状態を表示しました',
+    '反映されたか分かりませんでした。一覧で確かめてください',
+    'サインインが切れました。サインインし直してください',
+    'この変更はできません',
     '保存できませんでした。もう一度お試しください',
   ])
 })
 
-test('the status line puts a refusal first, then says why the panel waits, online or offline, and is empty when idle', () => {
+test('a failure’s line waits for a read of the day only when the write may have landed', () => {
   // Arrange
-  const refusal = 'これ以上動かせません'
+  const timedOut = new RequestTimeoutError()
+  const refused = new ORPCError('CONFLICT', { data: { reason: 'no-room' } })
+
+  // Act
+  const lines = [dayLine(timedOut, 1000), dayLine(refused, 2000)]
+
+  // Assert
+  expect(lines).toEqual([
+    {
+      at: 1000,
+      kind: 'uncertain',
+      text: '反映されたか分かりませんでした。一覧で確かめてください',
+      reading: true,
+      seen: null,
+      stale: false,
+    },
+    {
+      at: 2000,
+      kind: 'refused',
+      text: 'これ以上動かせません',
+      reading: false,
+      seen: null,
+      stale: false,
+    },
+  ])
+})
+
+test('the status line says why the panel waits first, then that the list is read again, then the failure or that the rows may be old', () => {
+  // Arrange
+  const refusal: DayLine = {
+    at: 1000,
+    kind: 'refused',
+    text: 'これ以上動かせません',
+    reading: false,
+    seen: null,
+    stale: false,
+  }
 
   // Act
   const lines = [
-    statusLine({ refusal, waiting: true, online: false }),
-    statusLine({ refusal: null, waiting: true, online: true }),
-    statusLine({ refusal: null, waiting: true, online: false }),
-    statusLine({ refusal: null, waiting: false, online: false }),
+    statusLine({ line: refusal, waiting: true, online: true }),
+    statusLine({ line: null, waiting: true, online: false }),
+    statusLine({
+      line: { ...refusal, kind: 'uncertain', reading: true },
+      waiting: false,
+      online: true,
+    }),
+    statusLine({ line: refusal, waiting: false, online: true }),
+    statusLine({
+      line: { ...refusal, stale: true },
+      waiting: false,
+      online: true,
+    }),
+    statusLine({ line: null, waiting: false, online: false }),
   ]
 
   // Assert
   expect(lines).toEqual([
-    { tone: 'alert', text: 'これ以上動かせません' },
     { tone: 'quiet', text: '反映しています…' },
     { tone: 'quiet', text: 'オフラインです。接続が戻ると反映されます' },
+    { tone: 'quiet', text: '一覧を読み直しています…' },
+    { tone: 'alert', text: 'これ以上動かせません' },
+    {
+      tone: 'alert',
+      text: '一覧を読み直せませんでした。表示が古いかもしれません',
+    },
+    null,
+  ])
+})
+
+test('an alert mounts its own node while quiet text goes to the polite region, and idle leaves both empty', () => {
+  // Arrange
+  const alert = { tone: 'alert' as const, text: 'これ以上動かせません' }
+  const quiet = { tone: 'quiet' as const, text: '反映しています…' }
+
+  // Act
+  const slots = [statusSlots(alert), statusSlots(quiet), statusSlots(null)]
+
+  // Assert
+  expect(slots).toEqual([
+    { alert: 'これ以上動かせません', polite: null },
+    { alert: null, polite: '反映しています…' },
+    { alert: null, polite: null },
+  ])
+})
+
+test('a day’s fingerprint changes with any row, the carried-in record or the next switch, and matches for the same day', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const carried = row('c', 'sleep', new Date('2026-09-07T23:00:00+09:00'))
+  const next = row('n', 'sleep', new Date('2026-09-09T07:00:00+09:00'))
+  const day: ListedDay = { carriedIn: carried, rows: [work], carriedOut: next }
+
+  // Act
+  const same = dayFingerprint({ ...day, rows: [{ ...work }] })
+  const variants = [
+    { ...day, rows: [{ ...work, activityId: 'rest' }] },
+    { ...day, rows: [{ ...work, startedAt: at('2026-09-08', 9, 15) }] },
+    { ...day, rows: [{ ...work, revision: 1 }] },
+    { ...day, rows: [{ ...work, id: 'x' }] },
+    { ...day, carriedIn: { ...carried, activityId: 'work' } },
+    { ...day, carriedIn: { ...carried, revision: 1 } },
+    { ...day, carriedIn: null },
+    { ...day, carriedOut: null },
+  ].map(dayFingerprint)
+
+  // Assert
+  expect(same).toBe(dayFingerprint(day))
+  expect(new Set([dayFingerprint(day), ...variants]).size).toBe(9)
+  expect(dayFingerprint({ carriedIn: null, rows: [], carriedOut: null })).toBe(
+    '[[],null,null]',
+  )
+})
+
+test('a read of the day ends the reading line and records what it showed, and a later read that differs expires the line', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const moved: ListedDay = {
+    ...day,
+    rows: [{ ...work, startedAt: at('2026-09-08', 9, 15) }],
+  }
+  const reading: DayLine = {
+    at: 1000,
+    kind: 'uncertain',
+    text: '反映されたか分かりませんでした。一覧で確かめてください',
+    reading: true,
+    seen: null,
+    stale: false,
+  }
+  const seen = { ...reading, reading: false, seen: dayFingerprint(day) }
+  const judge = (line: DayLine, listed: ListedDay) =>
+    afterDayRead({
+      line,
+      slot: undefined,
+      read: { at: 2000, ok: true, listed },
+      zoneWriting: false,
+      timeZone: TZ,
+    }).line
+
+  // Act
+  const first = judge(reading, day)
+  const unchanged = judge(seen, day)
+  const changed = judge(seen, moved)
+
+  // Assert
+  expect(first).toEqual({ seen: '[[["w","work",1788825600000,0]],null,null]' })
+  expect(unchanged).toBe('keep')
+  expect(changed).toBe('expire')
+})
+
+test('a read that landed no later than the failure decides nothing, and a zone write in flight holds 元に戻す but not the line', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const line: DayLine = {
+    at: 1000,
+    kind: 'refused',
+    text: 'これ以上動かせません',
+    reading: false,
+    seen: 'another day',
+    stale: false,
+  }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'gone',
+    to: 'work',
+    revision: 4,
+  }
+
+  // Act
+  const older = afterDayRead({
+    line,
+    slot: undefined,
+    read: { at: 1000, ok: true, listed: day },
+    zoneWriting: false,
+    timeZone: TZ,
+  })
+  const whileZoneWriting = afterDayRead({
+    line,
+    slot,
+    read: { at: 2000, ok: true, listed: day },
+    zoneWriting: true,
+    timeZone: TZ,
+  })
+  const noLine = afterDayRead({
+    line: undefined,
+    slot: undefined,
+    read: { at: 2000, ok: true, listed: day },
+    zoneWriting: false,
+    timeZone: TZ,
+  })
+
+  // Assert
+  expect(older).toEqual({ line: 'keep', retireUndo: false })
+  expect(whileZoneWriting).toEqual({ line: 'expire', retireUndo: false })
+  expect(noLine).toEqual({ line: 'keep', retireUndo: false })
+})
+
+test('a failed read marks the line stale, except a sign-in line or one already stale, and the next good read clears it', () => {
+  // Arrange
+  const work = row('w', 'work', new Date('2026-09-08T09:00:00+09:00'))
+  const day: ListedDay = { carriedIn: null, rows: [work], carriedOut: null }
+  const reading: DayLine = {
+    at: 1000,
+    kind: 'uncertain',
+    text: '反映されたか分かりませんでした。一覧で確かめてください',
+    reading: true,
+    seen: null,
+    stale: false,
+  }
+  const judge = (line: DayLine, ok: boolean) =>
+    afterDayRead({
+      line,
+      slot: undefined,
+      read: { at: 2000, ok, listed: day },
+      zoneWriting: false,
+      timeZone: TZ,
+    }).line
+
+  // Act
+  const failed = judge(reading, false)
+  const signedOut = judge(
+    {
+      ...reading,
+      kind: 'unauthorized',
+      text: 'サインインが切れました。サインインし直してください',
+      reading: false,
+    },
+    false,
+  )
+  const againStale = judge({ ...reading, reading: false, stale: true }, false)
+  const recovered = judge({ ...reading, reading: false, stale: true }, true)
+
+  // Assert
+  expect(failed).toBe('unread')
+  expect(signedOut).toBe('keep')
+  expect(againStale).toBe('keep')
+  expect(recovered).toEqual({
+    seen: '[[["w","work",1788825600000,0]],null,null]',
+  })
+})
+
+test('a read retires 元に戻す once the day no longer reads as the slot left it, but not on a failed read or an unknown zone', () => {
+  // Arrange: the pick left the carried-in record at revision 4; another device has since moved it to 5.
+  const carried = { ...row('c', 'work', at('2026-09-07', 23)), revision: 5 }
+  const listed: ListedDay = { carriedIn: carried, rows: [], carriedOut: null }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'sleep',
+    revision: 4,
+  }
+  const judge = (read: { ok: boolean }, timeZone: string | undefined) =>
+    afterDayRead({
+      line: undefined,
+      slot,
+      read: { at: 2000, ok: read.ok, listed },
+      zoneWriting: false,
+      timeZone,
+    }).retireUndo
+
+  // Act
+  const moved = judge({ ok: true }, TZ)
+  const failed = judge({ ok: false }, TZ)
+  const zoneUnknown = judge({ ok: true }, undefined)
+  const stillMatching = afterDayRead({
+    line: undefined,
+    slot: { ...slot, revision: 5 },
+    read: { at: 2000, ok: true, listed },
+    zoneWriting: false,
+    timeZone: TZ,
+  }).retireUndo
+
+  // Assert
+  expect(moved).toBe(true)
+  expect(failed).toBe(false)
+  expect(zoneUnknown).toBe(false)
+  expect(stillMatching).toBe(false)
+})
+
+test('only a landed fetch of a day’s list counts as a read of that day', () => {
+  // Arrange
+  const dayKey = [
+    ['switches', 'listByDay'],
+    { input: { day: '2026-09-08' }, type: 'query' },
+  ]
+  const otherKey = [['switches', 'current'], { type: 'query' }]
+
+  // Act
+  const reads = [
+    dayOfRead({ type: 'success' }, dayKey),
+    dayOfRead({ type: 'error' }, dayKey),
+    dayOfRead({ type: 'success', manual: true }, dayKey),
+    dayOfRead({ type: 'fetch' }, dayKey),
+    dayOfRead({ type: 'pause' }, dayKey),
+    dayOfRead({ type: 'success' }, otherKey),
+  ]
+
+  // Assert
+  expect(reads).toEqual([
+    { day: '2026-09-08', ok: true },
+    { day: '2026-09-08', ok: false },
+    null,
+    null,
+    null,
     null,
   ])
 })
@@ -2048,9 +2410,15 @@ test('a sheet that moves to another day starts over, and a notice kept for the d
   }
 
   // Act
-  const sameDay = sheetView(sheet, '2026-09-08', {
-    refusal: 'これ以上動かせません',
-  })
+  const line: DayLine = {
+    at: 1000,
+    kind: 'refused',
+    text: 'これ以上動かせません',
+    reading: false,
+    seen: null,
+    stale: false,
+  }
+  const sameDay = sheetView(sheet, '2026-09-08', { line })
   const nextDay = sheetView(sheet, '2026-09-09', { notice: 'carried-in' })
 
   // Assert
@@ -2058,14 +2426,21 @@ test('a sheet that moves to another day starts over, and a notice kept for the d
     sheet,
     selectedId: 'r',
     noticeId: null,
-    refusal: 'これ以上動かせません',
+    line: {
+      at: 1000,
+      kind: 'refused',
+      text: 'これ以上動かせません',
+      reading: false,
+      seen: null,
+      stale: false,
+    },
   })
   expect(sameDay.sheet).toBe(sheet)
   expect(nextDay).toEqual({
     sheet: { day: '2026-09-09', selectedId: null, focusId: null },
     selectedId: 'carried-in',
     noticeId: 'carried-in',
-    refusal: null,
+    line: null,
   })
 })
 
@@ -2334,7 +2709,7 @@ test('on the same day the user’s own selection outranks the row a kept notice 
     sheet: { day: '2026-09-08', selectedId: 'r', focusId: null },
     selectedId: 'r',
     noticeId: 'carried-in',
-    refusal: null,
+    line: null,
   })
 })
 
