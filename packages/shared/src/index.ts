@@ -42,6 +42,7 @@ export {
 } from './schemas'
 export {
   clampStart,
+  DETOX_MEASURED_DAYS_MAX,
   detoxCarriedDays,
   MIN_SEGMENT_MS,
   segmentsInRange,
