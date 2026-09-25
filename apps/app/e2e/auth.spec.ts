@@ -99,7 +99,9 @@ test('signing up with an address that already has an account looks the same, and
 
   // Assert
   await expect(page).toHaveURL('/')
-  await expect(page.getByText('いま').first()).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
 })
 
 test('signing in after 登録 keeps the sent address on screen and the button off until the session lands', async ({
