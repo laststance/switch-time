@@ -4,6 +4,47 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.11.0.0] - 2026-09-25
+
+### Changed
+
+- The server now gives up on a call after 25 seconds, before the app's
+  30-second wait runs out, so a write the app stopped waiting for can no
+  longer land later behind the next one. A write it gave up on answers
+  whether nothing was saved, or whether it was cut off while saving and
+  may have landed.
+- One account's writes wait their turn inside the server instead of each
+  holding a database connection while it waits. A burst of taps from a
+  few accounts at once can no longer use up every connection and hold up
+  everyone else. A write still waiting when its time runs out is refused
+  as busy, and the writes behind it keep their order.
+- A day's list and the stats are read from one consistent snapshot on a
+  single connection, so a write landing in between can no longer split
+  what one screen shows.
+
+### Fixed
+
+- A write stuck on a database connection that went dead (after a
+  managed-database failover, for example) is cut off at the deadline. Its
+  database session is ended, so the account's next tap is not held up
+  behind it, and a lost connection is logged instead of crashing the
+  server.
+- The database itself now refuses a record that names another account's
+  activity, not only the API's own checks.
+- Editing an activity is bounded by the same deadline, so an edit that
+  arrives late cannot overwrite the one sent after it.
+
+### Developer experience
+
+- The production image is built as `switch-time-api:prod`, so a local
+  development build can no longer be run as production by mistake.
+- The README explains how to let a laptop reach the production database
+  for a one-off `psql` session, and how to close that access again.
+- The new database migration takes its locks in a fixed order, waits at
+  most 5 seconds for each, caps each statement at 10 seconds, and fails
+  the deployment rather than holding every account's writes. The README
+  gives the query that finds rows it would refuse, and how to undo it.
+
 ## [0.10.0.0] - 2026-09-25
 
 ### Added
