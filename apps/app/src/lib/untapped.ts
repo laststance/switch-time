@@ -265,6 +265,29 @@ export function untappedMergeNote(
 }
 
 /**
+ * Both lines of a selected row's panel, which `useCorrection` hands the sheet: the pick line on every row, the merge line on
+ * the day's own rows only, since the carried-in record never merges.
+ * @param list - The day's list; undefined while it loads.
+ * @param row - The selected row.
+ * @param facts - {@link UntappedFacts}; undefined until the settings are read.
+ * @returns `pick` ({@link untappedPickNote}) and `merge` ({@link untappedMergeNote}), each null when it has nothing to say.
+ * @example untappedRowNotes(list, carriedInRow, facts) // { pick: 'detox と活動を切り替えると、…', merge: null }
+ */
+export function untappedRowNotes(
+  list: ListedDay | undefined,
+  row: Pick<
+    CorrectionRow,
+    'id' | 'activityId' | 'carriedIn' | 'canMergePrevious' | 'canMergeNext'
+  >,
+  facts: UntappedFacts | undefined,
+): { pick: string | null; merge: string | null } {
+  return {
+    pick: untappedPickNote(list, row, facts),
+    merge: row.carriedIn ? null : untappedMergeNote(list, row, facts),
+  }
+}
+
+/**
  * The line above 元に戻す when the offered undo may change which untapped days count, read from the day as listed now (so a
  * setting or another edit since the undo was armed is taken into account): a day undo writes its snapshot back, an activity
  * undo puts the carried-in record's activity back.
@@ -286,4 +309,27 @@ export function untappedUndoNote(
       : { kind: 'pick', id: slot.id, activityId: slot.to }
   const span = untappedChange(list, edit, facts)
   return span ? untappedLine('元に戻すと', span, 'も') : null
+}
+
+/**
+ * The sheet's untapped-day notes, recomputed from the list on every render (never stored); `useCorrection` spreads them into
+ * what it returns. Until the stored settings are read, the zone and the unused-day rule may be defaults, so every note is
+ * null rather than wrong.
+ * @param list - The day's list; undefined while it loads.
+ * @param slot - The undo the sheet offers; undefined when none.
+ * @param facts - {@link UntappedFacts}, with `ready` once the stored settings are read.
+ * @returns `undoNote` ({@link untappedUndoNote}) and `untappedNotes`, the selected row's lines ({@link untappedRowNotes}).
+ * @example untappedSheetNotes(list, slot, { ...facts, ready: true }).undoNote // '元に戻すと、…の計測も変わることがあります'
+ */
+export function untappedSheetNotes(
+  list: ListedDay | undefined,
+  slot: UndoSlot | undefined,
+  facts: UntappedFacts & { ready: boolean },
+) {
+  const known = facts.ready ? facts : undefined
+  return {
+    undoNote: untappedUndoNote(list, slot, known),
+    untappedNotes: (row: Parameters<typeof untappedRowNotes>[1]) =>
+      untappedRowNotes(list, row, known),
+  }
 }

@@ -5,6 +5,8 @@ import type { ListedDay, UndoSlot } from './correction'
 import {
   untappedMergeNote,
   untappedPickNote,
+  untappedRowNotes,
+  untappedSheetNotes,
   untappedUndoNote,
   type UntappedFacts,
 } from './untapped'
@@ -415,6 +417,115 @@ test('undoing a switch of the carried-in record to detox names the untapped days
   expect(note).toBe(
     '元に戻すと、タップのない日（9月19日〜9月20日）の計測も変わることがあります',
   )
+})
+
+test('the carried-in record’s panel shows the pick line but never a merge line, since it cannot merge', () => {
+  // Arrange: the weekend detox carried into Monday, whose merge flags would otherwise ask.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+
+  // Act
+  const notes = untappedRowNotes(
+    list,
+    {
+      id: 'c',
+      activityId: null,
+      carriedIn: true,
+      canMergePrevious: true,
+      canMergeNext: true,
+    },
+    facts('2026-09-21', '2026-09-25'),
+  )
+
+  // Assert
+  expect(notes).toEqual({
+    pick: 'detox と活動を切り替えると、タップのない日（9月19日〜9月20日）の計測が変わることがあります',
+    merge: null,
+  })
+})
+
+test('a day’s own row shows both the pick line and the merge line', () => {
+  // Arrange: detox from Friday 9/18, 仕事 on Monday 9:00, a new detox run from 20:00 still running.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [
+      row('w', 'work', at('2026-09-21', 9)),
+      row('d', null, at('2026-09-21', 20)),
+    ],
+    carriedOut: null,
+  }
+
+  // Act
+  const notes = untappedRowNotes(
+    list,
+    {
+      id: 'w',
+      activityId: 'work',
+      carriedIn: false,
+      canMergePrevious: true,
+      canMergeNext: true,
+    },
+    facts('2026-09-21', '2026-09-28'),
+  )
+
+  // Assert
+  expect(notes).toEqual({
+    pick: 'detox と活動を切り替えると、タップのない日（9月26日〜9月28日）の計測が変わることがあります',
+    merge:
+      '統合すると、タップのない日（9月26日〜9月28日）の計測が変わることがあります',
+  })
+})
+
+test('the sheet shows no untapped-day note until the stored settings are read, then shows them', () => {
+  // Arrange: the carried-in record from Friday was just switched from 仕事 to detox on Monday's sheet.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+  const slot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-21',
+    id: 'c',
+    to: 'work',
+    revision: 1,
+  }
+  const carriedIn = {
+    id: 'c',
+    activityId: null,
+    carriedIn: true,
+    canMergePrevious: false,
+    canMergeNext: false,
+  }
+
+  // Act
+  const loading = untappedSheetNotes(list, slot, {
+    ...facts('2026-09-21', '2026-09-25'),
+    ready: false,
+  })
+  const read = untappedSheetNotes(list, slot, {
+    ...facts('2026-09-21', '2026-09-25'),
+    ready: true,
+  })
+
+  // Assert
+  expect([loading.undoNote, loading.untappedNotes(carriedIn)]).toEqual([
+    null,
+    { pick: null, merge: null },
+  ])
+  expect([read.undoNote, read.untappedNotes(carriedIn)]).toEqual([
+    '元に戻すと、タップのない日（9月19日〜9月20日）の計測も変わることがあります',
+    {
+      pick: 'detox と活動を切り替えると、タップのない日（9月19日〜9月20日）の計測が変わることがあります',
+      merge: null,
+    },
+  ])
 })
 
 test('no undo note shows when no undo is offered', () => {

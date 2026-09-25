@@ -236,18 +236,6 @@
 
 ## Stats
 
-### Say when an edit changes whether the untapped days around it count
-
-**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし, and a merge that removes a detox re-tap (a `starts_run` row, which the sheet lists as a plain デトックス row) into an earlier day's detox, which takes back the week the re-tap renewed. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
-
-**Why:** Since detox left on over midnight measures up to a week of the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
-
-**Context:** The rule is in `classifyDay` / `detoxCarriedDays` (`packages/shared/src/stats.ts`); `cutTotalsEffects` in `apps/app/src/lib/correction.ts` is the pattern for such a note. New text, so the pen file first. Left out of the PR that let detox days count.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Check how screen readers speak the `9h 00m` durations
 
 **What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in the day cell's aria-label; the correction row (`apps/app/src/app/(app)/correction.tsx`) and the 状態別 row are read from their visible text today, so they need an aria-label of their own to carry it. While listening, also judge the day cell's `・` separators (one per activity, a pause or 中黒 read aloud?) and its length when swiping through the 31 month cells; if it is too long, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
