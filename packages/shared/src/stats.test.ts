@@ -3,7 +3,6 @@ import { expect, test } from 'vitest'
 import {
   clampStart,
   classifyDay,
-  DETOX_MEASURED_DAYS_MAX,
   detoxCarriedDays,
   segmentsInRange,
   streak,
@@ -491,11 +490,22 @@ test('switching to an activity and back to detox starts a new week', () => {
   })
 
   // Assert: 09-02..09-08 from the first run, 09-11..09-17 from the second
-  expect(days.size).toBe(2 * DETOX_MEASURED_DAYS_MAX)
-  expect(days.has('2026-09-09')).toBe(false)
-  expect(days.has('2026-09-11')).toBe(true)
-  expect(days.has('2026-09-17')).toBe(true)
-  expect(days.has('2026-09-18')).toBe(false)
+  expect([...days].sort()).toEqual([
+    '2026-09-02',
+    '2026-09-03',
+    '2026-09-04',
+    '2026-09-05',
+    '2026-09-06',
+    '2026-09-07',
+    '2026-09-08',
+    '2026-09-11',
+    '2026-09-12',
+    '2026-09-13',
+    '2026-09-14',
+    '2026-09-15',
+    '2026-09-16',
+    '2026-09-17',
+  ])
 })
 
 test('a month left on detox counts its first week as measured and the rest as unused', () => {

@@ -1543,13 +1543,21 @@ test('the cut says nothing about 計測 on a day the server already measures or 
       cutAt,
     ),
   ).toEqual([])
-  expect(
-    cutTotalsEffects(
-      carriedIn,
-      { idleThresholdMs, dayExcluded: 'auto_unused' },
-      cutAt,
-    ),
-  ).toEqual(['unmeasured'])
+})
+
+test('the cut promises 計測 on a day the server counts as unused', () => {
+  // Arrange: a threshold past the record's 26 h, so only the 計測 line is under test.
+  const carriedIn = wholeDayWork()
+
+  // Act
+  const effects = cutTotalsEffects(
+    carriedIn,
+    { idleThresholdMs: 48 * 3_600_000, dayExcluded: 'auto_unused' },
+    at('2026-09-08', 11, 45).getTime(),
+  )
+
+  // Assert
+  expect(effects).toEqual(['unmeasured'])
 })
 
 test('a short carried-in record on a day with its own rows changes nothing in the totals', () => {
