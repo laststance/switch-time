@@ -1,6 +1,6 @@
 import { addDays, dayBounds, localDay, type DayRow } from '@switch-time/shared'
 import { eq } from 'drizzle-orm'
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import { db, pool } from '../db/client'
 import { activities, switches, userSettings } from '../db/schema/app'
@@ -19,6 +19,10 @@ const idOf = (list: { id: string; name: string }[], name: string) => {
 // A listed day's rows as a baseline or 「元に戻す」's `expected` names them, the way the correction sheet sends them.
 const listedRows = (rows: DayRow[]): DayRow[] =>
   rows.map(({ id, activityId, startedAt }) => ({ id, activityId, startedAt }))
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 test('sign-up seeds 6 activities and settings', async () => {
   // Arrange
@@ -2269,9 +2273,13 @@ test('splitting a detox span keeps both halves detox', async () => {
 })
 
 test('the very first tap can be detox: the clock starts on a state with no activity', async () => {
-  // Arrange: a fresh account, nothing tapped yet
+  // Arrange: a fresh account, nothing tapped yet, and the server clock at 12:00 in Tokyo so the tap's day cannot roll over mid-test
   const api = await signedIn('first-detox@example.com')
   expect(await api.switches.current()).toBeNull()
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
 
   // Act
   const first = await api.switches.switchTo({ activityId: null })
@@ -2281,7 +2289,7 @@ test('the very first tap can be detox: the clock starts on a state with no activ
   expect(first).toMatchObject({ activityId: null, source: 'tap' })
   expect(await api.switches.current()).toMatchObject({
     id: first.id,
-    runStartDay: today,
+    runStartDay: '2026-09-25',
   })
 })
 
