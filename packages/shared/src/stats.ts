@@ -107,8 +107,10 @@ export type TapLike = Pick<SwitchLike, 'activityId' | 'startedAt'>
 /**
  * The days a detox runs through without a tap of their own, clipped to `window` and to {@link DETOX_MEASURED_DAYS_MAX}
  * days after the day its run started; {@link classifyDay} measures them, so a detox left on over a weekend neither
- * breaks 連続記録 nor lists as 切替なし. A run is consecutive detox records (only a correction cut or a day rewrite makes
- * two in a row), so cutting a detox never renews its allowance; switching to an activity and back does. The `stats.*`
+ * breaks 連続記録 nor lists as 切替なし. A run is consecutive detox records, so cutting a detox never renews its
+ * allowance; switching to an activity and back does. A tap never makes two in a row, but a correction can (a cut, a
+ * rewrite, detox picked for the record between two detoxes, or a merge that removes it), and then the later run counts
+ * from the earlier one's start. The `stats.*`
  * handler calls it with every tap the account made. An activity left running gets no such day: it is usually a forgotten tap.
  * @param taps - Every tap of the account, in any order; `activityId` null is detox.
  * @param timeZone - The user's stored zone.
@@ -144,7 +146,8 @@ export function detoxCarriedDays(
     const dayAfterTap = addDays(tapDay, 1)
     const from = dayAfterTap > window.from ? dayAfterTap : window.from
     const to = lastCovered < window.to ? lastCovered : window.to
-    // Each record walks at most the cap, so every detox together walks at most the window's length.
+    // Records never overlap and each walk is clipped to the window (and to its run's cap), so all of them together walk
+    // at most the window's length.
     for (let day = from; day <= to; day = addDays(day, 1)) days.add(day)
   })
   return days

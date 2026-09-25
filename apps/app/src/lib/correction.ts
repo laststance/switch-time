@@ -504,7 +504,7 @@ export function cutTotalsEffects(
  * The lines under 「ここで分割」: one per way the cut changes the totals ({@link cutTotalsEffects}), or the reason the cut is
  * disabled when no quarter hour fits.
  * @param row - The selected carried-in row.
- * @param facts - The settings and day facts the totals rules read.
+ * @param facts - The idle threshold and the viewed day's class ({@link TotalsFacts}).
  * @param at - The stepper's cut time, which decides whether a part leaves the idle count.
  * @returns The lines in display order; empty when there is nothing to say.
  * @example cutNotes(carriedIn, facts, at) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']

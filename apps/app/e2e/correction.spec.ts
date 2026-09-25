@@ -1029,7 +1029,7 @@ test('the lines under ここで分割 follow the cut time and the day’s exclus
   await api.excludedDays.exclude({ day })
   // The 計測 line also hides while the day's class is loading, so wait for that answer before looking.
   const dayClassAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/week'),
+    response.url().includes('/api/rpc/stats/day'),
   )
   await page.reload()
   expect((await dayClassAnswer).ok()).toBe(true)
@@ -1072,7 +1072,7 @@ test('ここで分割 on a detox says the day becomes measured only after the de
 
   // Act: a day past the detox's week
   const pastWeekAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/week'),
+    response.url().includes('/api/rpc/stats/day'),
   )
   await page.goto(`/correction?day=${shift(today(), -3)}`)
   expect((await pastWeekAnswer).ok()).toBe(true)
@@ -1084,7 +1084,7 @@ test('ここで分割 on a detox says the day becomes measured only after the de
 
   // Act: a day inside the detox's week
   const inWeekAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/week'),
+    response.url().includes('/api/rpc/stats/day'),
   )
   await page.goto(`/correction?day=${shift(today(), -6)}`)
   expect((await inWeekAnswer).ok()).toBe(true)
@@ -1122,7 +1122,7 @@ test('cutting a detox past its first week measures the cut day only, and the nex
     '区切ると、この日は計測できた日になります',
   )
   const cutDayAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/week'),
+    response.url().includes('/api/rpc/stats/day'),
   )
   await page.goto(`/correction?day=${shift(today(), -3)}`)
   expect((await cutDayAnswer).ok()).toBe(true)
@@ -1146,7 +1146,7 @@ test('cutting a detox past its first week measures the cut day only, and the nex
 
   // Act: the next day, which the second detox record runs through
   const nextDayAnswer = page.waitForResponse((response) =>
-    response.url().includes('/api/rpc/stats/week'),
+    response.url().includes('/api/rpc/stats/day'),
   )
   await page.goto(`/correction?day=${shift(today(), -2)}`)
   expect((await nextDayAnswer).ok()).toBe(true)

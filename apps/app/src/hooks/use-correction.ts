@@ -387,10 +387,11 @@ function useCorrectionUndo(
 // What the lines under 「ここで分割」 read: the idle threshold and the viewed day's class as the stats answer it.
 function useTotalsFacts(day: string, ready: boolean): TotalsFacts {
   const { settings } = useSettings()
-  // The server's class for the viewed day alone, so the note follows the day rule (detox cap included) instead of copying
-  // it. `ready` waits for the stored time zone, as the day's list does, so a default-zone "today" is never fetched first.
+  // `stats.day` gives the server's class for the viewed day, so the note follows the day rule (detox cap included)
+  // instead of copying it. `ready` waits for the stored time zone, as the day's list does, so a default-zone "today" is
+  // never fetched first.
   const stats = useQuery(
-    orpc.stats.week.queryOptions({ input: { startDay: day }, enabled: ready }),
+    orpc.stats.day.queryOptions({ input: { day }, enabled: ready }),
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
