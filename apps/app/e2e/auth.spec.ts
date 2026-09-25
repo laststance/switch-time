@@ -68,6 +68,23 @@ test('typing after sign-up hides the notice and keeps the address and every type
   await expect(page.getByLabel('メールアドレス')).toHaveValue(email)
 })
 
+test('coming back from sign-up without registering leaves the focus where the user put it', async ({
+  page,
+}) => {
+  // Arrange: the password took the focus once after 登録; the user then moves to the address to fix it.
+  await register(page, uniqueEmail())
+  await page.getByLabel('メールアドレス').click()
+  await page.getByRole('link', { name: '新規登録はこちら' }).click()
+  await expect(page.getByLabel('名前')).toBeVisible()
+
+  // Act
+  await page.goBack()
+
+  // Assert
+  await expect(page.getByLabel('名前')).toBeHidden()
+  await expect(page.getByLabel('パスワード')).not.toBeFocused()
+})
+
 test('signing up with an address that already has an account looks the same, and the original password still signs in', async ({
   page,
 }) => {

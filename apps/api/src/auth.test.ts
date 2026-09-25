@@ -53,8 +53,17 @@ test('a sign-up for an address that already has an account answers exactly like 
 
 test('a sign-up for an address that already has an account answers with what was just sent, not with the stored account', async () => {
   // Arrange
-  await signUp('stored@example.com')
-  const sentAt = Date.now()
+  const answerUser = z.object({
+    user: z.object({
+      id: z.string(),
+      name: z.string(),
+      emailVerified: z.boolean(),
+      createdAt: z.string(),
+    }),
+  })
+  const stored = answerUser.parse(
+    await (await signUp('stored@example.com')).json(),
+  ).user
 
   // Act
   const response = await app.request('/api/auth/sign-up/email', {
@@ -66,20 +75,15 @@ test('a sign-up for an address that already has an account answers with what was
       password: 'another password entirely',
     }),
   })
-  const answer = z
-    .object({
-      user: z.object({
-        name: z.string(),
-        emailVerified: z.boolean(),
-        createdAt: z.string(),
-      }),
-    })
-    .parse(await response.json())
+  const answer = answerUser.parse(await response.json())
 
-  // Assert: the stored name ('Raphtalia') and the first sign-up's time would tell that the address was taken.
+  // Assert: the stored id, name ('Raphtalia') or creation time would tell that the address was taken.
+  expect(answer.user.id).not.toBe(stored.id)
   expect(answer.user.name).toBe('Someone Else')
   expect(answer.user.emailVerified).toBe(false)
-  expect(Date.parse(answer.user.createdAt)).toBeGreaterThanOrEqual(sentAt)
+  expect(Date.parse(answer.user.createdAt)).toBeGreaterThan(
+    Date.parse(stored.createdAt),
+  )
 })
 
 test('a second sign-up for an address creates no second account and no second set of activities', async () => {
