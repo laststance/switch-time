@@ -89,7 +89,9 @@ test('a failed first detox tap brings the first-launch screen back instead of le
   const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
   await expect(firstLaunch).toBeVisible()
   const tapAnswer = Promise.withResolvers<void>()
+  let tapRequests = 0
   await page.route('**/api/rpc/switches/switchTo', async (route) => {
+    tapRequests += 1
     await tapAnswer.promise
     await route.fulfill({
       status: 500,
@@ -126,14 +128,14 @@ test('a failed first detox tap brings the first-launch screen back instead of le
   })
   tapAnswer.resolve()
 
-  // Assert: the tap is rolled back to the first-launch screen, and the server holds no switch
+  // Assert: the tap is rolled back to the first-launch screen, and the refused tap was sent once, not retried
   await expect(firstLaunch).toBeVisible()
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
     'aria-pressed',
     'false',
   )
+  expect(tapRequests).toBe(1)
   currentAnswer.resolve()
-  expect(await (await apiAs(page)).switches.current()).toBeNull()
 })
 
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
