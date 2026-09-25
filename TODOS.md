@@ -52,28 +52,40 @@
 **Priority:** P3
 **Depends on:** None
 
-### Let the main device take the account's zone back
+### Pick a zone other than the device's in 設定
 
-**What:** Give the user a way back when another device's zone replaced the account's: a zone row in 設定 (designed in the pen file first) or a prompt when the stored zone differs from both the device's zone and the one it last synced.
+**What:** Let the タイムゾーン row on 設定 set any IANA zone, with a searchable list and readable city names, not only take back this device's zone.
 
-**Why:** Since 0.5.0.0 a device writes its zone only when its own zone changed since it last synced (`zoneSyncAction` in `apps/app/src/lib/settings.ts`), which stopped two devices from flipping the zone on every focus. A single sign-in from another zone (a friend's laptop abroad, a browser that reports UTC to resist fingerprinting, a test run against the real account) now writes once, and the main device, whose own zone has not changed, never writes again. Every day boundary, the stats and the correction windows stay shifted, and the app has no zone control to undo it.
+**Why:** The row can only write the zone this device reports (「この端末に合わせる」). A user who wants another zone (a second home, a browser that reports UTC to resist fingerprinting) has no control, and the row shows raw IANA ids (`America/New_York`) that a screen reader spells out.
 
-**Context:** `apps/app/src/lib/device-zone.ts` keeps the last synced zone per account (localStorage on the web, `expo-secure-store` on native). On iOS the keychain can keep that entry across a reinstall, so reinstalling does not reclaim the zone either. A prompt keeps the automatic path; a 設定 row is simpler and also covers a user who wants a zone other than the device's. Raised by the red-team pass during the 0.5.0.0 ship.
+**Context:** `useAccountZone` (`apps/app/src/hooks/use-account-zone.ts`) and `zoneRow` (`apps/app/src/lib/settings.ts`) drive the row; `settings.update` already takes any zone `timeZoneSchema` accepts. A picked zone must also be remembered as this device's sync (`rememberSyncedZone`), or `useTimeZoneSync` would write the device's zone over it when the device moves. Needs a pen design first (the 設定 board and `ST Phone / 設定・タイムゾーン行の状態`). Split off when the take-back shipped (2026-09-25).
 
-**Effort:** S
-**Priority:** P3
+**Effort:** M
+**Priority:** P4
 **Depends on:** None
 
-### Keep the zone sync from recording the previous account's zone when another tab signs in as someone else
+### Check on a phone that a zone change made in the background reaches 設定
 
-**What:** Key the settings query (or the synced-zone check) by the account, or have `useTimeZoneSync` skip the render in which the session's user id changed, so it only compares the device's zone with the new account's stored one.
+**What:** On an iPhone and an Android phone, put the app in the background, change the phone's time zone in the system settings, bring the app back, and check that the タイムゾーン row and the account's stored zone follow.
 
-**Why:** When another tab signs in as a different account, this tab's session turns to that account on focus. `useAccountScope` then resets the query cache (the PR that bound 元に戻す to its account), but in the same commit `useTimeZoneSync`'s effect still reads the first account's settings: it can find that zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
+**Why:** The app reads the zone with `Intl.DateTimeFormat().resolvedOptions().timeZone` each time it returns to the foreground (`useDeviceZone`). The e2e covers only the web. Hermes may take the zone from a cached system value (Foundation keeps `systemTimeZone` until `resetSystemTimeZone`), so on iOS a zone change while the app stays open may not show until a relaunch.
 
-**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), `useAccountScope` in `apps/app/src/hooks/use-account-scope.ts`. Raised by the Claude adversarial pass during the 0.5.0.0 ship; narrowed when the cache reset landed.
+**Context:** `apps/app/src/hooks/use-device-zone.ts` re-reads on TanStack's `focusManager`, which `src/lib/query.ts` wires to `AppState` on native. If Hermes keeps the old zone, read it from `expo-localization` (`getCalendars()[0].timeZone`) on native instead. Found by the adversarial review of the take-back PR (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
+
+### Bind every settings write to the account it was made for
+
+**What:** Send `forUserId` with every `settings.update`, not only the zone sync and 「この端末に合わせる」, and roll back only the fields a failed write changed.
+
+**Why:** A 外観 or 秒針 tap queued while a sign-in in another tab changes the cookie still lands on the new account. And the rollback puts back the whole row it saved, so when two settings writes fail one after the other, the first one's rollback also erases the second one's optimistic value.
+
+**Context:** `settings.update` already refuses a `forUserId` that is not the session's (`CONFLICT`, `apps/api/src/rpc/settings.ts`). The optimistic update and rollback are in `useUpdateSettings` (`apps/app/src/hooks/use-settings.ts`). `rolledBackSettings` already keeps another account's row. Found by the adversarial review of the take-back PR (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ## Correction

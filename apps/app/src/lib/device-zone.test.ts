@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
-import { readSyncedZone, rememberSyncedZone } from './device-zone'
+import { deviceZone, readSyncedZone, rememberSyncedZone } from './device-zone'
 
 // Node cannot load react-native or the native keychain: the platform is switchable per test, SecureStore records its calls.
 const platform = vi.hoisted(() => ({ OS: 'web' }))
@@ -28,6 +28,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   secureStore.getItem.mockReset()
   secureStore.setItem.mockReset()
@@ -89,6 +90,28 @@ test('a browser whose storage refuses access still remembers the zone it synced 
   expect(neverSyncedZone).toBeNull()
   expect(remember).not.toThrow()
   expect(syncedZone()).toBe('Asia/Tokyo')
+})
+
+test('a device that moves to another zone while the app stays open reports its new zone, not the one it had at launch', () => {
+  // Arrange: the device starts in Tokyo.
+  const tokyo = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+  }).resolvedOptions()
+  const london = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/London',
+  }).resolvedOptions()
+  const resolvedOptions = vi
+    .spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
+    .mockReturnValue(tokyo)
+  const zoneAtLaunch = deviceZone()
+
+  // Act: the device lands in London.
+  resolvedOptions.mockReturnValue(london)
+  const zoneAfterMove = deviceZone()
+
+  // Assert
+  expect(zoneAtLaunch).toBe('Asia/Tokyo')
+  expect(zoneAfterMove).toBe('Europe/London')
 })
 
 test('while signed out no zone is read or kept, so the next account to sign in starts unsynced', () => {
