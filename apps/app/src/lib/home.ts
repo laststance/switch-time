@@ -219,6 +219,43 @@ export function detoxStopped(
 }
 
 /**
+ * Which detox notice the hero shows today: the server-confirmed `stopped` first ({@link detoxStopped}), else `last-day`
+ * ({@link detoxLastDay}), else none. Home calls it on every render with the `stats.day` query for today.
+ * @returns
+ * - 'stopped' when {@link detoxStopped} holds
+ * - 'last-day' on the run's last measured day
+ * - null otherwise (an activity, a detox inside its week, an unknown answer past it)
+ * @example detoxNotice({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-23', switchCountToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: undefined } }) // 'last-day'
+ */
+export function detoxNotice(
+  input: Parameters<typeof detoxStopped>[0],
+): DetoxNotice {
+  if (detoxStopped(input)) return 'stopped'
+  if (detoxLastDay(input)) return 'last-day'
+  return null
+}
+
+/**
+ * Whether a press on a switch reaches the API. Pressing the active state again changes nothing (the server keeps that state,
+ * or refuses it when its activity is archived), so Home skips the call and the three refetches it triggers; the one exception
+ * is detox past its run's week, where the press starts a new run. Home's buttons, detox row and hotkeys all go through it.
+ * @param input.activityId - The pressed state; null is detox.
+ * @param input.renewable - {@link detoxRenewable} for the current state.
+ * @returns
+ * - true for a state other than the current one, and for detox pressed again while `renewable`
+ * - false for any other press on the current state
+ * @example sendsPick({ activityId: null, current: { activityId: null }, renewable: true }) // true
+ */
+export function sendsPick(input: {
+  activityId: string | null
+  current: { activityId: string | null }
+  renewable: boolean
+}): boolean {
+  if (input.activityId !== input.current.activityId) return true
+  return input.activityId === null && input.renewable
+}
+
+/**
  * The switch buttons: the live activities, plus the current one when another device archived it, kept last so the digit hotkeys
  * keep their places and the buttons never lose the state the hero is showing. Detox adds nothing: the detox row is its button.
  * @example gridActivities(live, activity)

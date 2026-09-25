@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   badgeRing,
   detoxLastDay,
+  detoxNotice,
   detoxPastWeek,
   detoxRenewable,
   detoxStopped,
@@ -10,6 +11,7 @@ import {
   homeFallback,
   homeReady,
   nowLook,
+  sendsPick,
 } from './home'
 
 describe('homeFallback', () => {
@@ -546,6 +548,107 @@ describe('detoxStopped', () => {
 
     // Assert
     expect(stopped).toBe(false)
+  })
+})
+
+describe('detoxNotice', () => {
+  // A detox run from 9/16, no tap today, auto-exclusion on
+  const base = {
+    current: { activityId: null, runStartDay: '2026-09-16' },
+    switchCountToday: 0,
+    autoExcludeUnusedDays: true,
+  }
+  const settled = { isError: false, isPaused: false }
+
+  test('warns on the last day, before any server answer is needed', () => {
+    // Act
+    const notice = detoxNotice({
+      ...base,
+      today: '2026-09-23',
+      stats: { ...settled, data: undefined },
+    })
+
+    // Assert
+    expect(notice).toBe('last-day')
+  })
+
+  test('says a day past the week is stopped once the server reads it as unmeasured', () => {
+    // Act
+    const notice = detoxNotice({
+      ...base,
+      today: '2026-09-25',
+      stats: {
+        ...settled,
+        data: {
+          days: [{ day: '2026-09-25', measured: false, excluded: null }],
+        },
+      },
+    })
+
+    // Assert
+    expect(notice).toBe('stopped')
+  })
+
+  test('shows nothing past the week while the answer is unknown, or inside the week before its last day', () => {
+    // Act
+    const unknown = detoxNotice({
+      ...base,
+      today: '2026-09-25',
+      stats: { ...settled, data: undefined },
+    })
+    const sixthDay = detoxNotice({
+      ...base,
+      today: '2026-09-22',
+      stats: { ...settled, data: undefined },
+    })
+
+    // Assert
+    expect(unknown).toBeNull()
+    expect(sixthDay).toBeNull()
+  })
+})
+
+describe('sendsPick', () => {
+  test('sends a press on another state, whatever the detox run says', () => {
+    // Act
+    const toActivity = sendsPick({
+      activityId: 'work',
+      current: { activityId: null },
+      renewable: false,
+    })
+    const toDetox = sendsPick({
+      activityId: null,
+      current: { activityId: 'work' },
+      renewable: false,
+    })
+
+    // Assert
+    expect(toActivity).toBe(true)
+    expect(toDetox).toBe(true)
+  })
+
+  test('drops a press on the current state, except detox past its run’s week', () => {
+    // Act
+    const sameActivity = sendsPick({
+      activityId: 'work',
+      current: { activityId: 'work' },
+      renewable: false,
+    })
+    const detoxInsideWeek = sendsPick({
+      activityId: null,
+      current: { activityId: null },
+      renewable: false,
+    })
+    const renewedDetox = sendsPick({
+      activityId: null,
+      current: { activityId: null },
+      renewable: true,
+    })
+
+    // Assert
+    expect(sameActivity).toBe(false)
+    expect(detoxInsideWeek).toBe(false)
+    expect(renewedDetox).toBe(true)
   })
 })
 

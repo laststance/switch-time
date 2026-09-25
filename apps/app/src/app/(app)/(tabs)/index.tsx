@@ -19,14 +19,14 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
-  detoxLastDay,
+  detoxNotice,
   detoxPastWeek,
   detoxRenewable,
-  detoxStopped,
   gridActivities,
   homeFallback,
   homeReady,
   nowLook,
+  sendsPick,
 } from '@/lib/home'
 import { hotkeyIndex, isDetoxHotkey } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
@@ -68,21 +68,12 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       enabled: ready && detoxPastWeek(homeToday),
     }),
   )
-  const stopped = detoxStopped({ ...homeToday, stats: todayStats })
-  const detoxNotice = stopped
-    ? 'stopped'
-    : detoxLastDay(homeToday)
-      ? 'last-day'
-      : null
+  const notice = detoxNotice({ ...homeToday, stats: todayStats })
   const renewable = detoxRenewable({ current, today })
   const ink = useTokenColor('ink')
   const pathname = usePathname()
-  // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
-  // Skipping the call also saves the three refetches the mutation triggers. The one exception is detox past its run's week,
-  // where the press starts a new run.
   const pick = (activityId: string | null): void => {
-    const isRenewal = activityId === null && renewable
-    if (activityId !== current.activityId || isRenewal)
+    if (sendsPick({ activityId, current, renewable }))
       switchTo.mutate({ activityId })
   }
   useWebKeydown((event) => {
@@ -111,7 +102,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
           activity,
           formatSince(current.startedAt, today, timeZone),
           switchCount,
-          detoxNotice,
+          notice,
         )}
         startedAt={current.startedAt.getTime()}
       />
