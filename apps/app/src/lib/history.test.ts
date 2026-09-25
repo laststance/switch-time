@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import {
   historyView,
   shiftMonth,
+  sliceLook,
   weekStart,
   type HistoryActivity,
   type HistoryStats,
@@ -109,8 +110,20 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
     ['今日', 'stack', '9月9日（水）'],
   ])
   expect(view.rows[0]?.[5]?.slices).toEqual([
-    { activityId: 'work', color: '#3B7BD9', height: 55, top: false },
-    { activityId: 'old', color: '#D8579C', height: 16.5, top: true },
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 55,
+      top: false,
+      bottom: true,
+    },
+    {
+      activityId: 'old',
+      color: '#D8579C',
+      height: 16.5,
+      top: true,
+      bottom: false,
+    },
   ])
   expect(view.rows[0]?.[6]?.today).toBe(true)
   expect(view.measured).toBe('3 / 7日')
@@ -191,7 +204,7 @@ test('a day whose time all went to detox is outlined and named, instead of looki
   expect(view.rows[0]?.[4]?.slices).toEqual([])
 })
 
-test('a measured day whose only counted time is detox is outlined even when its activity time was idle-flagged', () => {
+test('a day of mostly idle-flagged time and some detox is a plain day with its detox part drawn, not a detox day', () => {
   // Arrange: 9/9 had 13 h of 仕事 flagged idle (so nothing in totals) and 11 h of detox
   const stats: HistoryStats = {
     days: [
@@ -218,10 +231,567 @@ test('a measured day whose only counted time is detox is outlined even when its 
     activities,
   })
 
-  // Assert: idle time is not stacked, so the day has nothing but detox to show and is outlined as detox
+  // Assert: the day is not claimed as a whole day of detox; its 11 h of detox is one outlined slice on the floor
+  expect(view.rows[0]?.[6]?.kind).toBe('stack')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    { activityId: null, color: null, height: 60.5, top: true, bottom: true },
+  ])
+})
+
+test('a day with no activity time and as much detox as idle time is outlined as a detox day', () => {
+  // Arrange: 9/9 had 12 h flagged idle and 12 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', { measured: true, idleMs: 12 * H, detoxMs: 12 * H }),
+    ],
+    totals: {},
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the outline is the detox mark, so the cell draws no detox slice inside it
   expect(view.rows[0]?.[6]?.kind).toBe('detox')
   expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox')
   expect(view.rows[0]?.[6]?.slices).toEqual([])
+})
+
+test('a day worked then spent in detox draws the detox part as an outline on top of the work', () => {
+  // Arrange: 9/9 had 12 h of 仕事 and 6 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 12 * H },
+        detoxMs: 6 * H,
+      }),
+    ],
+    totals: { work: 12 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the top corners move from 仕事 to the detox part
+  expect(view.rows[0]?.[6]?.kind).toBe('stack')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 66,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 33, top: true, bottom: false },
+  ])
+})
+
+test('the detox part is drawn as a sub outline with no fill, and each end of the stack follows the track corners', () => {
+  // Arrange: a lone activity slice fills both ends; a detox slice sits on top of another slice
+  const lone = {
+    activityId: 'work',
+    color: '#3B7BD9',
+    height: 66,
+    top: true,
+    bottom: true,
+  }
+  const detoxOnTop = {
+    activityId: null,
+    color: null,
+    height: 33,
+    top: true,
+    bottom: false,
+  }
+
+  // Act
+  const loneLook = sliceLook(lone)
+  const detoxLook = sliceLook(detoxOnTop)
+
+  // Assert
+  expect(loneLook).toEqual({
+    className: 'rounded-t-md rounded-b-md',
+    backgroundColor: '#3B7BD9',
+  })
+  expect(detoxLook).toEqual({
+    className: 'rounded-t-md border-sub border',
+    backgroundColor: 'transparent',
+  })
+})
+
+test('a slice between two others is drawn square, and the floor slice rounds only its bottom corners', () => {
+  // Arrange: 仕事 on the floor, 家事 in the middle of a stack that detox tops
+  const floor = {
+    activityId: 'work',
+    color: '#3B7BD9',
+    height: 44,
+    top: false,
+    bottom: true,
+  }
+  const middle = {
+    activityId: 'home',
+    color: '#E0A431',
+    height: 22,
+    top: false,
+    bottom: false,
+  }
+
+  // Act
+  const floorLook = sliceLook(floor)
+  const middleLook = sliceLook(middle)
+
+  // Assert
+  expect(floorLook).toEqual({
+    className: 'rounded-b-md',
+    backgroundColor: '#3B7BD9',
+  })
+  expect(middleLook).toEqual({
+    className: '',
+    backgroundColor: '#E0A431',
+  })
+})
+
+test('a detox part alone on the track is outlined with all four corners rounded, so the track does not clip its outline', () => {
+  // Arrange: an idle-heavy day whose only drawn slice is its detox part
+  const detoxAlone = {
+    activityId: null,
+    color: null,
+    height: 60.5,
+    top: true,
+    bottom: true,
+  }
+
+  // Act
+  const look = sliceLook(detoxAlone)
+
+  // Assert
+  expect(look).toEqual({
+    className: 'rounded-t-md rounded-b-md border-sub border',
+    backgroundColor: 'transparent',
+  })
+})
+
+test('a few minutes of detox draw no stray line in the short month cells', () => {
+  // Arrange: 9/9 had 8 h of 仕事 and 30 min of detox; a month cell is 48 px, so 30 min is 1 px
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H },
+        detoxMs: 0.5 * H,
+      }),
+    ],
+    totals: { work: 8 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'month',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: only the 仕事 slice, which keeps both rounded ends
+  expect(view.rows.flat().find((cell) => cell?.today)?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 16,
+      top: true,
+      bottom: true,
+    },
+  ])
+})
+
+test('an excluded day still draws its detox part, stacked inside the dashed border', () => {
+  // Arrange: 9/9 was excluded by hand after 6 h of 仕事 and 3 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        excluded: 'manual',
+        totals: { work: 6 * H },
+        detoxMs: 3 * H,
+      }),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the 132 px track keeps 130 px inside its 1 px border
+  expect(view.rows[0]?.[6]?.kind).toBe('excluded')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 32.5,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 16.25, top: true, bottom: false },
+  ])
+})
+
+test('a whole excluded day fits inside its dashed border, so the top of its detox outline is not clipped', () => {
+  // Arrange: 9/9 was excluded by hand after 18 h of 仕事 and 6 h of detox, the whole day
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        excluded: 'manual',
+        totals: { work: 18 * H },
+        detoxMs: 6 * H,
+      }),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 97.5 + 32.5 = the 130 px inside the border, not the 132 px track
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 97.5,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 32.5, top: true, bottom: false },
+  ])
+})
+
+test('the detox part of a 25-hour fall-back day stays inside the 24-hour bar', () => {
+  // Arrange: the fall-back day had 20 h of 仕事 and 5 h of detox, 25 h on a 24-h track
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 20 * H },
+        detoxMs: 5 * H,
+      }),
+    ],
+    totals: { work: 20 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 仕事 takes 110 px of the 132 px track, so the detox part gets the 22 px left rather than 27.5 px
+  expect(view.rows[0]?.[6]?.slices?.map((slice) => slice.height)).toEqual([
+    110, 22,
+  ])
+})
+
+test('a fall-back day whose activities fill the whole 24-hour bar draws no detox part above them', () => {
+  // Arrange: the fall-back day had 24 h of 仕事 and 1 h of detox, so 仕事 alone fills the 132 px track
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 24 * H },
+        detoxMs: 1 * H,
+      }),
+    ],
+    totals: { work: 24 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 仕事 keeps both rounded ends and nothing overflows the track
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 132,
+      top: true,
+      bottom: true,
+    },
+  ])
+})
+
+test('an hour of detox in a month cell is just tall enough to draw its outline', () => {
+  // Arrange: 9/9 had 8 h of 仕事 and 1 h of detox; a month cell is 48 px, so 1 h is exactly the 2 px floor
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H },
+        detoxMs: 1 * H,
+      }),
+    ],
+    totals: { work: 8 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'month',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert
+  expect(view.rows.flat().find((cell) => cell?.today)?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 16,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 2, top: true, bottom: false },
+  ])
+})
+
+test('a day of two activities and detox rounds only the floor and the top, leaving the middle slice square', () => {
+  // Arrange: 9/9 had 8 h of 仕事, 4 h of 家事 and 6 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H, home: 4 * H },
+        detoxMs: 6 * H,
+      }),
+    ],
+    totals: { work: 8 * H, home: 4 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 44,
+      top: false,
+      bottom: true,
+    },
+    {
+      activityId: 'home',
+      color: '#E0A431',
+      height: 22,
+      top: false,
+      bottom: false,
+    },
+    { activityId: null, color: null, height: 33, top: true, bottom: false },
+  ])
+})
+
+test('today with no taps and no detox yet stays a plain day, not a detox day', () => {
+  // Arrange: today (9/9) has nothing recorded
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09'),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert
+  expect(view.rows[0]?.[6]?.kind).toBe('stack')
+  expect(view.rows[0]?.[6]?.slices).toEqual([])
+})
+
+test('状態別 ends with a detox row summed over the measured days only', () => {
+  // Arrange: 2 measured days with 2 h and 4 h of detox, and an excluded day with 5 h that must not count
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07', {
+        excluded: 'manual',
+        detoxMs: 5 * H,
+      }),
+      day('2026-09-08', {
+        measured: true,
+        totals: { work: 8 * H },
+        detoxMs: 2 * H,
+      }),
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 4 * H },
+        detoxMs: 4 * H,
+      }),
+    ],
+    totals: { work: 12 * H },
+    measuredDays: 2,
+    streak: 2,
+    excludedDays: [{ day: '2026-09-07', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the detox row has no target, so its bar stays empty
+  expect(view.breakdown.at(-1)).toEqual({
+    id: 'detox',
+    name: 'detox',
+    color: null,
+    iconKey: 'wind',
+    total: '6h 00m',
+    average: '3h 00m',
+    ratio: 0,
+  })
+})
+
+test('状態別 lists no detox row for a range without detox time', () => {
+  // Arrange: the e2e week has no detox
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats: week,
+    activities,
+  })
+
+  // Assert
+  expect(view.breakdown.map((row) => row.id)).toEqual(['work', 'home', 'old'])
 })
 
 test('a day worked on an activity the list does not know yet stays a stack, not a detox day', () => {
@@ -255,9 +825,12 @@ test('a day worked on an activity the list does not know yet stays a stack, not 
     activities,
   })
 
-  // Assert: the unknown activity draws no slice, but the day is not claimed as detox
+  // Assert: the unknown activity draws no slice and the day is not claimed as detox, so only its 2 h detox part sits on the floor
   expect(view.rows[0]?.[6]?.kind).toBe('stack')
   expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    { activityId: null, color: null, height: 11, top: true, bottom: true },
+  ])
 })
 
 test('the month calendar pads Sunday-first rows and counts only the days up to today', () => {

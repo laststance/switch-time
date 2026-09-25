@@ -68,6 +68,15 @@ test('the week view shows the excluded day dashed and out of the average', async
     'border-top-style',
     'dashed',
   )
+  // The dash is drawn in `sub`, the tone of the day's own weekday label, so it clears 3:1 against the card
+  const sub = await excluded
+    .locator('div')
+    .last()
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(excluded.locator('div').first()).toHaveCSS(
+    'border-top-color',
+    sub,
+  )
   // The wind glyph marks detox days only: neither the excluded day nor the measured ones carry it.
   await expect(page.getByTestId('detox-glyph')).toHaveCount(0)
 })
@@ -155,4 +164,51 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   await expect(
     page.getByRole('button', { name: 'detox 9:00 – 24:00 15h 00m' }),
   ).toBeVisible()
+})
+
+test('a day worked then spent in detox draws its detox part as a sub outline on top of the work, and 状態別 lists detox', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 from 9:00, detox from 18:00; today's 家事 tap (signUp) closes the detox
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: null, startedAt: at(yesterday, 18) },
+    ],
+  })
+
+  // Act
+  await page.getByRole('tab', { name: '記録' }).click()
+
+  // Assert: yesterday stays a plain day (no detox outline or glyph on the cell); its slices run bottom-up, 仕事 then detox
+  await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
+  const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
+  const cell = page.getByRole('link', { name: new RegExp(`^${dayName}（.）$`) })
+  await expect(cell).toBeVisible()
+  await expect(cell.getByTestId('detox-glyph')).toHaveCount(0)
+  const track = cell.locator('div').first()
+  await expect(track).toHaveCSS('border-top-width', '0px')
+  const slices = track.locator(':scope > div')
+  await expect(slices).toHaveCount(2)
+  // RN-web defaults every View to a solid style, so the width is what proves the outline is drawn
+  await expect(slices.first()).toHaveCSS('border-top-width', '0px')
+  const detoxPart = slices.last()
+  await expect(detoxPart).toHaveCSS('border-top-width', '1px')
+  await expect(detoxPart).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  const sub = await cell
+    .locator('div')
+    .last()
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(detoxPart).toHaveCSS('border-top-color', sub)
+
+  // 状態別 lists detox (its order and figures are pinned by the unit test)
+  const breakdown = page.getByText('状態別', { exact: true }).locator('../..')
+  await expect(breakdown.getByText('detox', { exact: true })).toBeVisible()
 })

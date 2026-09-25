@@ -8,6 +8,7 @@ const API_ORIGIN = `http://localhost:${process.env.E2E_API_PORT || '4100'}`
 
 /**
  * Creates a fresh account through the UI and taps 家事 on the first-launch screen, so every shell test starts signed in on Home.
+ * Returns once the server has stored that tap, so a test that reads or rewrites today through the API sees it.
  * @example await signUp(page)
  */
 export async function signUp(page: Page): Promise<void> {
@@ -20,7 +21,12 @@ export async function signUp(page: Page): Promise<void> {
     )
   await page.getByLabel('パスワード').fill('correct-horse-battery')
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  // Home shows the tap optimistically, before the server answers: without this wait, a seed read right after can miss it.
+  const firstTapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
   await page.getByRole('button', { name: '家事' }).click()
+  expect((await firstTapAnswer).ok()).toBe(true)
   await expect(
     page.getByRole('heading', { name: 'いま', exact: true }),
   ).toBeVisible()

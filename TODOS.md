@@ -248,25 +248,25 @@
 **Priority:** P3
 **Depends on:** None
 
-### Show a day's partial detox time on History
+### Fit a 25-hour day's activity time on History's 24-hour bar
 
-**What:** Draw the detox part of a day that also has activity time on History's bar, for example as an outlined segment in `sub` at the top of the stack, and decide whether 状態別 gets a detox row.
+**What:** Decide how a fall-back day that holds more than 24 h of activity time fits History's bar, for example by scaling that day's slices to its own length or clamping the top activity slice as the detox part is, and add a `history.test.ts` case.
 
-**Why:** Only a day spent all in detox is marked (the solid `sub` outline with the wind glyph). A detox weekend that starts on 金 evening and ends on 月 morning shows 土 and 日 as detox, but the detox hours of 金 and 月 are bare track, the same as time nobody recorded.
+**Why:** `stackSlices` sizes every slice as a share of 24 h, so on the one day a year the clocks go back, 25 h of activity asks for more than the 132 px (week) or 48 px (month) track and the top slice is clipped by the track's rounded end.
 
-**Context:** `stackSlices` / `dayCell` in `apps/app/src/lib/history.ts` stack `stat.totals`, which leave detox out (`detoxMs` is its own field). New drawing, so the pen file first. Raised by the design review of the PR that outlined detox days solid (2026-09-25).
+**Context:** `stackSlices` in `apps/app/src/lib/history.ts`; `dayBounds` in `packages/shared/src/stats.ts` gives the day its real length. The detox part is already clamped to the room left above the activities. 「1本 = 24時間」 is the chart's label, so scaling one day changes what a pixel means on it. Raised by the outside voice of the eng review of the PR that drew a day's detox part on History (2026-09-25).
 
 **Effort:** S
-**Priority:** P3
+**Priority:** P4
 **Depends on:** None
 
-### Stop marking a day of idle and detox time as a detox day on History
+### Read a History day's activity and detox time to screen readers
 
-**What:** Decide how History draws a measured day whose only time is detox plus an activity left running past the idle threshold, for example as detox only when `detoxMs` is at least `idleMs`, and add a `history.test.ts` case with `detoxMs > 0`, `idleMs > 0` and empty totals.
+**What:** Add what a stacked day cell draws to its `aria-label` (each activity's time, then detox when the cell has a detox part), and assert it in `history.test.ts`.
 
-**Why:** `dayCell` picks `'detox'` whenever `totals` hold no activity time and `detoxMs > 0`, without looking at `idleMs`. A day of 9 h forgotten 仕事 and 1 h detox gets the solid `sub` outline, the wind glyph and 「・detox」 in its label, so the mark says the day went to detox when most of it went to a forgotten activity.
+**Why:** A stacked cell's label is the date alone, so a screen-reader user hears nothing of the bars. Since History draws a day's partial detox time as an outline, that outline also has no text equivalent, while a detox day's label ends in ・detox.
 
-**Context:** `dayCell` in `apps/app/src/lib/history.ts`; `sumSegments` in `packages/shared/src/stats.ts` keeps idle time out of `totals`. Older than the solid outline, which only makes the claim louder. Raised by the red-team review of the PR that outlined detox days solid (2026-09-25).
+**Context:** `SUFFIX` and `dayCell` in `apps/app/src/lib/history.ts`; `formatDuration` gives the durations. Month cells are 31 links in a row, so keep the label short. Raised by the design pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -324,16 +324,28 @@
 
 ## Design
 
-### Raise the excluded day's dashed border above 3:1
+### Raise the 24-h bar's idle dash above 3:1
 
-**What:** Make the dashed border of an excluded (計測なし) day on History reach 3:1 against the chart card, for example dashed `sub` instead of dashed `line`; check it at 1x on the 48 px month cells in both themes. The pen file first.
+**What:** Draw the idle spans of Home's 24-h bar (and the correction sheet's bar, if it dashes idle too) in dashed `sub` instead of dashed `line`, as History's excluded day now is; check it at 1x in both themes. The pen file first.
 
-**Why:** 「点線の日」 in the footnote points at that dash, but `line` is 12 % ink in light and 14 % white in dark, below the 3:1 WCAG asks of a mark that carries meaning. Since detox days became a solid `sub` outline, the excluded day is the faintest mark in the chart.
+**Why:** Dashed is the "no data" mark on both surfaces, but since History's excluded day moved to `sub` (so it clears 3:1 against the card), the bar's idle dash is the one no-data mark still in `line`, 12 % ink in light and 14 % white in dark, below the 3:1 WCAG asks of a mark that carries meaning.
 
-**Context:** `CELL.excluded` in `apps/app/src/app/(app)/(tabs)/history.tsx`; the pen draws the day as a hatch with a `$line` stroke. Dashed `sub` still differs from detox by shape. Raised by the design review of the PR that outlined detox days solid (2026-09-25).
+**Context:** `LOOK.idle` (`border border-dashed border-line`) in `apps/app/src/components/today-flow.tsx`; `design/tokens.md` §5 and `design-system/readme.md` name the idle dash. Found while fixing the excluded day's dash (2026-09-25).
 
 **Effort:** S
-**Priority:** P3
+**Priority:** P4
+**Depends on:** None
+
+### Keep an excluded day's detox outline off its dashed border
+
+**What:** Decide in the pen how an excluded day's detox part meets the cell's dashed `sub` border (for example a 1 px `chip` gap inside the dash, with end radii of 6 − inset, or no side lines on that slice), then implement it and check a manually excluded day of all detox at 1x in the month view.
+
+**Why:** History draws an excluded day's detox part as a solid `sub` outline at full width, so its side lines lie against the dash in the same tone and fill its gaps. On a day excluded by hand after a whole day of detox, the cell reads as a solid outline without the wind glyph, close to a detox day, and the dash that marks 「点線の日」 is lost.
+
+**Context:** `CELL.excluded` in `apps/app/src/app/(app)/(tabs)/history.tsx`; `sliceLook`, `EXCLUDED_BORDER_PX` and `dayCell` in `apps/app/src/lib/history.ts` (a gap would also come off the slices' track height). The pen's excluded day is an `auto_unused` day, which holds no detox, so the pen needs a manual one. A 1 px `p-px` gap was tried in the ship review and taken back, because it changes the cell's spacing without the pen. Raised by the Claude adversarial pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ### Space the correction panels' groups 20 apart, as tokens.md asks

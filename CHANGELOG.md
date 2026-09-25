@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.10.0.0] - 2026-09-25
+
+### Added
+
+- 記録 shows how much of a day went to detox. A day that mixed work and
+  detox stacks its detox time as an outlined part on top of its
+  activity colours, and a 計測なし day shows its detox part too.
+- 状態別 ends with a detox row (total and 1日あたり over the measured
+  days) whenever the range holds detox time.
+
+### Changed
+
+- A day that was mostly left idle, with some detox in it, now shows as
+  an ordinary day with its detox part, instead of being claimed as a
+  whole day of detox. A day counts as a detox day only when it has no
+  activity time and at least as much detox as idle time.
+- The dashed border of a 計測なし day is drawn in the secondary text
+  tone, so it stands out from the card at the WCAG 3:1 contrast asked of
+  a mark that carries meaning.
+
+### Fixed
+
+- A full 計測なし day's bar fits inside its dashed border, so its top is
+  no longer cut off.
+
 ## [0.9.1.0] - 2026-09-25
 
 ### Changed

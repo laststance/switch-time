@@ -9,7 +9,7 @@ export type SwitchLike = {
 
 export type Segment = {
   switchId: string
-  /** null = detox: drawn like any span, never totalled. */
+  /** null = detox: drawn like any span, left out of `totals` (History's 状態別 sums the days' `detoxMs` instead). */
   activityId: string | null
   start: number
   end: number

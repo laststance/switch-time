@@ -1,5 +1,5 @@
 {
-  "version": "2.18",
+  "version": "2.19",
   "children": [
     {
       "type": "frame",
@@ -1998,7 +1998,7 @@
       "context": "div",
       "clip": true,
       "width": 402,
-      "height": 1140,
+      "height": 1194,
       "fill": "$bg",
       "layout": "vertical",
       "children": [
@@ -2023,7 +2023,7 @@
               "name": "div",
               "context": "div",
               "width": "fill_container",
-              "height": 983,
+              "height": 1037,
               "layout": "vertical",
               "gap": 14,
               "children": [
@@ -2516,7 +2516,7 @@
                               },
                               "width": "fill_container",
                               "height": 132,
-                              "stroke": "$line",
+                              "stroke": "$sub",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner"
                             },
@@ -2749,10 +2749,11 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "r8jey",
+                              "id": "jeU08",
                               "name": "div",
                               "context": "div",
                               "width": "fill_container",
+                              "height": 132,
                               "layout": "vertical",
                               "gap": 1.5,
                               "justifyContent": "end",
@@ -2765,25 +2766,17 @@
                                     0,
                                     0
                                   ],
-                                  "id": "jhMxS",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-6",
+                                  "id": "UOOHF",
+                                  "name": "detox segment",
                                   "width": "fill_container",
-                                  "height": 25.89
+                                  "height": 33,
+                                  "stroke": "$sub",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner"
                                 },
                                 {
                                   "type": "rectangle",
-                                  "id": "OoHoP",
-                                  "name": "div",
-                                  "context": "div",
-                                  "fill": "$activity-5",
-                                  "width": "fill_container",
-                                  "height": 11.98
-                                },
-                                {
-                                  "type": "rectangle",
-                                  "id": "Elv26",
+                                  "id": "O0jV8v",
                                   "name": "div",
                                   "context": "div",
                                   "fill": "$activity-4",
@@ -2792,7 +2785,7 @@
                                 },
                                 {
                                   "type": "rectangle",
-                                  "id": "PuWkQ",
+                                  "id": "ZgBCC",
                                   "name": "div",
                                   "context": "div",
                                   "fill": "$activity-3",
@@ -2801,7 +2794,7 @@
                                 },
                                 {
                                   "type": "rectangle",
-                                  "id": "Fie8h",
+                                  "id": "dVw34",
                                   "name": "div",
                                   "context": "div",
                                   "fill": "$activity-2",
@@ -2816,7 +2809,7 @@
                                     6,
                                     6
                                   ],
-                                  "id": "TyeJI",
+                                  "id": "q7j8IH",
                                   "name": "div",
                                   "context": "div",
                                   "fill": "$activity-1",
@@ -4117,6 +4110,129 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KsTpu",
+                      "name": "detox row",
+                      "context": "div",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "HHvHk",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "U8kbx",
+                              "name": "detox chip",
+                              "context": "span",
+                              "width": 26,
+                              "height": 26,
+                              "cornerRadius": 10,
+                              "stroke": "$sub",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "zsyA6",
+                                  "name": "wind",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "wind",
+                                  "library": "lucide",
+                                  "fill": "$ink"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PV78O",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SA0BW",
+                                  "name": "detox",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "detox",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "tTxeG",
+                              "name": "6h 30m",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "6h 30m",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RsedG",
+                              "name": "span",
+                              "context": "span",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                20.44
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Z3GCR",
+                                  "name": "1h 05m",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "1h 05m",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "right",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "X4tIQT",
+                          "name": "detox track (no target)",
+                          "context": "div",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 8,
+                          "fill": "$chip",
+                          "cornerRadius": 4,
+                          "layout": "vertical"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -5007,7 +5123,7 @@
                               },
                               "width": "fill_container",
                               "height": 132,
-                              "stroke": "$line",
+                              "stroke": "$sub",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner"
                             },
@@ -5991,7 +6107,7 @@
                               },
                               "width": "fill_container",
                               "height": 132,
-                              "stroke": "$line",
+                              "stroke": "$sub",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner"
                             },
@@ -6190,7 +6306,7 @@
                               },
                               "width": "fill_container",
                               "height": 132,
-                              "stroke": "$line",
+                              "stroke": "$sub",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner"
                             },
@@ -7412,7 +7528,7 @@
                               },
                               "width": "fill_container",
                               "height": 132,
-                              "stroke": "$line",
+                              "stroke": "$sub",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner"
                             },
