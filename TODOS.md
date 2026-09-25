@@ -2,18 +2,6 @@
 
 ## Home
 
-### Start detox from the first-launch screen
-
-**What:** Offer detox as a starting state on `FirstLaunch`, next to the activity buttons.
-
-**Why:** A new account cannot begin on detox. `DetoxRow` and the `0` hotkey live in `HomeBody`, which only mounts once `switches.current` is non-null, so the first tap has to be a real activity. That records a span the user did not want and then has to correct.
-
-**Context:** Deliberate in the approved plan: first launch asks 「いま何をしていますか？」 and picking an activity is the onboarding. The API already supports it (`domain.test.ts`, "the very first tap can be detox"), so this is a UI-only change plus an e2e that signs up and presses detox without touching an activity. Raised by the Codex adversarial pass during the 0.1.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Say why a tap on ホーム was refused
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
@@ -21,6 +9,30 @@
 **Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
 
 **Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Give the first-launch screen Home's hotkeys
+
+**What:** Let the digit keys pick an activity and `0` start detox on the first-launch screen, as they do on Home, by moving the `useWebKeydown` handler (`hotkeyIndex`, `isDetoxHotkey` in `apps/app/src/lib/hotkeys.ts`) out of `HomeBody` so `FirstLaunch` gets it too.
+
+**Why:** Since 0.20.0.0 a new account can start on detox by pressing the detox row on the first-launch screen, but the keys still do nothing there: the handler lives in `HomeBody` in `apps/app/src/app/(app)/(tabs)/index.tsx`, which only mounts once `switches.current` is non-null.
+
+**Context:** What is left of "Start detox from the first-launch screen", which named both the row and the `0` hotkey; the PR that shipped 0.20.0.0 added the row only. Home's handler also gates the detox re-tap on `detoxRenewable`, which has no meaning before the first switch.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Roll a refused tap back to what the server last confirmed
+
+**What:** Make `useSwitchTo`'s `onError` restore the last state the server confirmed, not the `previous` it saved, when taps were queued: give each optimistic row its own token, restore only while the cache still holds this tap's row, and never restore another tap's optimistic row (invalidate instead).
+
+**Why:** TanStack runs `onMutate` before a scoped mutation waits its turn, so a queued tap saves the earlier tap's optimistic row as its `previous`. If both fail (an outage fails them together) and the refetch fails too, the second rollback brings back the first tap's row: Home shows a switch the server never recorded, with no error, until a refetch succeeds. A first tap failing while a second waits also wipes the second's row, so first launch flashes back. Reachable since the first tap, and easier since first launch offers detox (0.20.0.0).
+
+**Context:** `apps/app/src/hooks/use-switch-to.ts` (`onMutate`, `onError`, one `scope`). Use a token object, not a module `let` alias: the React Compiler folds such an alias into a comparison with itself. An e2e can hold two `switchTo` routes and fail both while holding `switches.current`. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
@@ -39,6 +51,18 @@
 **Depends on:** None
 
 ## Settings
+
+### Say in the unused-day hint that an untapped day ends the streak
+
+**What:** Reword the first sentence of the hint under 「使わなかった日を除外」 (`/excluded-days`), 「一度も切り替えなかった日は、平均と連続記録から外します。」, so it says the day leaves the averages and ends the streak there, instead of reading as if the streak skips it. Pen first.
+
+**Why:** `streak()` in `packages/shared/src/stats.ts` skips only manually excluded days (`status.excluded === 'manual'`); an automatically excluded day is not measured, so the streak stops at it. 「連続記録から外します」 reads like the manual case, so a user expects an untapped day to keep the streak going.
+
+**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx`; the pen board is 設定＋除外シート (hint `GOOSV`). The wording predates 0.20.0.0, which only dropped 「計測なし」 from it. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Say why the 活動項目 editor refused an add, a reorder or an archive
 
@@ -224,18 +248,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Name the detox re-tap in the unused-day setting's hint
-
-**What:** Add to the hint under 「使わなかった日を除外」 (`/excluded-days`) that pressing detox again after its week starts another week of counting, next to the rule it already states.
-
-**Why:** Home says so on the last day and past the week, but the setting that explains the 7-day rule still reads as if a detox stops counting for good after it.
-
-**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx` (`DETOX_MEASURED_DAYS_MAX`); the re-tap is `switchTo`'s `starts_run` row (the PR that closed the re-tap and last-day items). New text, so the pen file first.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Check how screen readers speak the `9h 00m` durations
 
 **What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in the day cell's aria-label; the correction row (`apps/app/src/app/(app)/correction.tsx`) and the 状態別 row are read from their visible text today, so they need an aria-label of their own to carry it. While listening, also judge the day cell's `・` separators (one per activity, a pause or 中黒 read aloud?) and its length when swiping through the 31 month cells; if it is too long, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
@@ -267,6 +279,18 @@
 **Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `detox の日` makes an hour of it read exactly like a detox day (`9月9日（水）・detox の日 1h 00m`), one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
 
 **Context:** `activityNameSchema` is `z.string().trim().min(1).max(20)`; `cellLabel` in `apps/app/src/lib/history.ts`. Raised by the Red Team of the ship review of the PR that made History's day cells read their times (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
+### Renew a detox run on the server only while auto-exclusion is on
+
+**What:** Make `switchTo` start a new detox run past the week (`starts_run`) only when the account's `autoExcludeUnusedDays` is on, as Home already does.
+
+**Why:** Home offers the renewal only while the rule is on (`detoxRenewable`), but the API checks the week alone. A tab that still shows the rule as on, after another device turned it off, can renew the run; turning the rule back on later then counts the week from that press.
+
+**Context:** `switchTo` in `apps/api/src/rpc/switches.ts` (the `detoxRunPastWeek` branch) already reads the stored zone from the settings row, so the flag is one column more. Add an API test for the rule off. Raised by the Codex outside voice during the plan review of the PR that let a new account start on detox (2026-09-25).
 
 **Effort:** S
 **Priority:** P4

@@ -193,9 +193,23 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   await page.getByRole('link', { name: '未使用日の自動除外' }).click()
   const sheet = page.getByRole('dialog', { name: '未使用日の扱い' })
   await expect(sheet).toBeVisible()
+  // The hint opens with the rule itself: an untapped day leaves the averages and the streak
+  await expect(
+    sheet.getByText(
+      '一度も切り替えなかった日は、平均と連続記録から外します。',
+      { exact: false },
+    ),
+  ).toBeVisible()
   await expect(
     sheet.getByText(
       'デトックスを続けた日は、始めた翌日から7日間は計測に入り、その後は「切替なし」として外します。',
+      { exact: false },
+    ),
+  ).toBeVisible()
+  // The hint also names the way back after the week: a detox re-tap counts its own day and starts another 7 days.
+  await expect(
+    sheet.getByText(
+      '7日を過ぎてからデトックスを押し直すと、その日から計測に戻り、翌日からまた7日間計測に入ります。',
       { exact: false },
     ),
   ).toBeVisible()
