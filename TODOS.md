@@ -6,7 +6,7 @@
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
 
-**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
+**Why:** A refused tap only falls back to the last state the server confirmed (`src/lib/optimistic-switch.ts`), so the clock jumps back without a word. On the first-launch screen (a button, the detox row or a digit hotkey), a refused first tap swaps Home back to the first-launch screen just as silently. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
 
 **Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
 
@@ -14,28 +14,64 @@
 **Priority:** P3
 **Depends on:** None
 
-### Give the first-launch screen Home's hotkeys
+### Tell keyboard and screen-reader users about the digit hotkeys
 
-**What:** Let the digit keys pick an activity and `0` start detox on the first-launch screen, as they do on Home, by moving the `useWebKeydown` handler (`hotkeyIndex`, `isDetoxHotkey` in `apps/app/src/lib/hotkeys.ts`) out of `HomeBody` so `FirstLaunch` gets it too.
+**What:** Expose the web hotkeys on the buttons they press: `aria-keyshortcuts` (`1`…`9` by position, `0` for detox) on `SwitchButton` and `DetoxRow`, on ホーム and on the first-launch screen alike, and decide in pen whether a visible key hint belongs next to them.
 
-**Why:** Since 0.20.0.0 a new account can start on detox by pressing the detox row on the first-launch screen, but the keys still do nothing there: the handler lives in `HomeBody` in `apps/app/src/app/(app)/(tabs)/index.tsx`, which only mounts once `switches.current` is non-null.
+**Why:** The digit keys pick activities and `0` starts detox on both screens, but nothing on screen or in the accessibility tree says so, so only someone who read the README finds them.
 
-**Context:** What is left of "Start detox from the first-launch screen", which named both the row and the `0` hotkey; the PR that shipped 0.20.0.0 added the row only. Home's handler also gates the detox re-tap on `detoxRenewable`, which has no meaning before the first switch.
+**Context:** `useSwitchHotkeys` (`apps/app/src/hooks/use-switch-hotkeys.ts`) and `hotkeyPick` (`apps/app/src/lib/hotkeys.ts`) map a key to the list the buttons are drawn from, so the button knows its own key. Check that react-native-web passes `aria-keyshortcuts` through before relying on it; a visible hint is a design change and starts in pen.
 
 **Effort:** S
 **Priority:** P3
 **Depends on:** None
 
-### Roll a refused tap back to what the server last confirmed
+### Bind every switch tap to the account it was made for
 
-**What:** Make `useSwitchTo`'s `onError` restore the last state the server confirmed, not the `previous` it saved, when taps were queued: give each optimistic row its own token, restore only while the cache still holds this tap's row, and never restore another tap's optimistic row (invalidate instead).
+**What:** Send the account a tap was made for with `switches.switchTo` (as `settings.update` takes `forUserId`), and have the API refuse it with `CONFLICT` when the session's user is someone else.
 
-**Why:** TanStack runs `onMutate` before a scoped mutation waits its turn, so a queued tap saves the earlier tap's optimistic row as its `previous`. If both fail (an outage fails them together) and the refetch fails too, the second rollback brings back the first tap's row: Home shows a switch the server never recorded, with no error, until a refetch succeeds. A first tap failing while a second waits also wipes the second's row, so first launch flashes back. Reachable since the first tap, and easier since first launch offers detox (0.20.0.0).
+**Why:** When another tab signs in as someone else, `useAccountScope` drops this tab's taps still queued behind a running one (`startTapSession`), but only once this tab's session refetch sees the new user. A web tab that is hidden while its running tap settles keeps the next tap paused (TanStack continues a mutation only while the page is focused), and on refocus `resumePausedMutations` sends it before the session read that the same focus starts. So the old account's queued tap goes out with the new cookie; a detox tap (`activityId: null`) is then recorded on the new account, since only an activity id is checked against the account.
 
-**Context:** `apps/app/src/hooks/use-switch-to.ts` (`onMutate`, `onError`, one `scope`). Use a token object, not a module `let` alias: the React Compiler folds such an alias into a comparison with itself. An e2e can hold two `switchTo` routes and fail both while holding `switches.current`. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
+**Context:** `startTapSession` in `apps/app/src/lib/optimistic-switch.ts`, `useSwitchTo` (`apps/app/src/hooks/use-switch-to.ts`), `switchTo` in `apps/api/src/rpc/switches.ts`; `settings.update` already does this check (`apps/api/src/rpc/settings.ts`, see "Bind every settings write to the account it was made for"). Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** None
+
+### Keep an older read from replacing a newer confirmed tap
+
+**What:** Let a tap record the cached `switches.current` as the state to fall back to only when that read is no older than the answer the session already confirmed, for example by comparing the rows' `createdAt` or the time the read started with the time of the last `confirmTap`.
+
+**Why:** `placeTap` records any cached row that is not a placeholder. A `switches.current` read started by something else (the correction sheet's refetch, a window focus) before tap A is stored can land after A's `confirmTap`; the next tap then records the state from before A. If every later tap of the burst is refused, the fallback shows that older state while A runs on the server, until the last tap's refetch lands (for good if that refetch fails).
+
+**Context:** `placeTap` and `confirmTap` in `apps/app/src/lib/optimistic-switch.ts`; `useSwitchTo`'s `onMutate` cancels only the reads already running. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
+### Record a queued tap at the time it was pressed
+
+**What:** Decide how a tap that waits in the queue keeps its own time: send the press time with `switches.switchTo` and have the API accept it within a bound of its own clock, or stop the scope from holding the next tap while the last one's refetch runs.
+
+**Why:** The server stamps a tap when it arrives. The last tap of a burst holds the scope until its `switches.current` and `listByDay` refetches land (up to about 61 s when `listByDay` is slow: a 30 s deadline, a retry, another 30 s), and a hidden web tab holds a queued tap until it is focused again. A tap pressed meanwhile is recorded late, and the time in between goes to the activity before it, with nothing on screen to say so.
+
+**Context:** `useSwitchTo`'s `onSettled` in `apps/app/src/hooks/use-switch-to.ts`, `const now = Date.now()` in `switchTo` (`apps/api/src/rpc/switches.ts`), `REQUEST_TIMEOUT_MS`. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** None
+
+### Keep a tap from before a sign-out in line with the taps after signing back in
+
+**What:** Keep the tap still running at sign-out or sign-in ahead of the next account's first tap, for example by having `startTapSession` wait for it, or by not letting `queryClient.clear()` drop the switch-to scope's queue.
+
+**Why:** `MutationCache.clear()` also clears the scopes, so a tap still on its way and the first tap after signing back in run side by side. Signing out and straight back in as the same account, the old tap can be stored after the new one (both wait on the account's lock, up to 30 s); the old tap's settle does not refetch, and the new one's refetch can come back before the old tap is stored, so the screen shows the new pick while the server runs the old one.
+
+**Context:** `useSignOut` (`apps/app/src/hooks/use-sign-out.ts`) and the sign-in screen (`apps/app/src/app/(auth)/sign-in.tsx`) call `clear()` then `startTapSession` (`apps/app/src/lib/optimistic-switch.ts`); `isLastTap` leaves the refetch to the new session. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ### Keep a detox span's outline whole when it is narrower than the bar's rounded end
@@ -284,13 +320,13 @@
 **Priority:** P4
 **Depends on:** None
 
-### Renew a detox run on the server only while auto-exclusion is on
+### Refetch the stats after a tap made during their first load
 
-**What:** Make `switchTo` start a new detox run past the week (`starts_run`) only when the account's `autoExcludeUnusedDays` is on, as Home already does.
+**What:** When a mutation invalidates a stats query that has no data yet and is loading, cancel that load and fetch again, instead of letting the invalidation join it.
 
-**Why:** Home offers the renewal only while the rule is on (`detoxRenewable`), but the API checks the week alone. A tab that still shows the rule as on, after another device turned it off, can renew the run; turning the rule back on later then counts the week from that press.
+**Why:** TanStack Query cancels a running fetch on invalidation only when the query already has data; a first load is reused. A tap (or a correction) stored while 記録's stats are loading for the first time is answered by that older read, and the stats leave out the tap until the next refetch, while Home already shows it.
 
-**Context:** `switchTo` in `apps/api/src/rpc/switches.ts` (the `detoxRunPastWeek` branch) already reads the stored zone from the settings row, so the flag is one column more. Add an API test for the rule off. Raised by the Codex outside voice during the plan review of the PR that let a new account start on detox (2026-09-25).
+**Context:** `invalidateKeys` (`apps/app/src/lib/query.ts`), called from `useSwitchTo`'s `onSettled` and the other mutation hooks; `Query.fetch` in `@tanstack/query-core`. Found by the Codex red-team pass of the ship review of 0.22.0.0 (2026-09-25).
 
 **Effort:** S
 **Priority:** P4
