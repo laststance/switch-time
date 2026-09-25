@@ -17,6 +17,7 @@ import {
   offeredUndo,
   onPressedDay,
   openedCut,
+  noteDayClass,
   pickRequest,
   refusalMessage,
   reselectedRow,
@@ -1460,29 +1461,23 @@ test('a carried-in detox record never reports idle time, since detox is never id
   expect(effects).toEqual([])
 })
 
-// Detox from 9/7 22:00 until 9/9 0:00, carried into 9/8, which has no row of its own.
-const carriedDetox = () => {
-  const day = '2026-09-08'
+test('a cut of a detox past its measured week says the untapped day becomes 計測できた日', () => {
+  // Arrange: detox from 8/31 22:00 until 9/9 0:00, carried into 9/8 with no row of its own. Its week measured 9/1 … 9/7,
+  // so the server counts 9/8 as unused and the cut's own switch is what measures it.
   const carriedIn = correctionRows(
     {
-      carriedIn: row('d', null, at('2026-09-07', 22)),
+      carriedIn: row('d', null, at('2026-08-31', 22)),
       rows: [],
       carriedOut: row('h', 'home', at('2026-09-09', 0)),
     },
     activities,
     {
-      ...dayBounds(day, TZ),
+      ...dayBounds('2026-09-08', TZ),
       now: at('2026-09-09', 10).getTime(),
       timeZone: TZ,
     },
   )[0]
   if (!carriedIn) throw new Error('no carried-in row')
-  return carriedIn
-}
-
-test('a cut of a detox past its measured week says the untapped day becomes 計測できた日', () => {
-  // Arrange: the server counts 9/8 as unused (the detox's week is over), so the cut's own switch is what measures it
-  const carriedIn = carriedDetox()
 
   // Act
   const notes = cutNotes(
@@ -1493,6 +1488,47 @@ test('a cut of a detox past its measured week says the untapped day becomes 計�
 
   // Assert
   expect(notes).toEqual(['区切ると、この日は計測できた日になります'])
+})
+
+test('the 計測 note never asks about today, so a sheet left open over midnight fetches the day afresh', () => {
+  // Arrange: an answer cached for the day, as if it had been fetched earlier
+  const query = {
+    isFetching: false,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+
+  // Act
+  const dayClass = noteDayClass(false, query)
+
+  // Assert
+  expect(dayClass).toBeNull()
+})
+
+test('the 計測 note waits while the past day’s class is loading or refetching after an edit', () => {
+  // Arrange: an answer from before an edit that is still being read again
+  const refetching = {
+    isFetching: true,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+  const loading = { isFetching: true, data: undefined }
+
+  // Act & Assert
+  expect(noteDayClass(true, refetching)).toBeUndefined()
+  expect(noteDayClass(true, loading)).toBeUndefined()
+})
+
+test('the 計測 note reads a past day’s class as the server reports it', () => {
+  // Arrange
+  const query = {
+    isFetching: false,
+    data: { days: [{ excluded: 'auto_unused' as const }] },
+  }
+
+  // Act
+  const dayClass = noteDayClass(true, query)
+
+  // Assert
+  expect(dayClass).toBe('auto_unused')
 })
 
 test('the 計測 line waits while the viewed day’s stats are still loading', () => {
