@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import { formatDay, formatDuration, formatElapsed, formatTime } from './format'
 
@@ -11,6 +11,25 @@ test('the elapsed hero reads H:MM:SS and keeps counting past 24 hours', () => {
 
   // Assert
   expect(readouts).toEqual(['0:00:59', '1:00:00', '27:15:03', '0:00:00'])
+})
+
+test('the since line builds one formatter per time zone, however often it renders', () => {
+  // Arrange: zones no other test here formats, so the cache starts empty for them
+  const construct = vi.spyOn(Intl, 'DateTimeFormat')
+  const instant = new Date('2026-09-09T00:05:00Z')
+
+  // Act
+  const readouts = [
+    formatTime(instant, 'Europe/Lisbon'),
+    formatTime(instant, 'Asia/Kolkata'),
+    formatTime(instant, 'Europe/Lisbon'),
+    formatTime(instant, 'Asia/Kolkata'),
+  ]
+
+  // Assert
+  expect(readouts).toEqual(['1:05', '5:35', '1:05', '5:35'])
+  expect(construct).toHaveBeenCalledTimes(2)
+  construct.mockRestore()
 })
 
 test('the header date and the since line follow the stored time zone', () => {
