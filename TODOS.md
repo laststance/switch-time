@@ -236,16 +236,16 @@
 **Priority:** P3
 **Depends on:** None
 
-### Tell a detox day apart from an excluded day on History
+### Show a day's partial detox time on History
 
-**What:** Give the detox cell its own outline (or narrow History's footnote to the excluded outline and add a short legend for detox), so 点線の日 in 「アプリを使わなかった N日 は平均から除外しています（点線の日）」 means only the days left out.
+**What:** Draw the detox part of a day that also has activity time on History's bar, for example as an outlined segment in `sub` at the top of the stack, and decide whether 状態別 gets a detox row.
 
-**Why:** Both cells are dashed (`CELL.detox` is `border-dashed border-sub`, the excluded cell `border-dashed` in the line tone). Since a detox left on over a weekend measures the days it covers, a week can show three dashed days while the footnote counts one, and the two detox days, which stay in the average, read as excluded.
+**Why:** Only a day spent all in detox is marked (the solid `sub` outline with the wind glyph). A detox weekend that starts on 金 evening and ends on 月 morning shows 土 and 日 as detox, but the detox hours of 金 and 月 are bare track, the same as time nobody recorded.
 
-**Context:** `dayCell` in `apps/app/src/lib/history.ts`, the footnote in `apps/app/src/app/(app)/(tabs)/history.tsx`. A visual change, so the pen file first. Found in review of the PR that let detox days count.
+**Context:** `stackSlices` / `dayCell` in `apps/app/src/lib/history.ts` stack `stat.totals`, which leave detox out (`detoxMs` is its own field). New drawing, so the pen file first. Raised by the design review of the PR that outlined detox days solid (2026-09-25).
 
 **Effort:** S
-**Priority:** P2
+**Priority:** P3
 **Depends on:** None
 
 ### Decide whether a detox left running for weeks keeps measuring days
@@ -300,16 +300,16 @@
 
 ## Design
 
-### Raise the sub token's contrast to WCAG AA
+### Raise the excluded day's dashed border above 3:1
 
-**What:** Darken `sub` in the light theme (and lighten it in dark) until 12 px notes reach 4.5:1 on `chip`, the selected card's fill, as well as on `sheetBg`; the pen file first, then `design-system/`, then the code copies.
+**What:** Make the dashed border of an excluded (計測なし) day on History reach 3:1 against the chart card, for example dashed `sub` instead of dashed `line`; check it at 1x on the 48 px month cells in both themes. The pen file first.
 
-**Why:** The carried-in panel's notes (where the record started, what a pick also changes, how a cut changes the totals) are `text-sub` at 12 px on the selected card's `bg-chip`, about 3.7:1, below AA. They carry information the user needs before an edit to an earlier day.
+**Why:** 「点線の日」 in the footnote points at that dash, but `line` is 12 % ink in light and 14 % white in dark, below the 3:1 WCAG asks of a mark that carries meaning. Since detox days became a solid `sub` outline, the excluded day is the faintest mark in the chart.
 
-**Context:** `sub` is app-wide (hints, labels, durations), so the change is a token change, not a one-off class. The notes carry `gstack-shortcut(dec-f15d7e22)` in `apps/app/src/app/(app)/correction.tsx` (the `NOTE` class); the irreversible case (the archived box) is already `text-ink`. Accepted as a shortcut in the design review of the carried-in row's panel (2026-09-24) (D11).
+**Context:** `CELL.excluded` in `apps/app/src/app/(app)/(tabs)/history.tsx`; the pen draws the day as a hatch with a `$line` stroke. Dashed `sub` still differs from detox by shape. Raised by the design review of the PR that outlined detox days solid (2026-09-25).
 
 **Effort:** S
-**Priority:** P2
+**Priority:** P3
 **Depends on:** None
 
 ### Space the correction panels' groups 20 apart, as tokens.md asks
@@ -319,18 +319,6 @@
 **Why:** `design/tokens.md` asks for at least 20 between groups; both panels use 12 (`gap-3` on the `Actions` container), so the groups read as one block.
 
 **Context:** The carried-in panel matched the existing panel on purpose so the two stay consistent (design review of the carried-in row's panel (2026-09-24), D9); change both together.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Check the 24-h bar's detox legend swatch at 1x
-
-**What:** Look at the wide legend's detox marker in both themes and decide whether an 8 px square with a 1 px dashed `line` border is legible.
-
-**Why:** At that size a dashed border yields one or two dashes per side, and in dark `line` is a low-alpha white, so the marker may read as an empty square rather than "dashed like the span".
-
-**Context:** `today-flow.tsx` renders it as `cn('h-2 w-2 rounded-[2px]', look.className)`. If it is illegible, either grow the detox swatch a little or give the legend square `border-sub`, which matches the History detox cell's tone. Raised by the design pass during the 0.1.0.0 ship; deferred because it needs eyes on a screen, not a code read.
 
 **Effort:** S
 **Priority:** P3

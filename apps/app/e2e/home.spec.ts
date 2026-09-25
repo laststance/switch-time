@@ -4,6 +4,23 @@ import { apiAs, signUp } from './helpers'
 
 const readout = /^\d+:\d{2}:\d{2}$/
 
+// The API seeds Asia/Tokyo, so fixtures are written in that zone (fixed +09:00, no DST), as in history.spec.ts.
+const today = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(
+    new Date(),
+  )
+const shift = (day: string, n: number) =>
+  new Date(new Date(`${day}T00:00:00Z`).getTime() + n * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
+const at = (day: string, hour: number) =>
+  new Date(`${day}T${String(hour).padStart(2, '0')}:00:00+09:00`)
+const idOf = (list: { id: string; name: string }[], name: string) => {
+  const activity = list.find((row) => row.name === name)
+  if (!activity) throw new Error(`no activity named ${name}`)
+  return activity.id
+}
+
 test('the first launch screen disappears after the first switch', async ({
   page,
 }) => {
@@ -91,9 +108,72 @@ test('tapping detox unpresses every activity, dims the readout and outlines the 
   // The theme follows the OS, so the dimmed readout is checked against the `sub` text next to it rather than a literal colour.
   const sub = await subtext.evaluate((el) => getComputedStyle(el).color)
   await expect(page.getByText(readout)).toHaveCSS('color', sub)
-  await expect(
-    page.getByRole('img', { name: '今日の流れ' }).locator('div').last(),
-  ).toHaveCSS('border-top-style', 'dashed')
+  // The open detox span is a solid `sub` outline: dashed is kept for idle spans, so the two differ by shape as well as tone.
+  const span = page
+    .getByRole('img', { name: '今日の流れ' })
+    .locator('div')
+    .last()
+  await expect(span).toHaveCSS('border-top-style', 'solid')
+  await expect(span).toHaveCSS('border-top-color', sub)
+})
+
+test('an activity left running past the idle threshold is dashed in line on the bar, unlike detox', async ({
+  page,
+}) => {
+  // Arrange: 仕事 from 9:00 yesterday runs into today until the sign-up tap, past the 12 h idle threshold
+  await signUp(page)
+  const api = await apiAs(page)
+  const yesterday = shift(today(), -1)
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+  })
+
+  // Act
+  await page.reload()
+
+  // Assert: the carried-in span is idle, dashed and not in the `sub` tone of the bar's own hour labels
+  const span = page
+    .getByRole('img', { name: '今日の流れ' })
+    .locator('div')
+    .first()
+  await expect(span).toHaveCSS('border-top-style', 'dashed')
+  const sub = await page
+    .getByText('0:00', { exact: true })
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(span).not.toHaveCSS('border-top-color', sub)
+})
+
+test('a detox left running overnight stays a solid sub outline on the bar, not an idle dash', async ({
+  page,
+}) => {
+  // Arrange: detox from 9:00 yesterday runs into today until the sign-up tap, past the 12 h idle threshold
+  await signUp(page)
+  const api = await apiAs(page)
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(yesterday, 9) }],
+  })
+
+  // Act
+  await page.reload()
+
+  // Assert: detox outranks idle, so the carried-in span keeps the detox outline in the `sub` tone of the hour labels
+  const span = page
+    .getByRole('img', { name: '今日の流れ' })
+    .locator('div')
+    .first()
+  await expect(span).toHaveCSS('border-top-style', 'solid')
+  const sub = await page
+    .getByText('0:00', { exact: true })
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(span).toHaveCSS('border-top-color', sub)
 })
 
 test('digit 0 starts detox and a digit hands the clock back to an activity', async ({
@@ -162,4 +242,15 @@ test('a reload while detox lands on Home in detox, not on the first-launch scree
   ).toHaveCount(0)
   // The hero's name, the detox row's label and the 「今日の流れ」 legend entry: without the legend there would be two.
   await expect(page.getByText('detox', { exact: true })).toHaveCount(3)
+  // The legend's square is drawn like the span it names: a solid outline in the `sub` tone of its label.
+  const card = page
+    .locator('div')
+    .filter({ has: page.getByText('今日の流れ', { exact: true }) })
+    .filter({ has: page.getByRole('img', { name: '今日の流れ' }) })
+    .last()
+  const label = card.getByText('detox', { exact: true })
+  const square = label.locator('xpath=preceding-sibling::div[1]')
+  await expect(square).toHaveCSS('border-top-style', 'solid')
+  const sub = await label.evaluate((el) => getComputedStyle(el).color)
+  await expect(square).toHaveCSS('border-top-color', sub)
 })

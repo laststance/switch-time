@@ -11,6 +11,7 @@ import { StrokeIcon } from '@/components/stroke-icon'
 import { useAllActivities } from '@/hooks/use-activities'
 import { useRangeStats } from '@/hooks/use-range-stats'
 import { useTokenColor } from '@/hooks/use-token-color'
+import { DETOX } from '@/lib/detox'
 import {
   historyView,
   type BreakdownRow,
@@ -18,7 +19,7 @@ import {
   type HistoryView,
   type Range,
 } from '@/lib/history'
-import { INFO, PENCIL } from '@/lib/icons'
+import { activityIcon, INFO, PENCIL } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 const UNIT: Record<Range, string> = { week: '週', month: '月' }
@@ -51,15 +52,25 @@ function StepButton({
 }
 
 // Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `line` border on both platforms
-// (ponytail: the native hatch is skipped, as in TodayFlow), and a day that was all detox the same dash in `sub`, the detox tone.
+// (ponytail: the native hatch is skipped, as in TodayFlow). Dashed is kept for 「点線の日」 alone: a day that was all detox
+// is outlined solid in `sub`, the detox tone, and carries the wind glyph, so it never reads as an excluded day.
 const CELL = {
   stack: 'bg-chip',
-  detox: 'border border-dashed border-sub bg-chip',
+  detox: 'border border-sub bg-chip',
   excluded: 'border border-dashed border-line bg-chip',
   empty: 'bg-chip',
 }
 
-function DayCell({ cell, height }: { cell: Cell; height: number }) {
+function DayCell({
+  cell,
+  height,
+  glyphSize,
+}: {
+  cell: Cell
+  height: number
+  glyphSize: number
+}) {
+  const sub = useTokenColor('sub')
   const column = (
     <>
       <View
@@ -76,6 +87,21 @@ function DayCell({ cell, height }: { cell: Cell; height: number }) {
             style={{ height: slice.height, backgroundColor: slice.color }}
           />
         ))}
+        {/* Decorative: the link's aria-label already ends in ・detox. `text-sub` feeds currentColor on web. */}
+        {cell.kind === 'detox' && (
+          <View
+            aria-hidden
+            testID="detox-glyph"
+            className="text-sub absolute inset-0 items-center justify-center"
+          >
+            <StrokeIcon
+              d={activityIcon(DETOX.iconKey)}
+              size={glyphSize}
+              strokeWidth={1.8}
+              color={sub}
+            />
+          </View>
+        )}
       </View>
       <Text
         className={cn(
@@ -148,7 +174,12 @@ function Chart({
         <View key={rowIndex} className="flex-row gap-1.5">
           {row.map((cell, slot) =>
             cell ? (
-              <DayCell key={cell.day} cell={cell} height={view.barHeight} />
+              <DayCell
+                key={cell.day}
+                cell={cell}
+                height={view.barHeight}
+                glyphSize={view.detoxGlyphSize}
+              />
             ) : (
               <View key={`pad-${slot}`} className="flex-1" />
             ),

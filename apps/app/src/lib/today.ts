@@ -41,7 +41,7 @@ export function countSwitches(list: DayList | undefined): number {
   return Math.max(0, list.rows.length - (list.carriedIn ? 0 : 1))
 }
 
-/** One 「今日の流れ」 legend entry; `color` null is detox, drawn as the dashed square its spans use on the bar. */
+/** One 「今日の流れ」 legend entry; `color` null is detox, drawn as the solid `sub` outlined square its spans use on the bar. */
 export type LegendEntry = { id: string; name: string; color: string | null }
 
 /**

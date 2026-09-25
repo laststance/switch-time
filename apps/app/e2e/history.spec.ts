@@ -106,7 +106,7 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
   ).toHaveCount(0)
 })
 
-test('a day spent in detox is outlined in sub, named detox, and opens its correction sheet', async ({
+test('a day spent in detox is outlined solid in sub with the wind glyph, named detox, and opens its correction sheet', async ({
   page,
 }) => {
   // Arrange: yesterday one tap into detox at 9:00; today's 家事 tap (signUp) closes it, so the day is measured with nothing to stack
@@ -123,14 +123,15 @@ test('a day spent in detox is outlined in sub, named detox, and opens its correc
   // Act
   await page.getByRole('tab', { name: '記録' }).click()
 
-  // Assert: the day reads as detox rather than 計測なし, and its dash is the `sub` tone of its own weekday label (an untapped
-  // day dashes in `line`)
+  // Assert: the day reads as detox rather than 計測なし: a solid outline (dashed is kept for 「点線の日」) in the `sub` tone of
+  // its own weekday label, with the wind glyph inside
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
   const detox = page.getByRole('link', { name: /・detox$/ })
   await expect(detox).toHaveCount(1)
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   const track = detox.locator('div').first()
-  await expect(track).toHaveCSS('border-top-style', 'dashed')
+  await expect(track).toHaveCSS('border-top-style', 'solid')
+  await expect(detox.getByTestId('detox-glyph').locator('svg')).toBeVisible()
   const sub = await detox
     .locator('div')
     .last()

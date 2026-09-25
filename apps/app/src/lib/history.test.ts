@@ -94,6 +94,7 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
   // Assert
   expect(view.title).toBe('直近7日')
   expect(view.barHeight).toBe(132)
+  expect(view.detoxGlyphSize).toBe(14)
   expect(view.weekdays).toEqual([])
   expect(view.rows).toHaveLength(1)
   expect(
@@ -252,6 +253,7 @@ test('the month calendar pads Sunday-first rows and counts only the days up to t
   // Assert
   expect(view.title).toBe('2026年9月')
   expect(view.barHeight).toBe(48)
+  expect(view.detoxGlyphSize).toBe(12)
   expect(view.weekdays).toEqual(['日', '月', '火', '水', '木', '金', '土'])
   expect(view.rows).toHaveLength(5)
   expect(view.rows.flat().map((cell) => cell?.label ?? '·')).toEqual([
