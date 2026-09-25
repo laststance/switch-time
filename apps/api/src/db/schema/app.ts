@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   check,
+  foreignKey,
   date,
   integer,
   numeric,
@@ -11,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -65,6 +67,8 @@ export const activities = pgTable(
         `color in (${ACTIVITY_PALETTE.map((hex) => `'${hex}'`).join(', ')})`,
       ),
     ),
+    // The target of switches' (activity_id, user_id) key: a switch can only name an activity of its own account.
+    unique('activities_id_user_id_key').on(table.id, table.userId),
   ],
 )
 
@@ -76,9 +80,7 @@ export const switches = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     // null = detox: the state is "no activity", and the time until the next row is recorded to nothing.
-    activityId: uuid('activity_id').references(() => activities.id, {
-      onDelete: 'cascade',
-    }),
+    activityId: uuid('activity_id'),
     // No end time: a segment lasts until the next row (or now); the latest row is the current state.
     startedAt: timestamptz('started_at').notNull(),
     source: switchSource('source').default('tap').notNull(),
@@ -94,6 +96,13 @@ export const switches = pgTable(
       table.userId,
       table.startedAt.desc().nullsFirst(),
     ),
+    // The activity must belong to the switch's own account, whatever route writes it (not only those that check it). A null
+    // activity (detox) passes: MATCH SIMPLE skips the check when any column of the key is null.
+    foreignKey({
+      name: 'switches_activity_user_fkey',
+      columns: [table.activityId, table.userId],
+      foreignColumns: [activities.id, activities.userId],
+    }).onDelete('cascade'),
   ],
 )
 

@@ -216,7 +216,7 @@
 
 **Why:** A connection that drops after the server committed tells the user the edit was not saved. The refetch then shows it landed, and pressing ±15分 again moves the record twice, because the new baseline matches. A request refused for its input fails the same way on every press while the text asks for another try.
 
-**Context:** `failed` and `useEditLifecycle` (its `onError`) in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+**Context:** `failed` and `useEditLifecycle` (its `onError`) in `apps/app/src/hooks/use-correction.ts`; `refusalMessage`, `FAILED_MESSAGE` and `afterUndoFailure` in `apps/app/src/lib/correction.ts`. New text needs the pen file's 訂正シート・状態行 board first. Found by the pre-landing review of the PR that added the status line (2026-09-25). Since the PR that bounded timeline writes, the API cuts a request off at its 25 s deadline and says which case it is: `TIMEOUT` when nothing was saved (a retry is safe), `GATEWAY_TIMEOUT` when the cut-off came during COMMIT (it may have landed, like the app's own timeout); the app reads both as a plain failure today.
 
 **Effort:** S
 **Priority:** P3
@@ -286,40 +286,16 @@
 
 ## Database
 
-### Keep several accounts' queued writes from filling the connection pool together
+### Bound the reads that still run without a deadline
 
-**What:** Queue each user's timeline writes in the API process (a per-user mutex in front of `withUserLock`) so only one connection per user waits on the advisory lock, or take the lock with `pg_try_advisory_xact_lock` and a short backoff.
+**What:** Put the remaining single-query calls under the request's deadline, starting with the session lookup that every procedure runs (Better Auth's `getSession` through the Drizzle adapter), then `activities.list`, `settings.get` / `getSettings`, `switches.current` and `excludedDays.*`, so none of them waits on a half-open connection for longer than `REQUEST_DEADLINE_MS`.
 
-**Why:** Since 0.5.0.0, one account can hold at most 4 timeline writes in flight per API process (TOO_MANY_REQUESTS above that, `TIMELINE_WRITES_PER_USER` in `apps/api/src/rpc/base.ts`), and a request waits at most 10 s for a pool connection (`connectionTimeoutMillis` in `apps/api/src/db/client.ts`). The pool still holds 10 connections, so three accounts with bursts in flight at once can fill it with writes queued on their own locks, and every other request then waits up to those 10 s and fails. The cap is also per process: with a second API instance, one account can hold twice as many. Reads are not capped at all: `switches.listByDay` takes three pool connections at once (`switchesBetween`'s `Promise.all`), so one account refetching fast can fill the pool on its own; running those three queries on one connection would take one per request.
+**Why:** Since the PR that bounded timeline writes, every write, `activities.update` and the multi-query reads run in `inTransaction`, which destroys its connection at the deadline. The other calls still go through `db` on the pool: after a managed-database failover, a lent connection whose socket went half-open keeps such a call waiting until the OS gives up on it, minutes later. Nothing is written twice, but the request hangs past the app's 30 s, and the session lookup runs before every write, so a write can wait there before its deadline starts to matter.
 
-**Context:** The advisory lock stays for correctness across API instances; the in-process queue only stops waiters from holding connections. Left over from "Keep one account's queued writes from filling the connection pool", raised by the security pass during the day baseline's ship (2026-09-25).
+**Context:** `inTransaction` in `apps/api/src/db/client.ts` owns its client and releases it with an error at the deadline; pg's `query_timeout` is not a way out (in non-pipeline mode it leaves the active query on the client, and the pool lends that client again). Better Auth takes the `db` instance in `apps/api/src/auth.ts`, so the session lookup needs either a per-request adapter or a `Promise.race` that evicts the client some other way. Left out of that PR.
 
-**Effort:** S
+**Effort:** M
 **Priority:** P4
-**Depends on:** None
-
-### Make the database refuse a switch that names another account's activity
-
-**What:** Add a unique constraint on `activities (id, user_id)` and replace the `switches.activity_id` foreign key with a composite one, `(activity_id, user_id)` → `activities (id, user_id)`, keeping `on delete cascade`; generate the migration.
-
-**Why:** The foreign key checks only that `activity_id` exists, so the one thing that keeps a user's timeline off another account's activity is the route code: `ownActivities` in `switches.ts`. A future write path that forgets that call would store a cross-account reference: the day would total time under an activity the client cannot name, and deleting the other account would cascade into this user's timeline and remove those rows.
-
-**Context:** Nothing reaches it today: every write that takes an activity id from the client calls `ownActivities` (directly or through `assertLiveActivities`), `splitInHalf` copies the id from the user's own row, activities never change owner, and they disappear only with their account. A composite key with the default `MATCH SIMPLE` still accepts a null `activity_id` (detox). `domain.test.ts` has the stranger cases to keep green ("a replaced day cannot be written onto another account’s activity", and the mixed-in one). Raised by the testing pass and the Claude adversarial pass during the 0.2.1.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Bound how long a stuck database call keeps an account's write places
-
-**What:** Give pool queries a deadline (`query_timeout` or `statement_timeout` on `apps/api/src/db/client.ts`'s pool, with `keepAlive`), and an `idle_in_transaction_session_timeout` on the database, sized above `TIMELINE_LOCK_TIMEOUT` (10 s) and kept away from the migration runner, which shares the pool.
-
-**Why:** Since 0.5.0.0, `withUserLock` counts each account's timeline writes in flight and frees a place in `finally`. Only `lock_timeout` bounds a write today: when the connection to the database goes half-open (a managed-database failover), `db.transaction` does not settle until the OS gives up on the socket, minutes later, and after 4 such writes every tap, archive and zone change of that account is refused with TOO_MANY_REQUESTS until then.
-
-**Context:** `apps/api/src/db/migrate.ts` runs migrations through the same `db` and `pool`, so a statement deadline set on the pool also bounds the migration's lock wait and index build; set it per query in `withUserLock` (`set_config('statement_timeout', …, true)`, as it does for `lock_timeout`) if the pool-wide one is too broad. Since the correction sheet's status line (2026-09-25) the app gives up on a call after 30 s (`REQUEST_TIMEOUT_MS` in `apps/app/src/lib/deadline.ts`), but the server does not see that: the stuck write keeps its place, and it may still commit. The server's own waits before a write starts can already add up to 30 s (a pool connection for the session lookup, one for the lock, then `lock_timeout`), so size the server's whole-request bound below the client's deadline. A write that commits after the client gave up has also released its mutation scope, so the next `switchTo` or `activities.update` (an unconditional whole-row update with no revision check) can go first and be overwritten by the late one. Raised by the Claude adversarial pass during the 0.5.0.0 ship; the ordering case by both outside passes of the PR that added the status line.
-
-**Effort:** S
-**Priority:** P3
 **Depends on:** None
 
 ## Design
@@ -399,30 +375,6 @@
 **Depends on:** A mailer, for the `requireEmailVerification` route
 
 ## Infrastructure
-
-### Give the README's production image and the Compose dev image different names
-
-**What:** Tag the README's production build something other than `switch-time-api` (for example `switch-time-api:prod`), or give the Compose `api` service its own `image:` name. Update the README's `docker run` to match.
-
-**Why:** `compose.yaml` sets `name: switch-time`, and its `api` service builds the `dev` target with no `image:`, so Compose tags that image `switch-time-api:latest`. The README's `docker build -f apps/api/Dockerfile -t switch-time-api .` uses the same tag, and the last build owns it. After the README build, `docker compose up -d` without `--build` runs the production image. That image sets `NODE_ENV=production`, which neither Compose nor `.env` overrides, so `env.ts` refuses the `http://` `APP_ORIGIN` and the API exits. In the other direction, the README's `docker run … switch-time-api` starts the dev image unless the production image was just rebuilt. This is reasoned from the config, not reproduced.
-
-**Context:** README, "API" section. `pnpm dev:backend` runs `docker compose up --build`, so the usual path is safe. Found during PR #48 (2026-09-17) and left out of that PR.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Say in the README how to reach the production database from a laptop
-
-**What:** Add to the DigitalOcean steps that, while the cluster has trusted sources, a laptop needs `doctl databases firewalls append <cluster-id> --rule ip_addr:<your-ip>` before `psql` connects, including step 2's `doadmin` session. Remove that rule afterwards with `doctl databases firewalls remove <cluster-id> --uuid <rule-uuid>`, and keep the `app:<app-id>` rule.
-
-**Why:** The production cluster's only trusted source is the App Platform app (`doctl databases firewalls list <cluster-id>`). A direct `psql` from a laptop therefore times out without saying why, and the README mentions only the app rule, in step 4.
-
-**Context:** Removing the app rule cuts off `db-migrate` and the API. Deferred after the 2026-09-11 production QA run.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
 
 ### Install Node 26 in the Cloud Agent environment
 

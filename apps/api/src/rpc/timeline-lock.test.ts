@@ -7,14 +7,18 @@ import {
   type DayBaseline,
   type DayRow,
 } from '@switch-time/shared'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { expect, onTestFinished, test } from 'vitest'
 
-import { db, pool } from '../db/client'
+import { REQUEST_DEADLINE_MS, db, pool, type LockedTx } from '../db/client'
 import { userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
-import { withUserLock } from './base'
+import {
+  boundedTransaction,
+  timelineWritesInFlight,
+  withUserLock,
+} from './base'
 
 const TZ = 'Asia/Tokyo'
 const H = 3_600_000
@@ -39,10 +43,14 @@ const listedRows = (rows: DayRow[]): DayRow[] =>
 async function holdTimelineLock(userId: string) {
   const held = Promise.withResolvers<void>()
   const mayRelease = Promise.withResolvers<void>()
-  const holder = withUserLock(userId, async () => {
-    held.resolve()
-    await mayRelease.promise
-  })
+  const holder = withUserLock(
+    userId,
+    Date.now() + REQUEST_DEADLINE_MS,
+    async () => {
+      held.resolve()
+      await mayRelease.promise
+    },
+  )
   await held.promise
   const release = async (): Promise<void> => {
     mayRelease.resolve()
@@ -52,8 +60,15 @@ async function holdTimelineLock(userId: string) {
   return release
 }
 
-// Waits until `count` calls are queued on an advisory lock, so the next call is known to queue behind them.
-async function waitForLockQueue(count: number): Promise<void> {
+// Waits until `count` calls of the account are queued behind the held lock, so the next call is known to queue behind them.
+async function waitForLockQueue(userId: string, count: number): Promise<void> {
+  await expect
+    .poll(() => timelineWritesInFlight(userId), { timeout: 3_000 })
+    .toBe(count + 1)
+}
+
+// Waits until `count` sessions wait on an advisory lock in Postgres: writes from another API instance queue there, not here.
+async function waitForAdvisoryWaiters(count: number): Promise<void> {
   await expect
     .poll(
       async () => {
@@ -90,9 +105,9 @@ test('two devices merging neighbouring records at once hand every span to the re
 
   // Act: one device merges 仕事 into 休息, the other 休息 into 娯楽, while a third write holds the lock
   const first = api.switches.mergeIntoNext({ id: work.id })
-  await waitForLockQueue(1)
+  await waitForLockQueue(work.userId, 1)
   const second = api.switches.mergeIntoNext({ id: rest.id })
-  await waitForLockQueue(2)
+  await waitForLockQueue(work.userId, 2)
   await release()
   await Promise.all([first, second])
 
@@ -114,9 +129,9 @@ test('a tap on an activity queued behind its archive is refused, so an archived 
 
   // Act: the archive of 休息 queues first, the tap on 休息 second
   const archive = api.activities.archive({ id: idOf(list, '休息') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(running.userId, 1)
   const tap = api.switches.switchTo({ activityId: idOf(list, '休息') })
-  await waitForLockQueue(2)
+  await waitForLockQueue(running.userId, 2)
   await release()
 
   // Assert: archived, the tap refused as archived, and 仕事 still runs
@@ -136,12 +151,12 @@ test('an activity change queued behind the archive of that activity is refused, 
 
   // Act: the archive of 休息 queues first, the change of the running record to 休息 second
   const archive = api.activities.archive({ id: idOf(list, '休息') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(running.userId, 1)
   const pick = api.switches.changeActivity({
     id: running.id,
     activityId: idOf(list, '休息'),
   })
-  await waitForLockQueue(2)
+  await waitForLockQueue(running.userId, 2)
   await release()
 
   // Assert: archived, the change refused as archived, and 仕事 still runs
@@ -166,9 +181,9 @@ test('two archives of the last two live activities at once leave one live, so th
 
   // Act: both archives queue behind the lock
   const first = api.activities.archive({ id: idOf(list, '食事') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(running.userId, 1)
   const second = api.activities.archive({ id: idOf(list, '娯楽') })
-  await waitForLockQueue(2)
+  await waitForLockQueue(running.userId, 2)
   await release()
   const outcomes = await Promise.allSettled([first, second])
 
@@ -203,7 +218,7 @@ test('a 15-minute move waits for a switch write in flight, so it lands next to t
 
   // Act
   const move = api.switches.moveStart({ id: rest.id, deltaMinutes: 15 })
-  await waitForLockQueue(1)
+  await waitForLockQueue(rest.userId, 1)
   await release()
 
   // Assert
@@ -223,9 +238,9 @@ test('an archive queued behind a tap on its activity is refused, because that ac
 
   // Act: the tap on 休息 queues first, the archive of 休息 second
   const tap = api.switches.switchTo({ activityId: idOf(list, '休息') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(running.userId, 1)
   const archive = api.activities.archive({ id: idOf(list, '休息') })
-  await waitForLockQueue(2)
+  await waitForLockQueue(running.userId, 2)
   await release()
 
   // Assert: 休息 runs and stays live
@@ -265,9 +280,9 @@ test('two 元に戻す of one day at once restore it once: the second is refused
 
   // Act
   const firstTab = api.switches.replaceDay(undo)
-  await waitForLockQueue(1)
+  await waitForLockQueue(rest.userId, 1)
   const secondTab = api.switches.replaceDay(undo)
-  await waitForLockQueue(2)
+  await waitForLockQueue(rest.userId, 2)
   await release()
   const outcomes = await Promise.allSettled([firstTab, secondTab])
 
@@ -296,7 +311,7 @@ test('a time-zone change waits for a switch write in flight, so no write reads a
 
   // Act
   const zoneChange = api.settings.update({ timeZone: 'America/New_York' })
-  await waitForLockQueue(1)
+  await waitForLockQueue(running.userId, 1)
   await release()
 
   // Assert
@@ -1152,11 +1167,11 @@ test('one account’s fifth timeline write in flight is refused at once, while a
   const otherList = await other.activities.list()
   const release = await holdTimelineLock(ownerId)
   const work = owner.switches.switchTo({ activityId: idOf(list, '仕事') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(ownerId, 1)
   const rest = owner.switches.switchTo({ activityId: idOf(list, '休息') })
-  await waitForLockQueue(2)
+  await waitForLockQueue(ownerId, 2)
   const fun = owner.switches.switchTo({ activityId: idOf(list, '娯楽') })
-  await waitForLockQueue(3)
+  await waitForLockQueue(ownerId, 3)
 
   // Act
   const fifth = owner.switches.switchTo({ activityId: idOf(list, '睡眠') })
@@ -1200,7 +1215,7 @@ test('timeline writes that failed free their places, so the account’s next bur
     api.switches.mergeIntoPrevious({ id: crypto.randomUUID() }),
     api.switches.mergeIntoPrevious({ id: crypto.randomUUID() }),
   ]
-  await waitForLockQueue(3)
+  await waitForLockQueue(userId, 3)
   await releaseFirst()
   const mergeOutcomes = await Promise.allSettled(failedMerges)
   expect(mergeOutcomes.map((outcome) => outcome.status)).toEqual([
@@ -1212,15 +1227,273 @@ test('timeline writes that failed free their places, so the account’s next bur
   // Act: a full burst again
   const releaseSecond = await holdTimelineLock(userId)
   const work = api.switches.switchTo({ activityId: idOf(list, '仕事') })
-  await waitForLockQueue(1)
+  await waitForLockQueue(userId, 1)
   const rest = api.switches.switchTo({ activityId: idOf(list, '休息') })
-  await waitForLockQueue(2)
+  await waitForLockQueue(userId, 2)
   const fun = api.switches.switchTo({ activityId: idOf(list, '娯楽') })
-  await waitForLockQueue(3)
+  await waitForLockQueue(userId, 3)
   await releaseSecond()
 
   // Assert
   await expect(work).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
   await expect(rest).resolves.toMatchObject({ activityId: idOf(list, '休息') })
   await expect(fun).resolves.toMatchObject({ activityId: idOf(list, '娯楽') })
+})
+
+test('a tap queued behind another API instance’s write waits on the database lock and lands once that write commits', async () => {
+  // Arrange: a raw session holds the account's advisory lock, as a write on another API instance would
+  const api = await signedIn('lock-instance@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const otherInstance = await pool.connect()
+  onTestFinished(() => otherInstance.release())
+  await otherInstance.query('begin')
+  await otherInstance.query(
+    'select pg_advisory_xact_lock(1, hashtext($1::text))',
+    [userId],
+  )
+
+  // Act
+  const tap = api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await waitForAdvisoryWaiters(1)
+  const landedWhileLocked = await settlesWithoutWaiting(tap)
+  await otherInstance.query('commit')
+
+  // Assert
+  expect(landedWhileLocked).toBe(false)
+  await expect(tap).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+})
+
+test('three accounts’ bursts queued behind their own locks leave the pool open, so a fourth account’s tap still lands', async () => {
+  // Arrange: three accounts each hold their lock with three more taps queued: 12 writes, more than the pool's 10 connections
+  const busyAccounts = await Promise.all(
+    ['burst-a@example.com', 'burst-b@example.com', 'burst-c@example.com'].map(
+      async (email) => {
+        const api = await signedIn(email)
+        const { id: userId } = await api.me()
+        return { api, userId, list: await api.activities.list() }
+      },
+    ),
+  )
+  const other = await signedIn('burst-other@example.com')
+  const otherList = await other.activities.list()
+  const releases: (() => Promise<void>)[] = []
+  const queuedTaps: Promise<unknown>[] = []
+  for (const { api, userId, list } of busyAccounts) {
+    releases.push(await holdTimelineLock(userId))
+    for (const name of ['仕事', '休息', '娯楽'])
+      queuedTaps.push(api.switches.switchTo({ activityId: idOf(list, name) }))
+    await waitForLockQueue(userId, 3)
+  }
+
+  // Act
+  const otherTap = other.switches.switchTo({
+    activityId: idOf(otherList, '休息'),
+  })
+  const otherLandedWhileLocked = await settlesWithoutWaiting(otherTap)
+  for (const release of releases) await release()
+
+  // Assert
+  expect(otherLandedWhileLocked).toBe(true)
+  const outcomes = await Promise.allSettled(queuedTaps)
+  expect(outcomes.map((outcome) => outcome.status)).toEqual([
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+    'fulfilled',
+  ])
+})
+
+test('a write still queued at its deadline is refused as busy and frees its place, while the tap behind it still lands in turn', async () => {
+  // Arrange: another device holds the account's lock
+  const api = await signedIn('deadline-queued@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const release = await holdTimelineLock(userId)
+  let expiredWriteRan = false
+
+  // Act: a write whose deadline is 300 ms away queues first, a tap second
+  const expiring = withUserLock(userId, Date.now() + 300, async () => {
+    expiredWriteRan = true
+  })
+  await waitForLockQueue(userId, 1)
+  const tap = api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await waitForLockQueue(userId, 2)
+  await expect(expiring).rejects.toMatchObject({
+    code: 'TOO_MANY_REQUESTS',
+    data: { reason: 'busy' },
+  })
+  const inFlightAfterExpiry = timelineWritesInFlight(userId)
+  await release()
+
+  // Assert: the holder and the tap are left in flight, the tap lands once the holder is done, and nothing is left behind
+  expect(expiredWriteRan).toBe(false)
+  expect(inFlightAfterExpiry).toBe(2)
+  await expect(tap).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+  expect(timelineWritesInFlight(userId)).toBe(0)
+})
+
+test('a write still running at its deadline is cut off: its database session ends, and the account’s next tap lands', async () => {
+  // Arrange: a write that never finishes its work, as one stuck on a dead connection would
+  const api = await signedIn('deadline-running@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const session = Promise.withResolvers<number>()
+
+  // Act
+  const stuck = withUserLock(userId, Date.now() + 500, async (tx) => {
+    const { rows } = await tx.execute<{ pid: number }>(
+      sql`select pg_backend_pid() as pid`,
+    )
+    session.resolve(Number(rows[0]?.pid))
+    await new Promise<never>(() => {})
+  })
+  const pid = await session.promise
+
+  // Assert: refused as not saved, the server drops that session (and the lock it held), and the next tap is not held up
+  await expect(stuck).rejects.toMatchObject({ code: 'TIMEOUT' })
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query('select 1 from pg_stat_activity where pid = $1', [
+            pid,
+          ])
+        ).rowCount,
+      { timeout: 3_000 },
+    )
+    .toBe(0)
+  await expect(
+    api.switches.switchTo({ activityId: idOf(list, '仕事') }),
+  ).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+})
+
+test('a write cut off while its COMMIT is on the way answers that it may or may not have been saved', async () => {
+  // Arrange: a deferred constraint trigger makes COMMIT itself take 3 s, past the 1 s deadline
+  const prepareSlowCommit = async (tx: LockedTx): Promise<void> => {
+    await tx.execute(sql`create temp table slow_commit (id int) on commit drop`)
+    await tx.execute(
+      sql.raw(`create function pg_temp.sleep_at_commit() returns trigger language plpgsql as $$
+        begin perform pg_sleep(3); return null; end $$`),
+    )
+    await tx.execute(
+      sql.raw(`create constraint trigger sleep_at_commit after insert on slow_commit
+        deferrable initially deferred for each row execute function pg_temp.sleep_at_commit()`),
+    )
+    await tx.execute(sql`insert into slow_commit values (1)`)
+  }
+
+  // Act
+  const committing = boundedTransaction(Date.now() + 1_000, prepareSlowCommit)
+
+  // Assert
+  await expect(committing).rejects.toMatchObject({ code: 'GATEWAY_TIMEOUT' })
+})
+
+test('a write whose deadline passes while every pool connection is lent out never runs, and gives the late connection back', async () => {
+  // Arrange: every connection of the pool is lent out
+  const lent = await Promise.all(
+    Array.from({ length: pool.options.max }, async () => pool.connect()),
+  )
+  const giveBack = (): void => {
+    for (const client of lent.splice(0)) client.release()
+  }
+  onTestFinished(giveBack)
+  let workRan = false
+
+  // Act
+  const starved = boundedTransaction(Date.now() + 300, async () => {
+    workRan = true
+  })
+  await expect(starved).rejects.toMatchObject({ code: 'TIMEOUT' })
+  giveBack()
+
+  // Assert: the connection that came after the deadline went straight back to the pool
+  await expect.poll(() => pool.waitingCount).toBe(0)
+  await expect.poll(() => pool.idleCount).toBe(pool.totalCount)
+  expect(workRan).toBe(false)
+})
+
+test('a database session ended in the middle of a write fails only that write, and the account’s next tap lands', async () => {
+  // Arrange
+  const api = await signedIn('session-killed@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+
+  // Act: the server ends the write's session while the write waits between statements (an unhandled `error` would crash)
+  const killed = withUserLock(
+    userId,
+    Date.now() + REQUEST_DEADLINE_MS,
+    async (tx) => {
+      const { rows } = await tx.execute<{ pid: number }>(
+        sql`select pg_backend_pid() as pid`,
+      )
+      await pool.query('select pg_terminate_backend($1)', [rows[0]?.pid])
+      await delay(200)
+      await tx.execute(sql`select 1`)
+    },
+  )
+
+  // Assert
+  await expect(killed).rejects.toThrow()
+  await expect(
+    api.switches.switchTo({ activityId: idOf(list, '仕事') }),
+  ).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+})
+
+/**
+ * How many pool connections one call checks out, counted on the pool's `acquire` event: a read that takes several per request
+ * lets one client refetching fast fill the pool on its own.
+ */
+async function connectionsTaken(call: () => Promise<unknown>): Promise<number> {
+  let acquired = 0
+  const countAcquire = (): void => {
+    acquired += 1
+  }
+  pool.on('acquire', countAcquire)
+  try {
+    await call()
+  } finally {
+    pool.off('acquire', countAcquire)
+  }
+  return acquired
+}
+
+test('listing a day takes one pool connection beyond the settings read, however many queries it runs', async () => {
+  // Arrange
+  const api = await signedIn('one-connection-list@example.com')
+  await api.switches.switchTo({
+    activityId: idOf(await api.activities.list(), '仕事'),
+  })
+
+  // Act
+  const forSettings = await connectionsTaken(async () => api.settings.get())
+  const forList = await connectionsTaken(async () =>
+    api.switches.listByDay({ day: today }),
+  )
+
+  // Assert
+  expect(forList - forSettings).toBe(1)
+})
+
+test('a day’s stats take one pool connection beyond the settings read', async () => {
+  // Arrange
+  const api = await signedIn('one-connection-stats@example.com')
+  await api.switches.switchTo({
+    activityId: idOf(await api.activities.list(), '仕事'),
+  })
+
+  // Act
+  const forSettings = await connectionsTaken(async () => api.settings.get())
+  const forStats = await connectionsTaken(async () =>
+    api.stats.day({ day: today }),
+  )
+
+  // Assert
+  expect(forStats - forSettings).toBe(1)
 })
