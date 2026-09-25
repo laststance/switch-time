@@ -46,11 +46,10 @@ function judgeDayRead(event: QueryCacheNotifyEvent): void {
   if (event.type !== 'updated') return
   const read = dayOfRead(event.action, event.query.queryKey)
   if (!read) return
-  const at = nextStamp()
+  // Stamped and listed now, so a later read landing before the microtask cannot lend this one its list.
+  const judged = { at: nextStamp(), ok: read.ok, listed: cachedList(read.day) }
   // Judged after the cache's own update: a throw here must not turn the read that landed into a failed one.
-  queueMicrotask(() =>
-    judgeDay(read.day, { at, ok: read.ok, listed: cachedList(read.day) }),
-  )
+  queueMicrotask(() => judgeDay(read.day, judged))
 }
 
 // One mutation-cache update: once the last settings write settles, every armed slot whose day's cached list is fresh (a read

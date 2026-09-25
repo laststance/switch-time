@@ -1079,7 +1079,7 @@ const STALE_MESSAGE = '一覧を読み直せませんでした。表示が古い
  * @param facts.line - The viewed day's line ({@link dayLine}), until the next press, selection or undo on it, or until a read
  * shows the day moved on.
  * @param facts.waiting - Whether a `switches.*` or `settings.*` write has been in flight for {@link WRITING_LINE_DELAY_MS}
- * (a landed write's refetch included, since `onSettled` awaits it; a failed one's refetch runs on its own).
+ * (a landed or refused write's refetch included, since `onSettled` awaits it; an uncertain one's refetch runs on its own).
  * @param facts.online - TanStack's `onlineManager` state.
  * @returns the line to show, or null when there is nothing to say
  * @example statusLine({ line: null, waiting: true, online: false }) // { tone: 'quiet', text: OFFLINE_MESSAGE }
