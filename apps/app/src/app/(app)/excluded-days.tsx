@@ -22,7 +22,7 @@ export default function ExcludedDaysSheet() {
   return (
     <Sheet
       title="未使用日の扱い"
-      hint={`一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は、始めた翌日から${DETOX_MEASURED_DAYS_MAX}日間は計測に入り、その後は「切替なし」として外します。`}
+      hint={`一度も切り替えなかった日は、平均と連続記録から外します。デトックスを続けた日は、始めた翌日から${DETOX_MEASURED_DAYS_MAX}日間は計測に入り、その後は「切替なし」として外します。${DETOX_MEASURED_DAYS_MAX}日を過ぎてからデトックスを押し直すと、その日から計測に戻り、翌日からまた${DETOX_MEASURED_DAYS_MAX}日間計測に入ります。`}
     >
       {/* Both cards read the same settings row: a failed read would show the defaults as if they were the account's own. */}
       {isError ? (

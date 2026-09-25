@@ -199,6 +199,13 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
       { exact: false },
     ),
   ).toBeVisible()
+  // The hint also names the way back after the week: a detox re-tap counts its own day and starts another 7 days.
+  await expect(
+    sheet.getByText(
+      '7日を過ぎてからデトックスを押し直すと、その日から計測に戻り、翌日からまた7日間計測に入ります。',
+      { exact: false },
+    ),
+  ).toBeVisible()
   const row = page.getByRole('button', { name: /を戻す$/ })
   await expect(row).toBeVisible()
   await expect(row).toHaveCount(1)

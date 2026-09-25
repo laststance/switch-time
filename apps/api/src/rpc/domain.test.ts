@@ -2276,9 +2276,13 @@ test('the very first tap can be detox: the clock starts on a state with no activ
   // Act
   const first = await api.switches.switchTo({ activityId: null })
 
-  // Assert: with no current row to compare against, a detox row is inserted and becomes the current state
+  // Assert: with no current row to compare against, a detox row is inserted and becomes the current state, and its run starts
+  // on its own day (the first-launch screen offers detox, so Home's measured week counts from this tap)
   expect(first).toMatchObject({ activityId: null, source: 'tap' })
-  expect((await api.switches.current())?.id).toBe(first.id)
+  expect(await api.switches.current()).toMatchObject({
+    id: first.id,
+    runStartDay: today,
+  })
 })
 
 test('another account cannot move a switch onto detox or switch to a foreign activity: both read as missing', async () => {

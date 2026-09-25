@@ -2,18 +2,6 @@
 
 ## Home
 
-### Start detox from the first-launch screen
-
-**What:** Offer detox as a starting state on `FirstLaunch`, next to the activity buttons.
-
-**Why:** A new account cannot begin on detox. `DetoxRow` and the `0` hotkey live in `HomeBody`, which only mounts once `switches.current` is non-null, so the first tap has to be a real activity. That records a span the user did not want and then has to correct.
-
-**Context:** Deliberate in the approved plan: first launch asks 「いま何をしていますか？」 and picking an activity is the onboarding. The API already supports it (`domain.test.ts`, "the very first tap can be detox"), so this is a UI-only change plus an e2e that signs up and presses detox without touching an activity. Raised by the Codex adversarial pass during the 0.1.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Say why a tap on ホーム was refused
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
@@ -224,18 +212,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Name the detox re-tap in the unused-day setting's hint
-
-**What:** Add to the hint under 「使わなかった日を除外」 (`/excluded-days`) that pressing detox again after its week starts another week of counting, next to the rule it already states.
-
-**Why:** Home says so on the last day and past the week, but the setting that explains the 7-day rule still reads as if a detox stops counting for good after it.
-
-**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx` (`DETOX_MEASURED_DAYS_MAX`); the re-tap is `switchTo`'s `starts_run` row (the PR that closed the re-tap and last-day items). New text, so the pen file first.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Fit a 25-hour day's activity time on History's 24-hour bar
 
 **What:** Decide how a fall-back day that holds more than 24 h of activity time fits History's bar, for example by scaling that day's slices to its own length or clamping the top activity slice as the detox part is, and add a `history.test.ts` case.
@@ -258,6 +234,18 @@
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** None
+
+### Renew a detox run on the server only while auto-exclusion is on
+
+**What:** Make `switchTo` start a new detox run past the week (`starts_run`) only when the account's `autoExcludeUnusedDays` is on, as Home already does.
+
+**Why:** Home offers the renewal only while the rule is on (`detoxRenewable`), but the API checks the week alone. A tab that still shows the rule as on, after another device turned it off, can renew the run; turning the rule back on later then counts the week from that press.
+
+**Context:** `switchTo` in `apps/api/src/rpc/switches.ts` (the `detoxRunPastWeek` branch) already reads the stored zone from the settings row, so the flag is one column more. Add an API test for the rule off. Raised by the Codex outside voice during the plan review of the PR that let a new account start on detox (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ## Database

@@ -46,6 +46,40 @@ test('the first launch screen disappears after the first switch', async ({
   await expect(page.getByText(/^\d+:\d{2} から · 今日 0 回切替$/)).toBeVisible()
 })
 
+test('a new account can start on detox from the first-launch screen, and a reload keeps it', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  const detoxRow = page.getByRole('button', { name: /^detox/ })
+  await expect(detoxRow).toHaveAttribute('aria-pressed', 'false')
+
+  // Act: press detox before any activity, and wait for the server's answer so the reload reads the stored row
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await detoxRow.click()
+  expect((await tapAnswer).ok()).toBe(true)
+  await page.reload()
+
+  // Assert: Home in detox, no activity pressed, and the since line names no activity
+  await expect(firstLaunch).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  // Only the detox row is pressed: no activity button took the first tap
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {
