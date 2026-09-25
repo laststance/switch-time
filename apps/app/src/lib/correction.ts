@@ -683,16 +683,25 @@ function slotMatchesDay(
   listed: ListedDay,
   timeZone: string,
 ): boolean {
-  // The record is looked for among the day's own rows too: a zone change can list it there, and the undo still lands while
-  // its revision holds.
-  if (slot.kind === 'activity') {
-    const record =
-      listed.carriedIn?.id === slot.id
-        ? listed.carriedIn
-        : listed.rows.find((row) => row.id === slot.id)
-    return record?.revision === slot.revision
-  }
-  // The carried-in record is left out, as `replaceDay` leaves it out: the undo never rewrites it.
+  if (slot.kind === 'activity')
+    return pickedRecord(listed, slot.id)?.revision === slot.revision
+  return dayRowsMatch(slot, listed, timeZone)
+}
+
+// The record a carried-in pick changed, looked for among the day's own rows too: a zone change can list it there, and the
+// undo still lands while its revision holds.
+function pickedRecord(listed: ListedDay, id: string) {
+  if (listed.carriedIn?.id === id) return listed.carriedIn
+  return listed.rows.find((row) => row.id === id)
+}
+
+// A day slot's checks, as `replaceDay` makes them. The carried-in record is left out, as `replaceDay` leaves it out: the undo
+// never rewrites it.
+function dayRowsMatch(
+  slot: Extract<UndoSlot, { kind: 'day' }>,
+  listed: ListedDay,
+  timeZone: string,
+): boolean {
   if (slot.timeZone !== timeZone) return false
   if ((listed.carriedOut?.id ?? null) !== slot.carriedOutId) return false
   if (listed.rows.length !== slot.expected.length) return false
