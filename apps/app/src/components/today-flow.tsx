@@ -30,8 +30,9 @@ type Segment = {
   idle: boolean
 }
 
-// Spans with no colour of their own are outlined over the `chip` track: detox solid in `sub` (the same mark as a detox day on
-// 記録), idle dashed in `line` (dashed = no data, as 記録's 「点線の日」). Detox differs from idle by shape as well as tone.
+// Spans with no colour of their own are outlined over the `chip` track: detox solid in `sub` (the same mark as detox on 記録),
+// idle dashed in `line` (dashed = no data, as 記録's 「点線の日」, whose dash is `sub`; TODOS.md has raising this one to 3:1).
+// Detox differs from idle by shape as well as tone.
 const LOOK = {
   detox: { className: 'border border-sub', backgroundColor: undefined },
   idle: {

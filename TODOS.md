@@ -260,6 +260,18 @@
 **Priority:** P4
 **Depends on:** None
 
+### Read a History day's activity and detox time to screen readers
+
+**What:** Add what a stacked day cell draws to its `aria-label` (each activity's time, then detox when the cell has a detox part), and assert it in `history.test.ts`.
+
+**Why:** A stacked cell's label is the date alone, so a screen-reader user hears nothing of the bars. Since History draws a day's partial detox time as an outline, that outline also has no text equivalent, while a detox day's label ends in ・detox.
+
+**Context:** `SUFFIX` and `dayCell` in `apps/app/src/lib/history.ts`; `formatDuration` gives the durations. Month cells are 31 links in a row, so keep the label short. Raised by the design pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Decide whether a detox left running for weeks keeps measuring days
 
 **What:** Choose whether a detox with no later tap measures every day up to today (the current rule), or stops after a limit (for example a week, or a setting), and add a test for a detox left running for a month.

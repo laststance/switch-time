@@ -208,7 +208,7 @@ test('a day worked then spent in detox draws its detox part as a sub outline on 
     .evaluate((el) => getComputedStyle(el).color)
   await expect(detoxPart).toHaveCSS('border-top-color', sub)
 
-  // 状態別 ends with the detox row
+  // 状態別 lists detox (its order and figures are pinned by the unit test)
   const breakdown = page.getByText('状態別', { exact: true }).locator('../..')
   await expect(breakdown.getByText('detox', { exact: true })).toBeVisible()
 })

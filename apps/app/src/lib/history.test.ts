@@ -438,7 +438,7 @@ test('a few minutes of detox draw no stray line in the short month cells', () =>
   ])
 })
 
-test('an excluded day still draws its detox part under the dashed border', () => {
+test('an excluded day still draws its detox part, stacked inside the dashed border', () => {
   // Arrange: 9/9 was excluded by hand after 6 h of 仕事 and 3 h of detox
   const stats: HistoryStats = {
     days: [
@@ -469,17 +469,61 @@ test('an excluded day still draws its detox part under the dashed border', () =>
     activities,
   })
 
-  // Assert
+  // Assert: the 132 px track keeps 128 px inside its border and 1 px gap
   expect(view.rows[0]?.[6]?.kind).toBe('excluded')
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 33,
+      height: 32,
       top: false,
       bottom: true,
     },
-    { activityId: null, color: null, height: 16.5, top: true, bottom: false },
+    { activityId: null, color: null, height: 16, top: true, bottom: false },
+  ])
+})
+
+test('a whole excluded day fits inside its dashed border, so the top of its detox outline is not clipped', () => {
+  // Arrange: 9/9 was excluded by hand after 18 h of 仕事 and 6 h of detox, the whole day
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        excluded: 'manual',
+        totals: { work: 18 * H },
+        detoxMs: 6 * H,
+      }),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: 96 + 32 = the 128 px inside the border, not the 132 px track
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    {
+      activityId: 'work',
+      color: '#3B7BD9',
+      height: 96,
+      top: false,
+      bottom: true,
+    },
+    { activityId: null, color: null, height: 32, top: true, bottom: false },
   ])
 })
 
@@ -781,9 +825,12 @@ test('a day worked on an activity the list does not know yet stays a stack, not 
     activities,
   })
 
-  // Assert: the unknown activity draws no slice, but the day is not claimed as detox
+  // Assert: the unknown activity draws no slice and the day is not claimed as detox, so only its 2 h detox part sits on the floor
   expect(view.rows[0]?.[6]?.kind).toBe('stack')
   expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    { activityId: null, color: null, height: 11, top: true, bottom: true },
+  ])
 })
 
 test('the month calendar pads Sunday-first rows and counts only the days up to today', () => {
