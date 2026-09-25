@@ -14,6 +14,7 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { DETOX } from '@/lib/detox'
 import {
   historyView,
+  sliceLook,
   type BreakdownRow,
   type Cell,
   type HistoryView,
@@ -51,13 +52,14 @@ function StepButton({
   )
 }
 
-// Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `line` border on both platforms
-// (ponytail: the native hatch is skipped, as in TodayFlow). Dashed is kept for 「点線の日」 alone: a day that was all detox
-// is outlined solid in `sub`, the detox tone, and carries the wind glyph, so it never reads as an excluded day.
+// Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `sub` border on both platforms
+// (ponytail: the native hatch is skipped, as in TodayFlow), in `sub` so the dash clears 3:1. Dashed is kept for 「点線の日」
+// alone: a day that was mostly detox is outlined solid in `sub`, the detox tone, and carries the wind glyph, so it never reads
+// as an excluded day. Any other day draws its detox part as a solid `sub` outline on top of its activity fills.
 const CELL = {
   stack: 'bg-chip',
   detox: 'border border-sub bg-chip',
-  excluded: 'border border-dashed border-line bg-chip',
+  excluded: 'border border-dashed border-sub bg-chip',
   empty: 'bg-chip',
 }
 
@@ -100,13 +102,19 @@ function DayCell({
         )}
         style={{ height }}
       >
-        {cell.slices.map((slice) => (
-          <View
-            key={slice.activityId}
-            className={cn(slice.top && 'rounded-t-md')}
-            style={{ height: slice.height, backgroundColor: slice.color }}
-          />
-        ))}
+        {cell.slices.map((slice) => {
+          const look = sliceLook(slice)
+          return (
+            <View
+              key={slice.activityId ?? 'detox'}
+              className={look.className}
+              style={{
+                height: slice.height,
+                backgroundColor: look.backgroundColor,
+              }}
+            />
+          )
+        })}
         {glyph}
       </View>
       <Text
@@ -268,7 +276,7 @@ function Breakdown({ rows }: { rows: BreakdownRow[] }) {
               className="h-full rounded-sm"
               style={{
                 width: `${row.ratio * 100}%`,
-                backgroundColor: row.color,
+                backgroundColor: row.color ?? 'transparent',
               }}
             />
           </View>

@@ -57,7 +57,7 @@ Three tiers, roughly 1.6x apart, so radius reads as hierarchy: controls 10, cont
 
 Exactly one switch is pressed at any moment: an activity button, or the detox row. The pressed button fills with the activity's own persisted color, flips its label to `#fff`, and matches its border. That is all — **no glow.** A drop shadow tinted with an accent colour is the single loudest "AI mockup" tell; the fill already carries the state. Unpressed buttons stay `--color-surface` with a `--color-line` border. Pass the color in as `--activity` on the element; the stylesheet does the rest.
 
-Detox is the one state without a colour, because it has no activity: its full-width row under the grid inverts to a `--color-ink` fill with `--color-bg` text while it is pressed, and the dial's bezel ring, second hand and centre pin (the hour and minute hands stay `--color-ink`), the status dot (hollow) and the elapsed readout all fall back to `--color-sub`. Its span on the 24-h bar (and on the correction sheet's bar, with its row's chip) is outlined solid in `--color-sub`, never filled, and it is never totalled; the bar's legend names it, and a measured History day spent entirely in detox is outlined solid in `--color-sub` with the wind glyph, so it does not read as an untapped day. Dashed is kept for no data: idle spans and excluded days. An untapped day that a detox runs through still counts as measured and draws as detox; an untapped day with anything else on the clock is 計測なし.
+Detox is the one state without a colour, because it has no activity: its full-width row under the grid inverts to a `--color-ink` fill with `--color-bg` text while it is pressed, and the dial's bezel ring, second hand and centre pin (the hour and minute hands stay `--color-ink`), the status dot (hollow) and the elapsed readout all fall back to `--color-sub`. Its span on the 24-h bar (and on the correction sheet's bar, with its row's chip) is outlined solid in `--color-sub`, never filled, and it is never totalled; the bar's legend names it, and a measured History day with no activity time and at least as much detox as idle time is outlined solid in `--color-sub` with the wind glyph, so it does not read as an untapped day. On any other History day the detox time is a solid `--color-sub` outline stacked on top of the activity fills, and 状態別 ends with a detox row (outlined chip, no bar fill) when the measured days hold detox. Dashed is kept for no data: idle spans and excluded days (dashed in `--color-sub`, so the dash clears 3:1). An untapped day that a detox runs through still counts as measured and draws as detox; an untapped day with anything else on the clock is 計測なし.
 
 ## The dial
 
@@ -79,7 +79,7 @@ Two tokens therefore have web-specific values, applied by `[data-surface="web"]`
 | Token | iOS / Android / macOS | Web |
 | --- | --- | --- |
 | `--color-tab-bg` | translucent `rgba(…,0.90)` | opaque, same value as `--color-bg` |
-| `--pattern-hatch` | diagonal stripe gradient | `none` — `.is-excluded` becomes a `1.5px dashed` border with a `--color-chip` fill |
+| `--pattern-hatch` | diagonal stripe gradient | `none` — `.is-excluded` becomes a `1.5px dashed` `--color-sub` border with a `--color-chip` fill |
 
 Every other token is shared unchanged.
 

@@ -150,7 +150,7 @@ body {
    to a dashed outline because RN-web drops gradient patterns. */
 .is-excluded { background-image: var(--pattern-hatch); background-color: var(--color-chip); }
 [data-surface="web"] .is-excluded {
-  border: 1.5px dashed var(--color-line);
+  border: 1.5px dashed var(--color-sub);
   background-color: var(--color-chip);
 }
 
