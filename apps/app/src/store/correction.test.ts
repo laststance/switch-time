@@ -7,7 +7,7 @@ import { accountChange, correctionSlice } from './correction'
 
 import { resetApp, store } from './index'
 
-const { armed, dropped } = correctionSlice.actions
+const { armed, dropped, hushed, noticed, refused } = correctionSlice.actions
 
 const pickUndo = (day: string): UndoSlot => ({
   kind: 'activity',
@@ -170,6 +170,163 @@ test('arming a day undo whose rows hold Dates raises no non-serializable warning
   // Assert
   expect(warnings).toBe(0)
   expect(store.getState().correction.undo['2026-09-25']?.kind).toBe('day')
+})
+
+test('a failure that lands after its sheet closed is kept for that day only, so reopening that day says why and other days say nothing', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  const { epoch } = sheet.getState()
+
+  // Act
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': 'これ以上動かせません',
+  })
+})
+
+test('a new press on the day clears its line and its archived notice, while an undo clears the line and keeps the notice', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  const { epoch } = sheet.getState()
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+  sheet.dispatch(noticed({ epoch, day: '2026-09-24', id: 'carried-in' }))
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-25', text: '統合できる記録がありません' }),
+  )
+
+  // Act
+  sheet.dispatch(hushed({ epoch, day: '2026-09-24', notice: false }))
+  const afterUndo = sheet.getState()
+  sheet.dispatch(hushed({ epoch, day: '2026-09-24', notice: true }))
+  const afterPress = sheet.getState()
+
+  // Assert
+  expect(afterUndo.refusal).toEqual({
+    '2026-09-25': '統合できる記録がありません',
+  })
+  expect(afterUndo.notice).toEqual({ '2026-09-24': 'carried-in' })
+  expect(afterPress.refusal).toEqual({
+    '2026-09-25': '統合できる記録がありません',
+  })
+  expect(afterPress.notice).toEqual({})
+})
+
+test('a failure or notice that lands after sign-out, or after another account signed in, says nothing to the next account', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const before = sheet.getState().epoch
+  sheet.dispatch(
+    refused({
+      epoch: before,
+      day: '2026-09-24',
+      text: 'これ以上動かせません',
+    }),
+  )
+  sheet.dispatch(
+    noticed({ epoch: before, day: '2026-09-24', id: 'carried-in' }),
+  )
+
+  // Act
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
+  sheet.dispatch(
+    refused({
+      epoch: before,
+      day: '2026-09-25',
+      text: '統合できる記録がありません',
+    }),
+  )
+  sheet.dispatch(
+    noticed({ epoch: before, day: '2026-09-25', id: 'carried-in' }),
+  )
+  store.dispatch(
+    refused({
+      epoch: store.getState().correction.epoch,
+      day: '2026-09-24',
+      text: 'これ以上動かせません',
+    }),
+  )
+  store.dispatch(
+    noticed({
+      epoch: store.getState().correction.epoch,
+      day: '2026-09-24',
+      id: 'carried-in',
+    }),
+  )
+  store.dispatch(resetApp())
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({})
+  expect(sheet.getState().notice).toEqual({})
+  expect(store.getState().correction.refusal).toEqual({})
+  expect(store.getState().correction.notice).toEqual({})
+})
+
+test('a press from before sign-out cannot clear the next account’s line or notice', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const before = sheet.getState().epoch
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-b'))
+  const after = sheet.getState().epoch
+  sheet.dispatch(
+    refused({ epoch: after, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+  sheet.dispatch(noticed({ epoch: after, day: '2026-09-24', id: 'carried-in' }))
+
+  // Act
+  sheet.dispatch(hushed({ epoch: before, day: '2026-09-24', notice: true }))
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': 'これ以上動かせません',
+  })
+  expect(sheet.getState().notice).toEqual({ '2026-09-24': 'carried-in' })
+})
+
+test('a session refetch for the same account keeps each day’s line and notice', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+  const { epoch } = sheet.getState()
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+  sheet.dispatch(noticed({ epoch, day: '2026-09-24', id: 'carried-in' }))
+
+  // Act
+  sheet.dispatch(correctionSlice.actions.accountSeen('account-a'))
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': 'これ以上動かせません',
+  })
+  expect(sheet.getState().notice).toEqual({ '2026-09-24': 'carried-in' })
+})
+
+test('a second failure on the same day replaces its line, so the line names the latest failure', () => {
+  // Arrange
+  const sheet = configureStore({ reducer: correctionSlice.reducer })
+  const { epoch } = sheet.getState()
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: 'これ以上動かせません' }),
+  )
+
+  // Act
+  sheet.dispatch(
+    refused({ epoch, day: '2026-09-24', text: '統合できる記録がありません' }),
+  )
+
+  // Assert
+  expect(sheet.getState().refusal).toEqual({
+    '2026-09-24': '統合できる記録がありません',
+  })
 })
 
 test('a sign-in as someone else in another tab drops the cached queries too, while the first account after a reset only claims the slots', () => {

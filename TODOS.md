@@ -66,37 +66,37 @@
 **Priority:** P3
 **Depends on:** None
 
-### Say an edit failed after its sheet closed
+### Let a day's kept failure line expire once the day moved on
 
-**What:** When an edit or undo started from the correction sheet is refused or times out after the sheet closed, say so somewhere the user is: a line on ホーム, or the status line of the sheet reopened for that day.
+**What:** Hide a day's kept refusal line once a later read of that day has succeeded (keep when it was set, compare with the list's `dataUpdatedAt`), or clear it when a `switches.*` write on that day succeeds, and let the offline or writing line show over an old refusal.
 
-**Why:** The refusal text lives in the sheet's own state, so a sheet closed while its write was in flight drops it. The rows show the day as it is, but nothing says the edit did not happen (or may have landed, after a timeout).
+**Why:** Since the line moved to the store (`refused` in `apps/app/src/store/correction.ts`) it lasts until the next press, selection or undo on that day. Reopen a day hours after a refusal, when a tap on ホーム or another sheet's merge has long since changed it, and the sheet still says the edit failed, even naming 別の端末 for this device's own double tap. `statusLine` puts the refusal first, so it also hides 「オフラインです…」 and 「反映しています…」 on reopening.
 
-**Context:** `useEditLifecycle` in `apps/app/src/hooks/use-correction.ts` sets the refusal from the mutation's hook-level `onError`, with the day from `onMutate`; the undo slot already moved to the store (`correctionSlice`) for the same reason. A refusal could join it there, keyed by day like the slot, with the sign-out `epoch`. Related: "Say why a tap on ホーム was refused". Found by the eng review of the PR that moved the undo into the store (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Turn 元に戻す off once this device's own tap changed the day
-
-**What:** Offer a day's armed 元に戻す only while the listed day still matches it (a day slot's `expected` rows, an activity slot's revision), and drop it otherwise.
-
-**Why:** Since the slots moved to the store they outlive the sheet. Edit today in the sheet, close it, tap another activity on ホーム, and reopen the sheet: 元に戻す is still on, and pressing it is refused as day-changed with a text that names 別の端末, though this device made the change.
-
-**Context:** `correctionSlice` in `apps/app/src/store/correction.ts`, `useCorrectionUndo` in `apps/app/src/hooks/use-correction.ts`. Related: "Stop naming another device when this device's own late write changed the day". Found by the Claude adversarial pass of the PR that moved the undo into the store (2026-09-25).
+**Context:** `statusLine` in `apps/app/src/lib/correction.ts`, `useCorrectionState` in `apps/app/src/hooks/use-correction.ts`. Related: "Stop naming another device when this device's own late write changed the day". Raised by the Claude adversarial pass during the 0.8.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
 **Depends on:** None
 
-### Keep an answer from another day's press off the viewed day's selection
+### Drop a day's 元に戻す once a settled read shows the day moved on
 
-**What:** Apply an edit's selection, focus and archived notice (`landed`, `selectInserted`) only when the day it was pressed on is still the viewed day.
+**What:** Dispatch `dropped` for the day when `offeredUndo` turns a slot off on a settled, successful read (no fetch or `switches.*` write in flight), instead of only hiding it.
 
-**Why:** A split or a pick whose answer lands after the sheet moved to another day (today's sheet past midnight, a `?day=` change) selects a row the list no longer shows, or clears that day's notice.
+**Why:** A slot that no longer matches stays in the store. If another device later puts the day back exactly as the edit left it (merging away the switch this device tapped), 元に戻す shows again and would undo an edit made long before; the API accepts it, since the day reads as the undo expects. A read that fails while stale data is shown must not drop it.
 
-**Context:** `useCorrectionEdits` in `apps/app/src/hooks/use-correction.ts`; `onMutate` already takes the pressed day. Found by the Claude adversarial pass of the PR that moved the undo into the store (2026-09-25).
+**Context:** `offeredUndo` in `apps/app/src/lib/correction.ts`, `useCorrection` in `apps/app/src/hooks/use-correction.ts`. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep the user's own selection when today's sheet passes midnight
+
+**What:** When the sheet's day changes, keep the row the user selected if the new day still lists it (the running record becomes the carried-in one under the same id), and drop only the selection and focus an answer set.
+
+**Why:** `sheetView` starts the sheet's own state over whenever the day changes, so a panel open at midnight closes under the user's finger, with its picker and 区切る時刻. Before 0.8.0.0 the selection stayed. `onPressedDay` alone already keeps a late answer off the new day.
+
+**Context:** `sheetView` and `onPressedDay` in `apps/app/src/lib/correction.ts`; the e2e "a split whose answer lands after midnight selects nothing on the new day" must keep passing. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
 
 **Effort:** S
 **Priority:** P3
@@ -216,7 +216,7 @@
 
 **Why:** A timed-out undo keeps its slot, and on a slow API the refetch can finish before that undo commits. Once it lands, pressing 元に戻す again or making an edit is refused as day-changed, and the sheet blames another device on a single device. The same happens after any timed-out edit that lands after the refetch, and to the second press of a double tap (two presses before the controls dim), which the first press's edit refuses.
 
-**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `useEditLifecycle` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Found by the pre-landing review of the PR that added the status line (2026-09-25).
+**Context:** `REFUSAL_MESSAGES` in `apps/app/src/lib/correction.ts`; `useEditLifecycle` and the undo path in `apps/app/src/hooks/use-correction.ts`. New text needs the pen file first. Since 元に戻す is offered only while the listed day matches its slot (`offeredUndo`, 2026-09-25), the undo turns off once any later read shows the late write, so only a press made before that read is still refused this way. Found by the pre-landing review of the PR that added the status line (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
