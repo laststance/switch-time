@@ -3,7 +3,7 @@ import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
 /** The account just registered on this device: the address sign-in starts with, and whether its 登録しました notice still shows. */
 export type Registration = {
   email: string
-  // New for every registration (a counter would restart: sign-up's success resets the store first). Sign-in keys its form on it,
+  // New for every registration (a counter would restart after sign-in's or sign-out's reset and could repeat the key sign-in kept). Sign-in keys its form on it,
   // so a new registration refills the form and dismissing the notice does not.
   id: string
   notice: boolean
