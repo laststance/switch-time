@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.8.0.0] - 2026-09-25
+
+### Added
+
+- An edit or 「元に戻す」 refused after its correction sheet closed is
+  still explained: reopening that day's sheet shows the refusal on the
+  status line, and an undo refused because the activity was archived
+  opens the record on its notice. Each day keeps its own line and
+  notice, and signing out or another account signing in clears them.
+
+### Fixed
+
+- 「元に戻す」 turns off once the day no longer reads as the edit left
+  it, for example after a tap on ホーム or a change from another device
+  that the list has already shown, instead of staying on for a press
+  that can only be refused. The undo of a pick on the carried-in record
+  stays on after a zone change lists that record among the day's own
+  rows, while no other write has reached it.
+- A split or undo whose answer lands after the sheet moved to another
+  day (today's sheet past midnight, or another day opened from 記録)
+  no longer selects a row on the day now shown.
+- Picking an activity or cutting on the record a kept notice opened
+  keeps its panel open while the change is written, and a notice that
+  lands while another row is selected shows once its record is tapped.
+
 ## [0.7.0.0] - 2026-09-25
 
 ### Added
