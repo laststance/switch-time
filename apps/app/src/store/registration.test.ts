@@ -1,7 +1,8 @@
 import { expect, test } from 'vitest'
 
-import { resetApp, store } from './index'
 import { registrationSlice } from './registration'
+
+import { resetApp, store } from './index'
 
 const { registered, noticeDismissed } = registrationSlice.actions
 
