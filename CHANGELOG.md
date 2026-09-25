@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.13.0.0] - 2026-09-25
+
+### Changed
+
+- A detox left running measures at most the week after the day it
+  started: the untapped days among the next seven count as measured and
+  keep 連続記録, and from the eighth day on an untapped day is 計測なし
+  again, so an app left on detox and forgotten stops counting. Switching
+  to an activity and back starts a new week; cutting a detox in 訂正 does
+  not. The stats work this out from your taps on every read, so past
+  weeks and months that held a longer detox change too: their measured
+  days, 1日あたり averages and a 連続記録 that ran through such a detox
+  are counted again under the new rule.
+- The line under 「ここで分割」 that says a cut makes the day 計測できた日
+  now asks the server how it counts that day, so it follows the detox
+  week and every other day rule instead of a copy of them in the app.
+  It trusts the day's own rows first, so it never repeats the promise
+  once the cut has landed, and it waits instead of guessing while the
+  answer is loading, failed or held offline. A sheet left open over
+  midnight asks again once the day is past.
+
 ## [0.11.0.0] - 2026-09-25
 
 ### Changed
