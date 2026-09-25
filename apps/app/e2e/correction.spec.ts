@@ -1836,11 +1836,14 @@ test('a settings change made while a day’s sheet is closed keeps that day’s 
   answer.resolve()
   await landed
 
-  // Act: change the appearance in 設定 and wait for the server to store it, then open the day again from History.
+  // Act: change the appearance in 設定 and wait for the server to store it and for the write to settle (its re-read of the
+  // settings is the last step before it does), then open the day again from History.
   await page.getByRole('tab', { name: '設定' }).click()
+  const settled = page.waitForResponse('**/api/rpc/settings/get')
   await page.getByRole('button', { name: '暗' }).click()
   const api = await apiAs(page)
   await expect.poll(async () => (await api.settings.get()).theme).toBe('dark')
+  await settled
   await page.getByRole('tab', { name: '記録' }).click()
   await dayLink(page, yesterday).click()
 

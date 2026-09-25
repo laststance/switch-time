@@ -13,6 +13,7 @@ import {
   type RefusalReason,
   type ReplaceDayInput,
 } from '@switch-time/shared'
+import type { QueryState } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { DETOX } from './detox'
@@ -1237,7 +1238,7 @@ export function isSettledWrite(event: {
  */
 export function isFreshList(
   state:
-    { status: string; fetchStatus: string; isInvalidated: boolean } | undefined,
+    Pick<QueryState, 'status' | 'fetchStatus' | 'isInvalidated'> | undefined,
 ): boolean {
   if (!state || state.isInvalidated) return false
   return state.status === 'success' && state.fetchStatus === 'idle'

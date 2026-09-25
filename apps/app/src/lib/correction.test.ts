@@ -2347,8 +2347,12 @@ test('only a write that just settled, landed or failed, sends the armed 元に�
 
 test('a settled settings write judges 元に戻す only by a day list that is settled, successful and not marked stale', () => {
   // Arrange
-  const fresh = { status: 'success', fetchStatus: 'idle', isInvalidated: false }
-  const states = [
+  const fresh: Parameters<typeof isFreshList>[0] = {
+    status: 'success',
+    fetchStatus: 'idle',
+    isInvalidated: false,
+  }
+  const states: Parameters<typeof isFreshList>[0][] = [
     fresh,
     { ...fresh, isInvalidated: true },
     { ...fresh, fetchStatus: 'fetching' },

@@ -22,7 +22,8 @@ import { afterReadActions } from '@/store/correction'
  * Home's poll of today, the re-read after a failed edit, a History page. So a line the day has moved past, or a slot whose
  * replay could only be refused, is gone before that day's sheet reopens, and an uncertain failure's line waits for a real
  * read (a paused offline read never lands). A settings write's own re-reads land while it is in flight, when a slot cannot
- * be judged, so every armed slot is judged again by its day's cached list once that write settles. Mounted once by
+ * be judged, so once that write settles every armed slot whose day's list is fresh ({@link isFreshList}) is judged by it; a
+ * closed sheet's day waits for its next read. Mounted once by
  * {@link AppLayout}; the decisions live in {@link afterDayRead}.
  * @example useDayReads()
  */
@@ -51,8 +52,8 @@ function judgeDayRead(event: QueryCacheNotifyEvent): void {
   })
 }
 
-// One mutation-cache update: once the last settings write settles, every armed slot whose day's cached list is fresh (that
-// write re-read it, or nothing has touched it since) is judged by it. Other days wait for their next read. Lines are left
+// One mutation-cache update: once the last settings write settles, every armed slot whose day's cached list is fresh (a read
+// landed after that write marked it stale: its re-read of a watched list, or a sheet opened meanwhile) is judged by it. Other days wait for their next read. Lines are left
 // alone: a cached list is not a new read.
 function judgeAfterSettingsWrite(event: MutationCacheNotifyEvent): void {
   const { mutation } = event
