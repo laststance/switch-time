@@ -68,7 +68,8 @@ async function endSession(backendPid: number, lentAt: Date): Promise<void> {
   }, SESSION_END_TIMEOUT_MS)
   try {
     await client.query(
-      'select pg_terminate_backend(pid) from pg_stat_activity where pid = $1 and backend_start <= $2',
+      // 1 s of slack for this host's clock running behind the server's, which would otherwise skip a freshly opened session.
+      "select pg_terminate_backend(pid) from pg_stat_activity where pid = $1 and backend_start <= $2::timestamptz + interval '1 second'",
       [backendPid, lentAt],
     )
   } finally {
@@ -97,7 +98,8 @@ export const REQUEST_DEADLINE_MS = 25_000
 
 /**
  * {@link inTransaction} reached its deadline. `committing` tells whether `work` had finished, so COMMIT may have reached the
- * database (the outcome is unknown), or not (the transaction never committed, since the connection was destroyed first).
+ * database (the outcome is unknown), or not (nothing committed: the connection was destroyed first, or the transaction was
+ * rolled back because `work` finished past the deadline).
  */
 export class DeadlineError extends Error {
   constructor(readonly committing: boolean) {
@@ -113,8 +115,9 @@ export class DeadlineError extends Error {
 /**
  * Runs `work` in one transaction on a pool connection the call owns, and gives up at `deadline`: the connection is then
  * destroyed (a stuck socket never returns to the pool), its server session is ended with `pg_terminate_backend` so the
- * transaction and the lock it holds go at once ({@link IDLE_IN_TRANSACTION_TIMEOUT_MS} is the fallback when that cannot
- * reach the server), and the call rejects with {@link DeadlineError} without waiting for `work`. A call already past its
+ * transaction and the lock it holds go at once (when that does not reach or match the session, an idle one ends after
+ * {@link IDLE_IN_TRANSACTION_TIMEOUT_MS} and a running statement at its `statement_timeout`), and the call rejects with
+ * {@link DeadlineError} without waiting for `work`. A call already past its
  * deadline takes no connection at all.
  * `db.transaction` cannot do this: it releases its connection itself, only once the transaction settles, and never when
  * BEGIN fails. Called only through {@link boundedTransaction}, which answers the {@link DeadlineError} as an ORPCError.
