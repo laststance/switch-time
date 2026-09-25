@@ -93,23 +93,24 @@ const TIMELINE_LOCK_NAMESPACE = 1
  */
 const TIMELINE_LOCK_TIMEOUT = '10s'
 
-/** How long one statement of a timeline write may run on the server (Postgres `statement_timeout`); above the lock wait. */
+/** How long one statement of a write under {@link withUserLock} may run on the server (Postgres `statement_timeout`); above the lock wait. */
 const TIMELINE_STATEMENT_TIMEOUT = '15s'
 
 /**
- * How many timeline writes one account may have in flight in this process, the running one included: a burst above this is
- * refused at once rather than queued, since the queue already holds more than a request's deadline lets it wait for.
+ * How many writes under {@link withUserLock} one account may have in flight in this process, the running one included: the
+ * timeline writes, the activity writes and a zone change share the cap. A burst above this is refused at once rather than
+ * queued, since the queue already holds more than a request's deadline lets it wait for.
  */
 const TIMELINE_WRITES_PER_USER = 4
 
-/** One account's timeline writes in this process: how many are in flight, and the turn the next arrival waits for. */
+/** One account's writes under {@link withUserLock} in this process: how many are in flight, and the turn the next arrival waits for. */
 type TimelineQueue = { size: number; tail: Promise<void> }
 
-// The accounts with timeline writes in flight in this process (an account with none has no entry).
+// The accounts with writes under the user's lock in flight in this process (an account with none has no entry).
 const timelineQueues = new Map<string, TimelineQueue>()
 
 /**
- * How many timeline writes the account has in flight in this process, the running one included. The tests wait on it to
+ * How many writes under {@link withUserLock} the account has in flight in this process, the running one included. The tests wait on it to
  * know a write has queued, since a write queued here holds no database lock `pg_stat_activity` would show.
  */
 export const timelineWritesInFlight = (userId: string): number =>
@@ -133,9 +134,10 @@ async function awaitTurn(turn: Promise<void>, deadline: number): Promise<void> {
 
 /**
  * Runs `work` in one transaction that first takes the user's timeline lock (`pg_advisory_xact_lock`, released at commit or
- * rollback). Every write to a user's switches, `activities.archive` and a stored-zone change take it, and read what they
- * decide on inside it, so two devices' writes run one after the other: a merge sees the neighbours the other merge left,
- * two 「元に戻す」 never both delete and insert, a tap cannot slip between archive's check and its write.
+ * rollback). Every write to a user's switches, the activity writes that pick or check the live set (`activities.create`,
+ * `reorder`, `archive`, `unarchive`) and a stored-zone change take it, and read what they decide on inside it, so two devices'
+ * writes run one after the other: a merge sees the neighbours the other merge left, two 「元に戻す」 never both delete and
+ * insert, a tap cannot slip between archive's check and its write, a create and an unarchive never take the same slot.
  *
  * The account's writes first queue in this process, in arrival order, so only the one at the head holds a pool connection
  * and several accounts' bursts cannot fill the pool with writes waiting on their own locks. The advisory lock still orders
@@ -165,7 +167,7 @@ export async function withUserLock<T>(
   }
   if (queue.size >= TIMELINE_WRITES_PER_USER)
     throw new ORPCError('TOO_MANY_REQUESTS', {
-      message: 'too many timeline writes in flight',
+      message: 'too many writes under the user lock in flight',
       data: REFUSAL.busy,
     })
   timelineQueues.set(userId, queue)
@@ -178,7 +180,7 @@ export async function withUserLock<T>(
       await awaitTurn(previous, deadline)
     } catch {
       throw new ORPCError('TOO_MANY_REQUESTS', {
-        message: 'timeline write queued past its deadline',
+        message: 'write under the user lock queued past its deadline',
         data: REFUSAL.busy,
       })
     }

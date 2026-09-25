@@ -202,7 +202,7 @@ export const splitAtInputSchema = z.object({
 export type SplitAtInput = z.infer<typeof splitAtInputSchema>
 
 /**
- * Why the API refused a timeline write, sent as the error's `data` (`{ reason }`) so the correction sheet can say it in
+ * Why the API refused a write under the user's lock (a timeline write, or `busy` on an activity write or a zone change), sent as the error's `data` (`{ reason }`) so the correction sheet can say it in
  * Japanese: the English `message` is for logs, and one error code (CONFLICT) covers most of these.
  */
 const refusalReasonSchema = z.enum([
@@ -221,7 +221,7 @@ export type RefusalReason = z.infer<typeof refusalReasonSchema>
 export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
 
 /**
- * The `data` of every refusal a timeline write can answer, one per {@link RefusalReason}. The API throws them and the app
+ * The `data` of every refusal a write under the user's lock can answer, one per {@link RefusalReason}. The API throws them and the app
  * reads them, so the two sides share one value rather than two string literals. Each entry is frozen too, because every
  * error thrown with it carries the same object.
  * - `dayChanged`: CONFLICT, the day no longer reads as the sheet saw it (another device or tab wrote since, or the stored
@@ -233,7 +233,8 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  * - `noNeighbour`: CONFLICT, a merge has no previous or next record to merge into.
  * - `nextOnLaterDay`: CONFLICT, 「次の記録に統合」 would pull back a record from a later day.
  * - `cannotSplit`: CONFLICT, a split would leave a part under a minute, or fall outside its record or the baseline's day.
- * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of timeline writes in flight, or the write reached the
+ * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of writes under the user's lock in flight (timeline writes,
+ *   the activity writes that pick or check the live set, a zone change share it), or the write reached the
  *   request's deadline while queued behind the account's earlier writes. Nothing was saved either way.
  * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
