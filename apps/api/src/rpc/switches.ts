@@ -20,7 +20,13 @@ import { z } from 'zod'
 import { db, type Executor, type LockedTx } from '../db/client'
 import { activities, switches } from '../db/schema/app'
 
-import { authed, one, ownSwitch, withUserLock } from './base'
+import {
+  authed,
+  boundedTransaction,
+  one,
+  ownSwitch,
+  withUserLock,
+} from './base'
 import { getSettings } from './settings'
 
 type SwitchRow = typeof switches.$inferSelect
@@ -228,30 +234,45 @@ async function withNeighbours(tx: LockedTx, userId: string, id: string) {
 
 /**
  * Every switch inside [start, end) plus its neighbours: the state carried in from before and the first switch after,
- * which closes the last segment. Oldest first: the input for segments.
- * @example const { carriedIn, rows, carriedOut } = await switchesBetween(userId, start, end)
+ * which closes the last segment. Oldest first: the input for segments. The three reads share one connection (one per
+ * request, however fast a client refetches) and one snapshot, so a write landing between them cannot pair rows with
+ * neighbours from before it.
+ * @example const { carriedIn, rows, carriedOut } = await switchesBetween(userId, start, end, context.deadline)
  */
-async function switchesBetween(userId: string, start: number, end: number) {
-  const [[carriedIn], rows, [carriedOut]] = await Promise.all([
-    db
-      .select()
-      .from(switches)
-      .where(and(own(userId), lt(switches.startedAt, new Date(start))))
-      .orderBy(desc(switches.startedAt))
-      .limit(1),
-    db
-      .select()
-      .from(switches)
-      .where(inDay(userId, { start, end }))
-      .orderBy(asc(switches.startedAt)),
-    db
-      .select()
-      .from(switches)
-      .where(and(own(userId), gte(switches.startedAt, new Date(end))))
-      .orderBy(asc(switches.startedAt))
-      .limit(1),
-  ])
-  return { carriedIn: carriedIn ?? null, rows, carriedOut: carriedOut ?? null }
+async function switchesBetween(
+  userId: string,
+  start: number,
+  end: number,
+  deadline: number,
+) {
+  return boundedTransaction(
+    deadline,
+    async (tx) => {
+      const [carriedIn] = await tx
+        .select()
+        .from(switches)
+        .where(and(own(userId), lt(switches.startedAt, new Date(start))))
+        .orderBy(desc(switches.startedAt))
+        .limit(1)
+      const rows = await tx
+        .select()
+        .from(switches)
+        .where(inDay(userId, { start, end }))
+        .orderBy(asc(switches.startedAt))
+      const [carriedOut] = await tx
+        .select()
+        .from(switches)
+        .where(and(own(userId), gte(switches.startedAt, new Date(end))))
+        .orderBy(asc(switches.startedAt))
+        .limit(1)
+      return {
+        carriedIn: carriedIn ?? null,
+        rows,
+        carriedOut: carriedOut ?? null,
+      }
+    },
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
+  )
 }
 
 // The day's own rows as a baseline or 「元に戻す」's expectation lists them, oldest first.
@@ -488,7 +509,7 @@ export const switchesRouter = {
     .input(z.object({ activityId: z.uuid().nullable() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         await assertLiveActivities(tx, userId, [input.activityId])
         const current = await latestSwitch(userId, tx)
         // Tapping the active state again keeps it: no zero-length segment, and the clock never drops its state.
@@ -513,14 +534,14 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const { timeZone } = await getSettings(context.user.id)
       const { start, end } = dayBounds(input.day, timeZone)
-      return switchesBetween(context.user.id, start, end)
+      return switchesBetween(context.user.id, start, end, context.deadline)
     }),
 
   moveStart: authed
     .input(moveStartInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const window = await checkOwnRowBaseline(
           tx,
           userId,
@@ -546,7 +567,7 @@ export const switchesRouter = {
     .input(changeActivityInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
         const row = await ownSwitch(userId, input.id, tx)
         await assertLiveActivities(tx, userId, [input.activityId])
@@ -566,7 +587,7 @@ export const switchesRouter = {
     .input(rowEditInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
         const { row, prev, next } = await withNeighbours(tx, userId, input.id)
         // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
@@ -582,7 +603,7 @@ export const switchesRouter = {
     .input(rowEditInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const window = await checkOwnRowBaseline(
           tx,
           userId,
@@ -605,7 +626,7 @@ export const switchesRouter = {
     .input(rowEditInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const window = await checkOwnRowBaseline(
           tx,
           userId,
@@ -630,7 +651,7 @@ export const switchesRouter = {
     .input(splitAtInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const window = await checkBaseline(tx, userId, input.baseline)
         const { row, next } = await withNeighbours(tx, userId, input.id)
         const at = input.at.getTime()
@@ -658,7 +679,7 @@ export const switchesRouter = {
       // The window the client meant; the lock below refuses the call when the stored zone is no longer this one.
       const window = dayBounds(input.day, input.timeZone)
       assertRowsFitDay(input.rows, window)
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const { timeZone } = await getSettings(userId, tx)
         if (timeZone !== input.timeZone) throw dayChanged()
         await ownActivities(

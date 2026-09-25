@@ -7,7 +7,7 @@ import { db } from '../db/client'
 import { activities } from '../db/schema/app'
 import { seedUser } from '../db/seed-user'
 
-import { authed, one, withUserLock } from './base'
+import { authed, boundedTransaction, one, withUserLock } from './base'
 import { latestSwitch } from './switches'
 
 const active = (userId: string) =>
@@ -60,15 +60,22 @@ export const activitiesRouter = {
 
   update: authed
     .input(activityInputSchema.extend({ id: z.uuid() }))
+    // Bounded by the request's deadline: a whole-row update that landed after the app gave up could overwrite the edit
+    // the app sent next.
     .handler(async ({ context, input: { id, ...values } }) =>
-      one(
-        await db
-          .update(activities)
-          .set(values)
-          .where(
-            and(eq(activities.id, id), eq(activities.userId, context.user.id)),
-          )
-          .returning(),
+      boundedTransaction(context.deadline, async (tx) =>
+        one(
+          await tx
+            .update(activities)
+            .set(values)
+            .where(
+              and(
+                eq(activities.id, id),
+                eq(activities.userId, context.user.id),
+              ),
+            )
+            .returning(),
+        ),
       ),
     ),
 
@@ -115,7 +122,7 @@ export const activitiesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       // Under the timeline lock: a tap on this activity, or a second archive, waits until this one has checked and written.
-      return withUserLock(userId, async (tx) => {
+      return withUserLock(userId, context.deadline, async (tx) => {
         const current = await latestSwitch(userId, tx)
         const activeCount = await tx.$count(activities, active(userId))
         // The clock always holds exactly one state: its activity, and the last remaining one, stay.
