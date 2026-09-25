@@ -40,28 +40,16 @@
 
 ## Settings
 
-### Let the main device take the account's zone back
+### Pick a zone other than the device's in 設定
 
-**What:** Give the user a way back when another device's zone replaced the account's: a zone row in 設定 (designed in the pen file first) or a prompt when the stored zone differs from both the device's zone and the one it last synced.
+**What:** Let the タイムゾーン row on 設定 set any IANA zone, with a searchable list and readable city names, not only take back this device's zone.
 
-**Why:** Since 0.5.0.0 a device writes its zone only when its own zone changed since it last synced (`zoneSyncAction` in `apps/app/src/lib/settings.ts`), which stopped two devices from flipping the zone on every focus. A single sign-in from another zone (a friend's laptop abroad, a browser that reports UTC to resist fingerprinting, a test run against the real account) now writes once, and the main device, whose own zone has not changed, never writes again. Every day boundary, the stats and the correction windows stay shifted, and the app has no zone control to undo it.
+**Why:** The row can only write the zone this device reports (「この端末に合わせる」). A user who wants another zone (a second home, a browser that reports UTC to resist fingerprinting) has no control, and the row shows raw IANA ids (`America/New_York`) that a screen reader spells out.
 
-**Context:** `apps/app/src/lib/device-zone.ts` keeps the last synced zone per account (localStorage on the web, `expo-secure-store` on native). On iOS the keychain can keep that entry across a reinstall, so reinstalling does not reclaim the zone either. A prompt keeps the automatic path; a 設定 row is simpler and also covers a user who wants a zone other than the device's. Raised by the red-team pass during the 0.5.0.0 ship.
+**Context:** `useAccountZone` (`apps/app/src/hooks/use-account-zone.ts`) and `zoneRow` (`apps/app/src/lib/settings.ts`) drive the row; `settings.update` already takes any zone `timeZoneSchema` accepts. A picked zone must also be remembered as this device's sync (`rememberSyncedZone`), or `useTimeZoneSync` would write the device's zone over it when the device moves. Needs a pen design first (the 設定 board and `ST Phone / 設定・タイムゾーン行の状態`). Split off when the take-back shipped (2026-09-25).
 
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep the zone sync from recording the previous account's zone when another tab signs in as someone else
-
-**What:** Key the settings query (or the synced-zone check) by the account, or have `useTimeZoneSync` skip the render in which the session's user id changed, so it only compares the device's zone with the new account's stored one.
-
-**Why:** When another tab signs in as a different account, this tab's session turns to that account on focus. `useAccountScope` then resets the query cache (the PR that bound 元に戻す to its account), but in the same commit `useTimeZoneSync`'s effect still reads the first account's settings: it can find that zone equal to the device's and record it as synced for the second account (`zoneSyncAction`'s 'record'), after which the device never writes its zone into the second account.
-
-**Context:** `apps/app/src/hooks/use-time-zone-sync.ts`, `orpc.settings.get.queryKey()` (not keyed by user), `useAccountScope` in `apps/app/src/hooks/use-account-scope.ts`. Raised by the Claude adversarial pass during the 0.5.0.0 ship; narrowed when the cache reset landed.
-
-**Effort:** S
-**Priority:** P3
+**Effort:** M
+**Priority:** P4
 **Depends on:** None
 
 ## Correction
