@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import {
   addDays,
@@ -79,4 +79,33 @@ test('a day whose local midnight is skipped by DST starts at the transition inst
   expect(localDay(new Date(start), zone)).toBe('2026-09-06')
   expect(localDay(new Date(start - 1), zone)).toBe('2026-09-05')
   expect(dayBounds('2026-09-05', zone).end).toBe(start)
+})
+
+test('a day before the year 1000 keeps a four-digit year', () => {
+  // Act
+  const day = localDay(new Date('0999-06-01T12:00:00Z'), 'UTC')
+
+  // Assert
+  expect(day).toBe('0999-06-01')
+})
+
+test('day math builds one formatter per time zone, however many instants it reads', () => {
+  // Arrange: zones no other test here reads, so the cache starts empty for them
+  const construct = vi.spyOn(Intl, 'DateTimeFormat')
+  const instant = new Date('2026-09-09T00:00:00Z')
+
+  // Act
+  const days = [
+    localDay(instant, 'Europe/Lisbon'),
+    localDay(instant, 'Pacific/Honolulu'),
+    localDay(instant, 'Europe/Lisbon'),
+    localDay(instant, 'Pacific/Honolulu'),
+  ]
+  const offset = tzOffsetMs(instant, 'Europe/Lisbon')
+
+  // Assert
+  expect(days).toEqual(['2026-09-09', '2026-09-08', '2026-09-09', '2026-09-08'])
+  expect(offset).toBe(3_600_000)
+  expect(construct).toHaveBeenCalledTimes(2)
+  construct.mockRestore()
 })

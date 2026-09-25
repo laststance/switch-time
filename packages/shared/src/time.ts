@@ -1,5 +1,8 @@
 const DAY_MS = 86_400_000
 
+/** The first day {@link daySchema} accepts (the Unix epoch): `Date.UTC` reads years 0–99 as 1900–1999, so older days would break {@link dayBounds}. */
+export const EARLIEST_DAY = '1970-01-01'
+
 type Civil = {
   year: number
   month: number
@@ -9,10 +12,14 @@ type Civil = {
   second: number
 }
 
-// Wall-clock fields of `date` in `timeZone`. formatToParts + h23 (not toLocaleString / hour12) so Hermes and V8 agree.
-function civil(date: Date, timeZone: string): Civil {
-  const fields: Record<string, number> = {}
-  const parts = new Intl.DateTimeFormat('en-US', {
+// One formatter per zone: building an Intl.DateTimeFormat costs far more than formatting with it, and stats read one per tap.
+const civilFormats = new Map<string, Intl.DateTimeFormat>()
+
+// The zone's cached formatter; an unknown zone throws here, before anything is cached.
+function civilFormat(timeZone: string): Intl.DateTimeFormat {
+  const cached = civilFormats.get(timeZone)
+  if (cached) return cached
+  const format = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',
     year: 'numeric',
@@ -21,8 +28,16 @@ function civil(date: Date, timeZone: string): Civil {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-  }).formatToParts(date)
-  for (const part of parts) fields[part.type] = Number(part.value)
+  })
+  civilFormats.set(timeZone, format)
+  return format
+}
+
+// Wall-clock fields of `date` in `timeZone`. formatToParts + h23 (not toLocaleString / hour12) so Hermes and V8 agree.
+function civil(date: Date, timeZone: string): Civil {
+  const fields: Record<string, number> = {}
+  for (const part of civilFormat(timeZone).formatToParts(date))
+    fields[part.type] = Number(part.value)
   return fields as Civil
 }
 
@@ -44,7 +59,8 @@ export function tzOffsetMs(date: Date, timeZone: string): number {
  */
 export function localDay(date: Date, timeZone: string): string {
   const c = civil(date, timeZone)
-  return `${c.year}-${pad(c.month)}-${pad(c.day)}`
+  // Four digits even before the year 1000, so days keep sorting as strings.
+  return `${String(c.year).padStart(4, '0')}-${pad(c.month)}-${pad(c.day)}`
 }
 
 const HOUR_MS = 3_600_000
