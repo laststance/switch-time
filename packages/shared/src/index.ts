@@ -51,4 +51,10 @@ export {
   type DayStats,
   type ExcludedReason,
 } from './stats'
-export { addDays, dayBounds, daysInMonth, localDay } from './time'
+export {
+  addDays,
+  dayBounds,
+  daysInMonth,
+  FORMAT_CACHE_MAX_ZONES,
+  localDay,
+} from './time'

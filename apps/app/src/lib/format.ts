@@ -1,3 +1,5 @@
+import { FORMAT_CACHE_MAX_ZONES } from '@switch-time/shared'
+
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`)
 
 /**
@@ -63,6 +65,8 @@ export function formatTime(date: Date, timeZone: string): string {
       hourCycle: 'h23',
       timeZone,
     })
+    // Full: start over rather than grow, so odd spellings ('asia/tokyo') cannot pile up
+    if (timeFormats.size >= FORMAT_CACHE_MAX_ZONES) timeFormats.clear()
     timeFormats.set(timeZone, format)
   }
   return format.format(date)

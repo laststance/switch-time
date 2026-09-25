@@ -224,13 +224,37 @@
 
 ## Stats
 
-### Say that changing a carried-in detox changes whether the days it spans count
+### Say when an edit changes whether the untapped days around it count
 
-**What:** Under 活動を変える on a carried-in detox record, add a note like the cut's 計測 line: picking an activity turns the untapped days the detox ran through back into 計測なし (and picking detox on a carried-in activity measures them).
+**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, and a merge or 元に戻す that removes or adds the tap ending a detox. The rule to state: whether later untapped days count follows the activity of the record carried over them.
 
-**Why:** Since detox left on over midnight measures the days it covers (`detoxCarriedDays`, 2026-09-25), a pick on that record silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
+**Why:** Since detox left on over midnight measures the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
 
 **Context:** The rule is in `classifyDay` / `detoxCarriedDays` (`packages/shared/src/stats.ts`); `cutTotalsEffects` in `apps/app/src/lib/correction.ts` is the pattern for such a note. New text, so the pen file first. Left out of the PR that let detox days count.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tell a detox day apart from an excluded day on History
+
+**What:** Give the detox cell its own outline (or narrow History's footnote to the excluded outline and add a short legend for detox), so 点線の日 in 「アプリを使わなかった N日 は平均から除外しています（点線の日）」 means only the days left out.
+
+**Why:** Both cells are dashed (`CELL.detox` is `border-dashed border-sub`, the excluded cell `border-dashed` in the line tone). Since a detox left on over a weekend measures the days it covers, a week can show three dashed days while the footnote counts one, and the two detox days, which stay in the average, read as excluded.
+
+**Context:** `dayCell` in `apps/app/src/lib/history.ts`, the footnote in `apps/app/src/app/(app)/(tabs)/history.tsx`. A visual change, so the pen file first. Found in review of the PR that let detox days count.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** None
+
+### Decide whether a detox left running for weeks keeps measuring days
+
+**What:** Choose whether a detox with no later tap measures every day up to today (the current rule), or stops after a limit (for example a week, or a setting), and add a test for a detox left running for a month.
+
+**Why:** Someone who taps detox and then stops using the app gets a 連続記録 that grows by one each day and a zero-total measured day that pulls every 1日あたり average down, which is the dilution the auto exclusion exists to prevent. An activity left running is read as a forgotten tap instead, and the idle threshold does not apply to detox.
+
+**Context:** `detoxCarriedDays` in `packages/shared/src/stats.ts` covers up to `window.to` (today). A deliberate choice in the PR that let detox days count; found in its review.
 
 **Effort:** S
 **Priority:** P3

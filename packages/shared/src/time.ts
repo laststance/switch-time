@@ -1,6 +1,6 @@
 const DAY_MS = 86_400_000
 
-/** The first day {@link daySchema} accepts (the Unix epoch): `Date.UTC` reads years 0–99 as 1900–1999, so older days would break {@link dayBounds}. */
+/** The first day {@link daySchema} accepts: a chosen floor (the Unix epoch) well above years 0–99, which `Date.UTC` reads as 1900–1999 and which would break {@link dayBounds}. */
 export const EARLIEST_DAY = '1970-01-01'
 
 type Civil = {
@@ -11,6 +11,12 @@ type Civil = {
   minute: number
   second: number
 }
+
+/**
+ * Most zone spellings a formatter cache holds before it starts over: well above the ~420 IANA names, and a bound on memory,
+ * since Intl also takes 'asia/tokyo' or '+0930' and a client could otherwise send a new spelling on every request.
+ */
+export const FORMAT_CACHE_MAX_ZONES = 1000
 
 // One formatter per zone: building an Intl.DateTimeFormat costs far more than formatting with it, and stats read one per tap.
 const civilFormats = new Map<string, Intl.DateTimeFormat>()
@@ -29,6 +35,8 @@ function civilFormat(timeZone: string): Intl.DateTimeFormat {
     minute: '2-digit',
     second: '2-digit',
   })
+  // Full: start over rather than grow (keyed by the spelling as given, since Intl maps aliases like Asia/Kolkata to other names)
+  if (civilFormats.size >= FORMAT_CACHE_MAX_ZONES) civilFormats.clear()
   civilFormats.set(timeZone, format)
   return format
 }

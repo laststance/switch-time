@@ -201,6 +201,19 @@ test('a month older than the streak window still counts the days a detox ran thr
   ])
 })
 
+test('the month and week views refuse days before 1970 at the API boundary', async () => {
+  // Arrange
+  const api = await signedIn('pre-epoch@example.com')
+
+  // Act + Assert: the floor keeps Date.UTC's 1900s reading of years 0–99 away from the day math
+  await expect(api.stats.month({ month: '1969-12' })).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+  })
+  await expect(
+    api.stats.week({ startDay: '1969-12-31' }),
+  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
 test('an activity left on for two days still leaves them unused', async () => {
   // Arrange: 休息 from 20:00 three days ago until 仕事 at midnight today, nothing tapped between
   const api = await signedIn('carried-activity@example.com')

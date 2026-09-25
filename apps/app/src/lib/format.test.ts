@@ -1,6 +1,10 @@
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import { formatDay, formatDuration, formatElapsed, formatTime } from './format'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 test('the elapsed hero reads H:MM:SS and keeps counting past 24 hours', () => {
   // Arrange
@@ -29,7 +33,6 @@ test('the since line builds one formatter per time zone, however often it render
   // Assert
   expect(readouts).toEqual(['1:05', '5:35', '1:05', '5:35'])
   expect(construct).toHaveBeenCalledTimes(2)
-  construct.mockRestore()
 })
 
 test('the header date and the since line follow the stored time zone', () => {
@@ -69,4 +72,30 @@ test('the since line keeps failing for an unknown time zone instead of caching a
   expect(readUnknownZone).toThrow(RangeError)
   expect(readUnknownZone).toThrow(RangeError)
   expect(formatTime(instant, 'Asia/Tokyo')).toBe('9:05')
+})
+
+test('the since line keeps its formatter cache under the cap however many zone spellings it sees', () => {
+  // Arrange: Intl takes any casing, so flipping the case of 'antarctica' gives 1000 different keys; Tokyo is cached first so the cache is never empty
+  const instant = new Date('2026-09-09T00:05:00Z')
+  formatTime(instant, 'Asia/Tokyo')
+  const spellings = Array.from({ length: 1000 }, (_, index) =>
+    [...'antarctica/mcmurdo']
+      .map((letter, position) =>
+        position < 10 && (index >> position) & 1
+          ? letter.toUpperCase()
+          : letter,
+      )
+      .join(''),
+  )
+  const construct = vi.spyOn(Intl, 'DateTimeFormat')
+
+  // Act: every spelling once, then the first again after the cache has started over
+  const readouts = spellings.map((spelling) => formatTime(instant, spelling))
+  const firstAgain = formatTime(instant, spellings[0])
+
+  // Assert
+  expect(new Set(spellings).size).toBe(1000)
+  expect(new Set(readouts)).toEqual(new Set(['12:05']))
+  expect(firstAgain).toBe('12:05')
+  expect(construct).toHaveBeenCalledTimes(1001)
 })

@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import {
   addDays,
@@ -9,6 +9,10 @@ import {
   localDay,
   tzOffsetMs,
 } from './time'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 test('a Tokyo day runs from 15:00 UTC of the previous day', () => {
   // Act
@@ -107,7 +111,6 @@ test('day math builds one formatter per time zone, however many instants it read
   expect(days).toEqual(['2026-09-09', '2026-09-08', '2026-09-09', '2026-09-08'])
   expect(offset).toBe(3_600_000)
   expect(construct).toHaveBeenCalledTimes(2)
-  construct.mockRestore()
 })
 
 test('an unknown time zone keeps failing on every read instead of reusing a cached formatter', () => {
@@ -121,4 +124,46 @@ test('an unknown time zone keeps failing on every read instead of reusing a cach
   expect(readUnknownZone).toThrow(RangeError)
   expect(readUnknownZone).toThrow(RangeError)
   expect(localDay(instant, 'Asia/Tokyo')).toBe('2026-09-09')
+})
+
+test('a client cycling spellings of a zone cannot grow the formatter cache past its cap', () => {
+  // Arrange: Intl takes any casing, so flipping the case of 'antarctica' gives 1000 different keys; Tokyo is cached first so the cache is never empty
+  const instant = new Date('2026-09-09T00:00:00Z')
+  localDay(instant, 'Asia/Tokyo')
+  const spellings = Array.from({ length: 1000 }, (_, index) =>
+    [...'antarctica/mcmurdo']
+      .map((letter, position) =>
+        position < 10 && (index >> position) & 1
+          ? letter.toUpperCase()
+          : letter,
+      )
+      .join(''),
+  )
+  const construct = vi.spyOn(Intl, 'DateTimeFormat')
+
+  // Act: every spelling once, then the first again after the cache has started over
+  const days = spellings.map((spelling) => localDay(instant, spelling))
+  const firstAgain = localDay(instant, spellings[0])
+
+  // Assert
+  expect(new Set(spellings).size).toBe(1000)
+  expect(new Set(days)).toEqual(new Set(['2026-09-09']))
+  expect(firstAgain).toBe('2026-09-09')
+  expect(construct).toHaveBeenCalledTimes(1001)
+})
+
+test('an alias zone such as Asia/Kolkata is cached under the name it was given', () => {
+  // Arrange: Intl reports Asia/Kolkata as Asia/Calcutta, so a cache keyed by that name would miss every time
+  const construct = vi.spyOn(Intl, 'DateTimeFormat')
+  const instant = new Date('2026-09-09T00:00:00Z')
+
+  // Act
+  const days = [
+    localDay(instant, 'Asia/Kolkata'),
+    localDay(instant, 'Asia/Kolkata'),
+  ]
+
+  // Assert
+  expect(days).toEqual(['2026-09-09', '2026-09-09'])
+  expect(construct).toHaveBeenCalledTimes(1)
 })
