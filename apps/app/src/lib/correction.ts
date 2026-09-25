@@ -200,11 +200,11 @@ function cutRange(
   const ceiling =
     Math.min(trueEnd, bounds.end, bounds.now - CLOCK_SKEW_MARGIN_MS) -
     MIN_SEGMENT_MS
-  const grid = (step: number) => ({
+  const stepsInside = (step: number) => ({
     first: bounds.start + Math.ceil((floor - bounds.start) / step) * step,
     last: bounds.start + Math.floor((ceiling - bounds.start) / step) * step,
   })
-  const quarters = grid(QUARTER_MS)
+  const quarters = stepsInside(QUARTER_MS)
   if (quarters.first <= quarters.last) {
     const count = (quarters.last - quarters.first) / QUARTER_MS
     return {
@@ -214,7 +214,7 @@ function cutRange(
       middleMinute: false,
     }
   }
-  const minutes = grid(MINUTE_MS)
+  const minutes = stepsInside(MINUTE_MS)
   // Not even a whole minute keeps a minute from both ends: 「ここで分割」 is disabled.
   if (minutes.first > minutes.last) return null
   const middle =
