@@ -25,7 +25,8 @@ export function TimeZoneRow({ className }: { className: string }) {
             {summary}
           </Text>
         ) : (
-          <Text key="summary" className="text-sub text-2xs">
+          // Polite: a take-back that lands removes the button that had focus, so the line saying "same" is what confirms it.
+          <Text key="summary" aria-live="polite" className="text-sub text-2xs">
             {summary}
           </Text>
         )}

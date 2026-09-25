@@ -10,8 +10,17 @@ import { deviceZone } from '@/lib/device-zone'
  * @example const device = useDeviceZone() // 'Asia/Tokyo'
  */
 export function useDeviceZone(): string {
-  return useSyncExternalStore(subscribeToForeground, deviceZone, deviceZone)
+  return useSyncExternalStore(subscribeToForeground, readZone, readZone)
 }
 
+// The zone last read. React reads the snapshot on every render, and only a foreground can change it, so the Intl lookup
+// (dearer on Hermes than on V8) runs once per foreground instead of once per render.
+let lastReadZone = deviceZone()
+
+const readZone = (): string => lastReadZone
+
 const subscribeToForeground = (onChange: () => void): (() => void) =>
-  focusManager.subscribe(onChange)
+  focusManager.subscribe(() => {
+    lastReadZone = deviceZone()
+    onChange()
+  })
