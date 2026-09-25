@@ -234,6 +234,18 @@
 **Priority:** P4
 **Depends on:** None
 
+### Name only the untapped days an edit really changes
+
+**What:** Make the correction sheet's untapped-day notes exact: (1) let `untappedChange` see the taps after the first switch after the day, up to that switch's day + 7, so a run that a later tap ends is not treated as running through its week; (2) leave manually excluded days out, as `classifyDay` does; (3) name separate runs of changed days separately (「9月9日、9月16日〜9月17日」) instead of one first-to-last range that can include the viewed day's own tapped day and days that do not change. (3) changes the note's text, so pen first.
+
+**Why:** Each case shows a note, or a wider range, for days whose counting does not change. For example, picking detox for the last row of a day 8+ days back that a detox after midnight follows names the day a week later even when the next morning's tap ends that run. The notes say 「変わることがあります」 and never miss a real change, but a false warning makes them easy to ignore.
+
+**Context:** `untappedChange` and `timeline` in `apps/app/src/lib/untapped.ts`. `switches.listByDay` returns only the first switch after the day (`carriedOut`), and manual exclusions come from `excludedDays.list` (`use-excluded-days.ts`). Adding a hook to `useCorrection` puts it over fallow's complexity limit, so feed them through `untappedSheetNotes` or the list answer. Raised by the red-team review of the PR that added the notes (2026-09-25).
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** None
+
 ## Stats
 
 ### Check how screen readers speak the `9h 00m` durations
