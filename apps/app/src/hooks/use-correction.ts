@@ -19,6 +19,7 @@ import {
   dayTitle,
   isDayChangedRefusal,
   landedUndo,
+  noteDayClass,
   offeredUndo,
   onPressedDay,
   pickRequest,
@@ -402,6 +403,6 @@ function useTotalsFacts(
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
-    dayExcluded: isPast ? stats.data?.days[0]?.excluded : null,
+    dayExcluded: noteDayClass(isPast, stats),
   }
 }

@@ -449,9 +449,38 @@ export function cutStepper(
 /** The day facts the cut's effect on the totals depends on; the hook reads them from settings and the viewed day's stats. */
 export type TotalsFacts = {
   idleThresholdMs: number
-  /** The viewed day's class as `stats.*` reports it; undefined while that answer loads, so the 計測 note waits rather than guess. */
+  /**
+   * A past day's class as `stats.day` reports it; null for today (never asked: today is never 計測なし), undefined while
+   * the answer loads or refetches, so the 計測 note waits rather than guess.
+   */
   dayExcluded: ExcludedReason | null | undefined
 }
+
+/**
+ * The viewed day's class for {@link TotalsFacts}, from the `stats.day` query the correction hook runs for a past day
+ * only; kept out of the hook so the three answers are tested.
+ * @param isPast - Whether the viewed day is before today in the stored zone.
+ * @param query - The `stats.day` query: its answer (undefined until the first one lands) and whether it is fetching.
+ * @returns
+ * - null for today, which is never 計測なし yet, so it is never asked
+ * - undefined while the answer loads or a refetch is in flight (after an edit, even one that timed out and let the list
+ *   land first), so the 計測 note waits rather than repeat a promise the day's new rows no longer hold
+ * - otherwise the day's class as the server reports it
+ * @example noteDayClass(true, { isFetching: false, data: { days: [{ excluded: 'auto_unused' }] } }) // 'auto_unused'
+ * @example noteDayClass(false, { isFetching: false, data: undefined }) // null
+ */
+export function noteDayClass(
+  isPast: boolean,
+  query: {
+    isFetching: boolean
+    data: { days: readonly { excluded: ExcludedReason | null }[] } | undefined
+  },
+): TotalsFacts['dayExcluded'] {
+  if (!isPast) return null
+  if (query.isFetching) return undefined
+  return query.data?.days[0]?.excluded
+}
+
 /** 'idle': the cut turns idle time into counted time; 'unmeasured': the day becomes 計測できた日. */
 export type TotalsEffect = 'idle' | 'unmeasured'
 
