@@ -186,6 +186,30 @@
 **Priority:** P3
 **Depends on:** None
 
+### Keep 区切る時刻 still while 「ここで分割」 is pending
+
+**What:** While a cut is pending, keep the readout and the notes on the time the user chose, until the panel moves to the new row.
+
+**Why:** `onSettled` refetches `switches.*` and `stats.*` together, and the list usually lands first. The cut row stays selected with its end now at the cut, so the chosen time falls outside `earliest` – `latest`: `cutStepper` falls back to the shorter row's `initial` and `cutToHold` holds it. The `aria-live` readout shows and announces a time the user never chose, until `selectInserted` moves the panel once the stats land.
+
+**Context:** `CutControls` in `apps/app/src/app/(app)/correction.tsx` (it gets `pending`), `cutStepper` and `cutToHold` in `apps/app/src/lib/correction.ts`, `onSettled` in `apps/app/src/hooks/use-correction.ts`. Either freeze the stepper while pending, or select the inserted row as soon as the list lands. Raised by the Claude adversarial pass during the 0.23.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Say why today's running record cuts near its start
+
+**What:** On today's running record, when the 15-minute margin before now leaves no quarter hour, say that the last 15 minutes cannot be cut, rather than 「短い記録のため、真ん中で区切ります」. The pen file first.
+
+**Why:** The ceiling then comes from `now - CLOCK_SKEW_MARGIN_MS`, so the middle minute sits near the record's start: a record from 9:00 cuts at 9:02 at 9:20, while its middle is 9:10. The note calls that the middle, for up to about half an hour after every tap.
+
+**Context:** `cutRange` (the middle-minute branch and the `now` ceiling) and the note text in `apps/app/src/lib/correction.ts`. `CutRange` could say which bound set the ceiling. Raised by the Claude adversarial pass during the 0.23.0.0 ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Remove `switches.splitInHalf` once 0.23 has been live for a release
 
 **What:** Delete the `splitInHalf` procedure and its API tests.
