@@ -1,4 +1,5 @@
 import { DEFAULT_ACTIVITIES } from '@switch-time/shared'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'expo-router'
 import { Text, View } from 'react-native'
 import Svg, { Circle, Line } from 'react-native-svg'
@@ -6,8 +7,11 @@ import Svg, { Circle, Line } from 'react-native-svg'
 import { DetoxRow } from '@/components/detox-row'
 import { SwitchButton } from '@/components/switch-button'
 import { useActivities } from '@/hooks/use-activities'
+import { useSwitchHotkeys } from '@/hooks/use-switch-hotkeys'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useTokenColor } from '@/hooks/use-token-color'
+import { sendsPick } from '@/lib/home'
+import { type CurrentSwitch, orpc } from '@/lib/orpc'
 
 // The logo's four arcs are the first four default activities, in their palette colours.
 const ARCS = [
@@ -19,13 +23,24 @@ const ARCS = [
 
 /**
  * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity button, or detox from the
- * {@link DetoxRow} under the buttons), which flips `switches.current` and so swaps this for Home.
+ * {@link DetoxRow} under the buttons, or the digit hotkeys on web, {@link useSwitchHotkeys}), which flips `switches.current` and so swaps this for Home.
  * @example {current === null ? <FirstLaunch /> : <HomeBody />}
  */
 export function FirstLaunch() {
   const activities = useActivities().data ?? []
   const switchTo = useSwitchTo()
   const ink = useTokenColor('ink')
+  const queryClient = useQueryClient()
+  const pick = (activityId: string | null): void => {
+    // Two keys or clicks inside one frame: the second finds the first one's row in the cache before Home takes over, and a re-tap of it
+    // (a fresh run has nothing to renew) sends nothing.
+    const placed = queryClient.getQueryData<CurrentSwitch | null>(
+      orpc.switches.current.queryKey(),
+    )
+    if (!placed || sendsPick({ activityId, current: placed, renewable: false }))
+      switchTo.mutate({ activityId })
+  }
+  useSwitchHotkeys(activities, pick)
   return (
     <View className="items-center gap-3.5 pt-8">
       <View className="bg-face text-ink h-22 w-22 items-center justify-center rounded-[26px]">
@@ -83,15 +98,12 @@ export function FirstLaunch() {
             iconKey={activity.iconKey}
             tint={activity.color}
             active={false}
-            onPress={() => switchTo.mutate({ activityId: activity.id })}
+            onPress={() => pick(activity.id)}
           />
         ))}
         {/* Inside the wrapping row, as the pen's 初回起動 board draws it: it keeps the buttons' 10px gap (Home leaves 16px), and
             full width gives it a line of its own under them. A new account can start on detox without recording an activity first. */}
-        <DetoxRow
-          active={false}
-          onPress={() => switchTo.mutate({ activityId: null })}
-        />
+        <DetoxRow active={false} onPress={() => pick(null)} />
       </View>
       <Link href="/settings">
         <Text className="text-sub py-3 text-xs font-medium underline">

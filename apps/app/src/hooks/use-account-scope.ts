@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { startTapSession } from '@/lib/optimistic-switch'
 import { queryClient } from '@/lib/query'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { accountChange, correctionSlice } from '@/store/correction'
@@ -17,7 +18,13 @@ export function useAccountScope(account: string | undefined): void {
   useEffect(() => {
     const change = accountChange(seen, account)
     if (!change) return
-    if (change.switched) void queryClient.resetQueries()
+    // `resetQueries` leaves the previous account's taps in the mutation cache: a new session of taps drops the queued ones before
+    // they go out with this account's cookie, and keeps the running one from becoming this account's fallback or refetching over
+    // its picks.
+    if (change.switched) {
+      void queryClient.resetQueries()
+      startTapSession(queryClient)
+    }
     dispatch(correctionSlice.actions.accountSeen(change.account))
   }, [account, seen, dispatch])
 }

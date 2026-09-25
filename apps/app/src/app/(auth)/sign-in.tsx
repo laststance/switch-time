@@ -14,6 +14,7 @@ import {
 } from '@/hooks/use-registration'
 import { useScreenFocusField } from '@/hooks/use-screen-focus-field'
 import { authClient } from '@/lib/auth-client'
+import { startTapSession } from '@/lib/optimistic-switch'
 import { queryClient } from '@/lib/query'
 import {
   keptFormKey,
@@ -53,6 +54,7 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
     async (values) => authClient.signIn.email(values),
     () => {
       queryClient.clear()
+      startTapSession(queryClient)
       dispatch(resetApp())
     },
   )

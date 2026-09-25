@@ -611,11 +611,18 @@ export const switchesRouter = {
         const current = await latestSwitch(userId, tx)
         const now = Date.now()
         // Tapping the active state again keeps it (no zero-length segment, and the clock never drops its state), except
-        // detox pressed again after its run's measured week: a new run starts here, and the days after it count again.
+        // detox pressed again after its run's measured week while the unused-day rule is on: a new run starts here, and the
+        // days after it count again.
         let startsRun = false
         if (current !== null && current.activityId === input.activityId) {
           if (input.activityId !== null) return current
-          const { timeZone } = await getSettings(userId, tx)
+          const { timeZone, autoExcludeUnusedDays } = await getSettings(
+            userId,
+            tx,
+          )
+          // With the rule off no day is left out, so there is nothing to renew (Home offers it only while the rule is on; a tab
+          // that still shows the rule on after another device turned it off must not start a run the week would later count from).
+          if (!autoExcludeUnusedDays) return current
           const runStartDay = await runStartOf(tx, userId, current, timeZone)
           // Inside the week the press stays a no-op, so a double tap never cuts a run.
           if (!detoxRunPastWeek(runStartDay, localDay(new Date(now), timeZone)))

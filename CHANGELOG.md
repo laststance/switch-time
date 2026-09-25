@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.22.0.0] - 2026-09-25
+
+### Added
+
+- The first-launch screen takes Home's digit hotkeys on the web: `1`–`9`
+  start the activity at that position, `0` starts detox. A held key picks
+  once, and the same digit (or button) pressed twice before Home appears
+  sends one tap.
+
+### Fixed
+
+- A refused tap puts back what the server last accepted, and only while its
+  own row is still shown. In a quick run of taps, an earlier tap's refetch
+  or rollback no longer wipes the row of a later tap still waiting to go
+  out, and only the last tap of the run refetches.
+- Signing in, signing out, or another tab switching the account drops the
+  taps still waiting to go out, instead of sending them as the new account.
+- Pressing detox again past its week starts a new run on the server only
+  while 未使用日の自動除外 is on, as Home already showed.
+
 ## [0.21.0.0] - 2026-09-25
 
 ### Added
