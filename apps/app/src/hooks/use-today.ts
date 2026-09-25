@@ -8,11 +8,18 @@ import { useAppSelector } from '@/store'
 
 /**
  * Today as the API sees it (the stored `settings.timeZone`, not the device's): the calendar day, its bounds, the 24-h bar's segments
- * from `switches.listByDay` sliced against the ticking clock, and how many times the user switched today.
+ * from `switches.listByDay` sliced against the ticking clock, and how many times the user switched today. `ready` says the stored
+ * zone is known, for other queries keyed by today; `autoExcludeUnusedDays` is the stored unused-day rule.
  * @example const { today, timeZone, segments, switchCount } = useToday()
  */
 export function useToday() {
-  const { today, timeZone, idleThresholdMinutes, ready } = useLocalToday()
+  const {
+    today,
+    timeZone,
+    idleThresholdMinutes,
+    autoExcludeUnusedDays,
+    ready,
+  } = useLocalToday()
   const now = useAppSelector((s) => s.clock.now)
   // The day query waits for the zone: asking for the device's "today" first would fetch the wrong day near midnight.
   const day = useQuery(
@@ -25,6 +32,8 @@ export function useToday() {
   return {
     today,
     timeZone,
+    autoExcludeUnusedDays,
+    ready,
     start,
     end,
     segments: daySegments(

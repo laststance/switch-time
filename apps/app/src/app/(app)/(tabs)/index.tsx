@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link, usePathname } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 
@@ -16,10 +17,18 @@ import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useToday } from '@/hooks/use-today'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
-import { formatDay, formatTime } from '@/lib/format'
-import { gridActivities, homeFallback, homeReady, nowLook } from '@/lib/home'
+import { formatDay, formatSince } from '@/lib/format'
+import {
+  detoxPastWeek,
+  detoxStopped,
+  gridActivities,
+  homeFallback,
+  homeReady,
+  nowLook,
+} from '@/lib/home'
 import { hotkeyIndex, isDetoxHotkey } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
+import { orpc } from '@/lib/orpc'
 
 type Current = ReturnType<typeof useCurrentActivity>
 type HomeBodyProps = {
@@ -33,7 +42,32 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const activities = gridActivities(useActivities().data ?? [], activity)
   const allActivities = useAllActivities().data ?? []
   const switchTo = useSwitchTo()
-  const { today, timeZone, start, end, segments, switchCount } = useToday()
+  const {
+    today,
+    timeZone,
+    autoExcludeUnusedDays,
+    ready,
+    start,
+    end,
+    segments,
+    switchCount,
+  } = useToday()
+  const homeToday = {
+    current,
+    today,
+    timeZone,
+    switchCountToday: switchCount,
+    autoExcludeUnusedDays,
+  }
+  // The server's class for today says whether a detox past its week still measures it; only a detox record older than the week
+  // with no tap today can be past it, so nothing else asks (stats.day scans the whole history).
+  const todayStats = useQuery(
+    orpc.stats.day.queryOptions({
+      input: { day: today },
+      enabled: ready && detoxPastWeek(homeToday),
+    }),
+  )
+  const stopped = detoxStopped({ ...homeToday, stats: todayStats })
   const ink = useTokenColor('ink')
   const pathname = usePathname()
   // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
@@ -65,8 +99,9 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       <NowPanel
         look={nowLook(
           activity,
-          formatTime(current.startedAt, timeZone),
+          formatSince(current.startedAt, today, timeZone),
           switchCount,
+          stopped,
         )}
         startedAt={current.startedAt.getTime()}
       />

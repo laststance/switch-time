@@ -15171,13 +15171,13 @@
                         {
                           "type": "text",
                           "id": "GOOSV",
-                          "name": "一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は計測に入ります。",
+                          "name": "Hint",
                           "context": "div",
                           "fill": "$sub",
                           "textGrowth": "fixed-width-height",
                           "width": "fill_container",
                           "height": 38.38,
-                          "content": "一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は計測に入ります。",
+                          "content": "一度も切り替えなかった日は「計測なし」として平均・連続記録から外します。デトックスを続けた日は、始めた翌日から7日間は計測に入り、その後は「切替なし」として外します。",
                           "lineHeight": 1.6,
                           "fontFamily": "Roboto",
                           "fontSize": 12,
@@ -47318,6 +47318,427 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "aJnfD",
+      "x": 4966,
+      "y": 2399,
+      "name": "ST Phone / ホーム・detox の状態",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "VvX3M",
+          "name": "今日始めた detox（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "WZ3ZW",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "今日始めた detox（sub）。これまでどおり時刻だけ",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ARXRx",
+              "name": "Hero status",
+              "width": "fill_container",
+              "fill": "$bg",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nBor9",
+                  "name": "Name",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "cOYxK",
+                      "name": "Dot",
+                      "width": 10,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G8LTIl",
+                      "name": "State",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "fontFamily": "Roboto",
+                      "fontSize": 22,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "RCcc4",
+                  "name": "Readout",
+                  "fill": "$sub",
+                  "content": "0:42:10",
+                  "fontFamily": "Roboto",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "smDla",
+                  "name": "Subtext",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "21:20 から · どの行動にも積み上がりません",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "aDXSe",
+          "name": "前日以前に始めた detox（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "u1D5w9",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "前日以前に始めた detox（sub）。始めた日付を付ける（訂正シートの「9月23日 23:00」と同じ書式）。始めた翌日から7日間はこのまま",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "j9sYbg",
+              "name": "Hero status",
+              "width": "fill_container",
+              "fill": "$bg",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eAg2W",
+                  "name": "Name",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "n2qEii",
+                      "name": "Dot",
+                      "width": 10,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "odQRN",
+                      "name": "State",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "fontFamily": "Roboto",
+                      "fontSize": 22,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "MD7bf",
+                  "name": "Readout",
+                  "fill": "$sub",
+                  "content": "38:12:03",
+                  "fontFamily": "Roboto",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "P9C14",
+                  "name": "Subtext",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "9月23日 21:20 から · どの行動にも積み上がりません",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "DapOm",
+          "name": "7日間を過ぎた detox（sub, 2 行）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "RZkQ8",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "7日間を過ぎた detox。記録の開始行（sub）はそのまま、その下に「今日は計測に入りません」（ink, 14, 600）と決まり＋取り戻し方（sub, 12, 2 行まで折り返し）。stats.day が今日を measured:false・excluded:null と答え、今日のタップが無いときだけ。読み込み中・失敗・オフラインは記録の開始行だけ。読み込み後に 2 行ぶん伸びる。読み上げは順番どおり（ライブリージョンなし）。wide web は左揃え",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "DK01G",
+              "name": "Hero status",
+              "width": "fill_container",
+              "fill": "$bg",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "FcIkY",
+                  "name": "Name",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "dHzS3",
+                      "name": "Dot",
+                      "width": 10,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "g8e92",
+                      "name": "State",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "fontFamily": "Roboto",
+                      "fontSize": 22,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "JiPvm",
+                  "name": "Readout",
+                  "fill": "$sub",
+                  "content": "204:40:51",
+                  "fontFamily": "Roboto",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "YmyY0",
+                  "name": "Subtext",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "9月16日 21:20 から · どの行動にも積み上がりません",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "OO7yS",
+                  "name": "Counting status",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "EtpQj",
+                      "name": "Notice",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "今日は計測に入りません",
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Nro63",
+                      "name": "Rule",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "デトックスの計測は始めた翌日から7日間まで。今日中に行動へ切り替えると、今日も計測に入ります。",
+                      "lineHeight": 1.4,
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "kpTvH",
+          "name": "前日以前に始めた活動（sub）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "coJ45",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "前日以前に始めた活動（sub）。活動も同じく日付を付ける",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "DMvvA",
+              "name": "Hero status",
+              "width": "fill_container",
+              "fill": "$bg",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "B50w25",
+                  "name": "Name",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "m03Jv",
+                      "name": "Dot",
+                      "fill": "$activity-2",
+                      "width": 10,
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "UVgtP",
+                      "name": "State",
+                      "fill": "$ink",
+                      "content": "仕事",
+                      "fontFamily": "Roboto",
+                      "fontSize": 22,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "JmooZ",
+                  "name": "Readout",
+                  "fill": "$ink",
+                  "content": "9:02:44",
+                  "fontFamily": "Roboto",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "roHj7",
+                  "name": "Subtext",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "9月24日 23:10 から · 今日 0 回切替",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }

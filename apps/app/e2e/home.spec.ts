@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 import { apiAs, createAccount, signUp } from './helpers'
 
@@ -258,4 +258,107 @@ test('a reload while detox lands on Home in detox, not on the first-launch scree
   await expect(square).toHaveCSS('border-top-width', '1px')
   const sub = await label.evaluate((el) => getComputedStyle(el).color)
   await expect(square).toHaveCSS('border-top-color', sub)
+})
+
+// A detox started at 21:00 on `start` becomes the current state: signUp's first tap today is removed, so nothing ends it.
+async function seedCarriedDetox(page: Page, start: string): Promise<void> {
+  const api = await apiAs(page)
+  await api.switches.replaceDay({
+    day: start,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: null, startedAt: at(start, 21) }],
+  })
+  // replaceDay rewrites today only while it still holds the rows it names: the first-launch tap.
+  const { rows: firstLaunch } = await api.switches.listByDay({ day: today() })
+  await api.switches.replaceDay({
+    day: today(),
+    timeZone: 'Asia/Tokyo',
+    expected: firstLaunch.map(({ id, activityId, startedAt }) => ({
+      id,
+      activityId,
+      startedAt,
+    })),
+    rows: [],
+  })
+}
+
+const monthDay = (day: string) =>
+  `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`
+
+test('a detox on the seventh day after it started names its start day and says nothing about counting', async ({
+  page,
+}) => {
+  // Arrange: start day + 7 is the last untapped day a detox still measures
+  await signUp(page)
+  const start = shift(today(), -7)
+  await seedCarriedDetox(page, start)
+  const dayClassRequests: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/stats/day'))
+      dayClassRequests.push(request.url())
+  })
+  // The gate reads the stored unused-day rule, so an empty list only means something once settings have answered
+  const settingsAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/settings/get'),
+  )
+
+  // Act
+  await page.reload()
+  await settingsAnswer
+
+  // Assert: the since line carries the date; inside its week Home neither asks the server about today nor shows the notice
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(
+    page.getByText(
+      `${monthDay(start)} 21:00 から · どの行動にも積み上がりません`,
+      { exact: true },
+    ),
+  ).toBeVisible()
+  // Every query the rendered screen enables has gone out and come back before the list is read
+  await page.waitForLoadState('networkidle')
+  expect(dayClassRequests).toEqual([])
+  await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
+})
+
+test('a detox past its week says on Home that today does not count, until an activity is tapped', async ({
+  page,
+}) => {
+  // Arrange: start day + 8 is the first untapped day the detox no longer measures
+  await signUp(page)
+  const start = shift(today(), -8)
+  await seedCarriedDetox(page, start)
+  await page.reload()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const notice = page.getByText('今日は計測に入りません', { exact: true })
+  await expect(notice).toBeVisible()
+  await expect(
+    page.getByText(
+      'デトックスの計測は始めた翌日から7日間まで。今日中に行動へ切り替えると、今日も計測に入ります。',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      `${monthDay(start)} 21:00 から · どの行動にも積み上がりません`,
+      { exact: true },
+    ),
+  ).toBeVisible()
+
+  // Act
+  await page.getByRole('button', { name: '仕事' }).click()
+
+  // Assert: today now has a tap, so it is measured and the notice goes with the detox
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(notice).toHaveCount(0)
+  await expect(page.getByText(/^\d+:\d{2} から · 今日 1 回切替$/)).toBeVisible()
 })

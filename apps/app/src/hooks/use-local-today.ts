@@ -18,6 +18,7 @@ export function useLocalToday() {
     today,
     timeZone: settings.timeZone,
     idleThresholdMinutes: settings.idleThresholdMinutes,
+    autoExcludeUnusedDays: settings.autoExcludeUnusedDays,
     ready,
   }
 }
