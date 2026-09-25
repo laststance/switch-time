@@ -97,19 +97,20 @@ const TIMELINE_LOCK_TIMEOUT = '10s'
 const TIMELINE_STATEMENT_TIMEOUT = '15s'
 
 /**
- * How many timeline writes one account may have in flight in this process, the running one included: a burst above this is
- * refused at once rather than queued, since the queue already holds more than a request's deadline lets it wait for.
+ * How many writes under {@link withUserLock} one account may have in flight in this process, the running one included: the
+ * timeline writes, the activity writes and a zone change share the cap. A burst above this is refused at once rather than
+ * queued, since the queue already holds more than a request's deadline lets it wait for.
  */
 const TIMELINE_WRITES_PER_USER = 4
 
-/** One account's timeline writes in this process: how many are in flight, and the turn the next arrival waits for. */
+/** One account's writes under {@link withUserLock} in this process: how many are in flight, and the turn the next arrival waits for. */
 type TimelineQueue = { size: number; tail: Promise<void> }
 
-// The accounts with timeline writes in flight in this process (an account with none has no entry).
+// The accounts with writes under the user's lock in flight in this process (an account with none has no entry).
 const timelineQueues = new Map<string, TimelineQueue>()
 
 /**
- * How many timeline writes the account has in flight in this process, the running one included. The tests wait on it to
+ * How many writes under {@link withUserLock} the account has in flight in this process, the running one included. The tests wait on it to
  * know a write has queued, since a write queued here holds no database lock `pg_stat_activity` would show.
  */
 export const timelineWritesInFlight = (userId: string): number =>

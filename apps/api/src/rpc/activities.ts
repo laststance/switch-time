@@ -60,6 +60,24 @@ const nextLivePosition = async (
   return next?.position ?? 0
 }
 
+/**
+ * A `position` value that gives each listed activity its own slot, so one pass of `reorder` is a single UPDATE rather than one
+ * per row, and the user's lock ({@link withUserLock}) is held for the same few round trips whatever the grid's size.
+ * @param ids - The activities in their new order.
+ * @param slotOf - The slot of the activity at each index.
+ * @returns A `case id when … then … end` expression for `.set({ position })`
+ * @example
+ * slotsByIndex(['a', 'b'], (index) => index) // => case "id" when 'a' then 0 when 'b' then 1 end
+ */
+const slotsByIndex = (
+  ids: readonly string[],
+  slotOf: (index: number) => number,
+) =>
+  sql<number>`case ${activities.id} ${sql.join(
+    ids.map((id, index) => sql`when ${id} then ${slotOf(index)}::integer`),
+    sql` `,
+  )} end`
+
 // Same ids, each exactly once: a reorder must not drop, add or duplicate an activity.
 const isPermutation = (ids: readonly string[], expected: readonly string[]) =>
   ids.length === expected.length &&
@@ -125,23 +143,16 @@ export const activitiesRouter = {
           throw new ORPCError('BAD_REQUEST', {
             message: 'ids must be exactly the active activities',
           })
-        // ponytail: 2n statements. Parking every row on a negative slot first keeps the unique (user, position) index happy mid-shuffle.
-        await Promise.all(
-          input.ids.map(async (id, index) =>
-            tx
-              .update(activities)
-              .set({ position: -index - 1 })
-              .where(eq(activities.id, id)),
-          ),
-        )
-        await Promise.all(
-          input.ids.map(async (id, index) =>
-            tx
-              .update(activities)
-              .set({ position: index })
-              .where(eq(activities.id, id)),
-          ),
-        )
+        // Two statements whatever the grid's size. Parking every row on a negative slot first keeps the unique (user, position) index
+        // happy mid-shuffle; the permutation check proved `ids` is exactly the live set, so every live row gets a slot.
+        await tx
+          .update(activities)
+          .set({ position: slotsByIndex(input.ids, (index) => -index - 1) })
+          .where(active(userId))
+        await tx
+          .update(activities)
+          .set({ position: slotsByIndex(input.ids, (index) => index) })
+          .where(active(userId))
         // The permutation check proved live rows exist, so the seeding repair in {@link listActivities} has nothing to do here.
         return selectActivities(tx, userId)
       })
@@ -151,7 +162,7 @@ export const activitiesRouter = {
     .input(z.object({ id: z.uuid() }))
     .handler(async ({ context, input }) => {
       const userId = context.user.id
-      // Under the timeline lock: a tap on this activity, or a second archive, waits until this one has checked and written.
+      // Under the user's lock: a tap on this activity, or a second archive, waits until this one has checked and written.
       return withUserLock(userId, context.deadline, async (tx) => {
         const current = await latestSwitch(userId, tx)
         const activeCount = await tx.$count(activities, active(userId))

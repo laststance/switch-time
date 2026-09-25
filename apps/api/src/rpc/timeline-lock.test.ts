@@ -266,6 +266,37 @@ test('a reorder queued behind the archive of an activity it names is refused, an
   ])
 })
 
+test('an unarchive queued behind the addition of an activity comes back after it, so the two never take the same slot', async () => {
+  // Arrange: 休息 archived, then another device holds the lock
+  const api = await signedIn('lock-unarchive-create@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await api.activities.archive({ id: rest })
+  const release = await holdTimelineLock(userId)
+
+  // Act: the addition queues first, the unarchive second
+  const create = api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+  await waitForLockQueue(userId, 1)
+  const unarchive = api.activities.unarchive({ id: rest })
+  await waitForLockQueue(userId, 2)
+  await release()
+
+  // Assert
+  await expect(create).resolves.toMatchObject({ name: '読書', position: 6 })
+  await expect(unarchive).resolves.toMatchObject({
+    id: rest,
+    archivedAt: null,
+    position: 7,
+  })
+})
+
 test('an activity added while four of the account’s writes are in flight is refused at once as busy, and nothing is added', async () => {
   // Arrange: another device holds the lock and three taps queue behind it, so four writes are in flight
   const api = await signedIn('cap-create@example.com')
