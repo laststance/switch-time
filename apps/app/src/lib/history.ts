@@ -149,11 +149,13 @@ function dayCell(
       : String(Number(stat.day.slice(8)))
   const slices = stackSlices(stat.totals, activities, BAR_PX[range])
   // Today is a stack even before its first tap (its carried-in state is already drawing); older untapped days are 計測なし.
-  // A measured day with nothing to stack but detox time is outlined, so a day off the clock does not read as an untapped one.
+  // A measured day with no activity time but detox time is outlined, so a day off the clock does not read as an untapped one.
+  // Judged on the totals, not the slices: an activity missing from a stale list must not turn a worked day into detox.
+  const hasActivityTime = Object.values(stat.totals).some((ms) => ms > 0)
   const kind = stat.excluded
     ? 'excluded'
     : stat.measured || isToday
-      ? slices.length === 0 && stat.detoxMs > 0
+      ? !hasActivityTime && stat.detoxMs > 0
         ? 'detox'
         : 'stack'
       : 'empty'

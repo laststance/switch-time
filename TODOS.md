@@ -26,6 +26,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Keep a detox span's outline whole when it is narrower than the bar's rounded end
+
+**What:** Draw a detox span that touches an end of the 24-h bar (or the correction sheet's day bar) but is narrower than that end's corner radius so its outline stays closed, for example by capping the lent radius at half the span's width or giving such a span a minimum width.
+
+**Why:** `spanCorners` lends the bar's own corner to a span touching that end, which keeps an ordinary span's outline from being clipped open. A span only a few pixels wide (a few minutes of detox right after midnight, or just before now) is still cut by the bar's `overflow-hidden` rounded corner, so its `sub` outline shows as a broken arc.
+
+**Context:** `spanCorners` in `apps/app/src/lib/today.ts`, `BANDS` in `apps/app/src/components/today-flow.tsx` (7 px wide, 5 px narrow) and `DAY_BAR_CORNERS` in `apps/app/src/app/(app)/correction.tsx` (`rounded-md`). Raised by the red-team review of the PR that outlined detox spans solid (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ## Settings
 
 ### Let the main device take the account's zone back
@@ -252,7 +264,7 @@
 
 **What:** Decide how History draws a measured day whose only time is detox plus an activity left running past the idle threshold, for example as detox only when `detoxMs` is at least `idleMs`, and add a `history.test.ts` case with `detoxMs > 0`, `idleMs > 0` and empty totals.
 
-**Why:** `dayCell` picks `'detox'` whenever there is nothing to stack and `detoxMs > 0`, without looking at `idleMs`. A day of 9 h forgotten 仕事 and 1 h detox gets the solid `sub` outline, the wind glyph and 「・detox」 in its label, so the mark says the day went to detox when most of it went to a forgotten activity.
+**Why:** `dayCell` picks `'detox'` whenever `totals` hold no activity time and `detoxMs > 0`, without looking at `idleMs`. A day of 9 h forgotten 仕事 and 1 h detox gets the solid `sub` outline, the wind glyph and 「・detox」 in its label, so the mark says the day went to detox when most of it went to a forgotten activity.
 
 **Context:** `dayCell` in `apps/app/src/lib/history.ts`; `sumSegments` in `packages/shared/src/stats.ts` keeps idle time out of `totals`. Older than the solid outline, which only makes the claim louder. Raised by the red-team review of the PR that outlined detox days solid (2026-09-25).
 

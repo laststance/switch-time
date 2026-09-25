@@ -73,23 +73,26 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
       testID="day-bar"
       className="bg-chip h-3 w-full overflow-hidden rounded-md"
     >
-      {rows.map((row) => (
-        <View
-          key={row.id}
-          // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
-          className={cn(
-            'absolute inset-y-0',
-            row.color === null && 'border-sub border',
-            spanCorners(row, bounds, DAY_BAR_CORNERS),
-          )}
-          style={{
-            left: percent(row.start - bounds.start),
-            width: percent(row.end - row.start),
-            backgroundColor: row.color ?? undefined,
-            opacity: dim(row.id),
-          }}
-        />
-      ))}
+      {/* A device clock behind the server can end the latest row before it starts; its outline would draw as a stray line. */}
+      {rows
+        .filter((row) => row.end > row.start)
+        .map((row) => (
+          <View
+            key={row.id}
+            // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
+            className={cn(
+              'absolute inset-y-0',
+              row.color === null && 'border-sub border',
+              spanCorners(row, bounds, DAY_BAR_CORNERS),
+            )}
+            style={{
+              left: percent(row.start - bounds.start),
+              width: percent(row.end - row.start),
+              backgroundColor: row.color ?? undefined,
+              opacity: dim(row.id),
+            }}
+          />
+        ))}
     </View>
   )
 }

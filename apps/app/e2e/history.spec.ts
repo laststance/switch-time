@@ -141,6 +141,11 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
     .last()
     .evaluate((el) => getComputedStyle(el).color)
   await expect(track).toHaveCSS('border-top-color', sub)
+  // On web the glyph's stroke is currentColor, so it has to inherit the same `sub` or it turns black on dark
+  await expect(detox.getByTestId('detox-glyph').locator('path')).toHaveCSS(
+    'stroke',
+    sub,
+  )
 
   // The outlined day still opens the correction sheet, listing the detox span
   await detox.click()

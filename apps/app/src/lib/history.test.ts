@@ -224,6 +224,42 @@ test('a measured day whose only counted time is detox is outlined even when its 
   expect(view.rows[0]?.[6]?.slices).toEqual([])
 })
 
+test('a day worked on an activity the list does not know yet stays a stack, not a detox day', () => {
+  // Arrange: 9/9 had 6 h on an activity made on another device (not in the cached list yet) and 2 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', {
+        measured: true,
+        totals: { made_elsewhere: 6 * H },
+        detoxMs: 2 * H,
+      }),
+    ],
+    totals: { made_elsewhere: 6 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the unknown activity draws no slice, but the day is not claimed as detox
+  expect(view.rows[0]?.[6]?.kind).toBe('stack')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）')
+})
+
 test('the month calendar pads Sunday-first rows and counts only the days up to today', () => {
   // Arrange
   const today = '2026-09-09'
