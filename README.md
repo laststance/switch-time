@@ -168,7 +168,7 @@ After that every push to `main` builds `api` and `web`, runs the migration job a
 ## Conventions
 
 - **React Compiler is on.** `apps/app` sets `experiments.reactCompiler: true` explicitly (the SDK 57 template ships it; the SDK itself defaults to off). Lint uses `eslint-plugin-react-hooks@7` (compiler rules included) and the "React Compiler Setup" of `@laststance/react-next-eslint-plugin`, so do not hand-write `useMemo`/`useCallback`/`React.memo`.
-- **Design tokens come from `design-system/theme.json`.** Change the JSON first, then `packages/shared`; `packages/shared/src/activity-palette.test.ts` fails when they drift.
+- **Design tokens come from `design-system/theme.json`.** Change the JSON first, then its copies (`design-system/styles.css`, `apps/app/src/global.css`, `packages/shared`). `apps/app/src/lib/tokens.test.ts` fails when a colour in `styles.css` or `global.css` drifts from the JSON, or when `sub` falls below WCAG AA (4.5:1) on a surface or `chip`; `packages/shared/src/activity-palette.test.ts` fails when the palette drifts.
 - **Dependencies are pinned** and `minimumReleaseAge: 1440` refuses releases younger than 24h. New install scripts must be allow-listed in `pnpm-workspace.yaml#allowBuilds`.
 - Tests: `test` over `it`, AAA comments, hard-coded expected values, names describe observable behaviour.
 
