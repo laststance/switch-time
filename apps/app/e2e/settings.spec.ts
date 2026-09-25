@@ -396,14 +396,20 @@ test('after a switch to another account, this device writes its zone to that acc
   const emailB = await signInElsewhere(page)
   const accountB = await apiAs(page)
   await accountB.settings.update({ timeZone: 'UTC' })
-  // Settings reads are held back, so the session turns to B while A's row is still the cached one.
+  // Settings reads are held until the app has read the session as B, so the session turns to B while A's row is still the
+  // cached one, however long that session read takes.
+  let releaseSettingsReads = (): void => undefined
+  const settingsReadsHeld = new Promise<void>((resolve) => {
+    releaseSettingsReads = resolve
+  })
   await page.route('**/api/rpc/settings/get**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 3_000))
+    await settingsReadsHeld
     await route.continue().catch(() => undefined)
   })
 
   // Act
   await foregroundUntilSessionIs(page, emailB)
+  releaseSettingsReads()
 
   // Assert
   await expect
