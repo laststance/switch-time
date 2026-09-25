@@ -114,7 +114,7 @@ export type TapLike = Pick<SwitchLike, 'activityId' | 'startedAt'> & {
  * Where a detox run starts, per row, oldest first: an activity row ends the run (null), a detox row with `startsRun` starts
  * a new one on its own day, and any other detox row keeps the run it follows (or starts one after an activity or at the
  * very first row). An unmarked detox row never renews the allowance, so a cut, a rewrite or a merge that leaves two detox
- * rows in a row does not either; a merge keeps a renewal only when a detox takes over the re-tap's start (the API's two merges).
+ * rows in a row does not either; a merge hands a re-tap's renewal to a detox only on the re-tap's own local day (the API's two merges), and the kept row keeps its own mark.
  * Shared by {@link detoxCarriedDays} and {@link detoxRunStartDay}, so the stats and Home read the same run.
  * @example runStartDays([{ activityId: null, startedAt: sep1 }, { activityId: null, startedAt: sep3 }], 'Asia/Tokyo') // ['2026-09-01', '2026-09-01']
  */

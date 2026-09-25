@@ -468,7 +468,7 @@ test('merging a re-tap into a detox from an earlier day hands the renewal nothin
   // Act: the re-tap hands its time to the detox from twenty days ago
   await api.switches.mergeIntoPrevious({ id: renewal.id })
 
-  // Assert: the old detox keeps running unmarked, so its run still starts on its own day
+  // Assert: `startsRun: false` pins the rule (a carried mark would still read the old detox's own day as its start)
   expect(await api.switches.current()).toMatchObject({
     startedAt: at(tapDay, 20),
     startsRun: false,
