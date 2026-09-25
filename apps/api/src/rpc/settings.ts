@@ -51,7 +51,7 @@ export const settingsRouter = {
       const userId = context.user.id
       // A zone change moves every day's window, so it waits for (and holds off) the timeline's writes, which read the zone.
       if (input.timeZone === undefined) return updateSettings(userId, input, db)
-      return withUserLock(userId, async (tx) =>
+      return withUserLock(userId, context.deadline, async (tx) =>
         updateSettings(userId, input, tx),
       )
     }),

@@ -227,7 +227,8 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  * - `noNeighbour`: CONFLICT, a merge has no previous or next record to merge into.
  * - `nextOnLaterDay`: CONFLICT, 「次の記録に統合」 would pull back a record from a later day.
  * - `cannotSplit`: CONFLICT, a split would leave a part under a minute, or fall outside its record or the baseline's day.
- * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of timeline writes in flight.
+ * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of timeline writes in flight, or the write reached the
+ *   request's deadline while queued behind the account's earlier writes. Nothing was saved either way.
  * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
 export const REFUSAL = Object.freeze({
