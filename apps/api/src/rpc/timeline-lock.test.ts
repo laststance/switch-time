@@ -200,6 +200,117 @@ test('two archives of the last two live activities at once leave one live, so th
   expect(live.map((row) => row.name)).toEqual(['娯楽'])
 })
 
+test('a reorder queued behind the addition of an activity is refused, since the order it names misses the new one', async () => {
+  // Arrange: the editor's six ids, reversed, about to be sent while another device adds 読書
+  const api = await signedIn('lock-reorder-create@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const reversed = list.map((row) => row.id).toReversed()
+  const release = await holdTimelineLock(userId)
+
+  // Act: the addition queues first, the reorder second
+  const create = api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+  await waitForLockQueue(userId, 1)
+  const reorder = api.activities.reorder({ ids: reversed })
+  await waitForLockQueue(userId, 2)
+  await release()
+
+  // Assert: 読書 lands at the end, the reorder is refused, and the grid keeps its order
+  await expect(create).resolves.toMatchObject({ name: '読書', position: 6 })
+  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  expect(
+    (await api.activities.list()).map((row) => [row.name, row.position]),
+  ).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['休息', 2],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['娯楽', 5],
+    ['読書', 6],
+  ])
+})
+
+test('a reorder queued behind the archive of an activity it names is refused, and the live order stays as it was', async () => {
+  // Arrange: the editor's six ids, reversed, about to be sent while another device archives 休息
+  const api = await signedIn('lock-reorder-archive@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const reversed = list.map((row) => row.id).toReversed()
+  const release = await holdTimelineLock(userId)
+
+  // Act: the archive queues first, the reorder second
+  const archive = api.activities.archive({ id: idOf(list, '休息') })
+  await waitForLockQueue(userId, 1)
+  const reorder = api.activities.reorder({ ids: reversed })
+  await waitForLockQueue(userId, 2)
+  await release()
+
+  // Assert
+  await expect(archive).resolves.toMatchObject({ archivedAt: expect.any(Date) })
+  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => [row.name, row.position])).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['娯楽', 5],
+  ])
+})
+
+test('an activity added while four of the account’s writes are in flight is refused at once as busy, and nothing is added', async () => {
+  // Arrange: another device holds the lock and three taps queue behind it, so four writes are in flight
+  const api = await signedIn('cap-create@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const release = await holdTimelineLock(userId)
+  const work = api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await waitForLockQueue(userId, 1)
+  const rest = api.switches.switchTo({ activityId: idOf(list, '休息') })
+  await waitForLockQueue(userId, 2)
+  const fun = api.switches.switchTo({ activityId: idOf(list, '娯楽') })
+  await waitForLockQueue(userId, 3)
+
+  // Act
+  const create = api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+  const createSettledAtOnce = await settlesWithoutWaiting(
+    create.then(
+      () => undefined,
+      () => undefined,
+    ),
+  )
+  await release()
+  await Promise.all([work, rest, fun])
+
+  // Assert
+  expect(createSettledAtOnce).toBe(true)
+  await expect(create).rejects.toMatchObject({
+    code: 'TOO_MANY_REQUESTS',
+    data: { reason: 'busy' },
+  })
+  expect((await api.activities.list()).map((row) => row.name)).toEqual([
+    '家事',
+    '仕事',
+    '休息',
+    '睡眠',
+    '食事',
+    '娯楽',
+  ])
+})
+
 test('a 15-minute move waits for a switch write in flight, so it lands next to the neighbours that write left', async () => {
   // Arrange: yesterday 仕事 9:00, 休息 12:00, with a tap on 家事 today so 休息 has a later state
   const api = await signedIn('lock-move@example.com')

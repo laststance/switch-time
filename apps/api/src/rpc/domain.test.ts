@@ -1173,6 +1173,164 @@ test('adding an activity and unarchiving another at the same moment both land, e
   expect(live).toHaveLength(7)
 })
 
+test('a new activity goes after the last live one, taking the end slot an archived activity left', async () => {
+  // Arrange: 娯楽 (slot 5) archived, so the last live activity is 食事 at slot 4
+  const api = await signedIn('create-after-archive@example.com')
+  const list = await api.activities.list()
+  await api.activities.archive({ id: idOf(list, '娯楽') })
+
+  // Act
+  const created = await api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+
+  // Assert
+  expect(created).toMatchObject({ name: '読書', archivedAt: null, position: 5 })
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => [row.name, row.position])).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['休息', 2],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['読書', 5],
+  ])
+})
+
+test('unarchiving an activity whose old slot a new activity took brings it back after that one', async () => {
+  // Arrange: 娯楽 archived at slot 5, then 読書 added into slot 5
+  const api = await signedIn('unarchive-after-create@example.com')
+  const list = await api.activities.list()
+  const fun = idOf(list, '娯楽')
+  await api.activities.archive({ id: fun })
+  await api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+
+  // Act
+  const unarchived = await api.activities.unarchive({ id: fun })
+
+  // Assert
+  expect(unarchived).toMatchObject({ id: fun, archivedAt: null, position: 6 })
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live.map((row) => [row.name, row.position])).toEqual([
+    ['家事', 0],
+    ['仕事', 1],
+    ['休息', 2],
+    ['睡眠', 3],
+    ['食事', 4],
+    ['読書', 5],
+    ['娯楽', 6],
+  ])
+})
+
+test('two activities added at the same moment from two devices both land, each in its own slot', async () => {
+  // Arrange
+  const api = await signedIn('create-race@example.com')
+
+  // Act
+  const [reading, walking] = await Promise.all([
+    api.activities.create({
+      name: '読書',
+      color: '#2BA3B5',
+      iconKey: 'book',
+      targetHours: 1,
+    }),
+    api.activities.create({
+      name: '散歩',
+      color: '#4FA877',
+      iconKey: 'book',
+      targetHours: 0.5,
+    }),
+  ])
+
+  // Assert: slots 6 and 7 in whichever order the lock let them in
+  expect(
+    [reading.position, walking.position].toSorted((a, b) => a - b),
+  ).toEqual([6, 7])
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live).toHaveLength(8)
+})
+
+test('two archived activities unarchived at the same moment both come back, each in its own slot', async () => {
+  // Arrange: 休息 and 睡眠 archived, leaving 娯楽 at slot 5 as the last live activity
+  const api = await signedIn('unarchive-race@example.com')
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  const sleep = idOf(list, '睡眠')
+  await api.activities.archive({ id: rest })
+  await api.activities.archive({ id: sleep })
+
+  // Act
+  const [restBack, sleepBack] = await Promise.all([
+    api.activities.unarchive({ id: rest }),
+    api.activities.unarchive({ id: sleep }),
+  ])
+
+  // Assert: slots 6 and 7 in whichever order the lock let them in
+  expect(
+    [restBack.position, sleepBack.position].toSorted((a, b) => a - b),
+  ).toEqual([6, 7])
+  const live = (await api.activities.list()).filter(
+    (row) => row.archivedAt === null,
+  )
+  expect(live).toHaveLength(6)
+})
+
+test('a reorder answers the whole list, archived activities included, so History can still name them', async () => {
+  // Arrange: 娯楽 archived at slot 5, the five live ones about to be reversed into slots 0-4
+  const api = await signedIn('reorder-answer@example.com')
+  const list = await api.activities.list()
+  await api.activities.archive({ id: idOf(list, '娯楽') })
+  const liveIds = ['食事', '睡眠', '休息', '仕事', '家事'].map((name) =>
+    idOf(list, name),
+  )
+
+  // Act
+  const reordered = await api.activities.reorder({ ids: liveIds })
+
+  // Assert
+  expect(
+    reordered.map((row) => [row.name, row.position, row.archivedAt !== null]),
+  ).toEqual([
+    ['食事', 0, false],
+    ['睡眠', 1, false],
+    ['休息', 2, false],
+    ['仕事', 3, false],
+    ['家事', 4, false],
+    ['娯楽', 5, true],
+  ])
+})
+
+test('unarchiving on an account whose every activity is archived puts that one first in the grid', async () => {
+  // Arrange: every activity archived straight in the database, which no route allows
+  const api = await signedIn('unarchive-none-live@example.com')
+  const { id: userId } = await api.me()
+  const rest = idOf(await api.activities.list(), '休息')
+  await db
+    .update(activities)
+    .set({ archivedAt: new Date() })
+    .where(eq(activities.userId, userId))
+
+  // Act
+  const unarchived = await api.activities.unarchive({ id: rest })
+
+  // Assert
+  expect(unarchived).toMatchObject({ id: rest, archivedAt: null, position: 0 })
+})
+
 test('a color outside the palette is rejected', async () => {
   // Arrange
   const api = await signedIn('palette@example.com')
