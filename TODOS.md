@@ -224,28 +224,28 @@
 **Priority:** P3
 **Depends on:** None
 
-### Say on Home when a detox has stopped counting days
+### Let a detox re-tap past its week start a new run, and decide History's today cell
 
-**What:** Show on Home (and decide whether History's today cell follows) that a detox running past `DETOX_MEASURED_DAYS_MAX` (7) days after its run started no longer measures the untapped days, or let a detox re-tap on a day past the week start a new run (a new detox row the stats treat as a tap, which cut and rewrite rows are not).
+**What:** Let a tap on detox while a detox past its week runs start a new run (a new detox row the stats treat as a tap), and decide whether History's today cell says a stopped detox does not count, as Home now does.
 
-**Why:** From the eighth day after a detox run started, the untapped days it runs through are 計測なし and 連続記録 breaks, but DetoxRow stays pressed and nothing says so; tapping detox again is a no-op in `switches.switchTo`, so the only way to keep counting is a tap on an activity and back, which writes a minute of activity time.
+**Why:** Home's 「今日は計測に入りません」 tells the user to switch to an activity to count today, but the obvious reaction, tapping detox again, is a no-op in `switches.switchTo` (and Home drops a press on the active state), so the only way to keep counting writes a minute of activity time.
 
-**Context:** The cap and the run rule are in `detoxCarriedDays` (`packages/shared/src/stats.ts`); the re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; raised by the red team of that PR's pre-landing review. New text or state on Home, so the pen file first.
+**Context:** The re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`); the run rule and cap are `detoxCarriedDays` (`packages/shared/src/stats.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; the Home notice PR left these two parts of its TODO open (red team of its pre-landing review). A new state on Home or History goes through the pen file first.
 
 **Effort:** M
 **Priority:** P2
 **Depends on:** None
 
-### Say the detox week in the 未使用日の扱い hint
+### Warn on Home on the last day a detox still counts
 
-**What:** Change the hint on the 未使用日の扱い sheet, 「…デトックスを続けた日は計測に入ります。」, to state the week limit (for example 「デトックスを続けた日は7日まで計測に入ります。」), in the pen file first.
+**What:** On the seventh day after a detox run started (the last untapped day it still measures), say on Home that from tomorrow the untapped days stop counting, before 「今日は計測に入りません」 appears the next day.
 
-**Why:** Since the detox cap (2026-09-25), the untapped days from the eighth day after a detox run started are listed as 切替なし on that same sheet, under a hint that says they count.
+**Why:** Home now speaks only once today is already unmeasured, so a user who keeps a week-long detox learns about the limit the morning after the day it could have been kept, when 連続記録 is already at risk.
 
-**Context:** `hint` in `apps/app/src/app/(app)/excluded-days.tsx`; the board is `ST Phone / 設定＋除外シート` in `design/switch-time.pen`. Raised by the red team of the cap's pre-landing review; left out because only one session edits the pen file at a time.
+**Context:** The rule is in `detoxCarriedDays` (`packages/shared/src/stats.ts`); Home's notice is `detoxStopped` / `nowLook` in `apps/app/src/lib/home.ts`, drawn in `ST Phone / ホーム・detox の状態`. The last day depends on when the run started, which a cut can make earlier than the current record's start, so the client needs the run's start day from the server (for example a field on `stats.day`) rather than counting from the since label. The same field would let 「今日は計測に入りません」 speak for a run a cut split: `detoxPastWeek` counts from the record's start (which also keeps a future-day answer at midnight from reading as stopped), so such a run stays quiet today. Raised by the design review of the Home notice.
 
-**Effort:** S
-**Priority:** P2
+**Effort:** M
+**Priority:** P3
 **Depends on:** None
 
 ### Fit a 25-hour day's activity time on History's 24-hour bar

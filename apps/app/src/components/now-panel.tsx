@@ -8,19 +8,22 @@ import type { NowLook } from '@/lib/home'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/store'
 
-// Wide web sits the 176 px dial beside the status block inside a surface card; phones stack the 236 px dial over a centred block.
+// Wide web sits the 176 px dial beside the status block inside a surface card; phones stack the 236 px dial over a centred block,
+// whose lines wrap centred too.
 const BANDS = {
   wide: {
     root: 'flex-row flex-wrap items-center gap-6 rounded-card border border-line bg-surface p-6',
     dial: 176,
     status: 'min-w-[220px] flex-1 items-start gap-1',
     name: 'text-xl',
+    line: '',
   },
   narrow: {
     root: 'items-center gap-4',
     dial: 236,
     status: 'items-center gap-0.5',
     name: 'text-lg',
+    line: 'text-center',
   },
 }
 
@@ -49,8 +52,9 @@ type NowPanelProps = {
 }
 
 /**
- * The hero of Home: the dial, the current state in its own colour (detox in none) and the elapsed time ticking from the clock slice.
- * @example <NowPanel look={nowLook(activity, since, switchCount)} startedAt={current.startedAt.getTime()} />
+ * The hero of Home: the dial, the current state in its own colour (detox in none), the elapsed time ticking from the clock slice,
+ * and, on a day a detox no longer measures, the notice saying so.
+ * @example <NowPanel look={nowLook(activity, since, switchCount, stopped)} startedAt={current.startedAt.getTime()} />
  */
 export function NowPanel({ look, startedAt }: NowPanelProps) {
   const band = BANDS[useWide() ? 'wide' : 'narrow']
@@ -77,7 +81,20 @@ export function NowPanel({ look, startedAt }: NowPanelProps) {
         <Readout className={tone.readout} aria-label={`経過時間 ${elapsed}`}>
           {elapsed}
         </Readout>
-        <Text className="text-sub text-xs">{look.subtext}</Text>
+        <Text className={cn('text-sub text-xs', band.line)}>
+          {look.subtext}
+        </Text>
+        {/* A detox past its week (pen `ST Phone / ホーム・detox の状態`): the one ink line after the name, then the rule. */}
+        {look.notice && (
+          <View className="gap-0.5 pt-1.5">
+            <Text className={cn('text-ink text-sm font-semibold', band.line)}>
+              {look.notice.title}
+            </Text>
+            <Text className={cn('text-sub text-xs', band.line)}>
+              {look.notice.body}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   )
