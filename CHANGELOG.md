@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.16.0.0] - 2026-09-25
+
+### Added
+
+- Home says so when a detox has run past its week: from the eighth day
+  after it started, with no switch that day, 「今日は計測に入りません」
+  and the rule appear under the detox, until you tap an activity. It
+  shows only once the server confirms the day is not measured, never
+  while that answer is loading or failed, and never while 未使用日の扱い
+  keeps every day measured.
+- The 「… から」 line on Home names the day (`9月16日 21:20`) when the
+  running record started before today, so a detox carried over from an
+  earlier day no longer reads as if it started this morning.
+
+### Changed
+
+- The 未使用日の扱い hint states the detox week: a detox counts from the
+  day after it started for 7 days, and after that the day is left out as
+  「切替なし」.
+
 ## [0.15.0.0] - 2026-09-25
 
 ### Added
