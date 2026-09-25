@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.17.0.0] - 2026-09-25
+
+### Changed
+
+- 新規登録 no longer tells anyone whether an address already has an
+  account. アカウントを作成 answers the same way for a new address and a
+  taken one, and it no longer signs you in: サインイン opens with the
+  address filled in, the password field ready, and
+  「登録しました。サインインしてください」. Signing in with the password
+  just chosen can still tell, until the app proves who owns an address.
+- The notice is read out: with the password field on the web, and
+  announced by the screen reader on iPhone and Android.
+
+### Fixed
+
+- A sign-up holding a character the database cannot store as sent (a
+  NUL, or half of a UTF-16 pair) is turned away the same way for a new
+  and a taken address, instead of answering differently.
+- A sign-up left waiting on a slow connection no longer takes over
+  サインイン when its answer finally comes, whether you went on to sign
+  in or registered another address.
+- Once a sign-in goes through, サインイン keeps the address you sent and
+  its button stays off until the app opens, so a second tap cannot send
+  it again. A sign-in whose screen you left before it answered still
+  clears the previous account's data from this device.
+- Going back to サインイン from 新規登録 without registering leaves the
+  cursor where you had it.
+
 ## [0.16.0.0] - 2026-09-25
 
 ### Added

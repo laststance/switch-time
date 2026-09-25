@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test'
 
-import { apiAs, signUp } from './helpers'
+import { apiAs, createAccount, signUp } from './helpers'
 
 const readout = /^\d+:\d{2}:\d{2}$/
 
@@ -25,15 +25,7 @@ test('the first launch screen disappears after the first switch', async ({
   page,
 }) => {
   // Arrange
-  await page.goto('/sign-up')
-  await page.getByLabel('名前').fill('E2E')
-  await page
-    .getByLabel('メールアドレス')
-    .fill(
-      `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`,
-    )
-  await page.getByLabel('パスワード').fill('correct-horse-battery')
-  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  await createAccount(page)
   const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
   await expect(firstLaunch).toBeVisible()
   await expect(page.getByText(readout)).toHaveCount(0)
