@@ -207,10 +207,12 @@ type ActionsProps = {
   picker: ReactNode
   onMergePrevious: () => void
   onMergeNext: () => void
-  onSplit: () => void
+  /** 区切る時刻 with 「ここで分割」, built by the caller. */
+  cutControls: ReactNode
 }
 
-// The panel under the selected row: ±15 min on the start, the activity picker, merge either way and split.
+// The panel under one of the day's own rows: ±15 min on the start, the activity picker, merge either way, and 区切る時刻 at
+// the bottom. Its groups sit 20 apart (tokens.md: the gap between groups).
 function Actions({
   row,
   pending,
@@ -220,12 +222,12 @@ function Actions({
   picker,
   onMergePrevious,
   onMergeNext,
-  onSplit,
+  cutControls,
 }: ActionsProps) {
   // One gate for every control: nothing is pressable while a fetch or an edit is in flight.
   const can = (flag: boolean) => !pending && flag
   return (
-    <View className="gap-3 px-3.5 pt-0.5 pb-3.5">
+    <View className="gap-5 px-3.5 pt-0.5 pb-3.5">
       <View className="flex-row items-center gap-2.5">
         <Text className="text-sub flex-1 text-xs font-medium">開始時刻</Text>
         <StepButton
@@ -267,12 +269,8 @@ function Actions({
           />
         </View>
         {mergeNote && <Text className={NOTE}>{mergeNote}</Text>}
-        <ActionButton
-          title="半分で分割"
-          disabled={!can(row.canSplit)}
-          onPress={onSplit}
-        />
       </View>
+      {cutControls}
     </View>
   )
 }
@@ -321,31 +319,23 @@ function ActivityPicker({ row, pending, onPick }: PickerProps) {
   )
 }
 
-type CarriedInActionsProps = {
+type CutControlsProps = {
   row: CorrectionRow
   pending: boolean
   timeZone: string
   totalsFacts: TotalsFacts
-  noticeId: string | null
-  /** Which untapped days switching the record between detox and an activity may count differently; null: none. */
-  pickNote: string | null
-  /** The activity picker, built by the caller. */
-  picker: ReactNode
   onCut: (at: number) => void
 }
 
-// The panel under the carried-in record (layout B2): where it really started, 区切る時刻 with 「ここで分割」, and the picker,
-// which changes the whole record. It never moves or merges the record: that would rewrite the earlier day.
-function CarriedInActions({
+// 区切る時刻 and 「ここで分割」, in both panels: the readout, four steps, the cut, and the notes under it. It keeps the stepped
+// time; the caller keys it by the row's start, so a start moved by ±15 reopens it at the new range's middle.
+function CutControls({
   row,
   pending,
   timeZone,
   totalsFacts,
-  noticeId,
-  pickNote,
-  picker,
   onCut,
-}: CarriedInActionsProps) {
+}: CutControlsProps) {
   const [chosen, setChosen] = useState(() => openedCut(row))
   const stepper = cutStepper(row, chosen, timeZone)
   const step = (target: number): void => {
@@ -357,54 +347,78 @@ function CarriedInActions({
       )
   }
   return (
-    <View className="gap-3 px-3.5 pt-0.5 pb-3.5">
-      <Text className={NOTE}>{`${row.trueStartLabel} から続く記録です`}</Text>
-      <View className="gap-2">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sub text-xs font-medium">区切る時刻</Text>
-          <Text
-            role="status"
-            aria-label="区切る時刻"
-            aria-live="polite"
-            className="text-ink text-lg font-semibold tabular"
-          >
-            {stepper.label}
-          </Text>
-        </View>
-        <View className="flex-row gap-2">
-          {CUT_STEPS.map((minutes) => {
-            const target = stepper.targets[minutes]
-            return (
-              <ActionButton
-                key={minutes}
-                title={STEP_TEXT[minutes].title}
-                label={STEP_TEXT[minutes].label}
-                disabled={pending || target === null}
-                onPress={() => {
-                  if (target !== null) step(target)
-                }}
-                className="flex-1"
-              />
-            )
-          })}
-        </View>
-        <Control
-          disabled={pending || stepper.at === null}
-          onPress={() => {
-            if (stepper.at !== null) onCut(stepper.at)
-          }}
-          className="bg-ink h-11 rounded-chip"
+    <View className="gap-2">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sub text-xs font-medium">区切る時刻</Text>
+        <Text
+          role="status"
+          aria-label="区切る時刻"
+          aria-live="polite"
+          className="text-ink text-lg font-semibold tabular"
         >
-          <Text className="text-sheet-bg text-xs font-semibold">
-            ここで分割
-          </Text>
-        </Control>
-        {cutNotes(row, totalsFacts, stepper.at).map((note) => (
-          <Text key={note} className={NOTE}>
-            {note}
-          </Text>
-        ))}
+          {stepper.label}
+        </Text>
       </View>
+      <View className="flex-row gap-2">
+        {CUT_STEPS.map((minutes) => {
+          const target = stepper.targets[minutes]
+          return (
+            <ActionButton
+              key={minutes}
+              title={STEP_TEXT[minutes].title}
+              label={STEP_TEXT[minutes].label}
+              disabled={pending || target === null}
+              onPress={() => {
+                if (target !== null) step(target)
+              }}
+              className="flex-1"
+            />
+          )
+        })}
+      </View>
+      <Control
+        disabled={pending || stepper.at === null}
+        onPress={() => {
+          if (stepper.at !== null) onCut(stepper.at)
+        }}
+        className="bg-ink h-11 rounded-chip"
+      >
+        <Text className="text-sheet-bg text-xs font-semibold">ここで分割</Text>
+      </Control>
+      {cutNotes(row, totalsFacts, stepper.at).map((note) => (
+        <Text key={note} className={NOTE}>
+          {note}
+        </Text>
+      ))}
+    </View>
+  )
+}
+
+type CarriedInActionsProps = {
+  row: CorrectionRow
+  noticeId: string | null
+  /** Which untapped days switching the record between detox and an activity may count differently; null: none. */
+  pickNote: string | null
+  /** The activity picker, built by the caller. */
+  picker: ReactNode
+  /** 区切る時刻 with 「ここで分割」, built by the caller. */
+  cutControls: ReactNode
+}
+
+// The panel under the carried-in record (layout B2): where it really started, 区切る時刻 with 「ここで分割」, and the picker,
+// which changes the whole record. It never moves or merges the record: that would rewrite the earlier day. Groups sit 20
+// apart, as in the own-row panel.
+function CarriedInActions({
+  row,
+  noticeId,
+  pickNote,
+  picker,
+  cutControls,
+}: CarriedInActionsProps) {
+  return (
+    <View className="gap-5 px-3.5 pt-0.5 pb-3.5">
+      <Text className={NOTE}>{`${row.trueStartLabel} から続く記録です`}</Text>
+      {cutControls}
       <View className="gap-1.75">
         <View className="gap-1">
           <Text className="text-sub text-xs font-medium">活動を変える</Text>
@@ -443,7 +457,8 @@ type RowPanelProps = {
   correction: ReturnType<typeof useCorrection>
 }
 
-// The selected row's panel: the carried-in record cuts or changes its activity, the day's own rows get every edit.
+// The selected row's panel: the carried-in record cuts or changes its activity, the day's own rows get every edit. Both cut
+// through the same 区切る時刻 group.
 function RowPanel({ row, correction }: RowPanelProps) {
   const notes = correction.untappedNotes(row)
   const picker = (
@@ -453,17 +468,25 @@ function RowPanel({ row, correction }: RowPanelProps) {
       onPick={(activityId) => correction.pick(row, activityId)}
     />
   )
+  const cutControls = (
+    <CutControls
+      // A moved start is a new range: the stepped time would sit off its middle, or outside it.
+      key={`${row.id}:${row.trueStart}`}
+      row={row}
+      pending={correction.pending}
+      timeZone={correction.bounds.timeZone}
+      totalsFacts={correction.totalsFacts}
+      onCut={(at) => correction.cut(row, at)}
+    />
+  )
   if (row.carriedIn)
     return (
       <CarriedInActions
         row={row}
-        pending={correction.pending}
-        timeZone={correction.bounds.timeZone}
-        totalsFacts={correction.totalsFacts}
         noticeId={correction.noticeId}
         pickNote={notes.pick}
         picker={picker}
-        onCut={(at) => correction.cut(row, at)}
+        cutControls={cutControls}
       />
     )
   return (
@@ -476,7 +499,7 @@ function RowPanel({ row, correction }: RowPanelProps) {
       picker={picker}
       onMergePrevious={() => correction.mergePrevious(row)}
       onMergeNext={() => correction.mergeNext(row)}
-      onSplit={() => correction.split(row)}
+      cutControls={cutControls}
     />
   )
 }
@@ -554,7 +577,7 @@ export default function CorrectionSheet() {
   return (
     <Sheet
       title={correction.title}
-      hint="行をタップ → 開始時刻を15分ずつ動かす／活動を変える"
+      hint="行をタップ → 開始時刻を動かす／区切る／活動を変える（前の日から続く記録は区切る・活動を変えるのみ）"
     >
       <DayBar
         rows={correction.rows}

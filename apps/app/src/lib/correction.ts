@@ -33,8 +33,16 @@ export type CorrectionActivity = Pick<ActivityRow, 'id' | 'name' | 'iconKey'> &
   }
 /** What 「元に戻す」 keeps: the day's own rows as `switches.replaceDay` takes them. */
 export type DaySnapshot = ReplaceDayInput['rows']
-/** Where 「ここで分割」 may cut the carried-in record, in epoch ms on the stored zone's quarter hours; `initial` is where 区切る時刻 opens. */
-export type CutRange = { min: number; max: number; initial: number }
+/**
+ * Where 「ここで分割」 may cut a row, in epoch ms on the stored zone's quarter hours; `initial` is where 区切る時刻 opens.
+ * `middleMinute`: no quarter hour fits, so the range is the one whole minute in the row's middle (min = max = initial).
+ */
+export type CutRange = {
+  min: number
+  max: number
+  initial: number
+  middleMinute: boolean
+}
 
 export type CorrectionRow = {
   id: string
@@ -65,13 +73,12 @@ export type CorrectionRow = {
   /** The whole record, the part before the day included, as the idle rule measures it: its real start, and the next switch or now. */
   trueStart: number
   trueEnd: number
-  /** 区切る時刻's range on a carried-in row; null on the day's own rows and when no quarter hour fits. */
+  /** 区切る時刻's range; null when no whole minute keeps a minute from both ends (「ここで分割」 is disabled). */
   cut: CutRange | null
   canMoveEarlier: boolean
   canMoveLater: boolean
   canMergePrevious: boolean
   canMergeNext: boolean
-  canSplit: boolean
 }
 
 /** The day's bounds and the clock in epoch ms, plus the stored zone the times are written in. */
@@ -163,15 +170,26 @@ export function correctionRows(
 }
 
 const QUARTER_MS = 15 * 60_000
+const MINUTE_MS = 60_000
 // How far a device clock may run ahead of the server's before 区切る時刻 would offer a cut `switches.splitAt` refuses.
 const CLOCK_SKEW_MARGIN_MS = 15 * 60_000
 
 /**
- * 区切る時刻's range for a record from `startedAt` to `trueEnd`: quarter hours of the viewed day (counted from its 0:00, so any
- * zone offset works) that keep a minute from the record's true start and from its end, as `switches.splitAt` checks, and stay
- * a quarter short of now so a device clock running fast cannot offer a cut the server refuses.
- * 0:00 itself is allowed, since midnight is not a switch. The opening value is the middle quarter, a tie rounding down.
- * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15 }
+ * 区切る時刻's range for a record from `startedAt` to `trueEnd`, the carried-in record's or one of the day's own rows: quarter
+ * hours of the viewed day (counted from its 0:00, so any zone offset works) that keep a minute from the record's true start
+ * and from its end, as `switches.splitAt` checks, and stay a quarter short of now so a device clock running fast cannot offer
+ * a cut the server refuses. 0:00 itself is allowed, since midnight is not a switch. The opening value is the middle quarter,
+ * a tie rounding down. A row too short for any quarter hour is cut at its middle whole minute instead, so a row of a few
+ * minutes can still be cut. Called by {@link describeRow} for every row, on every tick.
+ * @param startedAt - The record's true start (before the day for the carried-in record).
+ * @param trueEnd - The next switch, or now for the current state.
+ * @param bounds - The viewed day and the clock.
+ * @returns
+ * - the quarter hours in reach, opening at the middle one
+ * - `middleMinute`: the one whole minute in the middle, when no quarter hour fits
+ * - null when not even a whole minute keeps a minute from both ends (a fresh current state: until 17 min past its start)
+ * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15, middleMinute: false }
+ * @example cutRange(nineOhOne, nineFourteen, bounds) // { min: 9:07, max: 9:07, initial: 9:07, middleMinute: true }
  */
 function cutRange(
   startedAt: number,
@@ -182,15 +200,27 @@ function cutRange(
   const ceiling =
     Math.min(trueEnd, bounds.end, bounds.now - CLOCK_SKEW_MARGIN_MS) -
     MIN_SEGMENT_MS
-  const min =
-    bounds.start + Math.ceil((floor - bounds.start) / QUARTER_MS) * QUARTER_MS
-  const max =
-    bounds.start +
-    Math.floor((ceiling - bounds.start) / QUARTER_MS) * QUARTER_MS
-  // No quarter hour keeps a minute from both ends: 「ここで分割」 is disabled.
-  if (min > max) return null
-  const quarters = (max - min) / QUARTER_MS
-  return { min, max, initial: min + Math.floor(quarters / 2) * QUARTER_MS }
+  const grid = (step: number) => ({
+    first: bounds.start + Math.ceil((floor - bounds.start) / step) * step,
+    last: bounds.start + Math.floor((ceiling - bounds.start) / step) * step,
+  })
+  const quarters = grid(QUARTER_MS)
+  if (quarters.first <= quarters.last) {
+    const count = (quarters.last - quarters.first) / QUARTER_MS
+    return {
+      min: quarters.first,
+      max: quarters.last,
+      initial: quarters.first + Math.floor(count / 2) * QUARTER_MS,
+      middleMinute: false,
+    }
+  }
+  const minutes = grid(MINUTE_MS)
+  // Not even a whole minute keeps a minute from both ends: 「ここで分割」 is disabled.
+  if (minutes.first > minutes.last) return null
+  const middle =
+    minutes.first +
+    Math.floor((minutes.last - minutes.first) / MINUTE_MS / 2) * MINUTE_MS
+  return { min: middle, max: middle, initial: middle, middleMinute: true }
 }
 
 const NO_TRUE_START = { trueStartDate: '', trueStartLabel: '' }
@@ -241,7 +271,7 @@ function describeRow(
     archived: Boolean(activity.archivedAt),
     trueStart: startedAt,
     trueEnd,
-    cut: carriedIn ? cutRange(startedAt, trueEnd, bounds) : null,
+    cut: cutRange(startedAt, trueEnd, bounds),
     ...(carriedIn
       ? LOCKED
       : ownRowFlags(row, prev, next, bounds, prevArchived)),
@@ -250,19 +280,14 @@ function describeRow(
 
 type RowFlags = Pick<
   CorrectionRow,
-  | 'canMoveEarlier'
-  | 'canMoveLater'
-  | 'canMergePrevious'
-  | 'canMergeNext'
-  | 'canSplit'
+  'canMoveEarlier' | 'canMoveLater' | 'canMergePrevious' | 'canMergeNext'
 >
-// Moving, merging or halving the carried-in record would rewrite the earlier day, which 「元に戻す」 cannot restore.
+// Moving or merging the carried-in record would rewrite the earlier day, which 「元に戻す」 cannot restore.
 const LOCKED: RowFlags = {
   canMoveEarlier: false,
   canMoveLater: false,
   canMergePrevious: false,
   canMergeNext: false,
-  canSplit: false,
 }
 
 // The action panel's flags for one of the day's own rows, with the clamp the API applies and the day's floor and ceiling.
@@ -273,9 +298,7 @@ function ownRowFlags(
   bounds: DayBounds,
   prevArchived: boolean,
 ): RowFlags {
-  const startedAt = row.startedAt.getTime()
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
-  const midpoint = Math.floor((startedAt + trueEnd) / 2)
   return {
     canMoveEarlier: moveTarget(row, prev, next, bounds, -15) !== null,
     canMoveLater: moveTarget(row, prev, next, bounds, 15) !== null,
@@ -284,8 +307,6 @@ function ownRowFlags(
     // Merging moves the next row back to this row's start, so that row must be the day's own: 「元に戻す」 rewrites this day
     // only, and would drop the next day's first switch for good.
     canMergeNext: next !== null && trueEnd < bounds.end,
-    // Both halves keep the clamp's margin and the new row stays inside the day.
-    canSplit: midpoint - startedAt >= MIN_SEGMENT_MS && midpoint < bounds.end,
   }
 }
 
@@ -356,7 +377,7 @@ export function dayBaseline(
 /**
  * The day's own rows once an edit has landed, from the baseline the API checked and the row the edit returned: the edit
  * wrote nothing else, since the API ran it under the user's lock right after that check. A merge deletes the edited row;
- * the returned row (moved, re-activitied, the merge's kept neighbour, a split's new part) replaces its id or joins; rows
+ * the returned row (moved, re-activitied, the merge's kept neighbour, a cut's new part) replaces its id or joins; rows
  * outside the day drop (a merge into the carried-in record keeps that record on its own day). 「元に戻す」 sends these as
  * `expected`, so it is refused once anything else has touched the day.
  * @param before - The baseline's rows.
@@ -399,9 +420,9 @@ export type CutStepMinutes = (typeof CUT_STEPS)[number]
 /** The time the user stepped 区切る時刻 to, and on which row; the panel keeps it in local state. */
 export type ChosenCut = { id: string; at: number }
 /**
- * The cut time the carried-in panel opens with: the range's middle as it is when the panel mounts, kept as a choice so
+ * The cut time a row's panel opens with: the range's middle as it is when the panel mounts, kept as a choice so
  * today's clock, which moves the range's end and so its middle, never shifts the time under the user's finger.
- * @param row - The carried-in row the panel opens on.
+ * @param row - The row the panel opens on.
  * @returns The row's `initial` as a {@link ChosenCut}, or null when the row has no cut range.
  * @example openedCut(carriedIn) // { id: 'w', at: 3:15 }
  */
@@ -417,10 +438,10 @@ export type CutStepper = {
 }
 
 /**
- * The 区切る時刻 stepper of the selected carried-in row: a chosen time stays while it is inside the row's current range (so
- * today's clock never moves it), and anything else (another row's choice, a time a cut or an undo left outside) opens at
- * `initial`. Steps clamp to the range; a step that cannot move is disabled. Read by the carried-in panel at every render.
- * @param row - The selected row; only a carried-in one has a range.
+ * The 区切る時刻 stepper of the selected row: a chosen time stays while it is inside the row's current range (so today's
+ * clock never moves it), and anything else (another row's choice, a time a cut or an undo left outside) opens at `initial`.
+ * Steps clamp to the range; a step that cannot move is disabled. Read by either panel's cut group at every render.
+ * @param row - The selected row.
  * @param chosen - The last stepped time, or null before any step.
  * @param timeZone - The stored zone the readout is written in.
  * @returns
@@ -434,6 +455,7 @@ export function cutStepper(
   timeZone: string,
 ): CutStepper {
   const { cut } = row
+  // No cut at all: the readout says so and every step is disabled.
   if (!cut)
     return {
       at: null,
@@ -502,9 +524,9 @@ export type TotalsEffect = 'idle' | 'unmeasured'
 /**
  * Whether a cut at `at` takes time out of the idle count: the whole record is over the threshold, and at least one of
  * the two parts is not (`segmentsInRange` measures each part by its own length). Detox is never idle, so it has no effect.
- * @param row - The carried-in row, with the whole record's true start and end.
+ * @param row - The selected row, with the whole record's true start and end.
  * @param idleThresholdMs - The user's idle threshold.
- * @param at - The cut time, or null when the day has no quarter hour to cut at.
+ * @param at - The cut time, or null when the row has none.
  * @returns True when the note 「無操作扱い…が集計に入ります」 is accurate for this cut.
  * @example cutFreesIdle(row26h, 43_200_000, at1245) // true: the later part is 11h15
  */
@@ -521,10 +543,11 @@ function cutFreesIdle(
 }
 
 /**
- * How a cut of the carried-in record would change the totals, one line each under 「ここで分割」: a record over the idle
- * threshold counts nowhere until a cut leaves a part under it ({@link cutFreesIdle}), and a day the server counts as
- * unused (`auto_unused`, see {@link classifyDay}) becomes 計測できた日 once the cut gives it a switch of its own.
- * @param row - The selected row; the day's own rows have no cut and no effect.
+ * How a cut would change the totals, one line each under 「ここで分割」: a record over the idle threshold counts nowhere
+ * until a cut leaves a part under it ({@link cutFreesIdle}), on any row; and a day the server counts as unused
+ * (`auto_unused`, see {@link classifyDay}) becomes 計測できた日 once a cut of the carried-in record gives it a switch of its
+ * own (a day with an own row to cut is already measured).
+ * @param row - The selected row.
  * @param facts - The idle threshold and the viewed day's class.
  * @param at - The stepper's cut time, or null when there is none.
  * @returns The effects in display order; empty when the cut changes nothing in the totals.
@@ -535,9 +558,10 @@ export function cutTotalsEffects(
   facts: TotalsFacts,
   at: number | null,
 ): TotalsEffect[] {
-  if (!row.carriedIn) return []
   const effects: TotalsEffect[] = []
   if (cutFreesIdle(row, facts.idleThresholdMs, at)) effects.push('idle')
+  // Only the carried-in record can be what leaves the day without a switch of its own.
+  if (!row.carriedIn) return effects
   // The server's class already folds in today, the day's own taps, a detox that still measures it, a manual exclusion
   // (which outranks a switch) and auto-exclusion being off; a class not loaded yet says nothing.
   if (facts.dayExcluded === 'auto_unused') effects.push('unmeasured')
@@ -545,25 +569,30 @@ export function cutTotalsEffects(
 }
 
 /**
- * The lines under 「ここで分割」: one per way the cut changes the totals ({@link cutTotalsEffects}), or the reason the cut is
- * disabled when no quarter hour fits.
- * @param row - The selected carried-in row.
+ * The lines under 「ここで分割」: why the four steps are off when the row is cut at its middle minute, then one per way the
+ * cut changes the totals ({@link cutTotalsEffects}); or the reason the cut is disabled when the row has none.
+ * @param row - The selected row.
  * @param facts - The idle threshold and the viewed day's class ({@link TotalsFacts}).
  * @param at - The stepper's cut time, which decides whether a part leaves the idle count.
  * @returns The lines in display order; empty when there is nothing to say.
  * @example cutNotes(carriedIn, facts, at) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']
+ * @example cutNotes(nineOhOneToFourteen, facts, at) // ['短い記録のため、真ん中で区切ります']
+ * @example cutNotes(freshCurrentState, facts, null) // ['区切れる時刻がありません']
  */
 export function cutNotes(
   row: CorrectionRow,
   facts: TotalsFacts,
   at: number | null,
 ): string[] {
-  if (!row.cut) return ['15分単位で区切れる時刻がありません']
-  return cutTotalsEffects(row, facts, at).map((effect) =>
+  if (!row.cut) return ['区切れる時刻がありません']
+  const effects = cutTotalsEffects(row, facts, at).map((effect) =>
     effect === 'idle'
       ? `区切ると、無操作扱い（${idleLabel(facts.idleThresholdMs / 60_000)}超）だった時間が集計に入ります`
       : '区切ると、この日は計測できた日になります',
   )
+  return row.cut.middleMinute
+    ? ['短い記録のため、真ん中で区切ります', ...effects]
+    : effects
 }
 
 /**
@@ -595,18 +624,19 @@ export type UndoSlot =
       revision: number
     }
 /**
- * The row a day undo selects once it lands. A cut names the carried-in row it came from by id: that record starts before
- * the day, so `switches.replaceDay` leaves it alone. A split names the halved row by its start (epoch ms): `replaceDay`
- * deletes the day's rows and writes them back under new ids, so only the start finds it again. null: nothing to select.
+ * The row a day undo selects once it lands. A cut of the carried-in record names it by id: that record starts before the
+ * day, so `switches.replaceDay` leaves it alone. A cut of one of the day's own rows names it by its start (epoch ms):
+ * `replaceDay` deletes the day's rows and writes them back under new ids, so only the start finds it again. null: nothing
+ * to select.
  */
 export type Reselect = { id: string } | { startedAt: number } | null
 
 /**
- * The sheet's edits, as far as the undo cares, with the row the procedure returned: `cut` is 「ここで分割」 on a carried-in
- * row, `split` is 半分で分割. A pick's returned row carries the revision its write left.
+ * The sheet's edits, as far as the undo cares, with the row the procedure returned: `cut` is 「ここで分割」 on any row. A
+ * pick's returned row carries the revision its write left.
  */
 export type CorrectionEdit = {
-  kind: 'move' | 'pick' | 'merge' | 'split' | 'cut'
+  kind: 'move' | 'pick' | 'merge' | 'cut'
   returned: Pick<
     SwitchRow,
     'id' | 'activityId' | 'startedAt' | 'startsRun' | 'revision' | 'userId'
@@ -738,7 +768,10 @@ function dayRowsMatch(
   })
 }
 
-/** The correction sheet's own state, for the day it shows: the selected row, and the row a cut or split just created (focused). */
+/**
+ * The correction sheet's own state, for the day it shows: the selected row, and the row whose header takes focus (the part a
+ * cut just created, or the row a merge kept), since the pressed button left the screen with its panel.
+ */
 export type CorrectionSheet = {
   day: string
   selectedId: string | null
@@ -785,7 +818,7 @@ export function sheetView(
 
 /**
  * The sheet's own state after an answer to a press: the patch applies only while the sheet still shows the day the press
- * was made on, so a split or an undo that lands after midnight or a `?day=` change selects nothing on the day now shown.
+ * was made on, so a cut or an undo that lands after midnight or a `?day=` change selects nothing on the day now shown.
  * Called by the answers of {@link useCorrectionState} (inside {@link useCorrection}) through a functional state update, whose
  * `current.day` is the viewed day.
  * @param current - The sheet's state, whose `day` is the day it shows.
@@ -805,14 +838,14 @@ export function onPressedDay(
   return { ...current, ...patch }
 }
 
-// What a day undo selects again: the carried-in row after a cut, the halved row after a split, nothing after any other edit.
+// What a day undo selects again: the row a cut was made on (the carried-in record by id, an own row by its start), nothing
+// after any other edit.
 function reselectAfterUndo(
   kind: CorrectionEdit['kind'],
   row: CorrectionRow,
 ): Reselect {
-  if (kind === 'cut') return { id: row.id }
-  if (kind === 'split') return { startedAt: row.start }
-  return null
+  if (kind !== 'cut') return null
+  return row.carriedIn ? { id: row.id } : { startedAt: row.start }
 }
 
 /**
@@ -821,8 +854,8 @@ function reselectAfterUndo(
  * @param reselect - The slot's reselect.
  * @param written - The day's rows as the undo wrote them back, with their new ids.
  * @returns
- * - the named id for a cut (the carried-in row keeps its id)
- * - the id of the written row that starts at `startedAt` for a split
+ * - the named id for a cut of the carried-in record (it keeps its id)
+ * - the id of the written row that starts at `startedAt` for a cut of an own row
  * - null when there is nothing to select, or no written row starts there
  * @example reselectedRow({ startedAt: Date.parse('2026-09-08T09:00:00+09:00') }, written) // 'new-id-of-the-9:00-row'
  */
@@ -856,7 +889,7 @@ export type UndoRequest =
  * holding the rows the edit left under the same zone, or the carried-in record's previous activity through `changeActivity`,
  * conditional on the record still being at the revision the pick left.
  * @param slot - The armed undo.
- * @returns The procedure and its input; a day undo also names the row to select after it (after a cut or a split).
+ * @returns The procedure and its input; a day undo also names the row to select after it (after a cut).
  * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
  */
 export function undoRequest(slot: UndoSlot): UndoRequest {

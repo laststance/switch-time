@@ -175,7 +175,7 @@ export type DayBaseline = z.infer<typeof dayBaselineSchema>
 // instead, and the API's own tests edit without either.
 const withBaseline = { baseline: dayBaselineSchema.optional() }
 
-/** 前の記録に統合 / 次の記録に統合 / 半分で分割: a row and, from the sheet, its day's baseline. */
+/** 前の記録に統合 / 次の記録に統合 (and `switches.splitInHalf`, kept for clients before 0.23): a row and, from the sheet, its day's baseline. */
 export const rowEditInputSchema = z.object({ id: z.uuid(), ...withBaseline })
 
 /** Correction sheet ±15 min step; the router clamps to the neighbouring switches. */
@@ -196,7 +196,7 @@ export const changeActivityInputSchema = z.object({
   ...withBaseline,
 })
 
-/** 「ここで分割」 on the record carried into a day: cut it at `at`; the router keeps a minute from both ends and from now. */
+/** 「ここで分割」 on any row of the sheet, the record carried into the day included: cut it at `at`; the router keeps a minute from both ends and from now. */
 export const splitAtInputSchema = z.object({
   id: z.uuid(),
   at: z.coerce.date(),

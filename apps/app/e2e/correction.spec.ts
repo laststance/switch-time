@@ -181,7 +181,7 @@ test('undo after a merge and then a 15-minute move takes back only the move', as
 
   // Act: move 娯楽 15 minutes earlier, then undo.
   await merged.click()
-  await page.getByRole('button', { name: '15分早める' }).click()
+  await page.getByRole('button', { name: '15分早める', exact: true }).click()
   await expect(
     page.getByRole('button', { name: '娯楽 11:45 – 24:00 12h 15m' }),
   ).toBeVisible()
@@ -307,8 +307,10 @@ test('an edit made on a list another device has since changed is refused, and th
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
-test('undo joins a split row back into one', async ({ page }) => {
-  // Arrange: yesterday 仕事 9:00, 休息 12:00, with 仕事 split at 10:30.
+test('区切る時刻 cuts the day’s own row at the stepped time into a selected, focused later part, and undo joins it back', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00; 区切る時刻 on 仕事 opens at 10:30, the middle quarter of 9:15 – 11:45.
   await signUp(page)
   const api = await apiAs(page)
   const list = await api.activities.list()
@@ -323,20 +325,34 @@ test('undo joins a split row back into one', async ({ page }) => {
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const work = dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
   await work.click()
-  await page.getByRole('button', { name: '半分で分割' }).click()
-  const secondHalf = page.getByRole('button', {
-    name: '仕事 10:30 – 12:00 1h 30m',
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  await expect(readout).toHaveText('10:30')
+
+  // Act
+  await dialog.getByRole('button', { name: '区切る時刻を15分遅らせる' }).click()
+  await expect(readout).toHaveText('10:45')
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+
+  // Assert: the later part 10:45 – 12:00 is the selected, focused row.
+  const laterPart = dialog.getByRole('button', {
+    name: '仕事 10:45 – 12:00 1h 15m',
   })
-  await expect(secondHalf).toBeVisible()
+  await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
+  await expect(laterPart).toBeFocused()
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 10:45 1h 45m' }),
+  ).toHaveAttribute('aria-expanded', 'false')
 
   // Act
   await page.getByRole('button', { name: '元に戻す' }).click()
 
-  // Assert
-  await expect(work).toBeVisible()
-  await expect(secondHalf).toHaveCount(0)
+  // Assert: one 仕事 row again, selected, with nothing further to undo.
+  await expect(work).toHaveAttribute('aria-expanded', 'true')
+  await expect(laterPart).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
 test('an edit still landing after its sheet closed holds the next sheet until it lands', async ({
@@ -417,7 +433,7 @@ test('the last row of a past day cannot merge into the next day’s first switch
   ).toBeDisabled()
 })
 
-test('the two merge buttons share a line and 半分で分割 spans the full width below them', async ({
+test('the own-row panel’s groups sit 20 apart: the merge buttons share a line, and 区切る時刻 below them ends in a full-width ここで分割', async ({
   page,
 }) => {
   // Arrange: a wide window, so the sheet is the 560 px dialog; yesterday's 仕事 9:00 stays editable whatever the clock says.
@@ -438,17 +454,32 @@ test('the two merge buttons share a line and 半分で分割 spans the full widt
 
   // Act
   await work.click()
-  const split = page.getByRole('button', { name: '半分で分割' })
-  await expect(split).toBeVisible()
+  const cut = page.getByRole('button', { name: 'ここで分割' })
+  await expect(cut).toBeVisible()
 
-  // Assert: two 240 px halves 8 px apart, then one 488 px button 8 px below (flex-1 on it would collapse it to its text).
-  const [previousBox, nextBox, splitBox] = await Promise.all([
-    page.getByRole('button', { name: '前の記録に統合' }).boundingBox(),
-    page.getByRole('button', { name: '次の記録に統合' }).boundingBox(),
-    split.boundingBox(),
-  ])
-  if (!previousBox || !nextBox || !splitBox)
-    throw new Error('an action button has no box')
+  // Assert: 活動を変える starts 20 below 開始時刻's buttons; two 240 px merge buttons 8 px apart; 区切る時刻's readout 20 below
+  // them; one 488 px ここで分割 (flex-1 on it would collapse it to its text).
+  const [earlierBox, pickLabelBox, previousBox, nextBox, readoutBox, cutBox] =
+    await Promise.all([
+      page
+        .getByRole('button', { name: '15分早める', exact: true })
+        .boundingBox(),
+      page.getByText('活動を変える', { exact: true }).boundingBox(),
+      page.getByRole('button', { name: '前の記録に統合' }).boundingBox(),
+      page.getByRole('button', { name: '次の記録に統合' }).boundingBox(),
+      page.getByRole('status', { name: '区切る時刻' }).boundingBox(),
+      cut.boundingBox(),
+    ])
+  if (
+    !earlierBox ||
+    !pickLabelBox ||
+    !previousBox ||
+    !nextBox ||
+    !readoutBox ||
+    !cutBox
+  )
+    throw new Error('a panel control has no box')
+  expect(pickLabelBox.y).toBe(earlierBox.y + 44 + 20)
   expect(previousBox).toMatchObject({ width: 240, height: 44 })
   expect(nextBox).toMatchObject({
     x: previousBox.x + 248,
@@ -456,15 +487,11 @@ test('the two merge buttons share a line and 半分で分割 spans the full widt
     width: 240,
     height: 44,
   })
-  expect(splitBox).toMatchObject({
-    x: previousBox.x,
-    y: previousBox.y + 52,
-    width: 488,
-    height: 44,
-  })
+  expect(readoutBox.y).toBe(previousBox.y + 44 + 20)
+  expect(cutBox).toMatchObject({ x: previousBox.x, width: 488, height: 44 })
 })
 
-test('on a phone-width screen the two merge buttons still share a line at equal width, with 半分で分割 full width below', async ({
+test('on a phone-width screen the two merge buttons still share a line at equal width, with 区切る時刻 20 below and a full-width ここで分割', async ({
   page,
 }) => {
   // Arrange: a phone-width window, so the sheet fills the screen; yesterday's 仕事 9:00 stays editable whatever the clock says.
@@ -485,17 +512,18 @@ test('on a phone-width screen the two merge buttons still share a line at equal 
 
   // Act
   await work.click()
-  const split = page.getByRole('button', { name: '半分で分割' })
-  await expect(split).toBeVisible()
+  const cut = page.getByRole('button', { name: 'ここで分割' })
+  await expect(cut).toBeVisible()
 
-  // Assert: two 156 px halves 8 px apart, then one 320 px button 8 px below.
-  const [previousBox, nextBox, splitBox] = await Promise.all([
+  // Assert: two 156 px merge buttons 8 px apart, 区切る時刻's readout 20 below them, one 320 px ここで分割.
+  const [previousBox, nextBox, readoutBox, cutBox] = await Promise.all([
     page.getByRole('button', { name: '前の記録に統合' }).boundingBox(),
     page.getByRole('button', { name: '次の記録に統合' }).boundingBox(),
-    split.boundingBox(),
+    page.getByRole('status', { name: '区切る時刻' }).boundingBox(),
+    cut.boundingBox(),
   ])
-  if (!previousBox || !nextBox || !splitBox)
-    throw new Error('an action button has no box')
+  if (!previousBox || !nextBox || !readoutBox || !cutBox)
+    throw new Error('a panel control has no box')
   expect(previousBox).toMatchObject({ width: 156, height: 44 })
   expect(nextBox).toMatchObject({
     x: previousBox.x + 164,
@@ -503,23 +531,19 @@ test('on a phone-width screen the two merge buttons still share a line at equal 
     width: 156,
     height: 44,
   })
-  expect(splitBox).toMatchObject({
-    x: previousBox.x,
-    y: previousBox.y + 52,
-    width: 320,
-    height: 44,
-  })
+  expect(readoutBox.y).toBe(previousBox.y + 44 + 20)
+  expect(cutBox).toMatchObject({ x: previousBox.x, width: 320, height: 44 })
 })
 
-test('splitting the current state shows on Home without a reload', async ({
+test('cutting the current state shows on Home without a reload', async ({
   page,
 }) => {
-  // Between 0:00 and 0:02 in Tokyo the whole day is shorter than the API's 2 * MIN_SEGMENT_MS split guard, so no seed can pass.
+  // 区切る時刻 keeps a quarter hour back from now and a minute from each end, so a state under 17 minutes old has no cut.
   test.skip(
-    Date.now() - at(today(), 0).getTime() < 2 * 60_000,
-    'the Tokyo day is under two minutes old, so no current state is long enough to split',
+    Date.now() - at(today(), 0).getTime() < 17 * 60_000,
+    'the Tokyo day is under 17 minutes old, so the current state has no cut yet',
   )
-  // Arrange: 仕事 since midnight (the reload makes Home read the seeded day; the split must be at least two minutes in).
+  // Arrange: 仕事 since midnight (the reload makes Home read the seeded day).
   await signUp(page)
   const api = await apiAs(page)
   const list = await api.activities.list()
@@ -544,12 +568,12 @@ test('splitting the current state shows on Home without a reload', async ({
 
   // Act
   await page.getByRole('button', { name: /^仕事 0:00 – いま/ }).click()
-  await page.getByRole('button', { name: '半分で分割' }).click()
-  // Two 仕事 rows in the sheet (the unsplit row matched both halves' patterns); this also waits for the split to land.
+  await page.getByRole('button', { name: 'ここで分割' }).click()
+  // Two 仕事 rows in the sheet (the uncut row matched both parts' patterns); this also waits for the cut to land.
   const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
-  const halves = dialog.getByRole('button', { name: /^仕事 / })
-  await expect(halves.first()).toBeVisible()
-  await expect(halves).toHaveCount(2)
+  const parts = dialog.getByRole('button', { name: /^仕事 / })
+  await expect(parts.first()).toBeVisible()
+  await expect(parts).toHaveCount(2)
   await page.getByRole('button', { name: '完了' }).click()
 
   // Assert: Home counts the new row as a switch straight away.
@@ -907,9 +931,12 @@ test('a cut at 0:00 leaves the whole day to a new row, and undo selects the carr
   // Act
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
 
-  // Assert: the carried-in record has nothing left in the day; 仕事 0:00 – 7:00 is now the day's own row, open with its panel.
-  await expect(dialog.getByRole('button', { name: '半分で分割' })).toBeVisible()
-  await expect(readout).toHaveCount(0)
+  // Assert: the carried-in record has nothing left in the day; 仕事 0:00 – 7:00 is now the day's own row, open with its panel,
+  // whose 区切る時刻 opens at 3:30, the middle quarter of 0:15 – 6:45.
+  await expect(
+    dialog.getByRole('button', { name: '15分早める', exact: true }),
+  ).toBeVisible()
+  await expect(readout).toHaveText('3:30')
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
 
   // Act
@@ -918,9 +945,9 @@ test('a cut at 0:00 leaves the whole day to a new row, and undo selects the carr
   // Assert: the carried-in record is back, selected with its own panel, and 区切る時刻 opens at the middle again.
   await expect(readout).toHaveText('3:15')
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
-  await expect(dialog.getByRole('button', { name: '半分で分割' })).toHaveCount(
-    0,
-  )
+  await expect(
+    dialog.getByRole('button', { name: '15分早める', exact: true }),
+  ).toHaveCount(0)
 })
 
 test('the carried-in panel warns before a pick away from an archived activity and says after it that undo is gone', async ({
@@ -1265,10 +1292,10 @@ test('cutting a detox past its first week measures the cut day only, and the nex
   await expect(measuredNote).toBeVisible()
 })
 
-test('a carried-in record with no quarter hour to cut at disables every step and ここで分割 and says why', async ({
+test('a carried-in record with no whole minute to cut at disables every step and ここで分割 and says why', async ({
   page,
 }) => {
-  // Arrange: 仕事 from 30 s before D−1's midnight until 食事 at 0:14.
+  // Arrange: 仕事 from 30 s before D−1's midnight until 食事 at 0:01:20, so a cut would leave a part under a minute.
   await signUp(page)
   const api = await apiAs(page)
   const list = await api.activities.list()
@@ -1292,7 +1319,7 @@ test('a carried-in record with no quarter hour to cut at disables every step and
     rows: [
       {
         activityId: idOf(list, '食事'),
-        startedAt: new Date(`${day}T00:14:00+09:00`),
+        startedAt: new Date(`${day}T00:01:20+09:00`),
       },
     ],
   })
@@ -1300,7 +1327,7 @@ test('a carried-in record with no quarter hour to cut at disables every step and
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
 
   // Act
-  await dialog.getByRole('button', { name: '仕事 0:00 – 0:14 14m' }).click()
+  await dialog.getByRole('button', { name: '仕事 0:00 – 0:01 1m' }).click()
 
   // Assert
   await expect(dialog.getByRole('status', { name: '区切る時刻' })).toHaveText(
@@ -1314,8 +1341,58 @@ test('a carried-in record with no quarter hour to cut at disables every step and
     'ここで分割',
   ])
     await expect(dialog.getByRole('button', { name })).toBeDisabled()
+  await expect(dialog.getByText('区切れる時刻がありません')).toBeVisible()
+})
+
+test('a row too short for any quarter hour is cut at its middle minute, with the steps off and a line saying why', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:01, 休息 9:14; no quarter hour lies between 9:02 and 9:13, so the cut falls back to 9:07.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const yesterday = shift(today(), -1)
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: new Date(`${yesterday}T09:01:00+09:00`),
+      },
+      {
+        activityId: idOf(list, '休息'),
+        startedAt: new Date(`${yesterday}T09:14:00+09:00`),
+      },
+    ],
+  })
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:01 – 9:14 13m' }).click()
+  await expect(dialog.getByRole('status', { name: '区切る時刻' })).toHaveText(
+    '9:07',
+  )
+  for (const name of [
+    '区切る時刻を1時間早める',
+    '区切る時刻を15分早める',
+    '区切る時刻を15分遅らせる',
+    '区切る時刻を1時間遅らせる',
+  ])
+    await expect(dialog.getByRole('button', { name })).toBeDisabled()
   await expect(
-    dialog.getByText('15分単位で区切れる時刻がありません'),
+    dialog.getByText('短い記録のため、真ん中で区切ります'),
+  ).toBeVisible()
+
+  // Act
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+
+  // Assert
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:07 – 9:14 7m' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:01 – 9:07 6m' }),
   ).toBeVisible()
 })
 
@@ -1437,7 +1514,7 @@ test('an edit made offline says it waits for the connection, and lands once it i
 test('an edit whose answer never arrives gives up after 30 seconds, says it is reading the list again, then that it cannot tell whether the edit landed, and turns off the older undo', async ({
   page,
 }) => {
-  // Arrange: a split arms 元に戻す; then the API applies a merge, but its answer never reaches the app.
+  // Arrange: a cut arms 元に戻す; then the API applies a merge, but its answer never reaches the app.
   const { yesterday } = await seedYesterday(page)
   await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
     await route.fetch()
@@ -1447,7 +1524,7 @@ test('an edit whose answer never arrives gives up after 30 seconds, says it is r
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   await dialog
@@ -1468,14 +1545,17 @@ test('an edit whose answer never arrives gives up after 30 seconds, says it is r
   // Act
   await page.clock.fastForward('00:30')
 
-  // Assert: at 30 s the quiet line says the list is being read again, and no alert claims anything before that read.
-  await expect(dialog.getByRole('status')).toHaveText('一覧を読み直しています…')
+  // Assert: at 30 s the quiet line says the list is being read again, and no alert claims anything before that read. The
+  // selected row's panel has 区切る時刻's named readout, also a status, so the line is the one without a name.
+  await expect(dialog.locator('[role="status"]:not([aria-label])')).toHaveText(
+    '一覧を読み直しています…',
+  )
   await expect(dialog.getByRole('alert')).toHaveCount(0)
 
   // Act: the re-read answers.
   releaseList()
 
-  // Assert: the line says to check the list, the merged day shows, the panel answers again, and the split's undo stays off.
+  // Assert: the line says to check the list, the merged day shows, the panel answers again, and the cut's undo stays off.
   await expect(dialog.getByRole('alert')).toHaveText(
     '反映されたか分かりませんでした。一覧で確かめてください',
   )
@@ -1666,7 +1746,7 @@ test('an undo lost in transit says it cannot tell whether it landed, keeps 元�
 test('an edit answered with a server error after it landed says it cannot tell whether it landed, shows the rows it left and turns off the older undo', async ({
   page,
 }) => {
-  // Arrange: a split arms 元に戻す; then the API applies a merge, but the app gets a 500 in place of its answer.
+  // Arrange: a cut arms 元に戻す; then the API applies a merge, but the app gets a 500 in place of its answer.
   const { yesterday } = await seedYesterday(page)
   await page.route('**/api/rpc/switches/mergeIntoNext', async (route) => {
     await route.fetch()
@@ -1675,7 +1755,7 @@ test('an edit answered with a server error after it landed says it cannot tell w
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   await dialog
@@ -1685,7 +1765,7 @@ test('an edit answered with a server error after it landed says it cannot tell w
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
 
-  // Assert: the line says to check the list, the list shows the merge that landed, and the split's undo is off.
+  // Assert: the line says to check the list, the list shows the merge that landed, and the cut's undo is off.
   await expect(dialog.getByRole('alert')).toHaveText(
     '反映されたか分かりませんでした。一覧で確かめてください',
   )
@@ -1698,7 +1778,7 @@ test('an edit answered with a server error after it landed says it cannot tell w
 test('an edit the API gave up on before writing says it was not saved and keeps the older undo', async ({
   page,
 }) => {
-  // Arrange: a split arms 元に戻す; then a merge is answered with the API's own TIMEOUT, which it sends as a 500.
+  // Arrange: a cut arms 元に戻す; then a merge is answered with the API's own TIMEOUT, which it sends as a 500.
   const { yesterday } = await seedYesterday(page)
   await page.route('**/api/rpc/switches/mergeIntoNext', async (route) =>
     route.fulfill(rpcError('TIMEOUT', 500)),
@@ -1706,7 +1786,7 @@ test('an edit the API gave up on before writing says it was not saved and keeps 
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   const rest = dialog.getByRole('button', {
@@ -1717,7 +1797,7 @@ test('an edit the API gave up on before writing says it was not saved and keeps 
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
 
-  // Assert: the retry line, the day as it was, and the split still undoable.
+  // Assert: the retry line, the day as it was, and the cut still undoable.
   await expect(dialog.getByRole('alert')).toHaveText(
     '保存できませんでした。もう一度お試しください',
   )
@@ -1791,8 +1871,11 @@ test('an edit that may have landed while the connection went down says it is rea
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
 
-  // Assert: the quiet line waits for the read, with no alert while the read cannot run.
-  await expect(dialog.getByRole('status')).toHaveText('一覧を読み直しています…')
+  // Assert: the quiet line (the status without a name; 区切る時刻's readout has one) waits for the read, with no alert while
+  // the read cannot run.
+  await expect(dialog.locator('[role="status"]:not([aria-label])')).toHaveText(
+    '一覧を読み直しています…',
+  )
   await expect(dialog.getByRole('alert')).toHaveCount(0)
 
   // Act
@@ -1893,7 +1976,7 @@ test('a refusal on today’s sheet is gone when the sheet opens again after a ta
   if (!tapped) throw new Error('no 家事 row')
   await api.switches.moveStart({ id: tapped.id, deltaMinutes: -15 })
   await chores.click()
-  await dialog.getByRole('button', { name: '15分早める' }).click()
+  await dialog.getByRole('button', { name: '15分早める', exact: true }).click()
   await expect(dialog.getByRole('alert')).toHaveText(
     '記録が変わっていたため、最新の状態を表示しました',
   )
@@ -2275,7 +2358,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
-test('a double tap on 半分で分割 splits once, says why the second was refused, and keeps saying it after the first lands', async ({
+test('a double tap on ここで分割 cuts once, says why the second was refused, and keeps saying it after the first lands', async ({
   page,
 }) => {
   // Arrange
@@ -2285,19 +2368,19 @@ test('a double tap on 半分で分割 splits once, says why the second was refus
   const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
   await rest.click()
 
-  // Act: two presses in one task, before any render can dim the button.
+  // Act: two presses in one task, before any render can dim the button; 区切る時刻 opens at 15:00.
   await dialog
-    .getByRole('button', { name: '半分で分割' })
+    .getByRole('button', { name: 'ここで分割' })
     .evaluate((button: HTMLElement) => {
       button.click()
       button.click()
     })
 
-  // Assert: one split landed and armed 元に戻す, its later half is selected, and the second press's refusal stays.
-  const laterHalf = dialog.getByRole('button', {
+  // Assert: one cut landed and armed 元に戻す, its later part is selected, and the second press's refusal stays.
+  const laterPart = dialog.getByRole('button', {
     name: '休息 15:00 – 18:00 3h 00m',
   })
-  await expect(laterHalf).toHaveAttribute('aria-expanded', 'true')
+  await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   await expect(dialog.getByRole('alert')).toHaveText(
@@ -2307,12 +2390,12 @@ test('a double tap on 半分で分割 splits once, says why the second was refus
   // Act
   await undo.click()
 
-  // Assert: the day before the split is back, with the halved row selected again.
+  // Assert: the day before the cut is back, with the cut row selected again.
   await expect(rest).toHaveAttribute('aria-expanded', 'true')
-  await expect(laterHalf).toHaveCount(0)
+  await expect(laterPart).toHaveCount(0)
 })
 
-test('半分で分割 selects the later half, so the next pick changes only that half', async ({
+test('a cut of the day’s own row selects the later part, so the next pick changes only that part', async ({
   page,
 }) => {
   // Arrange
@@ -2321,13 +2404,13 @@ test('半分で分割 selects the later half, so the next pick changes only that
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
 
-  // Act
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
-  const laterHalf = dialog.getByRole('button', {
+  // Act: 区切る時刻 opens at 10:30.
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+  const laterPart = dialog.getByRole('button', {
     name: '仕事 10:30 – 12:00 1h 30m',
   })
-  await expect(laterHalf).toHaveAttribute('aria-expanded', 'true')
-  await expect(laterHalf).toBeFocused()
+  await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
+  await expect(laterPart).toBeFocused()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
 
   // Assert
@@ -2339,27 +2422,160 @@ test('半分で分割 selects the later half, so the next pick changes only that
   ).toBeVisible()
 })
 
-test('undoing 半分で分割 joins the halves and selects the joined row again', async ({
+test('moving a row’s start reopens 区切る時刻 at the middle of its new span, dropping the time stepped before', async ({
+  page,
+}) => {
+  // Arrange: 仕事 9:00 – 12:00 opens at 10:30 and is stepped to 10:45.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  await dialog.getByRole('button', { name: '区切る時刻を15分遅らせる' }).click()
+  await expect(readout).toHaveText('10:45')
+
+  // Act
+  await dialog
+    .getByRole('button', { name: '15分遅らせる', exact: true })
+    .click()
+
+  // Assert: 9:15 – 12:00 cuts from 9:30 to 11:45, whose middle is 10:30; 10:45 would still fit but is not kept.
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:15 – 12:00 2h 45m' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+  await expect(readout).toHaveText('10:30')
+})
+
+test('the sheet’s hint names every edit a row offers, and what a record carried in from the day before allows', async ({
+  page,
+}) => {
+  // Arrange
+  const { yesterday } = await seedYesterday(page)
+
+  // Act
+  await page.goto(`/correction?day=${yesterday}`)
+
+  // Assert
+  await expect(
+    page
+      .getByRole('dialog', { name: /の記録を訂正$/ })
+      .getByText(
+        '行をタップ → 開始時刻を動かす／区切る／活動を変える（前の日から続く記録は区切る・活動を変えるのみ）',
+      ),
+  ).toBeVisible()
+})
+
+test('前の記録に統合 moves keyboard focus to the joined row, so a second merge can follow without hunting for it', async ({
+  page,
+}) => {
+  // Arrange: yesterday 仕事 9:00, 休息 12:00, 娯楽 18:00.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+
+  // Act
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeFocused()
+
+  // Act
+  await dialog
+    .getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+
+  // Assert
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' }),
+  ).toBeFocused()
+})
+
+test('次の記録に統合 moves keyboard focus to the row that absorbed the merged one', async ({
   page,
 }) => {
   // Arrange
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const work = dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
-  await work.click()
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
-  const laterHalf = dialog.getByRole('button', {
-    name: '仕事 10:30 – 12:00 1h 30m',
-  })
-  await expect(laterHalf).toHaveAttribute('aria-expanded', 'true')
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
 
   // Act
-  await page.getByRole('button', { name: '元に戻す' }).click()
+  await dialog.getByRole('button', { name: '次の記録に統合' }).click()
 
   // Assert
-  await expect(work).toHaveAttribute('aria-expanded', 'true')
-  await expect(laterHalf).toHaveCount(0)
+  await expect(
+    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+  ).toBeFocused()
+})
+
+test('a control shows a 2 px ink ring 2 px outside it on keyboard focus, and none after a mouse click', async ({
+  page,
+}) => {
+  // Arrange: 仕事 9:00 – 12:00, whose 区切る時刻 steps can all be pressed at 10:30.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  const earlier = dialog.getByRole('button', { name: '区切る時刻を15分早める' })
+  const later = dialog.getByRole('button', { name: '区切る時刻を15分遅らせる' })
+
+  // Act
+  await earlier.click()
+
+  // Assert
+  await expect(earlier).toBeFocused()
+  await expect(earlier).toHaveCSS('outline-style', 'none')
+
+  // Act
+  await page.keyboard.press('Tab')
+
+  // Assert
+  await expect(later).toBeFocused()
+  await expect(later).toHaveCSS('outline-style', 'solid')
+  await expect(later).toHaveCSS('outline-width', '2px')
+  // ink follows the theme band (light 6:00 – 18:00 on auto), so the ring is compared with the readout's ink text.
+  const ink = await dialog
+    .getByRole('status', { name: '区切る時刻' })
+    .evaluate((readout) => getComputedStyle(readout).color)
+  expect(['rgb(27, 26, 23)', 'rgb(242, 239, 232)']).toContain(ink)
+  await expect(later).toHaveCSS('outline-color', ink)
+  await expect(later).toHaveCSS('outline-offset', '2px')
+})
+
+test('a control dims to 70 % while pressed, and a disabled one stays at 40 %', async ({
+  page,
+}) => {
+  // Arrange: 仕事 9:00 – 12:00 selected; nothing to undo yet, so 元に戻す is disabled.
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  const step = dialog.getByRole('button', { name: '区切る時刻を15分早める' })
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(step).toHaveCSS('opacity', '1')
+
+  // Act
+  await step.hover()
+  await page.mouse.down()
+
+  // Assert
+  await expect(step).toHaveCSS('opacity', '0.7')
+  await page.mouse.up()
+  await expect(step).toHaveCSS('opacity', '1')
+
+  // Act
+  await undo.hover()
+  await page.mouse.down()
+
+  // Assert
+  await expect(undo).toHaveCSS('opacity', '0.4')
+  await page.mouse.up()
 })
 
 test('a refusal shows at once even when the connection drops before the list is read again', async ({
@@ -2419,7 +2635,7 @@ test('a refusal on today’s sheet does not follow the sheet into the next day a
   if (!tapped) throw new Error('no 家事 row')
   await api.switches.moveStart({ id: tapped.id, deltaMinutes: -15 })
   await chores.click()
-  await dialog.getByRole('button', { name: '15分早める' }).click()
+  await dialog.getByRole('button', { name: '15分早める', exact: true }).click()
   await expect(dialog.getByRole('alert')).toHaveText(
     '記録が変わっていたため、最新の状態を表示しました',
   )
@@ -2668,19 +2884,19 @@ test('an archived notice that lands while another row is selected shows once its
   )
 })
 
-test('a split whose answer lands after midnight selects nothing on the new day, even the half that runs into it', async ({
+test('a cut whose answer lands after midnight selects nothing on the new day, even the part that runs into it', async ({
   page,
 }) => {
   test.skip(
-    Date.now() - at(today(), 0).getTime() < 2 * 60_000,
-    'the Tokyo day is under two minutes old, so no current state is long enough to split',
+    Date.now() - at(today(), 0).getTime() < 17 * 60_000,
+    'the Tokyo day is under 17 minutes old, so the current state has no cut yet',
   )
-  // Arrange: today's sheet splits the running 仕事, and the answer is held back past midnight. The later half runs on, so
-  // the new day lists it as the record carried in, under the id the split's answer names.
+  // Arrange: today's sheet cuts the running 仕事, and the answer is held back past midnight. The later part runs on, so
+  // the new day lists it as the record carried in, under the id the cut's answer names.
   await openTodayWorkSinceMidnight(page)
   await page.clock.install()
   const answer = Promise.withResolvers<void>()
-  await page.route('**/api/rpc/switches/splitInHalf', async (route) => {
+  await page.route('**/api/rpc/switches/splitAt', async (route) => {
     const response = await route.fetch()
     await answer.promise
     await route.fulfill({ response })
@@ -2688,25 +2904,25 @@ test('a split whose answer lands after midnight selects nothing on the new day, 
   await page.goto('/correction')
   const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
   await dialog.getByRole('button', { name: /^仕事 0:00 – / }).click()
-  await dialog.getByRole('button', { name: '半分で分割' }).click()
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
 
-  // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick, and then the split's answer
-  // lands. Setting the time fires no timer, so the split's 30 s deadline does not run out on the way.
+  // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick, and then the cut's answer
+  // lands. Setting the time fires no timer, so the cut's 30 s deadline does not run out on the way.
   const newDay = shift(today(), 1)
   await page.clock.setSystemTime(new Date(`${newDay}T00:00:30+09:00`))
-  // Only the new day lists 仕事 at under 2 minutes: the skip above keeps the old day's running row at 2 minutes or more.
+  // Only the new day lists 仕事 at under 2 minutes: the skip above keeps the old day's running row at 17 minutes or more.
   const carriedIn = dialog.getByRole('button', {
     name: /^仕事 0:00 – いま [01]m$/,
   })
   await expect(carriedIn).toBeVisible()
-  // The line stays while the split is in flight, its re-read included, and goes once it settles; the selection its answer
+  // The line stays while the cut is in flight, its re-read included, and goes once it settles; the selection its answer
   // would set runs as it settles, so the assertions below come after it.
   const writing = dialog.getByText('反映しています…')
   await expect(writing).toBeVisible()
   answer.resolve()
   await expect(writing).toBeHidden()
 
-  // Assert: the carried-in half is listed but not opened by an answer about yesterday.
+  // Assert: the carried-in part is listed but not opened by an answer about yesterday.
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
