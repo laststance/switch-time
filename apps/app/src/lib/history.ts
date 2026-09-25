@@ -312,7 +312,10 @@ function detoxBreakdownRow(stats: HistoryStats): BreakdownRow[] {
       color: DETOX.color,
       iconKey: DETOX.iconKey,
       total: formatDuration(total),
-      average: formatDuration(total / stats.measuredDays),
+      // Guarded as breakdownRows is, in case the server's measured-day count and the days' `measured` ever disagree.
+      average: formatDuration(
+        stats.measuredDays > 0 ? total / stats.measuredDays : 0,
+      ),
       ratio: 0,
     },
   ]
