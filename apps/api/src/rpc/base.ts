@@ -167,7 +167,7 @@ export async function withUserLock<T>(
   }
   if (queue.size >= TIMELINE_WRITES_PER_USER)
     throw new ORPCError('TOO_MANY_REQUESTS', {
-      message: 'too many timeline writes in flight',
+      message: 'too many writes under the user lock in flight',
       data: REFUSAL.busy,
     })
   timelineQueues.set(userId, queue)
@@ -180,7 +180,7 @@ export async function withUserLock<T>(
       await awaitTurn(previous, deadline)
     } catch {
       throw new ORPCError('TOO_MANY_REQUESTS', {
-        message: 'timeline write queued past its deadline',
+        message: 'write under the user lock queued past its deadline',
         data: REFUSAL.busy,
       })
     }
