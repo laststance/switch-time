@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 
 import { authClient } from '@/lib/auth-client'
-import { forgetConfirmedTaps } from '@/lib/optimistic-switch'
+import { startTapSession } from '@/lib/optimistic-switch'
 import { queryClient } from '@/lib/query'
 import { resetApp, useAppDispatch } from '@/store'
 
@@ -22,7 +22,7 @@ export function useSignOut() {
     },
     onSuccess: () => {
       queryClient.clear()
-      forgetConfirmedTaps(queryClient)
+      startTapSession(queryClient)
       dispatch(resetApp())
       router.replace('/sign-in')
     },

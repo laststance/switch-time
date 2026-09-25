@@ -165,8 +165,8 @@ export function detoxLastDay(
  * Whether pressing detox again starts a new run: detox runs, its run's measured week ended before today, and auto-exclusion
  * is on (while it is off every day is measured, so a new run would change nothing). It is the only rule that lets a press on
  * the active state through (the detox row and the `0` hotkey), and it switches the detox row's hint. The server applies the
- * same week rule under its lock ({@link detoxRunPastWeek} in switchTo) and keeps the running record otherwise, so a press sent
- * from a stale `today` changes nothing. The optimistic row a press writes has no run start, so a second press before the
+ * same week rule and the unused-day rule under its lock ({@link detoxRunPastWeek} in switchTo) and keeps the running record
+ * otherwise, so a press sent from a stale `today` or a stale rule changes nothing. The optimistic row a press writes has no run start, so a second press before the
  * refetch is dropped.
  * @returns
  * - true for a detox run started on `today - 8` or earlier, with auto-exclusion on
@@ -232,7 +232,7 @@ export function detoxNotice(
 
 /**
  * Whether a press on a switch reaches the API. Pressing the active state again changes nothing (the server keeps that state,
- * or refuses it when its activity is archived), so Home skips the call and the three refetches it triggers; the one exception
+ * or refuses it when its activity is archived), so Home skips the call and the refetches after it ({@link useSwitchTo}); the one exception
  * is detox past its run's week, where the press starts a new run. Home's buttons, detox row and hotkeys all go through it.
  * @param input.activityId - The pressed state; null is detox.
  * @param input.renewable - {@link detoxRenewable} for the current state.

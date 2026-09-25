@@ -6,9 +6,21 @@
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
 
-**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. On the first-launch screen, where a digit hotkey now sends the first tap, a refusal swaps Home back to the first-launch screen just as silently. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
+**Why:** A refused tap only falls back to the last state the server confirmed (`src/lib/optimistic-switch.ts`), so the clock jumps back without a word. On the first-launch screen (a button, the detox row or a digit hotkey), a refused first tap swaps Home back to the first-launch screen just as silently. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
 
 **Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Tell keyboard and screen-reader users about the digit hotkeys
+
+**What:** Expose the web hotkeys on the buttons they press: `aria-keyshortcuts` (`1`…`9` by position, `0` for detox) on `SwitchButton` and `DetoxRow`, on ホーム and on the first-launch screen alike, and decide in pen whether a visible key hint belongs next to them.
+
+**Why:** The digit keys pick activities and `0` starts detox on both screens, but nothing on screen or in the accessibility tree says so, so only someone who read the README finds them.
+
+**Context:** `useSwitchHotkeys` and `hotkeyPick` (`apps/app/src/lib/hotkeys.ts`) map a key to the list the buttons are drawn from, so the button knows its own key. Check that react-native-web passes `aria-keyshortcuts` through before relying on it; a visible hint is a design change and starts in pen.
 
 **Effort:** S
 **Priority:** P3

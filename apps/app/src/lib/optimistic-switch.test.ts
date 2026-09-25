@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 
 import {
   confirmTap,
-  forgetConfirmedTaps,
+  startTapSession,
   isLastTap,
   OPTIMISTIC_ID,
   placeTap,
@@ -31,11 +31,15 @@ const serverRow = (id: string, activityId: string | null): CurrentSwitch => ({
 function tap(client: QueryClient, activityId: string | null) {
   const answer = Promise.withResolvers<CurrentSwitch>()
   const lastTapWhenSettled: boolean[] = []
+  const request = { sent: false }
   const settled = client
     .getMutationCache()
     .build(client, {
       scope: { id: SWITCH_TO_SCOPE },
-      mutationFn: async () => answer.promise,
+      mutationFn: async () => {
+        request.sent = true
+        return answer.promise
+      },
       onMutate: () => placeTap(client, CURRENT, activityId),
       onSuccess: (row: CurrentSwitch, _input, context) => {
         if (context) confirmTap(context, row)
@@ -49,7 +53,7 @@ function tap(client: QueryClient, activityId: string | null) {
     })
     .execute({ activityId })
     .catch(() => undefined)
-  return { answer, settled, lastTapWhenSettled }
+  return { answer, settled, lastTapWhenSettled, request }
 }
 
 // Lets the mutation cache run the callbacks due so far (onMutate, the next tap's turn).
@@ -239,7 +243,7 @@ test('a tap of a signed-out account answered after the next account signs in nev
   const lateTap = tap(client, 'rest')
   await flush()
   client.clear()
-  forgetConfirmedTaps(client)
+  startTapSession(client)
   client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
   const chores = tap(client, 'chores')
   await flush()
@@ -263,7 +267,7 @@ test('a tap of a signed-out account answered late does not refetch over the next
   const lateTap = tap(client, 'rest')
   await flush()
   client.clear()
-  forgetConfirmedTaps(client)
+  startTapSession(client)
   client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
   const chores = tap(client, 'chores')
   await flush()
@@ -287,7 +291,7 @@ test('after another tab signs in as someone else, a refused tap queued behind th
   const oldTap = tap(client, 'rest')
   await flush()
   await client.resetQueries()
-  forgetConfirmedTaps(client)
+  startTapSession(client)
   client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
   const chores = tap(client, 'chores')
   await flush()
@@ -305,4 +309,84 @@ test('after another tab signs in as someone else, a refused tap queued behind th
   )
   expect(oldTap.lastTapWhenSettled).toEqual([false])
   expect(chores.lastTapWhenSettled).toEqual([true])
+})
+
+test('after another tab signs in as someone else, the old account’s taps still queued are never sent', async () => {
+  // Arrange: account X taps 休息, then 仕事 while 休息 is still unanswered; another tab signs in as Y before the answer
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-x-chores', 'chores'))
+  const running = tap(client, 'rest')
+  await flush()
+  const queued = tap(client, 'work')
+  await flush()
+  await client.resetQueries()
+  startTapSession(client)
+  client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
+
+  // Act: X's running tap is answered, which would hand the scope to the queued one
+  running.answer.resolve(serverRow('row-x-rest', 'rest'))
+  await running.settled
+  await flush()
+
+  // Assert: X's 仕事 never goes out with Y's session, and Y's 睡眠 stays shown
+  expect(queued.request.sent).toBe(false)
+  expect(client.getQueryData(CURRENT)).toEqual(
+    serverRow('row-y-sleep', 'sleep'),
+  )
+})
+
+test('after another tab signs in as someone else, the old account’s tap answered before the new account taps still refetches', async () => {
+  // Arrange: account X taps detox; before the answer another tab signs in as Y (the shared cookie now sends the tap as Y's)
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-x-work', 'work'))
+  const oldTap = tap(client, null)
+  await flush()
+  await client.resetQueries()
+  startTapSession(client)
+  client.setQueryData(CURRENT, serverRow('row-y-sleep', 'sleep'))
+
+  // Act: the tap is stored on Y's account after the reset's own read came back
+  oldTap.answer.resolve(serverRow('row-y-detox', null))
+  await oldTap.settled
+
+  // Assert: with no tap of Y's for it to land over, its refetch brings the detox Y's account now runs
+  expect(oldTap.lastTapWhenSettled).toEqual([true])
+})
+
+test('a tap made while the last tap still waits for the day list falls back to the switch that tap’s refetch brought, run start included', async () => {
+  // Arrange: detox is tapped over 仕事; once accepted, its refetch brings the detox row with its run start, then waits for the day list
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const refetchedDetox = {
+    ...serverRow('row-detox', null),
+    runStartDay: '2026-09-24',
+  }
+  const dayList = Promise.withResolvers<void>()
+  const detox = client
+    .getMutationCache()
+    .build(client, {
+      scope: { id: SWITCH_TO_SCOPE },
+      mutationFn: async () => serverRow('row-detox', null),
+      onMutate: () => placeTap(client, CURRENT, null),
+      onSuccess: (row: CurrentSwitch, _input, context) => {
+        if (context) confirmTap(context, row)
+      },
+      onSettled: async () => {
+        client.setQueryData(CURRENT, refetchedDetox)
+        await dayList.promise
+      },
+    })
+    .execute({ activityId: null })
+  await flush()
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Act: the day list lands, then 家事 is refused
+  dayList.resolve()
+  await detox
+  chores.answer.reject(new Error('TOO_MANY_REQUESTS'))
+  await chores.settled
+
+  // Assert: the refetched detox with its run start, so its notices stay
+  expect(client.getQueryData(CURRENT)).toEqual(refetchedDetox)
 })

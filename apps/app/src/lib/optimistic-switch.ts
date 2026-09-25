@@ -11,12 +11,12 @@ export const SWITCH_TO_SCOPE = 'switches.switchTo'
 /** The id of the row a tap shows before the server answers; never sent back to the server. */
 export const OPTIMISTIC_ID = 'optimistic'
 
-/** The last state the server confirmed, as one session of taps sees it; `isRecorded` stays false until its first tap notes one. */
-type ConfirmedState = { value: CurrentShown; isRecorded: boolean }
+/** The last state the server confirmed, as one session of taps sees it. */
+type ConfirmedState = { value: CurrentShown }
 
 /**
- * What a tap's `onMutate` hands to its `onSuccess` and `onError`: the cached row it placed, to tell whether the display is still
- * its own, and the confirmed state of the session it was made in.
+ * What a tap's `onMutate` hands to its `onSuccess`, `onError` and `onSettled`: the cached row it placed, to tell whether the display
+ * is still its own, and the confirmed state of the session it was made in, which {@link isLastTap} compares with the current one.
  */
 export type TapContext = { placed: CurrentShown; confirmed: ConfirmedState }
 
@@ -27,7 +27,7 @@ const confirmedStates = new WeakMap<QueryClient, ConfirmedState>()
 function confirmedStateOf(client: QueryClient): ConfirmedState {
   const known = confirmedStates.get(client)
   if (known) return known
-  const created = { value: undefined, isRecorded: false }
+  const created = { value: undefined }
   confirmedStates.set(client, created)
   return created
 }
@@ -40,14 +40,14 @@ const tapsInFlight = (client: QueryClient): number =>
   })
 
 /**
- * A tap's `onMutate`: shows the picked state at once and notes the state to fall back to. At the first tap of a burst the cache is
- * the server's state, so it becomes the confirmed one, unless it is the placeholder of a tap the server accepted whose refetch has
- * not landed yet (that tap's {@link confirmTap} already recorded its row). So does the first tap of a new session, even while a
- * tap of the previous account still waits in the scope.
+ * A tap's `onMutate`: shows the picked state at once and notes the state to fall back to. Unless the cache holds a tap's placeholder
+ * (a later tap of the burst, or an accepted tap whose refetch has not landed, whose {@link confirmTap} already recorded its row), it
+ * holds the server's latest read, so that becomes the confirmed state: at the first tap of a burst or of a new session, and after
+ * the last tap's refetch of the current switch lands while it still waits for the day list.
  * @param client - The app's query client.
  * @param queryKey - `switches.current`'s key.
  * @param activityId - The picked activity, or `null` for detox.
- * @returns The context {@link rollBackTap} needs.
+ * @returns The context {@link confirmTap}, {@link rollBackTap} and {@link isLastTap} read.
  * @example onMutate: async ({ activityId }) => { await queryClient.cancelQueries({ queryKey }); return placeTap(queryClient, queryKey, activityId) }
  */
 export function placeTap(
@@ -57,18 +57,12 @@ export function placeTap(
 ): TapContext {
   const previous = client.getQueryData<CurrentShown>(queryKey)
   const confirmed = confirmedStateOf(client)
-  // A tap of the previous account can still be counted after `resetQueries` (another tab's sign-in), so a new session records
-  // its first tap's state without waiting for a burst to start.
-  if (
-    previous?.id !== OPTIMISTIC_ID &&
-    (!confirmed.isRecorded || tapsInFlight(client) === 1)
-  ) {
-    confirmed.value = previous
-    confirmed.isRecorded = true
-  }
+  // A server row, not a placeholder: a later confirmTap of a tap still queued overwrites it, so a newer answer still wins.
+  if (previous?.id !== OPTIMISTIC_ID) confirmed.value = previous
   // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call restarts
   // the counter right now. (A tab that missed another device turning the unused-day rule off still sends the re-tap; the server
-  // keeps the running record, and the refetch after the last tap puts its start back and brings the rule.) `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
+  // keeps the running record, and the refetch after the last tap puts its start back and, unless a settings write is in flight,
+  // brings the rule.) `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
   // No run start until the refetch: the detox notices stay away and a second re-tap is dropped meanwhile.
   const next: CurrentSwitch = {
     userId: '',
@@ -98,7 +92,6 @@ export function confirmTap(
   row: Omit<CurrentSwitch, 'runStartDay'>,
 ): void {
   context.confirmed.value = { ...row, runStartDay: null }
-  context.confirmed.isRecorded = true
 }
 
 /**
@@ -119,32 +112,44 @@ export function rollBackTap(
 }
 
 /**
- * Starts a new session of taps when the cache is cleared or reset for another account (sign-in, sign-out, {@link useAccountScope}):
- * a tap of the old session that is answered late then confirms into its own session's state, never into the one the new account's
- * refused taps fall back to, and leaves the refetch to the new session ({@link isLastTap}).
- * @param client - The app's query client, right after `clear()` or `resetQueries()`.
- * @example queryClient.clear(); forgetConfirmedTaps(queryClient)
+ * Starts a new session of taps when the cache is cleared or reset for another account (sign-in, sign-out, {@link useAccountScope}).
+ * A tap of the old session that is answered late then confirms into its own session's state, never into the one the new account's
+ * refused taps fall back to, and leaves the refetch to the new session ({@link isLastTap}). The old account's taps still queued
+ * behind a running one are dropped: they have not been sent, and would go out with the new account's session cookie.
+ * @param client - The app's query client, right after `clear()` (which has already dropped every tap) or `resetQueries()`.
+ * @example queryClient.clear(); startTapSession(queryClient)
  */
-export function forgetConfirmedTaps(client: QueryClient): void {
+export function startTapSession(client: QueryClient): void {
   confirmedStates.delete(client)
+  const mutations = client.getMutationCache()
+  // A queued tap is paused until the running one settles; removed from its scope, it is never continued.
+  for (const queued of mutations.findAll({
+    predicate: (mutation) =>
+      mutation.options.scope?.id === SWITCH_TO_SCOPE && mutation.state.isPaused,
+  }))
+    mutations.remove(queued)
 }
 
 /**
  * Whether a settling tap is the last of its burst, for {@link useSwitchTo}'s refetch: an earlier tap's refetch would replace the
- * queued taps' rows (their `onMutate` has already run), so only the last tap refetches. A tap of a session that has since been
- * forgotten never does: `clear()` drops it from the mutation cache, so the count would miss it and its refetch would land over the
- * new account's pick.
+ * queued taps' rows (their `onMutate` has already run), so only the last tap refetches. A tap of a session that has since ended
+ * ({@link startTapSession}) refetches only while the new session has placed no tap: its refetch would land over the new account's
+ * pick, yet with no pick it is what shows a detox tap that went out with the new account's cookie (the reset's own read can come
+ * back before that tap is stored). After `clear()` the count misses the old tap, after `resetQueries()` it counts it.
  * @param client - The app's query client.
  * @param context - What {@link placeTap} returned for this tap; undefined when `onMutate` threw and nothing was placed.
  * @returns
- * - `true` when this tap belongs to the current session and no other tap is waiting or running
+ * - `true` when no other tap is waiting or running, and this tap belongs to the current session or the current one has no tap yet
  * - `false` otherwise
  * @example if (!isLastTap(queryClient, context)) return
  */
-export const isLastTap = (
+export function isLastTap(
   client: QueryClient,
   context: TapContext | undefined,
-): boolean =>
-  context !== undefined &&
-  context.confirmed === confirmedStates.get(client) &&
-  tapsInFlight(client) <= 1
+): boolean {
+  if (context === undefined) return false
+  const current = confirmedStates.get(client)
+  // No confirmed state yet: the new session has placed no tap for this refetch to land over.
+  const isOwnOrUntapped = current === undefined || context.confirmed === current
+  return isOwnOrUntapped && tapsInFlight(client) <= 1
+}

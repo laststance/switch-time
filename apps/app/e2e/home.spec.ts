@@ -820,6 +820,10 @@ test('0 pressed twice inside one frame past a detox’s week starts one new run,
   const renewal = page.waitForResponse((response) =>
     response.url().includes('/api/rpc/switches/switchTo'),
   )
+  // A second tap would wait in the scope for this refetch, then go out
+  const refetch = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/current'),
+  )
   await page.evaluate(async () => {
     const press = (key: string): boolean =>
       window.dispatchEvent(new KeyboardEvent('keydown', { key }))
@@ -832,6 +836,7 @@ test('0 pressed twice inside one frame past a detox’s week starts one new run,
     })
   })
   expect((await renewal).ok()).toBe(true)
+  expect((await refetch).ok()).toBe(true)
   await page.waitForLoadState('networkidle')
 
   // Assert: the second 0 saw the first one's new run and sent nothing
