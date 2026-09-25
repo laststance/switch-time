@@ -33,7 +33,6 @@ import { DETOX } from '@/lib/detox'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
-// gstack-shortcut(dec-f15d7e22): notes stay text-sub below AA, upgrade when the sub token contrast TODO lands
 const NOTE = 'text-sub text-xs leading-4.5'
 // The four 区切る時刻 steps: the glyph text on the button, and the action a screen reader speaks instead.
 const STEP_TEXT: Record<CutStepMinutes, { title: string; label: string }> = {
