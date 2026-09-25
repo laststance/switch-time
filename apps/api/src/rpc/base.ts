@@ -133,9 +133,10 @@ async function awaitTurn(turn: Promise<void>, deadline: number): Promise<void> {
 
 /**
  * Runs `work` in one transaction that first takes the user's timeline lock (`pg_advisory_xact_lock`, released at commit or
- * rollback). Every write to a user's switches, `activities.archive` and a stored-zone change take it, and read what they
- * decide on inside it, so two devices' writes run one after the other: a merge sees the neighbours the other merge left,
- * two 「元に戻す」 never both delete and insert, a tap cannot slip between archive's check and its write.
+ * rollback). Every write to a user's switches, the activity writes that pick or check the live set (`activities.create`,
+ * `reorder`, `archive`, `unarchive`) and a stored-zone change take it, and read what they decide on inside it, so two devices'
+ * writes run one after the other: a merge sees the neighbours the other merge left, two 「元に戻す」 never both delete and
+ * insert, a tap cannot slip between archive's check and its write, a create and an unarchive never take the same slot.
  *
  * The account's writes first queue in this process, in arrival order, so only the one at the head holds a pool connection
  * and several accounts' bursts cannot fill the pool with writes waiting on their own locks. The advisory lock still orders
