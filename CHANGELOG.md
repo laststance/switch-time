@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.20.0.0] - 2026-09-25
+
+### Added
+
+- A new account can start on detox. The first-launch screen shows the
+  detox row under the activity buttons, so you no longer have to record an
+  activity you were not doing and then correct it. The detox week counts
+  from that first press. If the server refuses the press, the
+  first-launch screen comes back.
+
+### Changed
+
+- The hint in 未使用日の扱い now says how a detox counts again after its
+  week: pressing デトックス again past the 7 days measures that day and the
+  7 days after it. The hint no longer calls an untapped day 「計測なし」.
+
 ## [0.19.0.0] - 2026-09-25
 
 ### Added

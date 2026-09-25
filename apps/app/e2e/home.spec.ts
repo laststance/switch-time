@@ -46,6 +46,98 @@ test('the first launch screen disappears after the first switch', async ({
   await expect(page.getByText(/^\d+:\d{2} から · 今日 0 回切替$/)).toBeVisible()
 })
 
+test('a new account can start on detox from the first-launch screen, and a reload keeps it', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  const detoxRow = page.getByRole('button', { name: /^detox/ })
+  await expect(detoxRow).toHaveAttribute('aria-pressed', 'false')
+
+  // Act: press detox before any activity, and wait for the server's answer so the reload reads the stored row
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await detoxRow.click()
+  expect((await tapAnswer).ok()).toBe(true)
+  await page.reload()
+
+  // Assert: Home in detox, no activity pressed, and the since line names no activity. The pressed row comes first: Home's
+  // loading frame also has the いま heading and no first-launch heading, so only the row proves Home read the stored switch.
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(firstLaunch).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
+  // Only the detox row is pressed: no activity button took the first tap
+  await expect(page.getByRole('button', { pressed: true })).toHaveCount(1)
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+})
+
+test('a failed first detox tap brings the first-launch screen back instead of leaving Home in detox', async ({
+  page,
+}) => {
+  // Arrange: hold the server's answer to the tap, so the optimistic Home can be seen before the failure arrives
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  const tapAnswer = Promise.withResolvers<void>()
+  let tapRequests = 0
+  await page.route('**/api/rpc/switches/switchTo', async (route) => {
+    tapRequests += 1
+    await tapAnswer.promise
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        json: {
+          defined: false,
+          code: 'INTERNAL_SERVER_ERROR',
+          status: 500,
+          message: 'INTERNAL_SERVER_ERROR',
+        },
+      }),
+    })
+  })
+
+  // Act
+  await page.getByRole('button', { name: /^detox/ }).click()
+
+  // Assert: Home shows detox at once, while the answer is still pending
+  await expect(
+    page.getByRole('heading', { name: 'いま', exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  // Act: the server refuses the tap, while the refetch of the current switch that follows is held, so only the rollback can
+  // bring the first-launch screen back
+  const currentAnswer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/current**', async (route) => {
+    await currentAnswer.promise
+    await route.continue()
+  })
+  tapAnswer.resolve()
+
+  // Assert: the tap is rolled back to the first-launch screen, and the refused tap was sent once, not retried
+  await expect(firstLaunch).toBeVisible()
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  expect(tapRequests).toBe(1)
+  currentAnswer.resolve()
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {

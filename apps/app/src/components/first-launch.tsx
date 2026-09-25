@@ -3,6 +3,7 @@ import { Link } from 'expo-router'
 import { Text, View } from 'react-native'
 import Svg, { Circle, Line } from 'react-native-svg'
 
+import { DetoxRow } from '@/components/detox-row'
 import { SwitchButton } from '@/components/switch-button'
 import { useActivities } from '@/hooks/use-activities'
 import { useSwitchTo } from '@/hooks/use-switch-to'
@@ -17,7 +18,8 @@ const ARCS = [
 ]
 
 /**
- * 初回起動: shown while the user has no switch yet. The first tap is `switchTo`, which flips `switches.current` and so swaps this for Home.
+ * 初回起動: shown while the user has no switch yet. The first tap is `switchTo` (an activity button, or detox from the
+ * {@link DetoxRow} under the buttons), which flips `switches.current` and so swaps this for Home.
  * @example {current === null ? <FirstLaunch /> : <HomeBody />}
  */
 export function FirstLaunch() {
@@ -84,6 +86,12 @@ export function FirstLaunch() {
             onPress={() => switchTo.mutate({ activityId: activity.id })}
           />
         ))}
+        {/* Inside the wrapping row, as the pen's 初回起動 board draws it: it keeps the buttons' 10px gap (Home leaves 16px), and
+            full width gives it a line of its own under them. A new account can start on detox without recording an activity first. */}
+        <DetoxRow
+          active={false}
+          onPress={() => switchTo.mutate({ activityId: null })}
+        />
       </View>
       <Link href="/settings">
         <Text className="text-sub py-3 text-xs font-medium underline">
