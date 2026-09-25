@@ -1613,10 +1613,13 @@ test('an edit refused as signed out keeps asking to sign in again while the list
     .click()
 
   // Act
-  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  const mergeIntoPrevious = dialog.getByRole('button', {
+    name: '前の記録に統合',
+  })
+  await mergeIntoPrevious.click()
   await listRefused.promise
-  // Nothing on screen marks the refused read landing in the query cache, so give it time to (a 401 is not retried).
-  await page.waitForTimeout(500)
+  // The controls wait while the list is fetched, so they come back once the refused read has settled (a 401 is not retried).
+  await expect(mergeIntoPrevious).toBeEnabled()
 
   // Assert: the sign-in line stays, rather than turning into the unread-list line.
   await expect(dialog.getByRole('alert')).toHaveText(
