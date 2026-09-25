@@ -11,7 +11,8 @@ All notable changes to this project are documented here. The format follows
 - Every row in the correction sheet can be cut at a chosen time. 区切る時刻
   opens at the middle quarter hour, steps ±15 min / ±1 h, and 「ここで分割」
   cuts there in one write. A row too short for any quarter hour is cut at
-  its middle minute, and says so.
+  its middle minute, and says so. On today's running record the time shown
+  stays put as the clock moves on.
 - Buttons dim to 70 % while pressed, and on the web a keyboard focus draws a
   2 px ring around them (a mouse click does not).
 
