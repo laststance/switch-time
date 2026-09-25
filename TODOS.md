@@ -212,28 +212,40 @@
 **Priority:** P3
 **Depends on:** None
 
-### Fit a 25-hour day's activity time on History's 24-hour bar
+### Check how screen readers speak the `9h 00m` durations
 
-**What:** Decide how a fall-back day that holds more than 24 h of activity time fits History's bar, for example by scaling that day's slices to its own length or clamping the top activity slice as the detox part is, and add a `history.test.ts` case.
+**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a correction sheet row and a 状態別 row. If `9h 00m` is not spoken as hours and minutes, add a spoken form (`9時間`, `9時間5分`, `45分`) and use it in the day cell's aria-label; the correction row (`apps/app/src/app/(app)/correction.tsx`) and the 状態別 row are read from their visible text today, so they need an aria-label of their own to carry it. While listening, also judge the day cell's `・` separators (one per activity, a pause or 中黒 read aloud?) and its length when swiping through the 31 month cells; if it is too long, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
 
-**Why:** `stackSlices` sizes every slice as a share of 24 h, so on the one day a year the clocks go back, 25 h of activity asks for more than the 132 px (week) or 48 px (month) track and the top slice is clipped by the track's rounded end.
+**Why:** History's day cells now read each activity's time and the detox time (`9月9日（水）・仕事 9h 00m・detox 6h 00m`), and the correction rows already read `detox 9:00 – 24:00 15h 00m`. The tests check these labels as strings only, so nobody has heard how a Japanese voice reads `h` and `m`.
 
-**Context:** `stackSlices` in `apps/app/src/lib/history.ts`; `dayBounds` in `packages/shared/src/stats.ts` gives the day its real length. The detox part is already clamped to the room left above the activities. 「1本 = 24時間」 is the chart's label, so scaling one day changes what a pixel means on it. Raised by the outside voice of the eng review of the PR that drew a day's detox part on History (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
-### Read a History day's activity and detox time to screen readers
-
-**What:** Add what a stacked day cell draws to its `aria-label` (each activity's time, then detox when the cell has a detox part), and assert it in `history.test.ts`.
-
-**Why:** A stacked cell's label is the date alone, so a screen-reader user hears nothing of the bars. Since History draws a day's partial detox time as an outline, that outline also has no text equivalent, while a detox day's label ends in ・detox.
-
-**Context:** `SUFFIX` and `dayCell` in `apps/app/src/lib/history.ts`; `formatDuration` gives the durations. Month cells are 31 links in a row, so keep the label short. Raised by the design pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
+**Context:** `formatDuration` in `apps/app/src/lib/format.ts` makes the visible and the spoken durations; `cellLabel` in `apps/app/src/lib/history.ts` builds the day cell's label. Keep one format across the labels. Raised by Codex in the eng review of the PR that made History's day cells read their times (2026-09-25).
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** None (the macOS check needs no native build)
+
+### Put 今日 in today's History cell label
+
+**What:** Start today's day cell's aria-label with the 今日 it shows (`今日 9月9日（水）・仕事 3h 00m`), in `cellLabel` in `apps/app/src/lib/history.ts`, and update the e2e selectors that match a cell by its date prefix (`apps/app/e2e/correction.spec.ts`).
+
+**Why:** Today's cell shows 今日 where the other cells show a weekday or day number, but its accessible name starts with the date, so the visible text is not in the name (WCAG 2.5.3 Label in Name) and a voice-control user who says 今日 cannot open it.
+
+**Context:** `dayCell` sets `label: isToday ? '今日' : weekLabel`; `cellLabel` builds the name from `formatDay`. The gap predates the times in the label. Raised by the design pass of the ship review of the PR that made History's day cells read their times (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep an activity's name from reading as detox or 平均から除外 in History's labels
+
+**What:** Decide whether `activityNameSchema` (`packages/shared/src/schemas.ts`) should refuse the names `detox`, `detox の日` and `平均から除外` and the `・` character, or whether History's day cell label should mark the detox part and 平均から除外 in a way no activity name can copy. Two activities can also share a name (an archived 仕事 and a new 仕事 both hold time on a day), and the label then reads the same name twice with nothing to tell them apart. Existing accounts may already hold such names, so a schema change needs a plan for them.
+
+**Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `detox の日` makes an hour of it read exactly like a detox day (`9月9日（水）・detox の日 1h 00m`), one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
+
+**Context:** `activityNameSchema` is `z.string().trim().min(1).max(20)`; `cellLabel` in `apps/app/src/lib/history.ts`. Raised by the Red Team of the ship review of the PR that made History's day cells read their times (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ### Renew a detox run on the server only while auto-exclusion is on
