@@ -250,9 +250,9 @@
 
 ### Say on Home when a detox has stopped counting days
 
-**What:** Show on Home (and decide whether History's today cell follows) that a detox running past `DETOX_MEASURED_DAYS_MAX` (7) untapped days no longer measures them, or let a detox re-tap on a day past the week start a new run (a new detox row the stats treat as a tap, which cut and rewrite rows are not).
+**What:** Show on Home (and decide whether History's today cell follows) that a detox running past `DETOX_MEASURED_DAYS_MAX` (7) days after its run started no longer measures the untapped days, or let a detox re-tap on a day past the week start a new run (a new detox row the stats treat as a tap, which cut and rewrite rows are not).
 
-**Why:** From the eighth untapped day, the days a detox runs through are 計測なし and 連続記録 breaks, but DetoxRow stays pressed and nothing says so; tapping detox again is a no-op in `switches.switchTo`, so the only way to keep counting is a tap on an activity and back, which writes a minute of activity time.
+**Why:** From the eighth day after a detox run started, the untapped days it runs through are 計測なし and 連続記録 breaks, but DetoxRow stays pressed and nothing says so; tapping detox again is a no-op in `switches.switchTo`, so the only way to keep counting is a tap on an activity and back, which writes a minute of activity time.
 
 **Context:** The cap and the run rule are in `detoxCarriedDays` (`packages/shared/src/stats.ts`); the re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; raised by the red team of that PR's pre-landing review. New text or state on Home, so the pen file first.
 
@@ -264,7 +264,7 @@
 
 **What:** Change the hint on the 未使用日の扱い sheet, 「…デトックスを続けた日は計測に入ります。」, to state the week limit (for example 「デトックスを続けた日は7日まで計測に入ります。」), in the pen file first.
 
-**Why:** Since the detox cap (2026-09-25), the eighth untapped day of a detox and after are listed as 切替なし on that same sheet, under a hint that says they count.
+**Why:** Since the detox cap (2026-09-25), the untapped days from the eighth day after a detox run started are listed as 切替なし on that same sheet, under a hint that says they count.
 
 **Context:** `hint` in `apps/app/src/app/(app)/excluded-days.tsx`; the board is `ST Phone / 設定＋除外シート` in `design/switch-time.pen`. Raised by the red team of the cap's pre-landing review; left out because only one session edits the pen file at a time.
 

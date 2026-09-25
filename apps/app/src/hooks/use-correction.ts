@@ -109,7 +109,7 @@ export function useCorrection(dayParam: string | undefined) {
     selectedId: state.selectedId,
     noticeId: state.noticeId,
     focusId: state.focusId,
-    totalsFacts: useTotalsFacts(day, ready),
+    totalsFacts: useTotalsFacts(day, today, ready),
     select: state.select,
     ...edits,
     undo,
@@ -385,16 +385,23 @@ function useCorrectionUndo(
 }
 
 // What the lines under 「ここで分割」 read: the idle threshold and the viewed day's class as the stats answer it.
-function useTotalsFacts(day: string, ready: boolean): TotalsFacts {
+function useTotalsFacts(
+  day: string,
+  today: string,
+  ready: boolean,
+): TotalsFacts {
   const { settings } = useSettings()
+  // Today is never 計測なし yet, so only a past day asks. Its first fetch comes once the day is past: a sheet left open
+  // over midnight asks then, rather than keeping the answer it had while the day was today.
+  const isPast = day < today
   // `stats.day` gives the server's class for the viewed day, so the note follows the day rule (detox cap included)
   // instead of copying it. `ready` waits for the stored time zone, as the day's list does, so a default-zone "today" is
   // never fetched first.
   const stats = useQuery(
-    orpc.stats.day.queryOptions({ input: { day }, enabled: ready }),
+    orpc.stats.day.queryOptions({ input: { day }, enabled: ready && isPast }),
   )
   return {
     idleThresholdMs: settings.idleThresholdMinutes * 60_000,
-    dayExcluded: stats.data?.days[0]?.excluded,
+    dayExcluded: isPast ? stats.data?.days[0]?.excluded : null,
   }
 }

@@ -96,8 +96,9 @@ export type ExcludedReason = 'auto_unused' | 'manual'
 export const STREAK_CAP_DAYS = 3650
 
 /**
- * How many untapped days after the day a detox run started it measures. Past that, a day with no tap is an ordinary
- * unused day again: a week off the clock keeps 連続記録, an app left on detox and abandoned stops counting.
+ * How many calendar days after the day a detox run started it measures, those without a tap of their own (a day a
+ * cut gave a tap still uses one of them). Past that, a day with no tap is an ordinary unused day again: a week off the
+ * clock keeps 連続記録, an app left on detox and abandoned stops counting.
  */
 export const DETOX_MEASURED_DAYS_MAX = 7
 
