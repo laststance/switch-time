@@ -173,11 +173,13 @@ test('a detox left running overnight stays a solid sub outline on the bar, not a
   // Act
   await page.reload()
 
-  // Assert: detox outranks idle, so the carried-in span keeps the detox outline in the `sub` tone of the hour labels
+  // Assert: detox outranks idle, so the carried-in span keeps the detox outline in the `sub` tone of the hour labels, and its
+  // left end follows the bar's curve so the rounded track does not clip the outline open at 0:00
   const span = page
     .getByRole('img', { name: '今日の流れ' })
     .locator('div')
     .first()
+  await expect(span).not.toHaveCSS('border-top-left-radius', '0px')
   await expect(span).toHaveCSS('border-top-style', 'solid')
   await expect(span).toHaveCSS('border-top-width', '1px')
   const sub = await page

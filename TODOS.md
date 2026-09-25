@@ -248,6 +248,18 @@
 **Priority:** P3
 **Depends on:** None
 
+### Stop marking a day of idle and detox time as a detox day on History
+
+**What:** Decide how History draws a measured day whose only time is detox plus an activity left running past the idle threshold, for example as detox only when `detoxMs` is at least `idleMs`, and add a `history.test.ts` case with `detoxMs > 0`, `idleMs > 0` and empty totals.
+
+**Why:** `dayCell` picks `'detox'` whenever there is nothing to stack and `detoxMs > 0`, without looking at `idleMs`. A day of 9 h forgotten 仕事 and 1 h detox gets the solid `sub` outline, the wind glyph and 「・detox」 in its label, so the mark says the day went to detox when most of it went to a forgotten activity.
+
+**Context:** `dayCell` in `apps/app/src/lib/history.ts`; `sumSegments` in `packages/shared/src/stats.ts` keeps idle time out of `totals`. Older than the solid outline, which only makes the claim louder. Raised by the red-team review of the PR that outlined detox days solid (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Decide whether a detox left running for weeks keeps measuring days
 
 **What:** Choose whether a detox with no later tap measures every day up to today (the current rule), or stops after a limit (for example a week, or a setting), and add a test for a detox left running for a month.

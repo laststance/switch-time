@@ -9,11 +9,16 @@ const BANDS = {
   wide: {
     root: 'gap-3 rounded-card border border-line bg-surface px-5 pb-4 pt-[18px]',
     bar: 'h-3.5 rounded-[7px]',
+    // A span touching either end of the bar takes its curve, so an outline there is not clipped open by the rounded track.
+    first: 'rounded-l-[7px]',
+    last: 'rounded-r-[7px]',
     labels: ['0:00', '6:00', '12:00', '18:00', '24:00'],
   },
   narrow: {
     root: 'gap-1.5 py-2',
     bar: 'h-2.5 rounded-[5px]',
+    first: 'rounded-l-[5px]',
+    last: 'rounded-r-[5px]',
     labels: ['0:00', '12:00', '24:00'],
   },
 }
@@ -40,7 +45,7 @@ const fill = (color: string | undefined) => ({
   className: '',
   backgroundColor: color,
 })
-// Detox is checked before idle: a detox left running overnight is past the threshold too, and sumSegments counts it as detox.
+// Detox is checked before idle: a detox left running overnight is past the threshold too, and {@link sumSegments} counts it as detox.
 const slice = (segment: Segment, colors: Record<string, string>) =>
   segment.activityId === null
     ? LOOK.detox
@@ -111,7 +116,12 @@ export function TodayFlow({
           return (
             <View
               key={segment.switchId}
-              className={cn('absolute inset-y-0', look.className)}
+              className={cn(
+                'absolute inset-y-0',
+                look.className,
+                segment.start <= start && band.first,
+                segment.end >= end && band.last,
+              )}
               style={{
                 left: percent(segment.start - start),
                 width: percent(segment.end - segment.start),

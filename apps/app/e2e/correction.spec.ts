@@ -549,7 +549,7 @@ test('splitting the current state shows on Home without a reload', async ({
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
 
-test('a detox row lists as detox with a solid sub chip and comes back through undo', async ({
+test('a detox row lists as detox, outlined solid in sub on its chip and the day bar, and comes back through undo', async ({
   page,
 }) => {
   // Arrange: yesterday 仕事 9:00, detox 12:00, 娯楽 18:00
@@ -578,6 +578,11 @@ test('a detox row lists as detox with a solid sub chip and comes back through un
   await expect(chip).toHaveCSS('border-top-style', 'solid')
   await expect(chip).toHaveCSS('border-top-width', '1px')
   await expect(chip).toHaveCSS('border-top-color', sub)
+  // The day bar's middle span (仕事, detox, 娯楽) is outlined the same way, as on Home's 24-h bar.
+  const span = page.getByTestId('day-bar').locator('div').nth(1)
+  await expect(span).toHaveCSS('border-top-style', 'solid')
+  await expect(span).toHaveCSS('border-top-width', '1px')
+  await expect(span).toHaveCSS('border-top-color', sub)
 
   // Act: merge the detox span into 仕事, then undo
   await detox.click()

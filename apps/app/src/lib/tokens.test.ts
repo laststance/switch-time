@@ -113,6 +113,40 @@ function appBand(name: 'dark' | 'light') {
   )
 }
 
+// The design system's stylesheet: dark on `:root`, light under `[data-theme="light"]`.
+const STYLES = readFileSync(
+  new URL('../../../../design-system/styles.css', import.meta.url),
+  'utf8',
+)
+
+/** One styles.css theme block's `--color-*` values, each as {@link channels}. */
+function stylesBand(name: 'dark' | 'light') {
+  const opener = name === 'dark' ? ':root {' : '[data-theme="light"] {'
+  const body = STYLES.split(opener)[1]?.split('}')[0] ?? ''
+  return Object.fromEntries(
+    [...body.matchAll(/--color-([a-z-]+):\s*([^;]+);/g)].map((match) => [
+      match[1],
+      channels(match[2] ?? ''),
+    ]),
+  )
+}
+
+test('design-system/styles.css carries the light colour tokens of theme.json, so the specimen pages match the app', () => {
+  // Arrange / Act
+  const styles = stylesBand('light')
+
+  // Assert
+  expect(styles).toEqual(designBand('light'))
+})
+
+test('design-system/styles.css carries the dark colour tokens of theme.json, so the specimen pages match the app', () => {
+  // Arrange / Act
+  const styles = stylesBand('dark')
+
+  // Assert
+  expect(styles).toEqual(designBand('dark'))
+})
+
 test('the app ships the light colour tokens of design-system/theme.json, so a token edit cannot skip the app', () => {
   // Arrange / Act
   const app = appBand('light')

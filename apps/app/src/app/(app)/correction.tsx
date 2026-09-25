@@ -65,7 +65,10 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
   const active = rows.some((row) => row.id === selectedId) ? selectedId : null
   const dim = (id: string) => (active === null || active === id ? 1 : DIMMED)
   return (
-    <View className="bg-chip h-3 w-full overflow-hidden rounded-md">
+    <View
+      testID="day-bar"
+      className="bg-chip h-3 w-full overflow-hidden rounded-md"
+    >
       {rows.map((row) => (
         <View
           key={row.id}
@@ -73,6 +76,9 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
           className={cn(
             'absolute inset-y-0',
             row.color === null && 'border-sub border',
+            // A span touching either end takes the bar's curve, so its outline is not clipped open there.
+            row.start <= bounds.start && 'rounded-l-md',
+            row.end >= bounds.end && 'rounded-r-md',
           )}
           style={{
             left: percent(row.start - bounds.start),
