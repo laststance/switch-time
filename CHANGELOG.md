@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.23.0.0] - 2026-09-25
+
+### Added
+
+- Every row in the correction sheet can be cut at a chosen time. 区切る時刻
+  opens at the middle quarter hour, steps ±15 min / ±1 h, and 「ここで分割」
+  cuts there in one write. A row too short for any quarter hour is cut at
+  its middle minute, and says so.
+- Buttons dim to 70 % while pressed, and on the web a keyboard focus draws a
+  2 px ring around them (a mouse click does not).
+
+### Changed
+
+- 「半分で分割」 is gone: 区切る時刻 replaces it on the day's own rows. The
+  API keeps `switches.splitInHalf` for one more release.
+- The correction sheet's hint names every edit, including what a record
+  carried in from the day before allows.
+- The groups in the correction panels sit 20 apart instead of 12.
+
+### Fixed
+
+- After 「前の記録に統合」 or 「次の記録に統合」, keyboard focus moves to the
+  row that kept the merged time instead of falling to the page.
+
 ## [0.22.0.0] - 2026-09-25
 
 ### Added

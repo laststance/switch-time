@@ -186,17 +186,17 @@
 **Priority:** P3
 **Depends on:** None
 
-### Offer 区切る時刻 on the day's own rows in place of 半分で分割
+### Remove `switches.splitInHalf` once 0.23 has been live for a release
 
-**What:** Give every row's panel the 区切る時刻 stepper and 「ここで分割」, and retire 「半分で分割」.
+**What:** Delete the `splitInHalf` procedure and its API tests.
 
-**Why:** 「半分で分割」 always cuts at the midpoint, so splitting a row at the time something really changed still takes a split followed by several ±15 moves, each a round trip. The carried-in record already cuts at a chosen quarter hour in one write.
+**Why:** No screen calls it since 0.23.0.0, which gave every row 区切る時刻 and 「ここで分割」 (`splitAt`). It stays one release so a tab or app still running 0.22 can finish a split it shows.
 
-**Context:** `cutRange` in `lib/correction.ts` computes the range for carried-in rows only (`cut` is null on the day's own rows), and `switches.splitAt` accepts any row. The day's own rows need the same margins as `clampStart` from both neighbours. Out of scope for the carried-in row's panel (2026-09-24); raised as an open question in its design.
+**Context:** `apps/api/src/rpc/switches.ts` (the procedure's comment says the same), the mention on `rowEditInputSchema` in `packages/shared/src/schemas.ts` (the merges keep using the schema), the `splitInHalf` cases in `apps/api/src/rpc/*.test.ts`, and the `cannot-split` wording in README's API section if nothing else answers it.
 
 **Effort:** S
-**Priority:** P3
-**Depends on:** None
+**Priority:** P4
+**Depends on:** 0.23.0.0 live in production for one release
 
 ### Show which repeated wall-clock time is meant on a fall-back day
 
@@ -217,18 +217,6 @@
 **Why:** A pick changes the record's activity on every day it covers. A record from 9/21 23:00 viewed on 9/23 also changes 9/22, and one that is still running changes today, but the note names only 9/21. A record that began more than a year ago reads as a recent date: on the same calendar day it even reads as the viewed day.
 
 **Context:** `CorrectionRow` already carries `trueStart` and `trueEnd`, and the last day the record touches is `localDay(trueEnd - 1)` in the stored zone. Raised by the Red Team during the carried-in panel's ship (2026-09-24). The untapped-day notes (`spanLabel` in `lib/untapped.ts`, 0.21.0.0) name their days without a year too, so a span across New Year or from a record over a year old needs the same rule.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Mention the carried-in panel's controls in the sheet hint
-
-**What:** Rewrite the correction sheet's hint (「行をタップ → 開始時刻を15分ずつ動かす／活動を変える」) so it also covers the carried-in row, whose panel cuts the record (区切る時刻 and 「ここで分割」) rather than moving its start. Change the text in the pen file first, then in `correction.tsx`.
-
-**Why:** On a day whose first row is carried in from an earlier day, the hint promises a 15-minute move that row does not have, and says nothing about cutting it.
-
-**Context:** The hint is the `hint` prop of `Sheet` in `apps/app/src/app/(app)/correction.tsx`, and the pen file's correction frame holds the same string. Raised by the design review during the carried-in panel's ship (2026-09-24).
 
 **Effort:** S
 **Priority:** P3
@@ -382,42 +370,6 @@
 
 **Effort:** S
 **Priority:** P4
-**Depends on:** None
-
-### Space the correction panels' groups 20 apart, as tokens.md asks
-
-**What:** Put 20 between the groups of both correction panels (the day's own rows: 開始時刻 / 活動を変える / the merge and split buttons; the carried-in record: origin note / 区切る時刻 / 活動を変える), in the pen file first.
-
-**Why:** `design/tokens.md` asks for at least 20 between groups; both panels use 12 (`gap-3` on the `Actions` container), so the groups read as one block.
-
-**Context:** The carried-in panel matched the existing panel on purpose so the two stay consistent (design review of the carried-in row's panel (2026-09-24), D9); change both together.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Give `Control` a pressed and keyboard-focus look
-
-**What:** Add a pressed state and a visible focus ring to `Control`, which every 「元に戻す」, ± and merge/split button uses.
-
-**Why:** Its only state is the 40 % disabled dim. A tap gives no feedback until the write lands, and on the web a keyboard user cannot tell which button has focus.
-
-**Context:** `apps/app/src/components/control.tsx`. Check the focus ring in both themes on a real screen before choosing a token. Pre-existing, raised by the design pass during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep keyboard focus in the correction sheet after a merge
-
-**What:** When a merge lands, move focus to the kept row's header (both merge procedures return that row) or to the dialog.
-
-**Why:** A merge deletes the selected row, which unmounts its card together with the focused button. On the web, focus falls to `<body>`: a keyboard or screen-reader user loses their place, and nothing announces the merge.
-
-**Context:** `correction.tsx` keys the cards by `row.id`. Applies to both merge buttons (「前の記録に統合」 since 0.1.0.0). 「ここで分割」 already does this since the carried-in row's panel (2026-09-24): `useCorrection` sets `focusId` to the row `splitAt` returns, and `RowHeader` takes focus when its `focused` prop turns on, so a merge can set the same id. Raised by the design pass during the 0.2.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
 **Depends on:** None
 
 ## Auth
