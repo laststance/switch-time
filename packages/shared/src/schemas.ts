@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { ACTIVITY_PALETTE } from './activity-palette'
-import { EARLIEST_DAY, isCalendarDay, isTimeZone } from './time'
+import { EARLIEST_DAY, isCalendarDay, isTimeZone, LATEST_DAY } from './time'
 
 /** Accepts only the 8 design palette hexes; keeps the DB free of arbitrary colours. */
 export const activityColorSchema = z.enum(ACTIVITY_PALETTE)
@@ -68,20 +68,24 @@ export function firstIssuePerField(error: z.ZodError): Record<string, string> {
   return messages
 }
 
-/** Calendar day as the API exchanges it ('YYYY-MM-DD', a real date, four-digit year, from {@link EARLIEST_DAY} on). */
+/** Calendar day as the API exchanges it ('YYYY-MM-DD', a real date, four-digit year, from {@link EARLIEST_DAY} to {@link LATEST_DAY}). */
 export const daySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { error: '日付が正しくありません' })
   .refine(isCalendarDay, { error: '日付が正しくありません' })
-  .refine((day) => day >= EARLIEST_DAY, { error: '日付が正しくありません' })
+  .refine((day) => day >= EARLIEST_DAY && day <= LATEST_DAY, {
+    error: '日付が正しくありません',
+  })
 
-/** 'YYYY-MM' for `stats.month`, from the month of {@link EARLIEST_DAY} on. */
+/** 'YYYY-MM' for `stats.month`, from the month of {@link EARLIEST_DAY} to that of {@link LATEST_DAY}. */
 export const monthSchema = z
   .string()
   .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { error: '月が正しくありません' })
-  .refine((month) => month >= EARLIEST_DAY.slice(0, 7), {
-    error: '月が正しくありません',
-  })
+  .refine(
+    (month) =>
+      month >= EARLIEST_DAY.slice(0, 7) && month <= LATEST_DAY.slice(0, 7),
+    { error: '月が正しくありません' },
+  )
 
 /** IANA zone; {@link isTimeZone} works on Hermes too. */
 export const timeZoneSchema = z

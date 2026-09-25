@@ -3,6 +3,9 @@ const DAY_MS = 86_400_000
 /** The first day {@link daySchema} accepts: a chosen floor (the Unix epoch) well above years 0–99, which `Date.UTC` reads as 1900–1999 and which would break {@link dayBounds}. */
 export const EARLIEST_DAY = '1970-01-01'
 
+/** The last day {@link daySchema} accepts: a month short of year 10000, so a week or month view plus a day never makes {@link addDays} write a five-digit year. */
+export const LATEST_DAY = '9999-11-30'
+
 type Civil = {
   year: number
   month: number
@@ -12,18 +15,18 @@ type Civil = {
   second: number
 }
 
-/**
- * Most zone spellings a formatter cache holds before it starts over: well above the ~420 IANA names, and a bound on memory,
- * since Intl also takes 'asia/tokyo' or '+0930' and a client could otherwise send a new spelling on every request.
- */
-export const FORMAT_CACHE_MAX_ZONES = 1000
+// A backstop only: keys are lower-cased IANA names and links (about 600), so the cache never reaches it in practice.
+const FORMAT_CACHE_MAX_ZONES = 1000
 
 // One formatter per zone: building an Intl.DateTimeFormat costs far more than formatting with it, and stats read one per tap.
 const civilFormats = new Map<string, Intl.DateTimeFormat>()
 
 // The zone's cached formatter; an unknown zone throws here, before anything is cached.
+// Keyed lower-cased (IANA names are case-insensitive), and offset zones ('+09:30') are never kept: a client can spell those
+// thousands of ways, and formatters dropped from a churning cache stay in native memory long after they are unreachable.
 function civilFormat(timeZone: string): Intl.DateTimeFormat {
-  const cached = civilFormats.get(timeZone)
+  const key = timeZone.toLowerCase()
+  const cached = civilFormats.get(key)
   if (cached) return cached
   const format = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -35,9 +38,10 @@ function civilFormat(timeZone: string): Intl.DateTimeFormat {
     minute: '2-digit',
     second: '2-digit',
   })
-  // Full: start over rather than grow (keyed by the spelling as given, since Intl maps aliases like Asia/Kolkata to other names)
+  // An offset zone is built per call, as every zone was before the cache
+  if (/^[+-]/.test(key)) return format
   if (civilFormats.size >= FORMAT_CACHE_MAX_ZONES) civilFormats.clear()
-  civilFormats.set(timeZone, format)
+  civilFormats.set(key, format)
   return format
 }
 

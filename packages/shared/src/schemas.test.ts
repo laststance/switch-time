@@ -31,3 +31,17 @@ test('a month before 1970 is refused and January 1970 is accepted', () => {
   // Assert
   expect(results).toEqual([false, false, true, true])
 })
+
+test('a day or month so late that a week after it would pass year 9999 is refused', () => {
+  // Act
+  const days = ['9999-11-30', '9999-12-01', '9999-12-31'].map(
+    (day) => daySchema.safeParse(day).success,
+  )
+  const months = ['9999-11', '9999-12'].map(
+    (month) => monthSchema.safeParse(month).success,
+  )
+
+  // Assert
+  expect(days).toEqual([true, false, false])
+  expect(months).toEqual([true, false])
+})

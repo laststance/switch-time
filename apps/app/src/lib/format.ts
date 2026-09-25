@@ -1,5 +1,3 @@
-import { FORMAT_CACHE_MAX_ZONES } from '@switch-time/shared'
-
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`)
 
 /**
@@ -49,6 +47,7 @@ export function formatDuration(ms: number): string {
 }
 
 // One formatter per zone: the timeline and the correction sheet format every row's start on each render.
+// No cap: the app only formats the signed-in account's stored zone, unlike the API's cache in the shared time module.
 const timeFormats = new Map<string, Intl.DateTimeFormat>()
 
 /**
@@ -65,8 +64,6 @@ export function formatTime(date: Date, timeZone: string): string {
       hourCycle: 'h23',
       timeZone,
     })
-    // Full: start over rather than grow, so odd spellings ('asia/tokyo') cannot pile up
-    if (timeFormats.size >= FORMAT_CACHE_MAX_ZONES) timeFormats.clear()
     timeFormats.set(timeZone, format)
   }
   return format.format(date)
