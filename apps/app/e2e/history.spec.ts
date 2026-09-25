@@ -94,7 +94,10 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
 
   // Assert: both untapped days read as detox, not 計測なし, and count toward the measured days and the streak
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /・detox$/ })).toHaveCount(2)
+  const detoxDays = page.getByRole('link', { name: /・detox$/ })
+  await expect(detoxDays).toHaveCount(2)
+  await expect(detoxDays.first()).toBeVisible()
+  await expect(detoxDays.last()).toBeVisible()
   await expect(page.getByRole('link', { name: /計測なし/ })).toHaveCount(0)
   await expect(page.getByText('4 / 7日')).toBeVisible()
   await expect(page.getByText('4日', { exact: true })).toBeVisible()
