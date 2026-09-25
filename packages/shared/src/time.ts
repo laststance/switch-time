@@ -135,10 +135,13 @@ export function isCalendarDay(day: string): boolean {
 }
 
 /**
- * IANA zone check that also runs on Hermes, which lacks `Intl.supportedValuesOf`.
+ * IANA zone check that also runs on Hermes, which lacks `Intl.supportedValuesOf`. Offsets such as '+09:00', which Intl also
+ * takes, are refused: devices report IANA names, and an offset would skip the formatter cache on every stats read.
  * @example isTimeZone('Asia/Tokyo') // true
+ * @example isTimeZone('+09:00') // false
  */
 export function isTimeZone(timeZone: string): boolean {
+  if (!IANA_NAME_SHAPE.test(timeZone)) return false
   try {
     Intl.DateTimeFormat('en-US', { timeZone })
     return true

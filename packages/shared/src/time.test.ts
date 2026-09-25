@@ -69,6 +69,8 @@ test('impossible dates and unknown zones are rejected', () => {
   expect(isCalendarDay('2026-09-09')).toBe(true)
   expect(isTimeZone('Asia/Tokyo')).toBe(true)
   expect(isTimeZone('Mars/Olympus')).toBe(false)
+  expect(isTimeZone('+09:00')).toBe(false)
+  expect(isTimeZone('Etc/GMT+5')).toBe(true)
 })
 
 test('a day whose local midnight is skipped by DST starts at the transition instant', () => {
