@@ -238,7 +238,7 @@
 
 ### Say when an edit changes whether the untapped days around it count
 
-**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and a merge of two detox records or a pick inside a detox run, which moves the day its 7-day week counts from. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
+**What:** Add a note like the cut's 計測 line to every edit that changes the record carried into or out of the viewed day: 活動を変える on a carried-in detox (an activity turns the untapped days it ran through back into 計測なし, detox on a carried-in activity measures them), the same pick on the day's last row, a merge or 元に戻す that removes or adds the tap ending a detox, and an edit that joins or splits detox runs (detox picked for the record between two detoxes, a merge that removes it, a pick or move on a run's first record), which moves the day its 7-day week counts from and can turn days another week measured into 計測なし. The rule to state: whether later untapped days count follows the activity of the record carried over them, for at most a week of detox.
 
 **Why:** Since detox left on over midnight measures up to a week of the days it covers (`detoxCarriedDays`, 2026-09-25), any of these edits silently moves `measuredDays`, the streak and every 1日あたり average for days the sheet is not showing.
 
@@ -246,6 +246,30 @@
 
 **Effort:** S
 **Priority:** P3
+**Depends on:** None
+
+### Say on Home when a detox has stopped counting days
+
+**What:** Show on Home (and decide whether History's today cell follows) that a detox running past `DETOX_MEASURED_DAYS_MAX` (7) untapped days no longer measures them, or let a detox re-tap on a day past the week start a new run (a new detox row the stats treat as a tap, which cut and rewrite rows are not).
+
+**Why:** From the eighth untapped day, the days a detox runs through are 計測なし and 連続記録 breaks, but DetoxRow stays pressed and nothing says so; tapping detox again is a no-op in `switches.switchTo`, so the only way to keep counting is a tap on an activity and back, which writes a minute of activity time.
+
+**Context:** The cap and the run rule are in `detoxCarriedDays` (`packages/shared/src/stats.ts`); the re-tap no-op is `switches.switchTo` (`apps/api/src/rpc/switches.ts`). The plan review of the cap (2026-09-25) kept the no-op and the API as they are; raised by the red team of that PR's pre-landing review. New text or state on Home, so the pen file first.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** None
+
+### Say the detox week in the 未使用日の扱い hint
+
+**What:** Change the hint on the 未使用日の扱い sheet, 「…デトックスを続けた日は計測に入ります。」, to state the week limit (for example 「デトックスを続けた日は7日まで計測に入ります。」), in the pen file first.
+
+**Why:** Since the detox cap (2026-09-25), the eighth untapped day of a detox and after are listed as 切替なし on that same sheet, under a hint that says they count.
+
+**Context:** `hint` in `apps/app/src/app/(app)/excluded-days.tsx`; the board is `ST Phone / 設定＋除外シート` in `design/switch-time.pen`. Raised by the red team of the cap's pre-landing review; left out because only one session edits the pen file at a time.
+
+**Effort:** S
+**Priority:** P2
 **Depends on:** None
 
 ### Fit a 25-hour day's activity time on History's 24-hour bar
