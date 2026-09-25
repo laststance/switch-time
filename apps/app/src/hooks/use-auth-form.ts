@@ -1,6 +1,6 @@
 import { firstIssuePerField } from '@switch-time/shared'
 import { useMutation } from '@tanstack/react-query'
-import { type Href, useNavigation } from 'expo-router'
+import type { Href } from 'expo-router'
 import { useState } from 'react'
 import type { ZodType } from 'zod'
 
@@ -19,7 +19,7 @@ let latestSubmit: object | null = null
  * `isPending`, Better Auth's message is its error). Success clears the cache and the store, then runs `onDone`. Sign-in passes none:
  * the (auth) layout redirects once the session has landed, so the (app) guard never sees the gap in between. Sign-up gets no session
  * (`autoSignIn: false`) and passes `onDone` to move on to sign-in.
- * @param onDone - Runs after a successful submit with the submitted values, while the form's screen is still in front.
+ * @param onDone - Runs after a successful submit with the submitted values, while the form is still mounted.
  * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v))
  * @example useAuthForm(signUpSchema, blank, (v) => authClient.signUp.email(v), (v) => register(v.email))
  */
@@ -30,7 +30,6 @@ export function useAuthForm<T extends Record<string, string>>(
   onDone?: (values: T) => void,
 ) {
   const dispatch = useAppDispatch()
-  const navigation = useNavigation()
   const [values, setValues] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const request = useMutation({
@@ -64,8 +63,7 @@ export function useAuthForm<T extends Record<string, string>>(
         if (attempt !== latestSubmit) return
         queryClient.clear()
         dispatch(resetApp())
-        // Left through a link while it ran (the screen stays mounted underneath): moving on would replace the form now in front.
-        if (navigation.isFocused()) onDone?.(sent)
+        onDone?.(sent)
       },
     })
   }

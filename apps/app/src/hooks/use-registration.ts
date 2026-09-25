@@ -1,4 +1,4 @@
-import { useGlobalSearchParams, useRouter } from 'expo-router'
+import { useGlobalSearchParams, useNavigation, useRouter } from 'expo-router'
 import { useEffect } from 'react'
 import { AccessibilityInfo, Platform } from 'react-native'
 
@@ -10,7 +10,7 @@ import { registrationSlice } from '@/store/registration'
  * sign-in reads `registration` (prefill, notice) and calls `dismissNotice` on the first keystroke or submit.
  * @returns
  * - `registration`: the address just registered and whether its notice shows, or `null`
- * - `register(email)`: records it and goes back to sign-in (keeping `next`)
+ * - `register(email)`: records it and goes back to sign-in (keeping `next`), unless the user already left sign-up
  * - `dismissNotice()`: hides the notice, keeping the address
  * @example const { registration, dismissNotice } = useRegistration()
  */
@@ -18,9 +18,12 @@ export function useRegistration() {
   const registration = useAppSelector((state) => state.registration.current)
   const dispatch = useAppDispatch()
   const router = useRouter()
+  const navigation = useNavigation()
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>()
 
   const register = (email: string): void => {
+    // Left through a link while the request ran (sign-up stays mounted underneath): moving on would replace the form now in front.
+    if (!navigation.isFocused()) return
     dispatch(registrationSlice.actions.registered(email))
     // Back to the sign-in screen underneath when there is one, else in place of sign-up: the filled form is not left behind.
     router.dismissTo({
