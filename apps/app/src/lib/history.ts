@@ -33,7 +33,7 @@ const DETOX_SLICE_MIN_PX = 2
 const EXCLUDED_BORDER_PX = 1
 // Room left on a track after subtracting slices can be a float residue (1e-14 px) rather than 0; below this it counts as full.
 const SLICE_EPSILON_PX = 1e-6
-// A slice under half a pixel shows nothing, so it does not take the rounded corners from the slice next to it.
+// The rounded end of a stack goes to the slice holding its outer half pixel: slivers thinner than that together show nothing.
 const SLICE_VISIBLE_PX = 0.5
 
 export type Slice = {
@@ -42,9 +42,12 @@ export type Slice = {
   /** `null` is detox ({@link DETOX}): an outline in `sub` stacked on top of the activity fills, not a fill of its own. */
   color: string | null
   height: number
-  /** The topmost slice carries the rounded top corners. */
+  /** The slice at the top of the stack carries the rounded top corners (a sliver too thin to see passes them down). */
   top: boolean
-  /** The slice on the track's floor carries the rounded bottom corners, so a detox outline there is not clipped by the track. */
+  /**
+   * The slice on the track's floor carries the rounded bottom corners, so a detox outline there is not clipped by the track (a
+   * sliver too thin to see passes them up).
+   */
   bottom: boolean
 }
 
@@ -120,14 +123,32 @@ function chartTitle(
 }
 
 /**
+ * The slice that holds the first {@link SLICE_VISIBLE_PX} of a stack, counted from the end `slices` starts at.
+ * Called by {@link stackSlices} for each end, so slivers too thin to see, alone or together, do not take the rounded corners.
+ * @param slices - The stack, ordered from the end being rounded.
+ * @returns
+ * - The first slice at which the running height reaches {@link SLICE_VISIBLE_PX}
+ * - The first slice when the whole stack is thinner; undefined for no slices
+ * @example
+ * sliceAtEnd([{ height: 0.01, ... }, { height: 16, ... }]) // => the 16 px slice
+ */
+function sliceAtEnd(slices: Slice[]): Slice | undefined {
+  let edge = 0
+  return (
+    slices.find((slice) => (edge += slice.height) >= SLICE_VISIBLE_PX) ??
+    slices.at(0)
+  )
+}
+
+/**
  * A day cell's slices, bottom-up: the activities in `position` order (those without time, or with no room left on the track,
  * skipped), then the detox part on top.
  * Called by {@link dayCell}, which passes `detoxMs` 0 for a detox day, since that cell's outline already is the detox mark.
  * @param totals - The day's activity time by activity id.
  * @param detoxMs - The day's detox time to draw on top of the activities.
  * @returns
- * - The slices, the lowest one at least {@link SLICE_VISIBLE_PX} tall flagged `bottom` and the highest one `top` (the first
- *   and last when none is)
+ * - The slices, the one holding the stack's lowest {@link SLICE_VISIBLE_PX} flagged `bottom` and the one holding its highest
+ *   `top` (the first and last when the whole stack is thinner)
  * - Each slice clamped to the room left above the ones below it, so a 25-h fall-back day's top slices are cut rather than overflow
  *   the bar
  * - The detox slice only when it is at least {@link DETOX_SLICE_MIN_PX} tall
@@ -150,8 +171,9 @@ function stackSlices(
       ((totals[activity.id] ?? 0) / DAY_MS) * barHeight,
       room,
     )
-    // No time, or no room left: the activity draws nothing (its time is still in the cell's label).
-    if (height < SLICE_EPSILON_PX) continue
+    // No time (or a negative or NaN total, which the server never sends), or no room left: the activity draws nothing (its time
+    // is still in the cell's label).
+    if (!(height >= SLICE_EPSILON_PX)) continue
     room -= height
     slices.push({
       activityId: activity.id,
@@ -170,13 +192,10 @@ function stackSlices(
       top: false,
       bottom: false,
     })
-  // Short slices still add up on the track, but a sliver too thin to see must not take the rounded ends from the slice next to it.
-  const visible = slices.filter((slice) => slice.height >= SLICE_VISIBLE_PX)
-  const ends = visible.length > 0 ? visible : slices
-  const first = ends.at(0)
-  if (first) first.bottom = true
-  const last = ends.at(-1)
-  if (last) last.top = true
+  const bottom = sliceAtEnd(slices)
+  if (bottom) bottom.bottom = true
+  const top = sliceAtEnd([...slices].reverse())
+  if (top) top.top = true
   return slices
 }
 
@@ -254,6 +273,8 @@ function cellLabel(
   if (kind === 'empty') return date
   // Nothing under half a minute is read: formatDuration would print it as 0m.
   const readable = (ms: number) => {
+    // A negative or NaN total (never sent by the server) is not read, as its slice is not drawn.
+    if (!(ms > 0)) return null
     const time = formatDuration(ms)
     return time === '0m' ? null : time
   }

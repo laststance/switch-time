@@ -827,18 +827,91 @@ test('short activities in a month cell still stack up rather than leave the trac
     activities,
   })
 
-  // Assert: all three are drawn, 1 px together, and with none visible alone the outer two keep the rounded ends
+  // Assert: all three are drawn, 1 px together; 家事 holds both outer half pixels, so it takes both rounded ends
+  const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
+  expect(
+    cell?.slices.map((slice) => [slice.activityId, slice.bottom, slice.top]),
+  ).toEqual([
+    ['work', false, false],
+    ['home', true, true],
+    ['old', false, false],
+  ])
+  expect(
+    cell?.slices.reduce((total, slice) => total + slice.height, 0),
+  ).toBeCloseTo(1)
+})
+
+test('thin slices stacked on a long activity take the rounded top once they add up to half a pixel', () => {
+  // Arrange: 9/9 had 8 h of 仕事 (16 px of the 48 px cell), then 10 minutes each of 家事 and 旧 (1/3 px each) on top
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: 8 * H, home: H / 6, old: H / 6 },
+      }),
+    ],
+    totals: { work: 8 * H, home: H / 6, old: H / 6 },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'month',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the top half pixel is 旧 and part of 家事, so 家事 takes the rounded top; 仕事 keeps the floor
   const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
   expect(
     cell?.slices.map((slice) => [slice.activityId, slice.bottom, slice.top]),
   ).toEqual([
     ['work', true, false],
-    ['home', false, false],
-    ['old', false, true],
+    ['home', false, true],
+    ['old', false, false],
   ])
-  expect(
-    cell?.slices.reduce((total, slice) => total + slice.height, 0),
-  ).toBeCloseTo(1)
+})
+
+test('a negative or NaN activity total is neither drawn nor read, and does not break the slices above it', () => {
+  // Arrange: 9/9 carries a broken 仕事 total (NaN) and 家事 total (-1 h) under 3 h of 旧
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: Number.NaN, home: -H, old: 3 * H },
+      }),
+    ],
+    totals: { work: Number.NaN, home: -H, old: 3 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: only 旧 is drawn (3/24 of the 132 px week column) and read
+  const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
+  expect(cell?.slices).toEqual([
+    {
+      activityId: 'old',
+      color: '#D8579C',
+      height: 16.5,
+      top: true,
+      bottom: true,
+    },
+  ])
+  expect(cell?.ariaLabel).toBe('9月9日（水）・旧 3h 00m')
 })
 
 test('half an hour of detox too short to outline in a month cell is still read out', () => {

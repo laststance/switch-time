@@ -274,9 +274,9 @@
 
 ### Keep an activity's name from reading as detox or 平均から除外 in History's labels
 
-**What:** Decide whether `activityNameSchema` (`packages/shared/src/schemas.ts`) should refuse the names `detox` and `平均から除外` and the `・` character, or whether History's day cell label should mark the detox part and 平均から除外 in a way no activity name can copy. Two activities can also share a name (an archived 仕事 and a new 仕事 both hold time on a day), and the label then reads the same name twice with nothing to tell them apart. Existing accounts may already hold such names, so a schema change needs a plan for them.
+**What:** Decide whether `activityNameSchema` (`packages/shared/src/schemas.ts`) should refuse the names `detox`, `detox の日` and `平均から除外` and the `・` character, or whether History's day cell label should mark the detox part and 平均から除外 in a way no activity name can copy. Two activities can also share a name (an archived 仕事 and a new 仕事 both hold time on a day), and the label then reads the same name twice with nothing to tell them apart. Existing accounts may already hold such names, so a schema change needs a plan for them.
 
-**Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
+**Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `detox の日` makes an hour of it read exactly like a detox day (`9月9日（水）・detox の日 1h 00m`), one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
 
 **Context:** `activityNameSchema` is `z.string().trim().min(1).max(20)`; `cellLabel` in `apps/app/src/lib/history.ts`. Raised by the Red Team of the ship review of the PR that made History's day cells read their times (2026-09-25).
 
