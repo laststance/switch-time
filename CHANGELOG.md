@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.14.0.0] - 2026-09-25
+
+### Added
+
+- The API can bring an archived activity back (`activities.unarchive`).
+  It returns to the end of the grid, since a reorder may have given its
+  old place to another activity, and it can be tapped again. Asking
+  again for one that is already back leaves it where it is, so a retry
+  is safe. No screen offers it yet; a 戻す control in 設定 comes next.
+
+### Fixed
+
+- Adding an activity from two devices at the same moment, or adding one
+  while another comes back from the archive, now puts each in its own
+  place in the grid. Before, both could reach for the same place and one
+  of them failed.
+- A reorder sent while another device archived or added an activity is
+  now refused instead of partly applied, and the grid keeps the order it
+  had. A reorder also takes the same short time however many activities
+  the grid holds.
+- Adding, reordering and bringing back activities now follow the same
+  per-account queue and time limit as taps, so a stuck connection no
+  longer leaves them waiting indefinitely. A burst of writes from one
+  account is refused as busy, as taps already were.
+
 ## [0.13.0.0] - 2026-09-25
 
 ### Changed

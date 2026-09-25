@@ -18,7 +18,7 @@
 
 **What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
 
-**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of timeline writes (`TIMELINE_WRITES_PER_USER`), and every refusal now carries a reason the app can read.
+**Why:** A refused tap only rolls back its optimistic state (`useSwitchTo`), so the clock jumps back without a word. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
 
 **Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
 
@@ -39,6 +39,18 @@
 **Depends on:** None
 
 ## Settings
+
+### Say why the 活動項目 editor refused an add, a reorder or an archive
+
+**What:** Give the create, reorder and archive mutations in `useActivityEditor` an error line (designed in the pen file first): the `busy` refusal in the same Japanese the correction sheet uses (`failureMessage`), archive's CONFLICT, and for `GATEWAY_TIMEOUT` a line saying the add may have been saved.
+
+**Why:** None of the three has an `onError`; `write.onSettled` only refetches the list, so a refused 「＋ 項目を追加」, ▲▼ or 🗑 just does nothing. Since `activities.create` and `reorder` run under `withUserLock` they can also answer `TOO_MANY_REQUESTS` (`busy`) and the deadline errors, as `archive` already could. A `GATEWAY_TIMEOUT` on an add may have saved the row; the refetch shows it, but a user who taps again before it lands adds a second one.
+
+**Context:** `apps/app/src/hooks/use-activity-editor.ts`, `failureMessage` in `apps/app/src/lib/correction.ts`, `REFUSAL` in `packages/shared`. Raised by the API-contract pass during the `activities.unarchive` ship.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Let the main device take the account's zone back
 
@@ -92,13 +104,13 @@
 
 ### Rebuild a merged-away record of an archived activity
 
-**What:** Give the user a way to bring back a record of an archived activity once 「元に戻す」 is gone. Either `changeActivity` accepts the user's archived activity on a past row (and 活動を変える offers it there), or an `activities.unarchive` route with a control in 設定 brings the activity back so the usual edits can rebuild the row.
+**What:** Add a control in 設定 that lists the archived activities and brings one back with 戻す through `activities.unarchive`, so the usual edits can rebuild a record of it once 「元に戻す」 is gone. The pen file first.
 
-**Why:** Since 0.2.1.0 (PR #49), 「元に戻す」 restores a day that holds such a record, and since the undo moved into the store it survives closing the sheet, but not a reload or sign-out. After that, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids, the 活動を変える picker lists live activities only (`useActivities`), and no route unarchives an activity.
+**Why:** 「元に戻す」 restores a day that holds a record of an archived activity, and it survives closing the sheet, but not a reload or sign-out. After that, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids and the 活動を変える picker lists live activities only (`useActivities`). The route exists since the PR that added it (2026-09-25), but no screen calls it. A pick on a carried-in record of an archived activity arms no undo at all (the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it), so that record is another one only this control could rebuild.
 
-**Context:** The undo slot lives in the Redux store per day (`correctionSlice`), so it outlives the sheet but not the page or the session. Accepting archived ids in `changeActivity` also needs a rule for which rows may take one: "not the latest row", checked under the user's timeline lock, as `replaceDay` and `mergeIntoPrevious` have done since 0.5.0.0 (`assertLiveActivities` on the row that becomes the latest switch, in `apps/api/src/rpc/switches.ts`); a later merge or undo that makes the edited row the latest is then refused by those checks. An `unarchive` must also move the row to the end of the live order in the same update, as `create` does. Archiving keeps the old `position`, `reorder` may since have handed it to a live activity, and `activities_user_position_idx` is unique among live rows, so clearing `archived_at` alone would fail. Test it by archiving, reordering, then unarchiving. Since the carried-in row's panel (2026-09-24), a pick on a carried-in record of an archived activity arms no undo at all: the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it, so that record is another one only this item could rebuild. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
+**Context:** `activities.unarchive` in `apps/api/src/rpc/activities.ts` puts the activity back at the end of the live order and answers an already-live one unchanged. `activities.list` already returns archived rows (`archivedAt` set), so the control needs no new read; the 活動項目 editor (`useActivityEditor`, `editorRows` in `apps/app/src/lib/settings.ts`) lists live ones only. The other remedy, `changeActivity` accepting archived ids on a past row, is no longer needed. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
 
-**Effort:** M
+**Effort:** S
 **Priority:** P3
 **Depends on:** None
 
@@ -252,13 +264,25 @@
 
 ### Bound the calls that still run without a deadline
 
-**What:** Put the remaining calls under the request's deadline, starting with the session lookup that every procedure runs (Better Auth's `getSession` through the Drizzle adapter), then the writes `activities.create`, `activities.reorder` (its permutation check also reads outside its transaction), `excludedDays.*` and `settings.update` without a zone change, and the reads `activities.list`, `settings.get` / `getSettings` and `switches.current`, so none of them waits on a half-open connection for longer than `REQUEST_DEADLINE_MS`.
+**What:** Put the remaining calls under the request's deadline, starting with the session lookup that every procedure runs (Better Auth's `getSession` through the Drizzle adapter), then the writes `excludedDays.*` and `settings.update` without a zone change, and the reads `activities.list`, `settings.get` / `getSettings` and `switches.current`, so none of them waits on a half-open connection for longer than `REQUEST_DEADLINE_MS`.
 
-**Why:** Since the PR that bounded timeline writes, every timeline write, `activities.update` and the multi-query reads run in `inTransaction`, which destroys its connection at the deadline. The other calls still go through `db` on the pool: after a managed-database failover, a lent connection whose socket went half-open keeps such a call waiting until the OS gives up on it, minutes later. Nothing is written twice, but the request hangs past the app's 30 s, and the session lookup runs before every write, so a write can wait there before its deadline starts to matter.
+**Why:** Since the PR that bounded timeline writes, every timeline write, `activities.update` and the multi-query reads run in `inTransaction` (and `activities.create`, `reorder` and `unarchive` since the PR that added `unarchive`, 2026-09-25), which destroys its connection at the deadline. The other calls still go through `db` on the pool: after a managed-database failover, a lent connection whose socket went half-open keeps such a call waiting until the OS gives up on it, minutes later. Nothing is written twice, but the request hangs past the app's 30 s, and the session lookup runs before every write, so a write can wait there before its deadline starts to matter.
 
 **Context:** `inTransaction` in `apps/api/src/db/client.ts` owns its client and releases it with an error at the deadline; pg's `query_timeout` is not a way out (in non-pipeline mode it leaves the active query on the client, and the pool lends that client again). Better Auth takes the `db` instance in `apps/api/src/auth.ts`, so the session lookup needs either a per-request adapter or a `Promise.race` that evicts the client some other way. Left out of that PR. Reads also have no per-account cap like `TIMELINE_WRITES_PER_USER`: one account sending many `stats.month` calls at once can hold every pool connection (pg's default of 10) for up to the deadline, so a small in-flight cap on reads belongs with this work. A timeline write that waits out `lock_timeout` (55P03, another instance holds the lock past 10 s) or `statement_timeout` (57014) still answers a plain 500 although nothing was saved; answer it as TIMEOUT, like a write cut off at its deadline. Since the correction status PR (2026-09-25) the app reads a plain 500 as a write that may have landed: it asks the user to check the list and drops the day's older 元に戻す, which a TIMEOUT would keep.
 
 **Effort:** M
+**Priority:** P4
+**Depends on:** None
+
+### Cap how many live activities an account can have
+
+**What:** Refuse `activities.create` and `activities.unarchive` once the account has as many live activities as `reorderInputSchema` accepts (100), with a `$count` under `withUserLock` and a `REFUSAL` reason the editor can say, and share the number between the two.
+
+**Why:** `reorder` must name the whole live set and accepts 1 to 100 ids, but nothing stops the live set growing past that: an account with 101 live activities can never reorder again, and with the editor's silent refusals (the 活動項目 item under Settings) the ▲▼ buttons just stop working. A client adding in a loop is throttled only by the per-process in-flight cap.
+
+**Context:** `apps/api/src/rpc/activities.ts`, `reorderInputSchema` in `packages/shared/src/schemas.ts`. Raised by the red-team pass during the `activities.unarchive` ship; the gap predates it.
+
+**Effort:** S
 **Priority:** P4
 **Depends on:** None
 
