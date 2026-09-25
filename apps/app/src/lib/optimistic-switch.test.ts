@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { expect, test } from 'vitest'
+import { expect, onTestFinished, test, vi } from 'vitest'
 
 import {
   confirmTap,
@@ -354,6 +354,33 @@ test('after another tab signs in as someone else, the old account’s taps still
   expect(client.getQueryData(CURRENT)).toEqual(
     serverRow('row-y-sleep', 'sleep'),
   )
+})
+
+test('an old account’s tap dropped from the queue is let go instead of re-arming a clean-up timer every five minutes for good', async () => {
+  // Arrange: account X taps 休息, then 仕事 while 休息 is still unanswered; another tab signs in as Y, and 休息 is answered
+  vi.useFakeTimers()
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
+  // Node counts as a server, where TanStack keeps every mutation for good; a browser clears them after five minutes
+  const client = new QueryClient({
+    defaultOptions: { mutations: { gcTime: 5 * 60 * 1000 } },
+  })
+  client.setQueryData(CURRENT, serverRow('row-x-chores', 'chores'))
+  const running = tap(client, 'rest')
+  await vi.advanceTimersByTimeAsync(0)
+  tap(client, 'work')
+  await vi.advanceTimersByTimeAsync(0)
+  await client.resetQueries()
+  startTapSession(client)
+  running.answer.resolve(serverRow('row-x-rest', 'rest'))
+  await running.settled
+
+  // Act: three of TanStack's five-minute clean-up rounds go by
+  await vi.advanceTimersByTimeAsync(15 * 60 * 1000)
+
+  // Assert: no timer is left holding the dropped 仕事
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 test('after another tab signs in as someone else, the old account’s tap answered before the new account taps still refetches', async () => {

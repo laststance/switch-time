@@ -32,7 +32,7 @@ export function FirstLaunch() {
   const ink = useTokenColor('ink')
   const queryClient = useQueryClient()
   const pick = (activityId: string | null): void => {
-    // Two keys inside one frame: the second finds the first one's row in the cache before Home takes over, and a re-tap of it
+    // Two keys or clicks inside one frame: the second finds the first one's row in the cache before Home takes over, and a re-tap of it
     // (a fresh run has nothing to renew) sends nothing.
     const placed = queryClient.getQueryData<CurrentSwitch | null>(
       orpc.switches.current.queryKey(),
@@ -98,15 +98,12 @@ export function FirstLaunch() {
             iconKey={activity.iconKey}
             tint={activity.color}
             active={false}
-            onPress={() => switchTo.mutate({ activityId: activity.id })}
+            onPress={() => pick(activity.id)}
           />
         ))}
         {/* Inside the wrapping row, as the pen's 初回起動 board draws it: it keeps the buttons' 10px gap (Home leaves 16px), and
             full width gives it a line of its own under them. A new account can start on detox without recording an activity first. */}
-        <DetoxRow
-          active={false}
-          onPress={() => switchTo.mutate({ activityId: null })}
-        />
+        <DetoxRow active={false} onPress={() => pick(null)} />
       </View>
       <Link href="/settings">
         <Text className="text-sub py-3 text-xs font-medium underline">

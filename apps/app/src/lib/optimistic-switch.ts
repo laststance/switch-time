@@ -115,8 +115,8 @@ export function rollBackTap(
 /**
  * Starts a new session of taps when the cache is cleared or reset for another account (sign-in, sign-out, {@link useAccountScope}).
  * A tap of the old session that is answered late then confirms into its own session's state, never into the one the new account's
- * refused taps fall back to, and leaves the refetch to the new session ({@link isLastTap}). The old account's taps still queued
- * behind a running one are dropped: they have not been sent, and would go out with the new account's session cookie.
+ * refused taps fall back to, and leaves the refetch to the new session ({@link isLastTap}). The old account's taps not sent yet
+ * (queued behind a running one, or paused while offline) are dropped: they would go out with the new account's session cookie.
  * @param client - The app's query client, right after `clear()` (which has already dropped every tap) or `resetQueries()`.
  * @example queryClient.clear(); startTapSession(queryClient)
  */
@@ -127,8 +127,13 @@ export function startTapSession(client: QueryClient): void {
   for (const queued of mutations.findAll({
     predicate: (mutation) =>
       mutation.options.scope?.id === SWITCH_TO_SCOPE && mutation.state.isPaused,
-  }))
+  })) {
     mutations.remove(queued)
+    // It stays pending for good, and a pending mutation re-arms its GC timer each time it fires: with no timer left, nothing
+    // keeps it (and the old session it holds) alive.
+    queued.gcTime = Infinity
+    queued.destroy()
+  }
 }
 
 /**

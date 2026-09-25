@@ -50,6 +50,30 @@
 **Priority:** P4
 **Depends on:** None
 
+### Record a queued tap at the time it was pressed
+
+**What:** Decide how a tap that waits in the queue keeps its own time: send the press time with `switches.switchTo` and have the API accept it within a bound of its own clock, or stop the scope from holding the next tap while the last one's refetch runs.
+
+**Why:** The server stamps a tap when it arrives. The last tap of a burst holds the scope until its `switches.current` and `listByDay` refetches land (up to about 61 s when `listByDay` is slow: a 30 s deadline, a retry, another 30 s), and a hidden web tab holds a queued tap until it is focused again. A tap pressed meanwhile is recorded late, and the time in between goes to the activity before it, with nothing on screen to say so.
+
+**Context:** `useSwitchTo`'s `onSettled` in `apps/app/src/hooks/use-switch-to.ts`, `const now = Date.now()` in `switchTo` (`apps/api/src/rpc/switches.ts`), `REQUEST_TIMEOUT_MS`. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** None
+
+### Keep a tap from before a sign-out in line with the taps after signing back in
+
+**What:** Keep the tap still running at sign-out or sign-in ahead of the next account's first tap, for example by having `startTapSession` wait for it, or by not letting `queryClient.clear()` drop the switch-to scope's queue.
+
+**Why:** `MutationCache.clear()` also clears the scopes, so a tap still on its way and the first tap after signing back in run side by side. Signing out and straight back in as the same account, the old tap can be stored after the new one (both wait on the account's lock, up to 30 s); the old tap's settle does not refetch, and the new one's refetch can come back before the old tap is stored, so the screen shows the new pick while the server runs the old one.
+
+**Context:** `useSignOut` (`apps/app/src/hooks/use-sign-out.ts`) and the sign-in screen (`apps/app/src/app/(auth)/sign-in.tsx`) call `clear()` then `startTapSession` (`apps/app/src/lib/optimistic-switch.ts`); `isLastTap` leaves the refetch to the new session. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ### Keep a detox span's outline whole when it is narrower than the bar's rounded end
 
 **What:** Draw a detox span that touches an end of the 24-h bar (or the correction sheet's day bar) but is narrower than that end's corner radius so its outline stays closed, for example by capping the lent radius at half the span's width or giving such a span a minimum width.
@@ -291,6 +315,18 @@
 **Why:** A History day cell reads `・<name> <time>` per activity, then `・detox <time>`, with `・平均から除外` on an excluded day. An activity named `detox` makes a worked day read two detox parts, one named `detox の日` makes an hour of it read exactly like a detox day (`9月9日（水）・detox の日 1h 00m`), one named `平均から除外` makes a measured day sound excluded, and a `・` inside a name breaks the separators. The bars tell them apart by colour; the label cannot.
 
 **Context:** `activityNameSchema` is `z.string().trim().min(1).max(20)`; `cellLabel` in `apps/app/src/lib/history.ts`. Raised by the Red Team of the ship review of the PR that made History's day cells read their times (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
+### Refetch the stats after a tap made during their first load
+
+**What:** When a mutation invalidates a stats query that has no data yet and is loading, cancel that load and fetch again, instead of letting the invalidation join it.
+
+**Why:** TanStack Query cancels a running fetch on invalidation only when the query already has data; a first load is reused. A tap (or a correction) stored while 記録's stats are loading for the first time is answered by that older read, and the stats leave out the tap until the next refetch, while Home already shows it.
+
+**Context:** `invalidateKeys` (`apps/app/src/lib/query.ts`), called from `useSwitchTo`'s `onSettled` and the other mutation hooks; `Query.fetch` in `@tanstack/query-core`. Found by the Codex red-team pass of the ship review of 0.22.0.0 (2026-09-25).
 
 **Effort:** S
 **Priority:** P4

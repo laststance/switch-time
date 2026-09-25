@@ -358,6 +358,61 @@ test('the same digit pressed twice inside one frame on the first-launch screen s
   )
 })
 
+test('a button pressed twice inside one frame on the first-launch screen sends one first tap', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+
+  // Act: two clicks on the first-launch 仕事, in two tasks that both run before Home takes over
+  let isAnswered = false
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  void tapAnswer.then(() => {
+    isAnswered = true
+  })
+  // The tap's own refetch, not Home's first read of the day
+  const dayRefetch = page.waitForResponse(
+    (response) =>
+      isAnswered && response.url().includes('/api/rpc/switches/listByDay'),
+  )
+  await page.getByRole('button', { name: '仕事' }).evaluate(async (button) => {
+    if (!(button instanceof HTMLElement)) return
+    button.click()
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        button.click()
+        resolve()
+      }, 0)
+    })
+  })
+  expect((await tapAnswer).ok()).toBe(true)
+  expect((await dayRefetch).ok()).toBe(true)
+  // One more task (the scope hands over a queued tap only after onSettled returns), then a request of our own: the browser
+  // reports requests in order, so a second tap sent before it has been counted by the time it answers
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+    await fetch(window.location.href)
+  })
+
+  // Assert: 仕事 runs, sent once
+  expect(tapRequests).toBe(1)
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {
