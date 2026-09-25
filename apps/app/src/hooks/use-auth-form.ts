@@ -4,23 +4,23 @@ import type { Href } from 'expo-router'
 import { useState } from 'react'
 import type { ZodType } from 'zod'
 
-import { queryClient } from '@/lib/query'
-import { resetApp, useAppDispatch } from '@/store'
-
 type AuthResult = { error: { message?: string } | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, the request as a mutation (the button waits on
- * `isPending`, Better Auth's message is its error). Success only clears the cache and the store: the (auth) layout redirects once the
- * session has landed, so the (app) guard never sees the gap in between.
- * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v))
+ * `isPending`, Better Auth's message is its error). Success runs `onDone` from the mutation's own options, so it also runs when the
+ * form has gone by the time the answer lands: sign-in's session lands anyway, and its reset must not be skipped. Sign-up passes
+ * `register`, which moves on only while sign-up is still in front.
+ * @param onDone - Runs after a successful submit with the submitted values, even if the form has unmounted since.
+ * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v), resetForNewSession)
+ * @example useAuthForm(signUpSchema, blank, (v) => authClient.signUp.email(v), (v) => register(v.email))
  */
 export function useAuthForm<T extends Record<string, string>>(
   schema: ZodType<T>,
   initial: T,
   submit: (values: T) => Promise<AuthResult>,
+  onDone?: (values: T) => void,
 ) {
-  const dispatch = useAppDispatch()
   const [values, setValues] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const request = useMutation({
@@ -31,13 +31,7 @@ export function useAuthForm<T extends Record<string, string>>(
       }))
       if (error) throw new Error(error.message ?? 'もう一度お試しください')
     },
-    // A new session must not inherit the previous account's cache (shared device; gcTime keeps it for minutes), nor its undo slots:
-    // a session that expired or was revoked elsewhere reaches sign-in without sign-out's reset. The reset also draws a new epoch,
-    // so an edit of the old session that lands late is ignored.
-    onSuccess: () => {
-      queryClient.clear()
-      dispatch(resetApp())
-    },
+    onSuccess: (_result, sent) => onDone?.(sent),
   })
 
   const set =
@@ -58,6 +52,8 @@ export function useAuthForm<T extends Record<string, string>>(
     fieldErrors,
     serverError: request.error?.message ?? null,
     pending: request.isPending,
+    // The request went through; sign-in keeps its button off from here until the session lands ({@link signInBusy}).
+    succeeded: request.isSuccess,
     onSubmit,
   }
 }

@@ -2083,7 +2083,7 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
   await page.getByRole('button', { name: 'サインアウト' }).click()
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
 
-  // Act: A's answer lands; B signs up in the same page (no reload, so the store survives) and opens the same date.
+  // Act: A's answer lands; B signs up and signs in in the same page (no reload, so the store survives) and opens the same date.
   const delivered = page.waitForResponse(
     '**/api/rpc/switches/mergeIntoPrevious',
   )
@@ -2101,6 +2101,12 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
     .filter({ visible: true })
     .fill('correct-horse-battery')
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  // Sign-up opens no session: sign in on the screen it leads to, where the address is already filled in.
+  await expect(page.getByRole('status')).toHaveText(
+    '登録しました。サインインしてください',
+  )
+  await page.getByLabel('パスワード').fill('correct-horse-battery')
+  await page.getByRole('button', { name: 'サインイン' }).click()
   await page.getByRole('button', { name: '家事' }).click()
   await expect(
     page.getByRole('heading', { name: 'いま', exact: true }),
@@ -2138,7 +2144,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeEnabled()
   await page.getByRole('button', { name: '完了' }).click()
 
-  // Act: a second tab signs A out and signs up as B, who records 食事 on the same date; the first tab follows the session.
+  // Act: a second tab signs A out and signs up and in as B, who records 食事 on the same date; the first tab follows the session.
   const other = await context.newPage()
   await other.goto('/')
   await other.getByRole('tab', { name: '設定' }).click()
@@ -2153,7 +2159,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
     expected: [],
     rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 9) }],
   })
-  // Coming back to the first tab refetches its session (a sign-up does not broadcast to other tabs, a sign-out does).
+  // Coming back to the first tab refetches its session (a sign-in does not broadcast to other tabs, a sign-out does).
   await page.bringToFront()
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),

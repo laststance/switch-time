@@ -8,10 +8,12 @@ import { useDispatch, useSelector } from 'react-redux'
 
 import { clockSlice } from './clock'
 import { correctionSlice } from './correction'
+import { registrationSlice } from './registration'
 
 const appReducer = combineReducers({
   clock: clockSlice.reducer,
   correction: correctionSlice.reducer,
+  registration: registrationSlice.reducer,
 })
 
 /**
@@ -21,7 +23,7 @@ const appReducer = combineReducers({
 export const resetApp = createAction('app/reset')
 
 /**
- * Client-only state (the clock, the correction sheet's 「元に戻す」). Server data, the user's settings included, lives in
+ * Client-only state (the clock, the correction sheet's 「元に戻す」, the address sign-up hands to sign-in). Server data, the user's settings included, lives in
  * TanStack Query via {@link orpc}, never here.
  * @example <ReduxProvider store={store}>
  */
