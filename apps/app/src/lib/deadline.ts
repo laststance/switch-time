@@ -1,6 +1,7 @@
 /**
  * How long one API call may take, its answer's body included, before the app gives up on it. It sits above the API's own
- * 25 s deadline (`REQUEST_DEADLINE_MS`), so a call reaches it only when the answer itself is lost or hangs in transit.
+ * 25 s deadline on its transactional calls (`REQUEST_DEADLINE_MS`), so such a call reaches it only when the answer is lost
+ * in transit; a call the API does not bound yet (TODOS.md) can also reach it on a stuck database connection.
  */
 export const REQUEST_TIMEOUT_MS = 30_000
 

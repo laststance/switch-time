@@ -43,6 +43,40 @@ const logConnectionError = (error: Error): void => {
 pool.on('connect', (client) => client.on('error', logConnectionError))
 pool.on('error', logConnectionError)
 
+/** How long ending an abandoned session may take; `pg_terminate_backend` answers at once from a server that is reachable. */
+const SESSION_END_TIMEOUT_MS = 2_000
+
+/**
+ * Ends the server session a cut-off transaction left behind, so the transaction and the user's lock go at once. Bounded
+ * itself: when the server does not answer, the connection it used is destroyed too rather than held, so a database that
+ * stopped answering cannot fill the pool with these. Called by {@link inTransaction} at a deadline, never awaited.
+ * @param backendPid - The abandoned session's pid.
+ * @param lentAt - When the pool lent that session's connection. Only a session that started before it is ended: a later
+ *   one holding the same pid (the OS reused it, or a failover moved the pool to another server) is someone else's.
+ * @example void endSession(4242, lentAt).catch(logConnectionError)
+ */
+async function endSession(backendPid: number, lentAt: Date): Promise<void> {
+  const client = await pool.connect()
+  let released = false
+  const giveBack = (error?: Error): void => {
+    if (released) return
+    released = true
+    client.release(error)
+  }
+  const timer = setTimeout(() => {
+    giveBack(new Error('ending the abandoned session timed out'))
+  }, SESSION_END_TIMEOUT_MS)
+  try {
+    await client.query(
+      'select pg_terminate_backend(pid) from pg_stat_activity where pid = $1 and backend_start <= $2',
+      [backendPid, lentAt],
+    )
+  } finally {
+    clearTimeout(timer)
+    giveBack()
+  }
+}
+
 export const db = drizzle({ client: pool, relations })
 
 /**
@@ -112,6 +146,7 @@ export async function inTransaction<T>(
   )
   const run = async () => {
     const client = await pool.connect()
+    const lentAt = new Date()
     let released = false
     // Exactly once, whichever of the deadline and the settled transaction comes first.
     release = (error): void => {
@@ -131,17 +166,18 @@ export async function inTransaction<T>(
       // The server only notices a closed socket when it next reads or writes on it: a statement still running there would
       // keep the user's lock until its statement_timeout, past the next write's lock_timeout. End that session now.
       if (backendPid !== undefined)
-        void pool
-          .query('select pg_terminate_backend($1)', [backendPid])
-          .catch(logConnectionError)
+        void endSession(backendPid, lentAt).catch(logConnectionError)
     }
-    if (expired) {
+    // The clock, not only the timer: a stalled event loop can run this before a timer that is already due.
+    if (expired || Date.now() >= deadline) {
       release()
       throw new DeadlineError(false)
     }
     try {
       return await drizzle({ client, relations }).transaction(async (tx) => {
         const result = await work(tx)
+        // Past the deadline, roll back instead of sending a COMMIT the app may no longer wait for.
+        if (Date.now() >= deadline) throw new DeadlineError(false)
         // Only COMMIT is left from here: a cut-off now cannot tell whether it landed.
         committing = true
         return result

@@ -9,6 +9,7 @@ import {
   type DayRow,
 } from '@switch-time/shared'
 import { eq, sql } from 'drizzle-orm'
+import type { PoolClient } from 'pg'
 import { expect, onTestFinished, test, vi } from 'vitest'
 
 import { REQUEST_DEADLINE_MS, db, pool, type LockedTx } from '../db/client'
@@ -1405,6 +1406,32 @@ test('a write cut off in the middle of a long statement lets go of the account�
   await expect(tap).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
 })
 
+test('a write whose work ends after its deadline, the event loop too busy to fire the timer, is rolled back instead of committed', async () => {
+  // Arrange
+  const api = await signedIn('deadline-stalled@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+
+  // Act: the work inserts a switch, then blocks the event loop past the deadline, so the timer cannot fire first
+  const stalled = boundedTransaction(Date.now() + 300, async (tx) => {
+    await tx.insert(switches).values({
+      userId,
+      activityId: idOf(list, '仕事'),
+      startedAt: new Date(),
+    })
+    const blockedUntil = Date.now() + 500
+    while (Date.now() < blockedUntil) {
+      // Busy-wait: a stall the timer cannot interrupt
+    }
+  })
+
+  // Assert: refused as not saved, and the switch is not there
+  await expect(stalled).rejects.toMatchObject({ code: 'TIMEOUT' })
+  expect(
+    await db.select().from(switches).where(eq(switches.userId, userId)),
+  ).toEqual([])
+})
+
 test('a call whose deadline passed before it reached the database takes no connection and never runs', async () => {
   // Arrange
   let workRan = false
@@ -1445,15 +1472,31 @@ test('a write cut off while its COMMIT is on the way answers that it may or may 
   await expect(committing).rejects.toMatchObject({ code: 'GATEWAY_TIMEOUT' })
 })
 
+/**
+ * Waits until no connection is lent and nobody waits for one, so the next `acquire` is the call under test and not the
+ * session end an earlier test's cut-off fired and did not await.
+ */
+async function waitForIdlePool(): Promise<void> {
+  await expect
+    .poll(() => pool.waitingCount === 0 && pool.idleCount === pool.totalCount, {
+      timeout: 3_000,
+    })
+    .toBe(true)
+}
+
 test('a read-only transaction cut off while committing answers that nothing was saved, since a read saves nothing', async () => {
   // Arrange: the next connection lent holds its COMMIT back for 5 s (a read-only transaction cannot create a slow trigger)
+  await waitForIdlePool()
   pool.once('acquire', (client) => {
     const query = client.query.bind(client)
-    vi.spyOn(client, 'query').mockImplementation(async (...args: unknown[]) => {
-      if (JSON.stringify(args).toLowerCase().includes('commit'))
-        await delay(5_000)
-      return Reflect.apply(query, client, args)
-    })
+    const slowCommit = vi
+      .spyOn(client, 'query')
+      .mockImplementation(async (...args: unknown[]) => {
+        if (JSON.stringify(args).toLowerCase().includes('commit'))
+          await delay(5_000)
+        return Reflect.apply(query, client, args)
+      })
+    onTestFinished(() => slowCommit.mockRestore())
   })
 
   // Act
@@ -1469,8 +1512,12 @@ test('a read-only transaction cut off while committing answers that nothing was 
 
 test('a transaction whose BEGIN fails passes that error on and gives its connection back to the pool', async () => {
   // Arrange: the next connection lent fails its first statement, BEGIN
+  await waitForIdlePool()
   pool.once('acquire', (client) => {
-    vi.spyOn(client, 'query').mockRejectedValueOnce(new Error('BEGIN failed'))
+    const failingBegin = vi
+      .spyOn(client, 'query')
+      .mockRejectedValueOnce(new Error('BEGIN failed'))
+    onTestFinished(() => failingBegin.mockRestore())
   })
   let workRan = false
 
@@ -1489,6 +1536,47 @@ test('a transaction whose BEGIN fails passes that error on and gives its connect
   expect(workRan).toBe(false)
   await expect.poll(() => pool.idleCount).toBe(pool.totalCount)
 })
+
+test('ending a cut-off write’s session gives up when the server does not answer, so it cannot keep a pool connection', async () => {
+  // Arrange: a write stuck in a long statement, and a server that will not answer the next connection lent
+  const api = await signedIn('session-end-unanswered@example.com')
+  const { id: userId } = await api.me()
+  const stuck = withUserLock(userId, Date.now() + 2_000, async (tx) => {
+    await tx.execute(sql`select pg_sleep(30)`)
+  })
+  const cutOff = expect(stuck).rejects.toMatchObject({ code: 'TIMEOUT' })
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            `select 1 from pg_stat_activity
+             where state = 'active' and query like 'select pg_sleep(30)%' and pid <> pg_backend_pid()`,
+          )
+        ).rowCount,
+      { timeout: 1_500 },
+    )
+    .toBe(1)
+  // From here the next connection lent is the session end's: nothing else takes one before the deadline
+  const answerNothing = (client: PoolClient): void => {
+    const unanswered = vi
+      .spyOn(client, 'query')
+      .mockImplementation(async () => new Promise<never>(() => {}))
+    onTestFinished(() => unanswered.mockRestore())
+  }
+  pool.once('acquire', answerNothing)
+  onTestFinished(() => {
+    pool.off('acquire', answerNothing)
+  })
+
+  // Act: the deadline cuts the write off, and the session end it fires gets no answer
+  await cutOff
+
+  // Assert: the connection the session end took is given up after its 2 s, not held
+  await expect
+    .poll(() => pool.totalCount - pool.idleCount, { timeout: 4_000 })
+    .toBe(0)
+}, 10_000)
 
 test('a write whose deadline passes while every pool connection is lent out never runs, and gives the late connection back', async () => {
   // Arrange: every connection of the pool is lent out
