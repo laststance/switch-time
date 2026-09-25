@@ -26,6 +26,30 @@
 **Priority:** P3
 **Depends on:** None
 
+### Bind every switch tap to the account it was made for
+
+**What:** Send the account a tap was made for with `switches.switchTo` (as `settings.update` takes `forUserId`), and have the API refuse it with `CONFLICT` when the session's user is someone else.
+
+**Why:** When another tab signs in as someone else, `useAccountScope` drops this tab's taps still queued behind a running one (`startTapSession`), but only once this tab's session refetch sees the new user. A web tab that is hidden while its running tap settles keeps the next tap paused (TanStack continues a mutation only while the page is focused), and on refocus `resumePausedMutations` sends it before the session read that the same focus starts. So the old account's queued tap goes out with the new cookie; a detox tap (`activityId: null`) is then recorded on the new account, since only an activity id is checked against the account.
+
+**Context:** `startTapSession` in `apps/app/src/lib/optimistic-switch.ts`, `useSwitchTo` (`apps/app/src/hooks/use-switch-to.ts`), `switchTo` in `apps/api/src/rpc/switches.ts`; `settings.update` already does this check (`apps/api/src/rpc/settings.ts`, see "Bind every settings write to the account it was made for"). Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
+### Keep an older read from replacing a newer confirmed tap
+
+**What:** Let a tap record the cached `switches.current` as the state to fall back to only when that read is no older than the answer the session already confirmed, for example by comparing the rows' `createdAt` or the time the read started with the time of the last `confirmTap`.
+
+**Why:** `placeTap` records any cached row that is not a placeholder. A `switches.current` read started by something else (the correction sheet's refetch, a window focus) before tap A is stored can land after A's `confirmTap`; the next tap then records the state from before A. If every later tap of the burst is refused, the fallback shows that older state while A runs on the server, until the last tap's refetch lands (for good if that refetch fails).
+
+**Context:** `placeTap` and `confirmTap` in `apps/app/src/lib/optimistic-switch.ts`; `useSwitchTo`'s `onMutate` cancels only the reads already running. Found by the red-team pass of the ship review of 0.22.0.0 (2026-09-25).
+
+**Effort:** S
+**Priority:** P4
+**Depends on:** None
+
 ### Keep a detox span's outline whole when it is narrower than the bar's rounded end
 
 **What:** Draw a detox span that touches an end of the 24-h bar (or the correction sheet's day bar) but is narrower than that end's corner radius so its outline stays closed, for example by capping the lent radius at half the span's width or giving such a span a minimum width.

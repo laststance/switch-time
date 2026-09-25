@@ -1,4 +1,5 @@
 import { DEFAULT_ACTIVITIES } from '@switch-time/shared'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'expo-router'
 import { Text, View } from 'react-native'
 import Svg, { Circle, Line } from 'react-native-svg'
@@ -9,6 +10,8 @@ import { useActivities } from '@/hooks/use-activities'
 import { useSwitchHotkeys } from '@/hooks/use-switch-hotkeys'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useTokenColor } from '@/hooks/use-token-color'
+import { sendsPick } from '@/lib/home'
+import { type CurrentSwitch, orpc } from '@/lib/orpc'
 
 // The logo's four arcs are the first four default activities, in their palette colours.
 const ARCS = [
@@ -27,8 +30,17 @@ export function FirstLaunch() {
   const activities = useActivities().data ?? []
   const switchTo = useSwitchTo()
   const ink = useTokenColor('ink')
-  // Nothing runs yet, so every pick is a change of state (and `0` has no run to renew): send them all.
-  useSwitchHotkeys(activities, (activityId) => switchTo.mutate({ activityId }))
+  const queryClient = useQueryClient()
+  const pick = (activityId: string | null): void => {
+    // Two keys inside one frame: the second finds the first one's row in the cache before Home takes over, and a re-tap of it
+    // (a fresh run has nothing to renew) sends nothing.
+    const placed = queryClient.getQueryData<CurrentSwitch | null>(
+      orpc.switches.current.queryKey(),
+    )
+    if (!placed || sendsPick({ activityId, current: placed, renewable: false }))
+      switchTo.mutate({ activityId })
+  }
+  useSwitchHotkeys(activities, pick)
   return (
     <View className="items-center gap-3.5 pt-8">
       <View className="bg-face text-ink h-22 w-22 items-center justify-center rounded-[26px]">

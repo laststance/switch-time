@@ -233,7 +233,8 @@ export function detoxNotice(
 /**
  * Whether a press on a switch reaches the API. Pressing the active state again changes nothing (the server keeps that state,
  * or refuses it when its activity is archived), so Home skips the call and the refetches after it ({@link useSwitchTo}); the one exception
- * is detox past its run's week, where the press starts a new run. Home's buttons, detox row and hotkeys all go through it.
+ * is detox past its run's week, where the press starts a new run. Home's buttons, detox row and hotkeys all go through it, and so
+ * do the first-launch screen's hotkeys once a first press has placed its row ({@link FirstLaunch}).
  * @param input.activityId - The pressed state; null is detox.
  * @param input.renewable - {@link detoxRenewable} for the current state.
  * @returns

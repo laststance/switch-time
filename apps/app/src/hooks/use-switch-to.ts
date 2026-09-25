@@ -12,8 +12,8 @@ import { invalidateKeys } from '@/lib/query'
 
 /**
  * `switches.switchTo` with the optimistic write the issue asks for: `switches.current` flips the moment the button is pressed,
- * a refused tap falls back to the last state the server confirmed, and the day list plus every stats query (and the settings, when
- * that tap is detox) refetch once the last queued tap has been answered. Taps from this device reach the server one at a time, in
+ * a refused tap falls back to the last state the server confirmed, and the current switch, the day list and every stats query (and
+ * the settings, when that tap is detox and no settings write is in flight) refetch once the last queued tap has been answered. Taps from this device reach the server one at a time, in
  * the order they were made.
  * @example const switchTo = useSwitchTo(); switchTo.mutate({ activityId })
  */

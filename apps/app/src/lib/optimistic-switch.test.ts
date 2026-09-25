@@ -159,6 +159,27 @@ test('a tap refused after an earlier queued tap was accepted falls back to the a
   expect(client.getQueryData(CURRENT)).toEqual(serverRow('row-work', 'work'))
 })
 
+test('a tap placed over a refetch that landed mid-burst falls back to the earlier queued tap once that one is accepted', async () => {
+  // Arrange: 家事 runs; 仕事 is tapped, a refetch (window focus) brings 家事 back before 仕事 is stored, then 休息 is tapped
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-chores', 'chores'))
+  const work = tap(client, 'work')
+  await flush()
+  client.setQueryData(CURRENT, serverRow('row-chores', 'chores'))
+  const rest = tap(client, 'rest')
+  await flush()
+
+  // Act: the server takes 仕事, then refuses 休息
+  work.answer.resolve(serverRow('row-work', 'work'))
+  await work.settled
+  await flush()
+  rest.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await rest.settled
+
+  // Assert: 仕事, the newer answer, not the 家事 the refetch read before it
+  expect(client.getQueryData(CURRENT)).toEqual(serverRow('row-work', 'work'))
+})
+
 test('a new burst that starts on an accepted tap’s placeholder falls back to that accepted switch', async () => {
   // Arrange: 仕事 was accepted, and its refetch has not landed, so its placeholder is still shown
   const client = new QueryClient()

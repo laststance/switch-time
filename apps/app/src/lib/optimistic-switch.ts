@@ -57,7 +57,8 @@ export function placeTap(
 ): TapContext {
   const previous = client.getQueryData<CurrentShown>(queryKey)
   const confirmed = confirmedStateOf(client)
-  // A server row, not a placeholder: a later confirmTap of a tap still queued overwrites it, so a newer answer still wins.
+  // A server row, not a placeholder: a later confirmTap of a tap still queued overwrites it. An outside read that started before
+  // an earlier tap was stored and lands after its confirmTap is older than that answer, yet recorded all the same (TODOS.md).
   if (previous?.id !== OPTIMISTIC_ID) confirmed.value = previous
   // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call restarts
   // the counter right now. (A tab that missed another device turning the unused-day rule off still sends the re-tap; the server

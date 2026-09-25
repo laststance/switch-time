@@ -302,6 +302,62 @@ test('a digit on the first-launch screen starts the clock on the button at that 
   await expect(page.getByText(/^\d+:\d{2} から · 今日 0 回切替$/)).toBeVisible()
 })
 
+test('the same digit pressed twice inside one frame on the first-launch screen sends one first tap', async ({
+  page,
+}) => {
+  // Arrange
+  await createAccount(page)
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+
+  // Act: two keydown tasks that both run before Home takes over from the first-launch screen
+  let isAnswered = false
+  const tapAnswer = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  void tapAnswer.then(() => {
+    isAnswered = true
+  })
+  // The tap's own refetch, not Home's first read of the day
+  const dayRefetch = page.waitForResponse(
+    (response) =>
+      isAnswered && response.url().includes('/api/rpc/switches/listByDay'),
+  )
+  await page.evaluate(async () => {
+    const press = (key: string): boolean =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+    press('2')
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        press('2')
+        resolve()
+      }, 0)
+    })
+  })
+  expect((await tapAnswer).ok()).toBe(true)
+  expect((await dayRefetch).ok()).toBe(true)
+  // One more task (the scope hands over a queued tap only after onSettled returns), then a request of our own: the browser
+  // reports requests in order, so a second tap sent before it has been counted by the time it answers
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+    await fetch(window.location.href)
+  })
+
+  // Assert: 仕事 runs, sent once
+  expect(tapRequests).toBe(1)
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+})
+
 test('tapping 仕事 lights only 仕事, restarts the elapsed counter and fills the bar in its colour', async ({
   page,
 }) => {
@@ -820,9 +876,12 @@ test('0 pressed twice inside one frame past a detox’s week starts one new run,
   const renewal = page.waitForResponse((response) =>
     response.url().includes('/api/rpc/switches/switchTo'),
   )
-  // A second tap would wait in the scope for this refetch, then go out
+  // A second tap would wait in the scope for these refetches, then go out
   const refetch = page.waitForResponse((response) =>
     response.url().includes('/api/rpc/switches/current'),
+  )
+  const dayRefetch = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/listByDay'),
   )
   await page.evaluate(async () => {
     const press = (key: string): boolean =>
@@ -837,7 +896,15 @@ test('0 pressed twice inside one frame past a detox’s week starts one new run,
   })
   expect((await renewal).ok()).toBe(true)
   expect((await refetch).ok()).toBe(true)
-  await page.waitForLoadState('networkidle')
+  expect((await dayRefetch).ok()).toBe(true)
+  // One more task (the scope hands over a queued tap only after onSettled returns), then a request of our own: the browser
+  // reports requests in order, so a second tap sent before it has been counted by the time it answers
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+    await fetch(window.location.href)
+  })
 
   // Assert: the second 0 saw the first one's new run and sent nothing
   expect(tapRequests).toBe(1)
