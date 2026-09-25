@@ -53,8 +53,9 @@ type NowPanelProps = {
 
 /**
  * The hero of Home: the dial, the current state in its own colour (detox in none), the elapsed time ticking from the clock slice,
- * and, on a day a detox no longer measures, the notice saying so.
- * @example <NowPanel look={nowLook(activity, since, switchCount, stopped)} startedAt={current.startedAt.getTime()} />
+ * and the detox notice: on its run's last measured day that tomorrow will not count, and on a day it no longer measures that
+ * today does not.
+ * @example <NowPanel look={nowLook(activity, since, switchCount, notice)} startedAt={current.startedAt.getTime()} />
  */
 export function NowPanel({ look, startedAt }: NowPanelProps) {
   const band = BANDS[useWide() ? 'wide' : 'narrow']

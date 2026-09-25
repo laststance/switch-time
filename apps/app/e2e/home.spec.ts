@@ -286,7 +286,7 @@ async function seedCarriedDetox(page: Page, start: string): Promise<void> {
 const monthDay = (day: string) =>
   `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`
 
-test('a detox on the seventh day after it started names its start day and says nothing about counting', async ({
+test('a detox on the seventh day after it started warns that tomorrow will not count, without asking the server about today', async ({
   page,
 }) => {
   // Arrange: start day + 7 is the last untapped day a detox still measures
@@ -307,7 +307,7 @@ test('a detox on the seventh day after it started names its start day and says n
   await page.reload()
   await settingsAnswer
 
-  // Assert: the since line carries the date; inside its week Home neither asks the server about today nor shows the notice
+  // Assert: the since line carries the date; the last day's warning needs no server answer, so Home asks nothing about today
   await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -317,6 +317,19 @@ test('a detox on the seventh day after it started names its start day and says n
       `${monthDay(start)} 21:00 から · どの行動にも積み上がりません`,
       { exact: true },
     ),
+  ).toBeVisible()
+  await expect(
+    page.getByText('明日から計測に入りません', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      'デトックスの計測は始めた翌日から7日間まで。明日はデトックスを押し直すと、また7日間計測に入ります。',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  // Inside its week a press still keeps the running record, so the detox row says nothing about starting over
+  await expect(
+    page.getByText('どの行動にも記録しない', { exact: true }),
   ).toBeVisible()
   // Every query the rendered screen enables has gone out and come back before the list is read
   await page.waitForLoadState('networkidle')
@@ -340,7 +353,7 @@ test('a detox past its week says on Home that today does not count, until an act
   await expect(notice).toBeVisible()
   await expect(
     page.getByText(
-      'デトックスの計測は始めた翌日から7日間まで。今日中に行動へ切り替えると、今日も計測に入ります。',
+      'デトックスの計測は始めた翌日から7日間まで。デトックスを押し直すか行動へ切り替えると、今日も計測に入ります。',
       { exact: true },
     ),
   ).toBeVisible()
@@ -361,4 +374,67 @@ test('a detox past its week says on Home that today does not count, until an act
   )
   await expect(notice).toHaveCount(0)
   await expect(page.getByText(/^\d+:\d{2} から · 今日 1 回切替$/)).toBeVisible()
+})
+
+test('pressing detox again past its week starts a new run: the notice goes and the since line counts from the press', async ({
+  page,
+}) => {
+  // Arrange: start day + 8, the first untapped day the detox no longer measures
+  await signUp(page)
+  const start = shift(today(), -8)
+  await seedCarriedDetox(page, start)
+  await page.reload()
+  const detox = page.getByRole('button', { name: /^detox/ })
+  await expect(detox).toHaveAttribute('aria-pressed', 'true')
+  await expect(
+    page.getByText('今日は計測に入りません', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText('押し直すと新しく始まります', { exact: true }),
+  ).toBeVisible()
+
+  // Act: the optimistic row alone would pass the checks below, so wait for the server and read its answer after a reload
+  const renewal = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await detox.click()
+  expect((await renewal).ok()).toBe(true)
+  await page.reload()
+
+  // Assert: a new detox record runs from now (a bare time, no date), today is measured, and the row stays pressed
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+  await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
+  await expect(
+    page.getByText('どの行動にも記録しない', { exact: true }),
+  ).toBeVisible()
+  await expect(detox).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('digit 0 past a detox’s week starts a new run, like pressing the detox row', async ({
+  page,
+}) => {
+  // Arrange: start day + 8, the first untapped day the detox no longer measures
+  await signUp(page)
+  const start = shift(today(), -8)
+  await seedCarriedDetox(page, start)
+  await page.reload()
+  await expect(
+    page.getByText('今日は計測に入りません', { exact: true }),
+  ).toBeVisible()
+
+  // Act: wait for the server and read its answer after a reload, as the optimistic row alone would pass
+  const renewal = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/switchTo'),
+  )
+  await page.keyboard.press('0')
+  expect((await renewal).ok()).toBe(true)
+  await page.reload()
+
+  // Assert
+  await expect(
+    page.getByText(/^\d+:\d{2} から · どの行動にも積み上がりません$/),
+  ).toBeVisible()
+  await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
 })

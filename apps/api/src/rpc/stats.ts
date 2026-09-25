@@ -44,6 +44,7 @@ async function rangeStats(
           id: switches.id,
           startedAt: switches.startedAt,
           activityId: switches.activityId,
+          startsRun: switches.startsRun,
         })
         .from(switches)
         .where(eq(switches.userId, userId))
@@ -72,6 +73,8 @@ async function rangeStats(
     tapped.map((row) => ({
       activityId: row.activityId,
       startedAt: row.startedAt.getTime(),
+      // A detox re-tap past the week starts a new run; without it, every later day of the run would read unused.
+      startsRun: row.startsRun,
     })),
     timeZone,
     { from: first < streakFloor ? first : streakFloor, to: today },

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { orpc, type SwitchRow } from '@/lib/orpc'
+import { orpc, type CurrentSwitch } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 
 /**
@@ -20,21 +20,22 @@ export function useSwitchTo() {
         const queryKey = orpc.switches.current.queryKey()
         await queryClient.cancelQueries({ queryKey })
         const previous = queryClient.getQueryData(queryKey)
-        // Pressing the active state keeps its start (the server returns the same row); anything else restarts the counter right now.
-        if (previous?.activityId !== activityId) {
-          // `id` after the spread: the placeholder row must never carry the previous row's id into a correction.
-          const next: SwitchRow = {
-            userId: '',
-            source: 'tap',
-            createdAt: new Date(),
-            ...previous,
-            id: 'optimistic',
-            revision: 0,
-            activityId,
-            startedAt: new Date(),
-          }
-          queryClient.setQueryData(queryKey, next)
+        // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call
+        // restarts the counter right now. `id` after the spread: the placeholder row must never carry the previous row's id into
+        // a correction. No run start until the refetch: the detox notices stay away and a second re-tap is dropped meanwhile.
+        const next: CurrentSwitch = {
+          userId: '',
+          source: 'tap',
+          createdAt: new Date(),
+          ...previous,
+          id: 'optimistic',
+          revision: 0,
+          activityId,
+          startedAt: new Date(),
+          startsRun: false,
+          runStartDay: null,
         }
+        queryClient.setQueryData(queryKey, next)
         return { previous }
       },
       onError: (_error, _input, context) => {

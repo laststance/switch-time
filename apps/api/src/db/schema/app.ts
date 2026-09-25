@@ -5,6 +5,7 @@ import {
   check,
   foreignKey,
   date,
+  index,
   integer,
   numeric,
   pgEnum,
@@ -87,6 +88,9 @@ export const switches = pgTable(
     // Bumped by every write that changes the row's activity or its span (its start, or where the next row starts), so a
     // write that names the revision it saw is refused once another write reshaped the record (changeActivity's `revision`).
     revision: integer('revision').default(0).notNull(),
+    // A detox row that starts a new detox run although the row before it is detox too: switchTo sets it on a detox re-tap
+    // past the run's measured week. Edits keep it and 「元に戻す」 writes it back, so a cut (a detox row without it) never renews.
+    startsRun: boolean('starts_run').default(false).notNull(),
     createdAt: timestamptz('created_at').defaultNow().notNull(),
   },
   (table) => [
@@ -96,6 +100,11 @@ export const switches = pgTable(
       table.userId,
       table.startedAt.desc().nullsFirst(),
     ),
+    // The rows that bound a detox run (an activity, or a detox that starts a run): `current` finds the running run's start
+    // from the latest of them without walking the account's whole history.
+    index('switches_run_boundary_idx')
+      .on(table.userId, table.startedAt.desc().nullsFirst())
+      .where(sql`${table.activityId} is not null or ${table.startsRun}`),
     // The activity must belong to the switch's own account, whatever route writes it (not only those that check it). A null
     // activity (detox) passes: MATCH SIMPLE skips the check when any column of the key is null.
     foreignKey({

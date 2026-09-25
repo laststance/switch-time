@@ -47521,6 +47521,141 @@
         },
         {
           "type": "frame",
+          "id": "W7i28v",
+          "name": "7日目の detox（最終日, sub, 2 行）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "iGWVc",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "detox を始めた翌日から数えて 7 日目（計測に入る最後の日）。記録の開始行（sub）はそのまま、その下に「明日から計測に入りません」（ink, 14, 600）と決まり＋明日の取り戻し方（sub, 12, 2 行まで折り返し）。自動除外が ON で、今の記録が detox のときだけ。クライアントだけで決まるので読み込み待ちなし。読み上げは順番どおり（ライブリージョンなし）。wide web は左揃え",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "h5njh1",
+              "name": "Hero status",
+              "width": "fill_container",
+              "fill": "$bg",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                16,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eBhLt",
+                  "name": "Name",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "VFxjZ",
+                      "name": "Dot",
+                      "width": 10,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TF3Cj",
+                      "name": "State",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "fontFamily": "Roboto",
+                      "fontSize": 22,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Kc4z2",
+                  "name": "Readout",
+                  "fill": "$sub",
+                  "content": "165:10:00",
+                  "fontFamily": "Roboto",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "JKEgK",
+                  "name": "Subtext",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "9月16日 21:20 から · どの行動にも積み上がりません",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "auKOq",
+                  "name": "Counting status",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r7whl",
+                      "name": "Notice",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "明日から計測に入りません",
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "y82AN",
+                      "name": "Rule",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "デトックスの計測は始めた翌日から7日間まで。明日はデトックスを押し直すと、また7日間計測に入ります。",
+                      "lineHeight": 1.4,
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "DapOm",
           "name": "7日間を過ぎた detox（sub, 2 行）",
           "width": 362,
@@ -47534,7 +47669,7 @@
               "fill": "$sub",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "7日間を過ぎた detox。記録の開始行（sub）はそのまま、その下に「今日は計測に入りません」（ink, 14, 600）と決まり＋取り戻し方（sub, 12, 2 行まで折り返し）。stats.day が今日を measured:false・excluded:null と答え、今日のタップが無いときだけ。読み込み中・失敗・オフラインは記録の開始行だけ。読み込み後に 2 行ぶん伸びる。読み上げは順番どおり（ライブリージョンなし）。wide web は左揃え",
+              "content": "7日間を過ぎた detox。記録の開始行（sub）はそのまま、その下に「今日は計測に入りません」（ink, 14, 600）と決まり＋取り戻し方（sub, 12, 2 行まで折り返し）。stats.day が今日を measured:false・excluded:null と答え、今日のタップが無いときだけ。読み込み中・失敗・オフラインは記録の開始行だけ。読み込み後に 2 行ぶん伸びる。デトックスを押し直すと新しい記録が始まり、この 2 行は消え、タイマーと開始行は押した時刻から数え直す。読み上げは順番どおり（ライブリージョンなし）。wide web は左揃え",
               "lineHeight": 1.4,
               "fontFamily": "Roboto",
               "fontSize": 10,
@@ -47641,7 +47776,7 @@
                       "fill": "$sub",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "デトックスの計測は始めた翌日から7日間まで。今日中に行動へ切り替えると、今日も計測に入ります。",
+                      "content": "デトックスの計測は始めた翌日から7日間まで。デトックスを押し直すか行動へ切り替えると、今日も計測に入ります。",
                       "lineHeight": 1.4,
                       "textAlign": "center",
                       "fontFamily": "Roboto",
@@ -47736,6 +47871,82 @@
                   "content": "9月24日 23:10 から · 今日 0 回切替",
                   "lineHeight": 1.4,
                   "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dhFNQ",
+          "name": "押し直せる detox の detox 行",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "ZsZbF",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "7日間を過ぎた detox の間だけ、detox 行のヒントが「押し直すと新しく始まります」に変わる（sub, 12）。行は選択中のまま（aria-pressed=true）。押すと新しい記録が始まる。0 キーも同じ。7日間の内側では押しても何も起きず、ヒントは「どの行動にも記録しない」のまま",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "oVvVF",
+              "name": "detox row（押し直せる）",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "gap": 9,
+              "padding": [
+                2,
+                7
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "bXOQZ",
+                  "name": "detox icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "wind",
+                  "library": "lucide",
+                  "fill": "$ink"
+                },
+                {
+                  "type": "text",
+                  "id": "y2semx",
+                  "name": "detox label",
+                  "fill": "$ink",
+                  "content": "detox",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "RTvh9",
+                  "name": "detox hint",
+                  "fill": "$sub",
+                  "content": "押し直すと新しく始まります",
+                  "lineHeight": 1.25,
                   "fontFamily": "Roboto",
                   "fontSize": 12,
                   "fontWeight": "normal"

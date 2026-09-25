@@ -19,12 +19,14 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
+  detoxNotice,
   detoxPastWeek,
-  detoxStopped,
+  detoxRenewable,
   gridActivities,
   homeFallback,
   homeReady,
   nowLook,
+  sendsPick,
 } from '@/lib/home'
 import { hotkeyIndex, isDetoxHotkey } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
@@ -55,11 +57,10 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const homeToday = {
     current,
     today,
-    timeZone,
     switchCountToday: switchCount,
     autoExcludeUnusedDays,
   }
-  // The server's class for today says whether a detox past its week still measures it; only a detox record older than the week
+  // The server's class for today says whether a detox past its week still measures it; only a detox run older than the week
   // with no tap today can be past it, so nothing else asks (stats.day scans the whole history).
   const todayStats = useQuery(
     orpc.stats.day.queryOptions({
@@ -67,13 +68,13 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       enabled: ready && detoxPastWeek(homeToday),
     }),
   )
-  const stopped = detoxStopped({ ...homeToday, stats: todayStats })
+  const notice = detoxNotice({ ...homeToday, stats: todayStats })
+  const renewable = detoxRenewable(homeToday)
   const ink = useTokenColor('ink')
   const pathname = usePathname()
-  // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
-  // Skipping the call also saves the three refetches the mutation triggers.
   const pick = (activityId: string | null): void => {
-    if (activityId !== current.activityId) switchTo.mutate({ activityId })
+    if (sendsPick({ activityId, current, renewable }))
+      switchTo.mutate({ activityId })
   }
   useWebKeydown((event) => {
     // A sheet above Home (or another tab, Home stays mounted) owns the keyboard.
@@ -101,7 +102,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
           activity,
           formatSince(current.startedAt, today, timeZone),
           switchCount,
-          stopped,
+          notice,
         )}
         startedAt={current.startedAt.getTime()}
       />
@@ -123,6 +124,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
       </View>
       <DetoxRow
         active={current.activityId === null}
+        renewable={renewable}
         onPress={() => pick(null)}
       />
       <TodayFlow

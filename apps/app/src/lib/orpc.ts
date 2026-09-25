@@ -43,7 +43,12 @@ export type ActivityRow = Awaited<
   ReturnType<AppRouterClient['activities']['list']>
 >[number]
 
-/** One `switches` row as the API returns it: `switches.current` when there is one, each row of `switches.listByDay`. */
-export type SwitchRow = NonNullable<
+/** One `switches` row as the API returns it: each row of `switches.listByDay`, and the row a timeline edit returns. */
+export type SwitchRow = Awaited<
+  ReturnType<AppRouterClient['switches']['listByDay']>
+>['rows'][number]
+
+/** `switches.current` when there is one: the running record plus `runStartDay`, the day its detox run started (null while an activity runs). */
+export type CurrentSwitch = NonNullable<
   Awaited<ReturnType<AppRouterClient['switches']['current']>>
 >
