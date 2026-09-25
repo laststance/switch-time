@@ -237,8 +237,8 @@ async function changeActivityAt(
   throw conflict('record changed elsewhere', REFUSAL.recordChanged)
 }
 
-// A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitInHalf and
-// splitAt both insert it.
+// A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitAt inserts
+// it, and so does splitInHalf for clients before 0.23.
 const insertSplit = async (tx: LockedTx, row: SwitchRow, startedAt: Date) => {
   await bumpRevision(tx, row.id)
   return one(
@@ -497,8 +497,8 @@ async function checkBaseline(
 }
 
 /**
- * {@link checkBaseline} for an edit of one of the day's own rows (every edit but 「ここで分割」, which cuts the carried-in
- * record): the edited row must be one of the baseline's rows (or, when the baseline lists none, start inside the day), since
+ * {@link checkBaseline} for an edit of one of the day's own rows (every edit but 「ここで分割」, which may also cut the
+ * carried-in record): the edited row must be one of the baseline's rows (or, when the baseline lists none, start inside the day), since
  * 「元に戻す」 rewrites only those. An edit of the carried-in record would change time before the day, which the day's undo
  * could never put back.
  * @returns the day's window, or null when the call named no baseline
@@ -754,6 +754,8 @@ export const switchesRouter = {
       })
     }),
 
+  // 半分で分割, which the sheet no longer offers (区切る時刻 cuts every row since 0.23). Kept for one release so a client still
+  // open from before it keeps working; TODOS.md tracks its removal.
   splitInHalf: authed
     .input(rowEditInputSchema)
     .handler(async ({ context, input }) => {
@@ -777,8 +779,9 @@ export const switchesRouter = {
       })
     }),
 
-  // 「ここで分割」 on the carried-in row: the cut lands at the chosen time, which may be far from the record's middle. The
-  // baseline's day holds the cut, so the new row is that day's own and its 元に戻す removes it.
+  // 「ここで分割」 on any row of the sheet, the carried-in record included: the cut lands at the chosen time, which may be far
+  // from the record's middle. The baseline's day holds the cut, so the new row is that day's own and its 元に戻す removes it;
+  // only a row running through that day (one of its own rows, or the carried-in record) can hold such a cut.
   splitAt: authed
     .input(splitAtInputSchema)
     .handler(async ({ context, input }) => {

@@ -141,10 +141,11 @@ type CorrectionState = ReturnType<typeof useCorrectionState>
 /** What an edit or undo keeps from its press for the hook-level callbacks (TanStack hands `onMutate`'s result to `onError`). */
 type Pressed = { day: string; epoch: string }
 
-// The sheet's own state ({@link CorrectionSheet}): the selected row and the row a cut or split just created (the sheet focuses
-// its header, since the pressed button left with its panel). It belongs to the day shown: a new day (midnight on today's sheet,
-// a `?day=` change) starts it over during render ({@link sheetView}), so an answer from a press on the day before, which
-// applies only while `day` is still its own ({@link onPressedDay}), selects nothing there. What the sheet said about a day
+// The sheet's own state ({@link CorrectionSheet}): the selected row, and the row whose header takes focus once a cut or a
+// merge lands (the part the cut created, the row the merge kept), since the pressed button left with its panel. It belongs
+// to the day shown: a new day (midnight on today's sheet, a `?day=` change) starts it over during render ({@link sheetView}),
+// so an answer from a press on the day before, which applies only while `day` is still its own ({@link onPressedDay}),
+// selects nothing there. What the sheet said about a day
 // (the last failure's line, the archived notice) lives in the store with the undo slot, so a press whose answer lands after
 // the sheet closed still says it when that day's sheet reopens; the notice's row is selected then, so its panel shows it.
 function useCorrectionState(day: string) {
@@ -171,23 +172,29 @@ function useCorrectionState(day: string) {
     line: view.line,
     // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice. The row the
     // notice selected becomes the sheet's own first, so clearing the notice leaves its panel open under the press.
+    // Focus is cleared too, so the answer's focus request is a change even when it names the row focused last time.
     hush: (notice: boolean): void => {
-      setSheet({ ...current, selectedId: view.selectedId })
+      setSheet({ ...current, selectedId: view.selectedId, focusId: null })
       dispatch(hushed({ epoch, day, notice }))
     },
     // A tap on a row: what the line or the notice said was about another moment, except the notice of the row tapped, which
     // may have landed while another row was selected and is seen only now.
     select: (id: string | null): void => {
-      setSheet({ ...current, selectedId: id })
+      setSheet({ ...current, selectedId: id, focusId: null })
       dispatch(hushed({ epoch, day, notice: id !== view.noticeId }))
     },
     // A row the sheet selects by itself (an undo's reselect): a line a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
       answer(pressedDay, { selectedId: id })
     },
-    // 半分で分割 and 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
+    // 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
     selectInserted: (pressedDay: string, id: string): void => {
       answer(pressedDay, { selectedId: id, focusId: id })
+    },
+    // A merge: the merged row's panel is gone, so focus lands on the row it joined, whose header reads its new span. Nothing is
+    // selected: the user picks the next row to edit.
+    focusKept: (pressedDay: string, id: string): void => {
+      answer(pressedDay, { focusId: id })
     },
     // An archived pick, or an undo refused as archived: the notice on the press's day, whose row is then selected.
     showNotice: (pressed: Pressed, id: string): void => {
@@ -315,10 +322,6 @@ function useCorrectionEdits(
     ...orpc.switches.mergeIntoNext.mutationOptions(),
     ...edit,
   })
-  const splitInHalf = useMutation({
-    ...orpc.switches.splitInHalf.mutationOptions(),
-    ...edit,
-  })
   const splitAt = useMutation({
     ...orpc.switches.splitAt.mutationOptions(),
     ...edit,
@@ -360,6 +363,12 @@ function useCorrectionEdits(
   const selectInserted = (inserted: SwitchRow): void => {
     state.selectInserted(day, inserted.id)
   }
+  const merged =
+    (landed: (returned: SwitchRow) => void) =>
+    (kept: SwitchRow): void => {
+      landed(kept)
+      state.focusKept(day, kept.id)
+    }
   return {
     move: (row: CorrectionRow, deltaMinutes: 15 | -15): void => {
       const { baseline, landed, failed } = press(row)
@@ -377,20 +386,13 @@ function useCorrectionEdits(
       const { baseline, landed, failed } = press(row)
       mergeIntoPrevious
         .mutateAsync({ id: row.id, baseline })
-        .then(landed('merge'), failed)
+        .then(merged(landed('merge')), failed)
     },
     mergeNext: (row: CorrectionRow): void => {
       const { baseline, landed, failed } = press(row)
       mergeIntoNext
         .mutateAsync({ id: row.id, baseline })
-        .then(landed('merge'), failed)
-    },
-    split: (row: CorrectionRow): void => {
-      const { baseline, landed, failed } = press(row)
-      splitInHalf.mutateAsync({ id: row.id, baseline }).then((inserted) => {
-        landed('split')(inserted)
-        selectInserted(inserted)
-      }, failed)
+        .then(merged(landed('merge')), failed)
     },
     cut: (row: CorrectionRow, at: number): void => {
       const { baseline, landed, failed } = press(row)
@@ -441,7 +443,7 @@ function useCorrectionUndo(
     if (request.procedure === 'replaceDay')
       replaceDay.mutateAsync(request.input).then((written) => {
         dispatch(dropped({ epoch, day }))
-        // A cut's or a split's undo brings back the row the edit was made on: select it again, on that day only.
+        // A cut's undo brings back the row the cut was made on: select it again, on that day only.
         const reselectId = reselectedRow(request.reselect, written)
         if (reselectId) state.reveal(day, reselectId)
       }, failed)

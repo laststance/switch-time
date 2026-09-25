@@ -11456,7 +11456,6 @@
                   "name": "div",
                   "context": "div",
                   "width": "fill_container",
-                  "height": 55,
                   "gap": 10,
                   "justifyContent": "space_between",
                   "children": [
@@ -11465,7 +11464,7 @@
                       "id": "V16N6U",
                       "name": "div",
                       "context": "div",
-                      "height": 53,
+                      "width": "fill_container",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
@@ -11484,10 +11483,12 @@
                         {
                           "type": "text",
                           "id": "m157lT",
-                          "name": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "name": "Hint",
                           "context": "div",
                           "fill": "$sub",
-                          "content": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "行をタップ → 開始時刻を動かす／区切る／活動を変える（前の日から続く記録は区切る・活動を変えるのみ）",
                           "lineHeight": 1.5,
                           "fontFamily": "Roboto",
                           "fontSize": 12,
@@ -12901,7 +12902,7 @@
                           "context": "div",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": 12,
+                          "gap": 20,
                           "padding": [
                             2,
                             14,
@@ -13515,18 +13516,194 @@
                                       ]
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "EZZWP",
+                              "name": "Cut group",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "v8MMz",
+                                  "name": "Cut head",
+                                  "width": "fill_container",
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ke4QU",
+                                      "name": "Cut label",
+                                      "fill": "$sub",
+                                      "content": "区切る時刻",
+                                      "lineHeight": 1.25,
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "lLGLS",
+                                      "name": "Cut readout",
+                                      "fill": "$ink",
+                                      "content": "6:45",
+                                      "lineHeight": 1.2,
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 22,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "hL0aW",
-                                  "name": "半分で分割",
-                                  "context": "button",
+                                  "id": "tFxJG",
+                                  "name": "Cut steps",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "H1Yrw",
+                                      "name": "区切る時刻を1時間早める",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Ikt6v",
+                                          "name": "−1時間",
+                                          "fill": "$ink",
+                                          "content": "−1時間",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "QtQNr",
+                                      "name": "区切る時刻を15分早める",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "p7p2Z",
+                                          "name": "−15分",
+                                          "fill": "$ink",
+                                          "content": "−15分",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "vJpLj",
+                                      "name": "区切る時刻を15分遅らせる",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "IRLBT",
+                                          "name": "+15分",
+                                          "fill": "$ink",
+                                          "content": "+15分",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "U9M7Qs",
+                                      "name": "区切る時刻を1時間遅らせる",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "sg4FF",
+                                          "name": "+1時間",
+                                          "fill": "$ink",
+                                          "content": "+1時間",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "vh7GU",
+                                  "name": "ここで分割",
                                   "width": "fill_container",
                                   "height": 44,
+                                  "fill": "$ink",
                                   "cornerRadius": 10,
-                                  "stroke": "$line",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "layout": "vertical",
                                   "padding": [
                                     1,
@@ -13537,9 +13714,10 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "sBzFz",
-                                      "fill": "$ink",
-                                      "content": "半分で分割",
+                                      "id": "hY5Se",
+                                      "name": "ここで分割",
+                                      "fill": "$sheet-bg",
+                                      "content": "ここで分割",
                                       "lineHeight": 1.25,
                                       "textAlign": "center",
                                       "fontFamily": "Roboto",
@@ -27232,7 +27410,6 @@
                   "name": "div",
                   "context": "div",
                   "width": "fill_container",
-                  "height": 55,
                   "gap": 10,
                   "justifyContent": "space_between",
                   "children": [
@@ -27241,7 +27418,7 @@
                       "id": "imfV3",
                       "name": "div",
                       "context": "div",
-                      "height": 53,
+                      "width": "fill_container",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
@@ -27260,10 +27437,12 @@
                         {
                           "type": "text",
                           "id": "Iw12J",
-                          "name": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "name": "Hint",
                           "context": "div",
                           "fill": "$sub",
-                          "content": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "行をタップ → 開始時刻を動かす／区切る／活動を変える（前の日から続く記録は区切る・活動を変えるのみ）",
                           "lineHeight": 1.5,
                           "fontFamily": "Roboto",
                           "fontSize": 12,
@@ -28826,7 +29005,7 @@
                           "name": "Carried-in actions",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": 12,
+                          "gap": 20,
                           "padding": [
                             2,
                             14,
@@ -29096,7 +29275,7 @@
                                   "fill": "$sub",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container(332)",
-                                  "content": "15分単位で区切れる時刻がありません",
+                                  "content": "区切れる時刻がありません",
                                   "lineHeight": 1.5,
                                   "fontFamily": "Roboto",
                                   "fontSize": 12,
@@ -29942,7 +30121,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -30214,7 +30393,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -30782,7 +30961,7 @@
                   "fill": "$sub",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "15分単位の時刻が1つも入らない（例: 23:59:30 開始、0:10 終了）。レイアウトは保ったまま読み値は「—」、4つのボタンと「ここで分割」は無効、下に理由を1行。活動を変えるは使える。",
+                  "content": "両側に1分ずつ残せない（例: 23:59:30 開始、0:01 終了）。レイアウトは保ったまま読み値は「—」、4つのボタンと「ここで分割」は無効、下に理由を1行。活動を変えるは使える。15分単位の時刻が入らないだけなら、真ん中の分で区切る（「ST Phone / 訂正シート・区切る時刻の状態」）。",
                   "lineHeight": 1.5,
                   "fontFamily": "Roboto",
                   "fontSize": 12,
@@ -30902,7 +31081,7 @@
                                   "name": "0:00 – 6:30",
                                   "context": "span",
                                   "fill": "$sub",
-                                  "content": "0:00 – 0:10",
+                                  "content": "0:00 – 0:01",
                                   "lineHeight": 1.25,
                                   "fontFamily": "Roboto",
                                   "fontSize": 12,
@@ -30918,7 +31097,7 @@
                           "name": "6h 30m",
                           "context": "span",
                           "fill": "$sub",
-                          "content": "10m",
+                          "content": "1m",
                           "lineHeight": 1.2,
                           "fontFamily": "Roboto",
                           "fontSize": 15,
@@ -30932,7 +31111,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -31204,7 +31383,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -31922,7 +32101,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -32186,7 +32365,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -32897,7 +33076,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -33167,7 +33346,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -33881,7 +34060,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -34151,7 +34330,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -34939,7 +35118,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -35214,7 +35393,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -35950,7 +36129,7 @@
                           "context": "div",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": 12,
+                          "gap": 20,
                           "padding": [
                             2,
                             14,
@@ -36629,18 +36808,194 @@
                                       ]
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "feztC",
+                              "name": "Cut group",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "I8JAd",
+                                  "name": "Cut head",
+                                  "width": "fill_container",
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "IVbWS",
+                                      "name": "Cut label",
+                                      "fill": "$sub",
+                                      "content": "区切る時刻",
+                                      "lineHeight": 1.25,
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "ezwFm",
+                                      "name": "Cut readout",
+                                      "fill": "$ink",
+                                      "content": "4:45",
+                                      "lineHeight": 1.2,
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 22,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "nZuHf",
-                                  "name": "半分で分割",
-                                  "context": "button",
+                                  "id": "O7zg7V",
+                                  "name": "Cut steps",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "la31k",
+                                      "name": "区切る時刻を1時間早める",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "m2E0S",
+                                          "name": "−1時間",
+                                          "fill": "$ink",
+                                          "content": "−1時間",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "oAoca",
+                                      "name": "区切る時刻を15分早める",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "TrGgR",
+                                          "name": "−15分",
+                                          "fill": "$ink",
+                                          "content": "−15分",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "AdXKd",
+                                      "name": "区切る時刻を15分遅らせる",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "GHYd8",
+                                          "name": "+15分",
+                                          "fill": "$ink",
+                                          "content": "+15分",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "o1nSj",
+                                      "name": "区切る時刻を1時間遅らせる",
+                                      "width": "fill_container",
+                                      "height": 44,
+                                      "cornerRadius": 10,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "layout": "vertical",
+                                      "padding": [
+                                        1,
+                                        6
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "tIPtz",
+                                          "name": "+1時間",
+                                          "fill": "$ink",
+                                          "content": "+1時間",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Z572nt",
+                                  "name": "ここで分割",
                                   "width": "fill_container",
                                   "height": 44,
+                                  "fill": "$ink",
                                   "cornerRadius": 10,
-                                  "stroke": "$line",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
                                   "layout": "vertical",
                                   "padding": [
                                     1,
@@ -36651,9 +37006,10 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "t218H",
-                                      "fill": "$ink",
-                                      "content": "半分で分割",
+                                      "id": "mn6XY",
+                                      "name": "ここで分割",
+                                      "fill": "$sheet-bg",
+                                      "content": "ここで分割",
                                       "lineHeight": 1.25,
                                       "textAlign": "center",
                                       "fontFamily": "Roboto",
@@ -37071,7 +37427,7 @@
                           "name": "Carried-in actions",
                           "width": "fill_container",
                           "layout": "vertical",
-                          "gap": 12,
+                          "gap": 20,
                           "padding": [
                             2,
                             14,
@@ -37341,7 +37697,7 @@
                                   "fill": "$sub",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container(332)",
-                                  "content": "15分単位で区切れる時刻がありません",
+                                  "content": "区切れる時刻がありません",
                                   "lineHeight": 1.5,
                                   "fontFamily": "Roboto",
                                   "fontSize": 12,
@@ -38060,7 +38416,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -38327,7 +38683,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 16,
@@ -43030,7 +43386,6 @@
                   "name": "Header",
                   "context": "div",
                   "width": "fill_container",
-                  "height": 55,
                   "gap": 10,
                   "justifyContent": "space_between",
                   "children": [
@@ -43039,7 +43394,7 @@
                       "id": "ZsnWd",
                       "name": "div",
                       "context": "div",
-                      "height": 53,
+                      "width": "fill_container",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
@@ -43058,10 +43413,12 @@
                         {
                           "type": "text",
                           "id": "s2Q6oQ",
-                          "name": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "name": "Hint",
                           "context": "div",
                           "fill": "$sub",
-                          "content": "行をタップ → 開始時刻を15分ずつ動かす／活動を変える",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "行をタップ → 開始時刻を動かす／区切る／活動を変える（前の日から続く記録は区切る・活動を変えるのみ）",
                           "lineHeight": 1.5,
                           "fontFamily": "Roboto",
                           "fontSize": 12,
@@ -44634,7 +44991,7 @@
                               "name": "Carried-in actions",
                               "width": "fill_container",
                               "layout": "vertical",
-                              "gap": 12,
+                              "gap": 20,
                               "padding": [
                                 2,
                                 14,
@@ -44904,7 +45261,7 @@
                                       "fill": "$sub",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container(332)",
-                                      "content": "15分単位で区切れる時刻がありません",
+                                      "content": "区切れる時刻がありません",
                                       "lineHeight": 1.5,
                                       "fontFamily": "Roboto",
                                       "fontSize": 12,
@@ -48010,7 +48367,7 @@
       "type": "frame",
       "id": "Rj6vk",
       "x": 3696,
-      "y": 2199,
+      "y": 2345,
       "name": "ST Phone / 訂正シート・タップのない日の注記",
       "width": 1210,
       "fill": "$bg",
@@ -48233,7 +48590,7 @@
                       "name": "Carried-in actions",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -48503,7 +48860,7 @@
                               "fill": "$sub",
                               "textGrowth": "fixed-width",
                               "width": "fill_container(332)",
-                              "content": "15分単位で区切れる時刻がありません",
+                              "content": "区切れる時刻がありません",
                               "lineHeight": 1.5,
                               "fontFamily": "Roboto",
                               "fontSize": 12,
@@ -49235,7 +49592,7 @@
                       "context": "div",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 12,
+                      "gap": 20,
                       "padding": [
                         2,
                         14,
@@ -49886,18 +50243,194 @@
                               "fontFamily": "Roboto",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y4G8y8",
+                          "name": "Cut group",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "RG14a",
+                              "name": "Cut head",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NaqJb",
+                                  "name": "Cut label",
+                                  "fill": "$sub",
+                                  "content": "区切る時刻",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i43xb",
+                                  "name": "Cut readout",
+                                  "fill": "$ink",
+                                  "content": "22:00",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "dpM8m",
-                              "name": "半分で分割",
-                              "context": "button",
+                              "id": "qwtYg",
+                              "name": "Cut steps",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "qMbWU",
+                                  "name": "区切る時刻を1時間早める",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ox98C",
+                                      "name": "−1時間",
+                                      "fill": "$ink",
+                                      "content": "−1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "xRQtV",
+                                  "name": "区切る時刻を15分早める",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "atRWO",
+                                      "name": "−15分",
+                                      "fill": "$ink",
+                                      "content": "−15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Zuvns",
+                                  "name": "区切る時刻を15分遅らせる",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zl0o0",
+                                      "name": "+15分",
+                                      "fill": "$ink",
+                                      "content": "+15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "aoOYc",
+                                  "name": "区切る時刻を1時間遅らせる",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "t4aHrh",
+                                      "name": "+1時間",
+                                      "fill": "$ink",
+                                      "content": "+1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "S5GQV",
+                              "name": "ここで分割",
                               "width": "fill_container",
                               "height": 44,
+                              "fill": "$ink",
                               "cornerRadius": 10,
-                              "stroke": "$line",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
                               "layout": "vertical",
                               "padding": [
                                 1,
@@ -49908,9 +50441,10 @@
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "k0Xfh9",
-                                  "fill": "$ink",
-                                  "content": "半分で分割",
+                                  "id": "O7tnrV",
+                                  "name": "ここで分割",
+                                  "fill": "$sheet-bg",
+                                  "content": "ここで分割",
                                   "lineHeight": 1.25,
                                   "textAlign": "center",
                                   "fontFamily": "Roboto",
@@ -50037,6 +50571,2837 @@
                           "textAlign": "center",
                           "fontFamily": "Roboto",
                           "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "LYs4z",
+      "x": 3696,
+      "y": 3295,
+      "name": "ST Phone / 訂正シート・区切る時刻の状態",
+      "width": 1210,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "gzbVX",
+          "name": "Board head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "OnNSe",
+              "name": "Board title",
+              "fill": "$ink",
+              "content": "自分の行の区切る時刻 — 状態一覧",
+              "fontFamily": "Roboto",
+              "fontSize": 22,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "g50MgV",
+              "name": "Board note",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "自分の行にも持ち越し行と同じ区切る時刻（読み値＋4つの刻み＋ここで分割）。候補は15分刻みで、開始の1分後から、次の記録・24:00・いまの15分前（時計のずれの余裕）のうち早い方の1分前まで。最初は真ん中の15分。通常の表示は「ST Phone / 訂正シート」。",
+              "lineHeight": 1.5,
+              "fontFamily": "Roboto",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Zae0k",
+          "name": "Board row",
+          "width": "fill_container",
+          "gap": 40,
+          "children": [
+            {
+              "type": "frame",
+              "id": "GwUks",
+              "name": "State: 短い記録（真ん中で区切る）",
+              "width": 350,
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "R42Ms",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "短い記録（真ん中で区切る）",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "mU8YH",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "9:01 – 9:14 の行。15分単位の時刻が入らないが、両側に1分以上残せるので真ん中の分（9:07）で区切れる。4つの刻みは無効（40%）、「ここで分割」は使える。理由を下に1行。",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "rKg0O",
+                  "name": "div",
+                  "context": "div",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$chip",
+                  "cornerRadius": 16,
+                  "stroke": "$activity-1",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": 1,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ix50i",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 58,
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KzXtO",
+                          "name": "span",
+                          "context": "span",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$activity-1",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "LInRo",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 18,
+                              "height": 18,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "luXk0",
+                                  "x": 2.25,
+                                  "y": 2.25,
+                                  "geometry": "M0 6l6.75-6 6.75 6 0 7.5-13.5 0 0-7.5z",
+                                  "width": 13.5,
+                                  "height": 13.5,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.5,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "a9JGw",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "D7iS7I",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "PVdo3",
+                                  "name": "家事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "家事",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QAjlw",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rk5ah",
+                                  "name": "6:30 – 7:15",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "9:01 – 9:14",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ADLrm",
+                          "name": "45m",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "13m",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jblVD",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        2,
+                        14,
+                        14,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NBMud",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qxflv",
+                              "name": "開始時刻",
+                              "context": "span",
+                              "fill": "$sub",
+                              "content": "開始時刻",
+                              "lineHeight": 1.25,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KJ39h",
+                              "name": "−",
+                              "context": "button",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$sheet-bg",
+                              "cornerRadius": 10,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CKZJO",
+                                  "fill": "$ink",
+                                  "content": "−",
+                                  "lineHeight": 1.11,
+                                  "textAlign": "center",
+                                  "fontFamily": "Arial",
+                                  "fontSize": 18,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e9gCoY",
+                              "name": "span",
+                              "context": "span",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                12.22
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GVLlC",
+                                  "name": "6:30",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "9:01",
+                                  "lineHeight": 1.17,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 18,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "snKw8",
+                              "name": "＋",
+                              "context": "button",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$sheet-bg",
+                              "cornerRadius": 10,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Q9y838",
+                                  "fill": "$ink",
+                                  "content": "＋",
+                                  "lineHeight": 1.11,
+                                  "textAlign": "center",
+                                  "fontFamily": "Arial",
+                                  "fontSize": 18,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "U38PE",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "nSoER",
+                              "name": "Activity head",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cbBeZ",
+                                  "name": "活動を変える",
+                                  "context": "div",
+                                  "fill": "$sub",
+                                  "content": "活動を変える",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dYeO5",
+                              "name": "div",
+                              "context": "div",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 7,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "T0yln",
+                                  "name": "div",
+                                  "context": "div",
+                                  "width": "fill_container",
+                                  "gap": 7,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "E6MSG",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "fill": "$activity-1",
+                                      "cornerRadius": 19,
+                                      "stroke": "$activity-1",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "yTqqx",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "o4Khu",
+                                              "x": 1.875,
+                                              "y": 1.875,
+                                              "geometry": "M0 5l5.625-5 5.625 5 0 6.25-11.25 0 0-6.25z",
+                                              "width": 11.25,
+                                              "height": 11.25,
+                                              "stroke": "#FFF",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "anERT",
+                                          "name": "家事",
+                                          "context": "span",
+                                          "fill": "#ffffff",
+                                          "content": "家事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "SVepw",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "HkF75",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "djOjw",
+                                              "x": 1.875,
+                                              "y": 3.125,
+                                              "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
+                                              "width": 11.25,
+                                              "height": 9.375,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "GW4Hy",
+                                          "name": "仕事",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "仕事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "TgDux",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "ec1hY",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "gusOn",
+                                              "x": 2.5,
+                                              "y": 1.875,
+                                              "geometry": "M0 3.75l7.5 0 0 3.75c0 1.38071-1.11929 2.5-2.5 2.5l-2.5 0c-1.38071 0-2.5-1.11929-2.5-2.5l0-3.75z m7.5 1.25l1.25 0c0.69036 0 1.25 0.55964 1.25 1.25 0 0.69036-0.55964 1.25-1.25 1.25l-1.25 0m-5.625-7.5l0 1.875m2.5-1.875l0 1.875",
+                                              "width": 10,
+                                              "height": 10,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "R46AS",
+                                          "name": "休息",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "休息",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "V3J3L",
+                                  "name": "div",
+                                  "context": "div",
+                                  "width": "fill_container",
+                                  "gap": 7,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "XTQ9T",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "kmYYH",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "TWj6B",
+                                              "x": 2.90191388130188,
+                                              "y": 2.5,
+                                              "geometry": "M9.59809 6.5625c-1.87828 0.80259-4.05589 0.38201-5.5002-1.0623-1.44431-1.44431-1.86489-3.62192-1.0623-5.5002-2.06834 0.88381-3.29196 3.03992-2.99011 5.26884 0.30185 2.22891 2.05486 3.98192 4.28377 4.28377 2.22891 0.30185 4.38503-0.92176 5.26884-2.99011",
+                                              "width": 9.59808611869812,
+                                              "height": 9.5980863571167,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "I5M5ja",
+                                          "name": "睡眠",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "睡眠",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "N4WCy",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "V6uPq",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "lvKPB",
+                                              "x": 2.5,
+                                              "y": 1.875,
+                                              "geometry": "M1.875 0l0 11.25m-1.875-11.25l0 3.125c0 1.03553 0.83947 1.875 1.875 1.875 1.03553 0 1.875-0.83947 1.875-1.875l0-3.125m3.75 0c-1.25 1.25-1.25 5 0 6.25l0 5m0-5c1.25-1.25 1.875-3.75 1.25-6.25",
+                                              "width": 8.995190620422363,
+                                              "height": 11.25,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "c5IgjF",
+                                          "name": "食事",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "食事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "WZxLo",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "M8MYc",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "lJhzA",
+                                              "x": 1.25,
+                                              "y": 5,
+                                              "geometry": "M2.5 0l7.5 0c1.38071 0 2.5 1.11929 2.5 2.5l0 1.875c-0.04118 0.80923-0.59751 1.50045-1.37923 1.71365-0.78172 0.2132-1.61195-0.09987-2.05827-0.77615l-0.9375-0.9375-3.75 0-0.9375 0.9375c-0.44631 0.67627-1.27655 0.98935-2.05827 0.77615-0.78172-0.2132-1.33806-0.90442-1.37923-1.71365l0-1.875c0-1.38071 1.11929-2.5 2.5-2.5m0.625 1.875l0 1.875m-0.9375-0.9375l1.875 0m4.6875-0.3125l0.00625 0m1.24375 0.9375l0.00625 0",
+                                              "width": 12.5,
+                                              "height": 6.154848098754883,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "M2LUL",
+                                          "name": "娯楽",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "娯楽",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "C55BLE",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "rCpky",
+                              "name": "div",
+                              "context": "div",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "zh2MZ",
+                                  "name": "前の記録に統合",
+                                  "context": "button",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "U9Q6L",
+                                      "fill": "$ink",
+                                      "content": "前の記録に統合",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "d0ab97",
+                                  "name": "次の記録に統合",
+                                  "context": "button",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Da34L",
+                                      "fill": "$ink",
+                                      "content": "次の記録に統合",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gMzAf",
+                          "name": "Cut group",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "XOQjE",
+                              "name": "Cut head",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "TvmE8",
+                                  "name": "Cut label",
+                                  "fill": "$sub",
+                                  "content": "区切る時刻",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jdvEE",
+                                  "name": "Cut readout",
+                                  "fill": "$ink",
+                                  "content": "9:07",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VrwA2",
+                              "name": "Cut steps",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "snChm",
+                                  "name": "区切る時刻を1時間早める",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "AsqUT",
+                                      "name": "−1時間",
+                                      "fill": "$ink",
+                                      "content": "−1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "KYhGH",
+                                  "name": "区切る時刻を15分早める",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "P5wab",
+                                      "name": "−15分",
+                                      "fill": "$ink",
+                                      "content": "−15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "mvk74",
+                                  "name": "区切る時刻を15分遅らせる",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "aF4SQ",
+                                      "name": "+15分",
+                                      "fill": "$ink",
+                                      "content": "+15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k4J4G",
+                                  "name": "区切る時刻を1時間遅らせる",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "r8oW98",
+                                      "name": "+1時間",
+                                      "fill": "$ink",
+                                      "content": "+1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "T178x",
+                              "name": "ここで分割",
+                              "width": "fill_container",
+                              "height": 44,
+                              "fill": "$ink",
+                              "cornerRadius": 10,
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jTrtB",
+                                  "name": "ここで分割",
+                                  "fill": "$sheet-bg",
+                                  "content": "ここで分割",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "lPCNh",
+                              "name": "Fallback note",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "短い記録のため、真ん中で区切ります",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "nFolk",
+              "name": "State: 区切れる時刻が無い（動いている記録）",
+              "width": 350,
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GYRnR",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "区切れる時刻が無い（動いている記録）",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "x567yE",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "始めて5分の、いま動いている記録。区切る時刻は「いまの15分前」（時計のずれの余裕）の1分前までなので、始めて17分たつまでは候補が無い。読み値は「—」、4つの刻みと「ここで分割」は無効、理由を1行。",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "duyLX",
+                  "name": "div",
+                  "context": "div",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$chip",
+                  "cornerRadius": 16,
+                  "stroke": "$activity-1",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": 1,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s0Hpc",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 58,
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "GMu2O",
+                          "name": "span",
+                          "context": "span",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$activity-1",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Q1Q8W",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 18,
+                              "height": 18,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "P127j7",
+                                  "x": 2.25,
+                                  "y": 2.25,
+                                  "geometry": "M0 6l6.75-6 6.75 6 0 7.5-13.5 0 0-7.5z",
+                                  "width": 13.5,
+                                  "height": 13.5,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.5,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Hwdin",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "S1G6rw",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cUGAn",
+                                  "name": "家事",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "家事",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vE9Fu",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "nfhKT",
+                                  "name": "6:30 – 7:15",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "20:00 – いま",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "uHnTp",
+                          "name": "45m",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "5m",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "y4jCwP",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        2,
+                        14,
+                        14,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "b5vuZP",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Azefw",
+                              "name": "開始時刻",
+                              "context": "span",
+                              "fill": "$sub",
+                              "content": "開始時刻",
+                              "lineHeight": 1.25,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kHlDZ",
+                              "name": "−",
+                              "context": "button",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$sheet-bg",
+                              "cornerRadius": 10,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "b1Z4xE",
+                                  "fill": "$ink",
+                                  "content": "−",
+                                  "lineHeight": 1.11,
+                                  "textAlign": "center",
+                                  "fontFamily": "Arial",
+                                  "fontSize": 18,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ynjB5",
+                              "name": "span",
+                              "context": "span",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                12.22
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jaKow",
+                                  "name": "6:30",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "20:00",
+                                  "lineHeight": 1.17,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 18,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mZDIa",
+                              "name": "＋",
+                              "context": "button",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$sheet-bg",
+                              "cornerRadius": 10,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ihHsw",
+                                  "fill": "$ink",
+                                  "content": "＋",
+                                  "lineHeight": 1.11,
+                                  "textAlign": "center",
+                                  "fontFamily": "Arial",
+                                  "fontSize": 18,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pLgxq",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "aifWp",
+                              "name": "Activity head",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pzirk",
+                                  "name": "活動を変える",
+                                  "context": "div",
+                                  "fill": "$sub",
+                                  "content": "活動を変える",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "S1jsl1",
+                              "name": "div",
+                              "context": "div",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 7,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Fwkzn",
+                                  "name": "div",
+                                  "context": "div",
+                                  "width": "fill_container",
+                                  "gap": 7,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "Ddny2",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "fill": "$activity-1",
+                                      "cornerRadius": 19,
+                                      "stroke": "$activity-1",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "lfA7H",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "I8O7y",
+                                              "x": 1.875,
+                                              "y": 1.875,
+                                              "geometry": "M0 5l5.625-5 5.625 5 0 6.25-11.25 0 0-6.25z",
+                                              "width": 11.25,
+                                              "height": 11.25,
+                                              "stroke": "#FFF",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "YsbCy",
+                                          "name": "家事",
+                                          "context": "span",
+                                          "fill": "#ffffff",
+                                          "content": "家事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "UPfAv",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "Rju5N",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "dS4Cu",
+                                              "x": 1.875,
+                                              "y": 3.125,
+                                              "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
+                                              "width": 11.25,
+                                              "height": 9.375,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "M2jqC",
+                                          "name": "仕事",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "仕事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "NhXtV",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "mvY7m",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "pCkjm",
+                                              "x": 2.5,
+                                              "y": 1.875,
+                                              "geometry": "M0 3.75l7.5 0 0 3.75c0 1.38071-1.11929 2.5-2.5 2.5l-2.5 0c-1.38071 0-2.5-1.11929-2.5-2.5l0-3.75z m7.5 1.25l1.25 0c0.69036 0 1.25 0.55964 1.25 1.25 0 0.69036-0.55964 1.25-1.25 1.25l-1.25 0m-5.625-7.5l0 1.875m2.5-1.875l0 1.875",
+                                              "width": 10,
+                                              "height": 10,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "xyD66",
+                                          "name": "休息",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "休息",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "RQ9aJ",
+                                  "name": "div",
+                                  "context": "div",
+                                  "width": "fill_container",
+                                  "gap": 7,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "pCpat",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "DRhGI",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "Xd5Iv",
+                                              "x": 2.90191388130188,
+                                              "y": 2.5,
+                                              "geometry": "M9.59809 6.5625c-1.87828 0.80259-4.05589 0.38201-5.5002-1.0623-1.44431-1.44431-1.86489-3.62192-1.0623-5.5002-2.06834 0.88381-3.29196 3.03992-2.99011 5.26884 0.30185 2.22891 2.05486 3.98192 4.28377 4.28377 2.22891 0.30185 4.38503-0.92176 5.26884-2.99011",
+                                              "width": 9.59808611869812,
+                                              "height": 9.5980863571167,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "TkH9D",
+                                          "name": "睡眠",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "睡眠",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "bIL8j",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "oi0H7",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "X2O8U0",
+                                              "x": 2.5,
+                                              "y": 1.875,
+                                              "geometry": "M1.875 0l0 11.25m-1.875-11.25l0 3.125c0 1.03553 0.83947 1.875 1.875 1.875 1.03553 0 1.875-0.83947 1.875-1.875l0-3.125m3.75 0c-1.25 1.25-1.25 5 0 6.25l0 5m0-5c1.25-1.25 1.875-3.75 1.25-6.25",
+                                              "width": 8.995190620422363,
+                                              "height": 11.25,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "mg2dT",
+                                          "name": "食事",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "食事",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ndCBT",
+                                      "name": "button",
+                                      "context": "button",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "cornerRadius": 19,
+                                      "stroke": "$line",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 6,
+                                      "padding": [
+                                        1,
+                                        14
+                                      ],
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "a2OB6e",
+                                          "name": "svg",
+                                          "context": "svg",
+                                          "clip": true,
+                                          "width": 15,
+                                          "height": 15,
+                                          "layout": "none",
+                                          "children": [
+                                            {
+                                              "type": "path",
+                                              "id": "g43Ddi",
+                                              "x": 1.25,
+                                              "y": 5,
+                                              "geometry": "M2.5 0l7.5 0c1.38071 0 2.5 1.11929 2.5 2.5l0 1.875c-0.04118 0.80923-0.59751 1.50045-1.37923 1.71365-0.78172 0.2132-1.61195-0.09987-2.05827-0.77615l-0.9375-0.9375-3.75 0-0.9375 0.9375c-0.44631 0.67627-1.27655 0.98935-2.05827 0.77615-0.78172-0.2132-1.33806-0.90442-1.37923-1.71365l0-1.875c0-1.38071 1.11929-2.5 2.5-2.5m0.625 1.875l0 1.875m-0.9375-0.9375l1.875 0m4.6875-0.3125l0.00625 0m1.24375 0.9375l0.00625 0",
+                                              "width": 12.5,
+                                              "height": 6.154848098754883,
+                                              "stroke": "$ink",
+                                              "strokeWidth": 1.375,
+                                              "strokeLinejoin": "round",
+                                              "strokeLinecap": "round"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "XQE1O",
+                                          "name": "娯楽",
+                                          "context": "span",
+                                          "fill": "$ink",
+                                          "content": "娯楽",
+                                          "lineHeight": 1.25,
+                                          "textAlign": "center",
+                                          "fontFamily": "Roboto",
+                                          "fontSize": 12,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q2QRU",
+                          "name": "div",
+                          "context": "div",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "CUznV",
+                              "name": "div",
+                              "context": "div",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ztHX9",
+                                  "name": "前の記録に統合",
+                                  "context": "button",
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "vv1GV",
+                                      "fill": "$ink",
+                                      "content": "前の記録に統合",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "rI1p4",
+                                  "name": "次の記録に統合",
+                                  "context": "button",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rv3i4",
+                                      "fill": "$ink",
+                                      "content": "次の記録に統合",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "T5fh5t",
+                          "name": "Cut group",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "LX60a",
+                              "name": "Cut head",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iv81n",
+                                  "name": "Cut label",
+                                  "fill": "$sub",
+                                  "content": "区切る時刻",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iQsMp",
+                                  "name": "Cut readout",
+                                  "fill": "$ink",
+                                  "content": "—",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dswmt",
+                              "name": "Cut steps",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Q1EpcW",
+                                  "name": "区切る時刻を1時間早める",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "hLcAU",
+                                      "name": "−1時間",
+                                      "fill": "$ink",
+                                      "content": "−1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "J2xecG",
+                                  "name": "区切る時刻を15分早める",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Ciqu7",
+                                      "name": "−15分",
+                                      "fill": "$ink",
+                                      "content": "−15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "u7fkj",
+                                  "name": "区切る時刻を15分遅らせる",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zuudZ",
+                                      "name": "+15分",
+                                      "fill": "$ink",
+                                      "content": "+15分",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "B8U5qa",
+                                  "name": "区切る時刻を1時間遅らせる",
+                                  "opacity": 0.4,
+                                  "width": "fill_container",
+                                  "height": 44,
+                                  "cornerRadius": 10,
+                                  "stroke": "$line",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    1,
+                                    6
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "IulzA",
+                                      "name": "+1時間",
+                                      "fill": "$ink",
+                                      "content": "+1時間",
+                                      "lineHeight": 1.25,
+                                      "textAlign": "center",
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "L943Rq",
+                              "name": "ここで分割",
+                              "opacity": 0.4,
+                              "width": "fill_container",
+                              "height": 44,
+                              "fill": "$ink",
+                              "cornerRadius": 10,
+                              "layout": "vertical",
+                              "padding": [
+                                1,
+                                6
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "fULuQ",
+                                  "name": "ここで分割",
+                                  "fill": "$sheet-bg",
+                                  "content": "ここで分割",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "NGyVZ",
+                              "name": "Null reason",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "区切れる時刻がありません",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "uyair",
+      "x": 3696,
+      "y": 4166,
+      "name": "ST Phone / Control の押下とフォーカス",
+      "width": 1210,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "c4jdvL",
+          "name": "Board head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "TkYLF",
+              "name": "Board title",
+              "fill": "$ink",
+              "content": "Control — 押下とキーボードフォーカス",
+              "fontFamily": "Roboto",
+              "fontSize": 22,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "VVbfM",
+              "name": "Board note",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "すべての Control（設定の ▲▼ と色、記録の ‹ ›、元に戻す、±、統合、区切る時刻の刻み、ここで分割）に同じ規則。押している間は不透明度 70%。キーボード（Tab）でフォーカスしたときだけ、ink の 2px の枠を 2px 外側に描く（web の :focus-visible。マウスのクリックでは出ない）。無効は 40% のままで、押しても 70% にならない。ink はテーマで反転するので、どちらのテーマでも見える。",
+              "lineHeight": 1.5,
+              "fontFamily": "Roboto",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "u9C8Va",
+          "name": "Board row",
+          "width": "fill_container",
+          "gap": 40,
+          "children": [
+            {
+              "type": "frame",
+              "id": "AQa70",
+              "name": "State: 通常",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RBqdm",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "通常",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "gO8oK",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "既定",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "PKsTO",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pvBPR",
+                      "name": "前の記録に統合",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x1yDJ",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "前の記録に統合",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q7Gdxg",
+                  "name": "Slot",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "W9O7D",
+                      "name": "−",
+                      "context": "button",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$sheet-bg",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mw2d0",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "−",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PBs4S",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "F8bKd",
+                      "name": "ここで分割",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 44,
+                      "fill": "$ink",
+                      "cornerRadius": 10,
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eitW7",
+                          "name": "Label",
+                          "fill": "$sheet-bg",
+                          "content": "ここで分割",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "J6Wr1",
+              "name": "State: 押下中",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Y3rzO",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "押下中",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Zz0Pb",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "不透明度 70%",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "iVD5e",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "U40PpO",
+                      "name": "前の記録に統合",
+                      "context": "button",
+                      "opacity": 0.7,
+                      "width": "fill_container",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AF9SG",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "前の記録に統合",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "G2NRl",
+                  "name": "Slot",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IJLxo",
+                      "name": "−",
+                      "context": "button",
+                      "opacity": 0.7,
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$sheet-bg",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "C8jpq",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "−",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wXkDT",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h2xfJD",
+                      "name": "ここで分割",
+                      "context": "button",
+                      "opacity": 0.7,
+                      "width": "fill_container",
+                      "height": 44,
+                      "fill": "$ink",
+                      "cornerRadius": 10,
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DDh5d",
+                          "name": "Label",
+                          "fill": "$sheet-bg",
+                          "content": "ここで分割",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sZ5eW",
+              "name": "State: キーボードフォーカス",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SKwe2",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "キーボードフォーカス",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "G6T3L",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "ink 2px・外側 2px",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "cqWGf",
+                  "name": "Focus ring",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "J471zc",
+                      "name": "前の記録に統合",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XHJ0l",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "前の記録に統合",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iL8MH",
+                  "name": "Focus ring",
+                  "cornerRadius": 14,
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "X3ZNzi",
+                      "name": "−",
+                      "context": "button",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$sheet-bg",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nQ7mx",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "−",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HZZpg",
+                  "name": "Focus ring",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "stroke": "$ink",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TXJCX",
+                      "name": "ここで分割",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 44,
+                      "fill": "$ink",
+                      "cornerRadius": 10,
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jRZWD",
+                          "name": "Label",
+                          "fill": "$sheet-bg",
+                          "content": "ここで分割",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C0AMcd",
+              "name": "State: 無効",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "c76FZO",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "無効",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "XdOxj",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "不透明度 40%（押しても変わらない）",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "soa6I",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C2TcD",
+                      "name": "前の記録に統合",
+                      "context": "button",
+                      "opacity": 0.4,
+                      "width": "fill_container",
+                      "height": 44,
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Y66tr",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "前の記録に統合",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "w7GesC",
+                  "name": "Slot",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NV29p",
+                      "name": "−",
+                      "context": "button",
+                      "opacity": 0.4,
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$sheet-bg",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FSjdt",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "−",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "N5cLa",
+                  "name": "Slot",
+                  "width": "fill_container",
+                  "cornerRadius": 14,
+                  "padding": 4,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "clE3F",
+                      "name": "ここで分割",
+                      "context": "button",
+                      "opacity": 0.4,
+                      "width": "fill_container",
+                      "height": 44,
+                      "fill": "$ink",
+                      "cornerRadius": 10,
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "STSWi",
+                          "name": "Label",
+                          "fill": "$sheet-bg",
+                          "content": "ここで分割",
+                          "lineHeight": 1.25,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
                           "fontWeight": "600"
                         }
                       ]

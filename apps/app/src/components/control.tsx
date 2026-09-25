@@ -13,7 +13,8 @@ type ControlProps = PropsWithChildren<{
 
 /**
  * A bare tap target (▲▼, the colour dot, ‹ ›, 「元に戻す」, a list row) that dims to 40 % while the action is impossible or a request
- * runs: the one disabled look for everything that is not a {@link Button} or a form control.
+ * runs: the one disabled look for everything that is not a {@link Button} or a form control. While pressed it shows 70 %, and a
+ * keyboard focus (web `:focus-visible`, never a mouse click) draws a 2 px `ink` ring 2 px outside it.
  * @example <Control label="次の週" disabled={latest} onPress={() => onStep(1)} className="h-9 w-9"><Text>›</Text></Control>
  */
 export function Control({
@@ -30,8 +31,9 @@ export function Control({
       disabled={disabled}
       onPress={onPress}
       className={cn(
-        'items-center justify-center',
-        disabled && 'opacity-40',
+        'focus-visible:outline-ink items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2',
+        // On web `:active` matches a disabled element too, so the pressed look is added only while it can be pressed.
+        disabled ? 'opacity-40' : 'active:opacity-70',
         className,
       )}
     >

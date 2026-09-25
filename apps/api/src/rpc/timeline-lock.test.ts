@@ -1189,6 +1189,88 @@ test('ここで分割 at a time before the sheet’s day is refused, so the cut 
   ).toEqual([at(dayBefore, 22)])
 })
 
+test('ここで分割 on one of the day’s own rows inserts its later part at the chosen time, between that row and the next', async () => {
+  // Arrange: yesterday 仕事 9:00, 食事 12:00
+  const api = await signedIn('baseline-cut-own-row@example.com')
+  const list = await api.activities.list()
+  const [work] = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '食事'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  if (!work) throw new Error('fixture has no row')
+  const listed = await api.switches.listByDay({ day: yesterday })
+
+  // Act: 仕事 is cut at 10:15, far from its middle
+  const inserted = await api.switches.splitAt({
+    id: work.id,
+    at: at(yesterday, 10.25),
+    baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
+  })
+
+  // Assert
+  expect(inserted).toMatchObject({
+    activityId: idOf(list, '仕事'),
+    startedAt: at(yesterday, 10.25),
+    source: 'split',
+  })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map((row) => [
+      row.activityId,
+      row.startedAt,
+    ]),
+  ).toEqual([
+    [idOf(list, '仕事'), at(yesterday, 9)],
+    [idOf(list, '仕事'), at(yesterday, 10.25)],
+    [idOf(list, '食事'), at(yesterday, 12)],
+  ])
+})
+
+test('ここで分割 on a day’s last row at a time past midnight is refused, so the cut never lands on the next day', async () => {
+  // Arrange: the day before yesterday ends with 仕事 at 22:00, which runs until 食事 at 3:00 yesterday
+  const api = await signedIn('baseline-cut-own-row-window@example.com')
+  const list = await api.activities.list()
+  const dayBefore = addDays(yesterday, -1)
+  const [work] = await api.switches.replaceDay({
+    day: dayBefore,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 22) }],
+  })
+  if (!work) throw new Error('fixture has no row')
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(yesterday, 3) }],
+  })
+  const listed = await api.switches.listByDay({ day: dayBefore })
+
+  // Act: 1:00 is inside 仕事, but on the day after the sheet's
+  const cut = api.switches.splitAt({
+    id: work.id,
+    at: at(dayBefore, 25),
+    baseline: {
+      day: dayBefore,
+      timeZone: TZ,
+      rows: listedRows(listed.rows),
+      carriedOutId: listed.carriedOut?.id ?? null,
+    },
+  })
+
+  // Assert
+  await expect(cut).rejects.toThrow('no room to split there')
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(yesterday, 3)])
+})
+
 test('元に戻す of a cut on a day with no switch of its own empties the day again and the carried-in record runs through it', async () => {
   // Arrange: 仕事 from 22:00 the day before is still running; yesterday is cut at 3:00 from its sheet
   const api = await signedIn('undo-empty-day@example.com')
