@@ -12,6 +12,7 @@ import {
 import { useState, useSyncExternalStore } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
+import { judgeArmedUndo } from '@/hooks/use-day-reads'
 import { useDelayedFlag } from '@/hooks/use-delayed-flag'
 import { useLocalToday } from '@/hooks/use-local-today'
 import { useSettings } from '@/hooks/use-settings'
@@ -26,6 +27,7 @@ import {
   isDayChangedRefusal,
   isManuallyExcluded,
   landedUndo,
+  nextStamp,
   offeredUndo,
   onPressedDay,
   pickRequest,
@@ -204,7 +206,7 @@ function useEditLifecycle(day: string) {
       _variables: unknown,
       pressed: Pressed | undefined,
     ): void => {
-      const line = dayLine(error, Date.now())
+      const line = dayLine(error, nextStamp())
       if (pressed) dispatch(lineRaised({ ...pressed, line }))
       if (line.kind === 'unauthorized') void readSessionAgain()
     },
@@ -218,12 +220,26 @@ function useEditLifecycle(day: string) {
       // A landed write: the mutation stays pending until the refetch settles, so the panel waits for the rows the edit left.
       if (!error)
         return invalidateKeys(queryClient, [orpc.switches.key(), ...others])
-      // A failed one arms nothing, so its refetch runs on its own (a hung API stalls it too, another 30 s and a retry); the
-      // list's fetch still dims the panel.
-      reReadAfterFailure(queryClient, pressed?.day ?? day)
-      void invalidateKeys(queryClient, others)
+      return readsAfterFailure(queryClient, error, pressed?.day ?? day, others)
     },
   }
+}
+
+// A failed edit's reads: it arms nothing. A refusal waits for them as a landed write does: a day-changed one refetches the
+// stored zone, and the next edit needs it. A failure that may have landed lets them run on its own (a hung API stalls them
+// too, another 30 s and a retry, and a dropped connection's retry waits for the network); the list's fetch still dims the
+// panel.
+async function readsAfterFailure(
+  queryClient: QueryClient,
+  error: unknown,
+  day: string,
+  others: QueryKey[],
+): Promise<void> {
+  const reads = Promise.all([
+    reReadAfterFailure(queryClient, day),
+    invalidateKeys(queryClient, others),
+  ])
+  if (failureKind(error) !== 'uncertain') await reads
 }
 
 // The keys a settled edit refetches besides `switches.*`: `stats.*`, and `settings.*` after a day-changed refusal while no
@@ -241,19 +257,24 @@ function othersToRefetch(queryClient: QueryClient, error: unknown): QueryKey[] {
 // {@link useDayReads} can settle the line; the rest only where a screen watches it. A sheet that closes while that read is in
 // flight cancels it with no action to judge, and the list stays invalidated, so reopening the sheet reads the day again. The
 // two calls match disjoint queries, since a second invalidation of the same query would cancel the first one's fetch.
-function reReadAfterFailure(queryClient: QueryClient, day: string): void {
+async function reReadAfterFailure(
+  queryClient: QueryClient,
+  day: string,
+): Promise<void> {
   const pressedList = hashKey(
     orpc.switches.listByDay.queryKey({ input: { day } }),
   )
-  void queryClient.invalidateQueries({
-    queryKey: orpc.switches.key(),
-    predicate: (query) => query.queryHash === pressedList,
-    refetchType: 'all',
-  })
-  void queryClient.invalidateQueries({
-    queryKey: orpc.switches.key(),
-    predicate: (query) => query.queryHash !== pressedList,
-  })
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: orpc.switches.key(),
+      predicate: (query) => query.queryHash === pressedList,
+      refetchType: 'all',
+    }),
+    queryClient.invalidateQueries({
+      queryKey: orpc.switches.key(),
+      predicate: (query) => query.queryHash !== pressedList,
+    }),
+  ])
 }
 
 // The sheet's edits. Each sends the day's baseline and arms 元に戻す through {@link undoSlotFor} once it succeeds.
@@ -314,6 +335,8 @@ function useCorrectionEdits(
           undoSlotFor({ kind, returned }, row, baseline, bounds),
         )
         dispatch(slot ? armed({ epoch, slot }) : dropped({ epoch, day }))
+        // The edit's own re-read landed before the slot existed, so the slot meets that read now.
+        judgeArmedUndo(day)
         if (archived) state.showNotice({ day, epoch }, row.id)
       }
     const failed = (error: unknown): void => {

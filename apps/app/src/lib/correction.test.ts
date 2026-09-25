@@ -3,7 +3,7 @@ import { RPCLink } from '@orpc/client/fetch'
 import { createTanstackQueryUtils } from '@orpc/tanstack-query'
 import type { AppRouterClient } from '@switch-time/api'
 import { dayBounds } from '@switch-time/shared'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import {
   afterDayRead,
@@ -26,6 +26,7 @@ import {
   isManuallyExcluded,
   isSettledWrite,
   landedUndo,
+  nextStamp,
   offeredUndo,
   onPressedDay,
   openedCut,
@@ -2297,6 +2298,83 @@ test('a read retires 元に戻す once the day no longer reads as the slot left 
   expect(failed).toBe(false)
   expect(zoneUnknown).toBe(false)
   expect(stillMatching).toBe(false)
+})
+
+test('a zone change that only moves the undo’s record or day out of view keeps 元に戻す for when the zone comes back', () => {
+  // Arrange: the pick left the record at revision 4, and it is still there, but a new zone lists another record carried in;
+  // the day slot was armed in Asia/Tokyo and the day is now read in another zone.
+  const other = { ...row('o', 'home', at('2026-09-07', 22)), revision: 1 }
+  const listed: ListedDay = { carriedIn: other, rows: [], carriedOut: null }
+  const activitySlot: UndoSlot = {
+    kind: 'activity',
+    day: '2026-09-08',
+    id: 'c',
+    to: 'sleep',
+    revision: 4,
+  }
+  const daySlot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: TZ,
+    rows: [],
+    expected: [{ id: 'h', activityId: 'home', startedAt: at('2026-09-08', 7) }],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const judge = (slot: UndoSlot, timeZone: string) =>
+    afterDayRead({
+      line: undefined,
+      slot,
+      read: { at: 2000, ok: true, listed },
+      zoneWriting: false,
+      timeZone,
+    }).retireUndo
+
+  // Act
+  const recordOutOfView = judge(activitySlot, TZ)
+  const dayInAnotherZone = judge(daySlot, 'America/New_York')
+  const dayInItsOwnZone = judge(daySlot, TZ)
+
+  // Assert
+  expect(recordOutOfView).toBe(false)
+  expect(dayInAnotherZone).toBe(false)
+  expect(dayInItsOwnZone).toBe(true)
+})
+
+test('a read in the same clock tick as the failure, or after the clock stepped back, still counts as later', () => {
+  // Arrange
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1_790_000_000_000)
+
+  // Act
+  const failure = nextStamp()
+  const sameTick = nextStamp()
+  now.mockReturnValue(1_789_999_000_000)
+  const afterStepBack = nextStamp()
+  now.mockRestore()
+
+  // Assert
+  expect(sameTick).toBe(1_790_000_000_001)
+  expect(afterStepBack).toBe(1_790_000_000_002)
+  expect(sameTick).toBeGreaterThan(failure)
+})
+
+test('a 4xx no procedure wrote (an unknown route) reads as a plain failure, not as a changed record, and keeps 元に戻す', () => {
+  // Arrange: what oRPC's link builds from Hono's plain-text 404.
+  const unknownRoute = new ORPCError('NOT_FOUND', {
+    status: 404,
+    data: { status: 404, headers: {}, body: '404 Not Found' },
+  })
+
+  // Act
+  const kind = failureKind(unknownRoute)
+  const message = failureMessage(unknownRoute)
+  const undo = afterUndoFailure(unknownRoute)
+
+  // Assert
+  expect(kind).toBe('failed')
+  expect(message).toBe('保存できませんでした。もう一度お試しください')
+  expect(undo).toBe('keep')
 })
 
 test('only a landed fetch of a day’s list counts as a read of that day', () => {

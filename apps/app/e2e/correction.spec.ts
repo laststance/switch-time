@@ -1854,6 +1854,60 @@ test('a settings change made while a day’s sheet is closed keeps that day’s 
   await expect(rest).toBeVisible()
 })
 
+test('元に戻す stays off once the merge’s own re-read saw another device’s change, even after that change was put back', async ({
+  page,
+}) => {
+  // Arrange: the API applies a merge of 休息 into 仕事 and holds its answer, while another device changes 仕事 to 休息.
+  const { api, yesterday } = await seedYesterday(page)
+  const list = await api.activities.list()
+  const merged = Promise.withResolvers<void>()
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/mergeIntoPrevious', async (route) => {
+    const response = await route.fetch()
+    merged.resolve()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog
+    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+    .click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await merged.promise
+  const work = (await api.switches.listByDay({ day: yesterday })).rows.find(
+    ({ activityId }) => activityId === idOf(list, '仕事'),
+  )
+  if (!work) throw new Error('no 仕事 row')
+  await api.switches.changeActivity({
+    id: work.id,
+    activityId: idOf(list, '休息'),
+  })
+
+  // Act: the answer lands and the merge reads the day again, then that device puts 仕事 back and the sheet reads it once stale.
+  answer.resolve()
+  await expect(
+    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await api.switches.changeActivity({
+    id: work.id,
+    activityId: idOf(list, '仕事'),
+  })
+  await page.clock.fastForward('00:31')
+  const reread = page.waitForResponse((response) =>
+    response.url().includes('/api/rpc/switches/listByDay'),
+  )
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')))
+  await reread
+
+  // Assert: the sheet lists 仕事 as the merge left it, yet offers no undo over a day that changed in between.
+  await expect(
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
 test('an undo that lands after its sheet closed leaves nothing to undo when that day is reopened', async ({
   page,
 }) => {

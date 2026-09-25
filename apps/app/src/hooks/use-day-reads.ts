@@ -10,6 +10,7 @@ import {
   dayOfRead,
   isFreshList,
   isSettledWrite,
+  nextStamp,
   type DayRead,
 } from '@/lib/correction'
 import { orpc } from '@/lib/orpc'
@@ -45,30 +46,38 @@ function judgeDayRead(event: QueryCacheNotifyEvent): void {
   if (event.type !== 'updated') return
   const read = dayOfRead(event.action, event.query.queryKey)
   if (!read) return
-  judgeDay(read.day, {
-    at: Date.now(),
-    ok: read.ok,
-    listed: cachedList(read.day),
-  })
+  const at = nextStamp()
+  // Judged after the cache's own update: a throw here must not turn the read that landed into a failed one.
+  queueMicrotask(() =>
+    judgeDay(read.day, { at, ok: read.ok, listed: cachedList(read.day) }),
+  )
 }
 
 // One mutation-cache update: once the last settings write settles, every armed slot whose day's cached list is fresh (a read
-// landed after that write marked it stale: its re-read of a watched list, or a sheet opened meanwhile) is judged by it. Other days wait for their next read. Lines are left
-// alone: a cached list is not a new read.
+// landed after that write marked it stale: its re-read of a watched list, or a sheet opened meanwhile) is judged by it
+// ({@link judgeArmedUndo}). Other days wait for their next read.
 function judgeAfterSettingsWrite(event: MutationCacheNotifyEvent): void {
   const { mutation } = event
   if (!isSettledWrite(event) || !mutation) return
   if (!matchMutation({ mutationKey: orpc.settings.key() }, mutation)) return
-  const { correction } = store.getState()
-  Object.keys(correction.undo)
-    .filter((day) => isFreshList(queryClient.getQueryState(listKey(day))))
-    .forEach((day) =>
-      judgeDay(
-        day,
-        { at: Date.now(), ok: true, listed: cachedList(day) },
-        { withLine: false },
-      ),
-    )
+  Object.keys(store.getState().correction.undo).forEach(judgeArmedUndo)
+}
+
+/**
+ * Judges a day's armed 「元に戻す」 by the day's cached list, when that list is fresh ({@link isFreshList}): a read that landed
+ * before the slot existed, or while a settings write was in flight, could not judge it. Called by {@link useCorrection} right
+ * after an edit arms its slot, and for every armed day once a settings write settles. Lines are left alone: a cached list
+ * is not a new read.
+ * @param day - The day (`YYYY-MM-DD`) whose slot to judge.
+ * @example judgeArmedUndo('2026-09-24')
+ */
+export function judgeArmedUndo(day: string): void {
+  if (!isFreshList(queryClient.getQueryState(listKey(day)))) return
+  judgeDay(
+    day,
+    { at: nextStamp(), ok: true, listed: cachedList(day) },
+    { withLine: false },
+  )
 }
 
 // The query key of a day's list.

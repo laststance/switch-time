@@ -880,10 +880,28 @@ export function failureKind(error: unknown): FailureKind {
   if (!(error instanceof ORPCError)) return 'uncertain'
   if (error.code === 'TIMEOUT') return 'failed'
   if (error.status >= 500) return 'uncertain'
+  // A 4xx no procedure wrote (a route the API does not have, a proxy's answer): nothing ran, so nothing can have landed.
+  if (isMalformedAnswer(error)) return 'failed'
+  return answeredKind(error)
+}
+
+// A 4xx a procedure answered, as {@link failureKind} sorts it.
+function answeredKind(error: ORPCError<string, unknown>): FailureKind {
   if (refusalReason(error) || error.code === 'NOT_FOUND') return 'refused'
   if (error.code === 'UNAUTHORIZED') return 'unauthorized'
-  if (error.code === 'BAD_REQUEST') return 'invalid'
-  return 'failed'
+  return error.code === 'BAD_REQUEST' ? 'invalid' : 'failed'
+}
+
+// The `data` oRPC's link gives an answer whose body is not an oRPC error: the HTTP response itself, so its code only
+// mirrors the status (a Hono 404 for an unknown route reads as NOT_FOUND).
+const malformedAnswerSchema = z.object({
+  status: z.number(),
+  headers: z.record(z.string(), z.unknown()),
+})
+
+// Whether an oRPC error was built from an answer no procedure wrote ({@link malformedAnswerSchema}).
+function isMalformedAnswer(error: ORPCError<string, unknown>): boolean {
+  return malformedAnswerSchema.safeParse(error.data).success
 }
 
 /** The kinds {@link failureKind} tells apart. */
@@ -902,13 +920,13 @@ export type FailureKind =
  *   a day whose current state would name one)
  * - 'clear': CONFLICT (`replaceDay`'s day-changed, `changeActivity`'s stale revision), NOT_FOUND, UNAUTHORIZED, or a
  *   BAD_REQUEST without a reason
- * - 'keep': anything else: uncertain, TIMEOUT, busy
+ * - 'keep': anything else: uncertain, TIMEOUT, busy, or a 4xx no procedure wrote
  * @example afterUndoFailure(new ORPCError('CONFLICT')) // 'clear'
  */
 export function afterUndoFailure(
   error: unknown,
 ): 'keep' | 'clear' | 'archived' {
-  if (!(error instanceof ORPCError)) return 'keep'
+  if (!(error instanceof ORPCError) || isMalformedAnswer(error)) return 'keep'
   const reason = refusalReason(error)
   if (error.code === 'BAD_REQUEST' && reason === REFUSAL.archived.reason)
     return 'archived'
@@ -985,7 +1003,7 @@ export function failureMessage(error: unknown): string {
  * what the reads of that day since have shown ({@link afterDayRead}).
  */
 export type DayLine = {
-  /** When the failure was answered (epoch ms): only a read that lands later counts. */
+  /** When the failure was answered ({@link nextStamp}): only a read stamped later counts. */
   at: number
   kind: FailureKind
   /** {@link failureMessage}'s text. */
@@ -998,10 +1016,26 @@ export type DayLine = {
   stale: boolean
 }
 
+// The last stamp {@link nextStamp} handed out.
+let lastStamp = 0
+
+/**
+ * A strictly increasing clock for the correction sheet's failures and the reads that judge them: epoch ms, but never equal
+ * to or below the previous stamp, so a read that lands in the same tick as the failure (a coarse `Date.now()`, a fast
+ * local answer) or after the system clock stepped back still counts as later. Called by the sheet's `onError` and by
+ * {@link useDayReads} for every read.
+ * @returns epoch ms, or one more than the previous stamp when the clock has not moved past it
+ * @example [nextStamp(), nextStamp()] // [1790000000000, 1790000000001] within one millisecond
+ */
+export function nextStamp(): number {
+  lastStamp = Math.max(Date.now(), lastStamp + 1)
+  return lastStamp
+}
+
 /**
  * The day's line for a failure just answered. Called by every sheet mutation's `onError`, which stores it for the pressed day.
  * @param error - The error the mutation failed with.
- * @param at - When it was answered (epoch ms).
+ * @param at - When it was answered ({@link nextStamp}).
  * @returns A line that has seen no read yet; reading only for an uncertain failure.
  * @example dayLine(new RequestTimeoutError(), 1000) // { at: 1000, kind: 'uncertain', text: '反映されたか…', reading: true, seen: null, stale: false }
  */
@@ -1177,14 +1211,27 @@ function lineAfterGoodRead(line: DayLine, fingerprint: string): LineAfterRead {
   return line.seen === null || line.stale ? { seen: fingerprint } : 'keep'
 }
 
-// The undo half of {@link afterDayRead}.
+// The undo half of {@link afterDayRead}: the slot goes only on proof that its write would be refused, not because the day
+// lists it differently. A zone change re-windows the day, and the undo holds again if the zone comes back.
 function undoOutlived(
   slot: UndoSlot | undefined,
   listed: ListedDay | null,
   timeZone: string | undefined,
 ): boolean {
   if (!slot || !listed || timeZone === undefined) return false
-  return offeredUndo(slot, listed, timeZone) === undefined
+  if (offeredUndo(slot, listed, timeZone)) return false
+  return slotRefutedBy(slot, listed, timeZone)
+}
+
+// Whether a day that no longer offers the slot proves it stale: a day slot's day read in the slot's own zone, or the picked
+// record listed at another revision. A record the day does not list may only sit outside its window now.
+function slotRefutedBy(
+  slot: UndoSlot,
+  listed: ListedDay,
+  timeZone: string,
+): boolean {
+  if (slot.kind === 'day') return slot.timeZone === timeZone
+  return pickedRecord(listed, slot.id) !== undefined
 }
 
 // A `switches.listByDay` query key: `[['switches', 'listByDay'], { input: { day }, type: 'query' }]`.
