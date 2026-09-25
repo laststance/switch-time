@@ -458,4 +458,49 @@ test.describe('device time zone', () => {
       })
       .toBe('America/Los_Angeles')
   })
+
+  test('a zone write that failed for an account is sent again once that account signs in on this device again', async ({
+    page,
+  }) => {
+    // Arrange: account A's automatic write fails; B, made elsewhere, already holds the device's zone, so its turn writes nothing.
+    await page.route('**/api/rpc/settings/update', async (route) =>
+      route.fulfill(rpcError('INTERNAL_SERVER_ERROR', 500)),
+    )
+    const failedWrite = page.waitForResponse((response) =>
+      response.url().includes('/api/rpc/settings/update'),
+    )
+    await signUp(page)
+    expect((await failedWrite).status()).toBe(500)
+    await page.unroute('**/api/rpc/settings/update')
+    const accountA = await apiAs(page)
+    const sessionA = await page.context().request.get('/api/auth/get-session')
+    const emailA: string = (await sessionA.json()).user.email
+    const emailB = await signInElsewhere(page)
+    await (
+      await apiAs(page)
+    ).settings.update({
+      timeZone: 'America/Los_Angeles',
+    })
+    await foregroundUntilSessionIs(page, emailB)
+    await expect
+      .poll(async () => syncedZones(page))
+      .toEqual(['America/Los_Angeles'])
+
+    // Act: A signs in on this device again.
+    const signInAnswer = await page
+      .context()
+      .request.post('/api/auth/sign-in/email', {
+        headers: { origin: new URL(page.url()).origin },
+        data: { email: emailA, password: 'correct-horse-battery' },
+      })
+    expect(signInAnswer.ok()).toBe(true)
+    await foregroundUntilSessionIs(page, emailA)
+
+    // Assert: A still held the API's default zone; the sync writes the device's this time.
+    await expect
+      .poll(async () => (await accountA.settings.get()).timeZone, {
+        timeout: 20_000,
+      })
+      .toBe('America/Los_Angeles')
+  })
 })

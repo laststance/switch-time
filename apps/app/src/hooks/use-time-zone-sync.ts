@@ -13,7 +13,7 @@ import { zoneSyncAction } from '@/lib/settings'
  * install, a move, also while the app stays open), so every day boundary the API computes follows the user's clock, while two
  * devices in different zones leave each other's write alone ({@link zoneSyncAction}). It acts only on a settings row that is
  * the session account's own, and each write names that account, so the API refuses it once the cookie is another's. A failed
- * write is not sent again for the same account and zone until the next launch. Mounted once, in the root layout.
+ * write is not sent again for the same account and zone until the next launch or sign-in. Mounted once, in the root layout.
  * @example useTimeZoneSync()
  */
 export function useTimeZoneSync(): void {
@@ -21,8 +21,11 @@ export function useTimeZoneSync(): void {
   const device = useDeviceZone()
   const { data: session } = authClient.useSession()
   const accountId = session?.user.id
-  const { mutate, isError, variables } = useUpdateSettings()
+  const { mutate, reset, isError, variables } = useUpdateSettings()
   const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
+  // A sign-in (the same account after an expired cookie, or back from another) is a fresh start: a write that failed before it
+  // may succeed now. Declared before the sync so it clears the failure first.
+  useEffect(() => reset(), [accountId, reset])
   // Without an account id (an expired session, a sign-out from another tab) the device's store cannot be read, and a write
   // would only fail.
   const settled = ready && !writing && Boolean(accountId)
