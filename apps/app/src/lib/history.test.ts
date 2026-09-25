@@ -799,7 +799,46 @@ test('a day cell does not read out times under half a minute as 0m', () => {
   expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 3h 00m')
   expect(cell?.slices.map((slice) => [slice.activityId, slice.top])).toEqual([
     ['work', true],
+    ['home', false],
   ])
+})
+
+test('short activities in a month cell still stack up rather than leave the track empty', () => {
+  // Arrange: 9/9 had 10 minutes each of 仕事, 家事 and 旧, each under half a pixel of the 48 px cell
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { work: H / 6, home: H / 6, old: H / 6 },
+      }),
+    ],
+    totals: { work: H / 6, home: H / 6, old: H / 6 },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'month',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: all three are drawn, 1 px together, and with none visible alone the outer two keep the rounded ends
+  const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
+  expect(
+    cell?.slices.map((slice) => [slice.activityId, slice.bottom, slice.top]),
+  ).toEqual([
+    ['work', true, false],
+    ['home', false, false],
+    ['old', false, true],
+  ])
+  expect(
+    cell?.slices.reduce((total, slice) => total + slice.height, 0),
+  ).toBeCloseTo(1)
 })
 
 test('half an hour of detox too short to outline in a month cell is still read out', () => {
