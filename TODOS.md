@@ -366,7 +366,7 @@
 
 **What:** Turn on `requireEmailVerification` once there is a mailer, so an address cannot be used until its owner confirms it, and add a password reset through the same mailer. When e-mail links or social sign-in bring auth deep links, also narrow the native entry in `trustedOrigins` from `switchtime://` to `switchtime://auth`.
 
-**Why:** Since 0.16.0.0 (`autoSignIn: false`) the answer to one sign-up request no longer tells whether an address has an account: Better Auth answers both the same way. The flow still does: sign up with a fresh password, then sign in with it, and only an unused address lets you in (leaving an account behind). Two overlapping sign-ups for an unused address can also differ: one may hit the unique index and get 422 `FAILED_TO_CREATE_USER`, while an existing address answers 200 twice. And someone who forgot they had an account and "registers" again with a new password gets 「登録しました」, then a sign-in error, with no way back without a reset. The same dead end hides squatting: someone can register another person's address first with a password of their own, and its owner now meets 「登録しました」 and a sign-in error instead of "already exists".
+**Why:** Since 0.17.0.0 (`autoSignIn: false`) the answer to one sign-up request no longer tells whether an address has an account: Better Auth answers both the same way. The flow still does: sign up with a fresh password, then sign in with it, and only an unused address lets you in (leaving an account behind). Two overlapping sign-ups for an unused address can also differ: one may hit the unique index and get 422 `FAILED_TO_CREATE_USER`, while an existing address answers 200 twice. And someone who forgot they had an account and "registers" again with a new password gets 「登録しました」, then a sign-in error, with no way back without a reset. The same dead end hides squatting: someone can register another person's address first with a password of their own, and its owner now meets 「登録しました」 and a sign-in error instead of "already exists".
 
 **Context:** `apps/api/src/auth.ts` sets `emailAndPassword: { enabled: true, autoSignIn: false }`; the branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`; with it, `onExistingUserSignUp` can mail the owner of an address that someone tried to register again. The 登録しました notice on sign-in (pen board 「ST Phone / サインイン（登録後）」) would then say to check the inbox, so change the board first. `switchtime://` stays host-less for now because the Expo client sends `expo-origin: switchtime://` (`Linking.createURL('', { scheme })`), which a `switchtime://auth` pattern rejects (`matchesOriginPattern`), so every native POST that carries cookies would get 403; the narrowing needs that origin to change too. A new account also takes longer to answer than an existing one (the inserts, and `seedUser`, which Better Auth waits for), so the timing of one request still tells, and a probe of an existing address leaves nothing behind; padding the duplicate path or seeding in the background would close that part without a mailer. Production rate limiting (Better Auth's rule for `/sign-up` and `/sign-in`, 3 per 10 s per `do-connecting-ip`) slows both, but its counts live in memory: per API instance, and reset on every deploy.
 
@@ -378,9 +378,9 @@
 
 **What:** Show the sign-in and sign-up server errors in Japanese: map Better Auth's error codes (`INVALID_EMAIL_OR_PASSWORD`, `PASSWORD_TOO_SHORT`, the rate limit's 429, …) to the app's words instead of showing its English `message`.
 
-**Why:** A wrong password shows "Invalid email or password" in an otherwise Japanese app. Since 0.16.0.0 every sign-up goes through sign-in, so more people see it.
+**Why:** A wrong password shows "Invalid email or password" in an otherwise Japanese app. Since 0.17.0.0 every sign-up goes through sign-in, so more people see it.
 
-**Context:** `useAuthForm` (`apps/app/src/hooks/use-auth-form.ts`) throws `error.message ?? 'もう一度お試しください'` and `AuthCard` shows it as the role=alert line. Put the copy on a pen board first (the text on a screen is a design change). Raised by the design review of the 0.16.0.0 plan.
+**Context:** `useAuthForm` (`apps/app/src/hooks/use-auth-form.ts`) throws `error.message ?? 'もう一度お試しください'` and `AuthCard` shows it as the role=alert line. Put the copy on a pen board first (the text on a screen is a design change). Raised by the design review of the 0.17.0.0 plan.
 
 **Effort:** S
 **Priority:** P3
@@ -392,7 +392,7 @@
 
 **Why:** `useNativeAnnouncement` (`apps/app/src/hooks/use-registration.ts`) calls `announceForAccessibility` as sign-in mounts, during the stack transition, which screen readers often interrupt. On the web the password field's `aria-describedby` carries the notice instead, and the e2e tests check that one.
 
-**Context:** Raised by the adversarial review of 0.16.0.0. `apps/app/src/app/(app)/correction.tsx` announces its status line on iOS only; see "Announce the correction sheet's status line with VoiceOver on iOS".
+**Context:** Raised by the adversarial review of 0.17.0.0. `apps/app/src/app/(app)/correction.tsx` announces its status line on iOS only; see "Announce the correction sheet's status line with VoiceOver on iOS".
 
 **Effort:** S
 **Priority:** P3
@@ -404,7 +404,7 @@
 
 **Why:** The first keystroke in the focused password field dismisses the notice. `AuthCard` centres the card vertically, so losing the chip and its gap (about 50px) moves the whole card by about 25px while the user types.
 
-**Context:** `dismissNotice()` runs in sign-in's `set` wrapper (`apps/app/src/app/(auth)/sign-in.tsx`); the card is centred by `items-center justify-center` in `apps/app/src/components/auth-card.tsx`. The board's caption says the notice goes on input but does not draw the card after it. Raised by the design review of 0.16.0.0.
+**Context:** `dismissNotice()` runs in sign-in's `set` wrapper (`apps/app/src/app/(auth)/sign-in.tsx`); the card is centred by `items-center justify-center` in `apps/app/src/components/auth-card.tsx`. The board's caption says the notice goes on input but does not draw the card after it. Raised by the design review of 0.17.0.0.
 
 **Effort:** S
 **Priority:** P3
@@ -414,9 +414,9 @@
 
 **What:** Add a keyboard-open state of the sign-in and sign-up boards to the pen file, then keep the focused field and the submit button above the keyboard on iOS and Android (a `KeyboardAvoidingView` or a scrollable card).
 
-**Why:** Since 0.16.0.0 sign-in focuses the password field after 登録, so the keyboard opens as soon as sign-in comes into view after 登録. The auth screens have nothing that moves out of its way: on a phone the keyboard (about 336pt) can cover the サインイン button, and the password field on a short one.
+**Why:** Since 0.17.0.0 sign-in focuses the password field after 登録, so the keyboard opens as soon as sign-in comes into view after 登録. The auth screens have nothing that moves out of its way: on a phone the keyboard (about 336pt) can cover the サインイン button, and the password field on a short one.
 
-**Context:** `useScreenFocusField` (`apps/app/src/hooks/use-screen-focus-field.ts`) focuses the password from `sign-in.tsx`; `AuthCard` has no keyboard handling. The web build is not affected. Raised by the design review of 0.16.0.0.
+**Context:** `useScreenFocusField` (`apps/app/src/hooks/use-screen-focus-field.ts`) focuses the password from `sign-in.tsx`; `AuthCard` has no keyboard handling. The web build is not affected. Raised by the design review of 0.17.0.0.
 
 **Effort:** S
 **Priority:** P3
