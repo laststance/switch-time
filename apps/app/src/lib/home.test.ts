@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import {
   badgeRing,
+  detoxCarriedIn,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -176,6 +177,52 @@ describe('nowLook', () => {
   })
 })
 
+describe('detoxCarriedIn', () => {
+  test('asks about today only for a detox from an earlier day with no tap today', () => {
+    // Arrange: a detox from 9/16 21:20 JST, read on 9/25 (Tokyo)
+    const startedAt = new Date('2026-09-16T12:20:00Z')
+    const base = { today: '2026-09-25', timeZone: 'Asia/Tokyo' }
+
+    // Act
+    const carried = detoxCarriedIn({
+      ...base,
+      current: { activityId: null, startedAt },
+      switchCountToday: 0,
+    })
+    const tappedToday = detoxCarriedIn({
+      ...base,
+      current: { activityId: null, startedAt },
+      switchCountToday: 1,
+    })
+    const activity = detoxCarriedIn({
+      ...base,
+      current: { activityId: 'work', startedAt },
+      switchCountToday: 0,
+    })
+
+    // Assert
+    expect(carried).toBe(true)
+    expect(tappedToday).toBe(false)
+    expect(activity).toBe(false)
+  })
+
+  test('does not ask for a detox started today, judged in the stored zone', () => {
+    // Act: 9/24 23:00 UTC is 9/25 08:00 in Tokyo
+    const carried = detoxCarriedIn({
+      current: {
+        activityId: null,
+        startedAt: new Date('2026-09-24T23:00:00Z'),
+      },
+      today: '2026-09-25',
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
+    })
+
+    // Assert
+    expect(carried).toBe(false)
+  })
+})
+
 describe('detoxStopped', () => {
   // A detox from 9/16 21:20 JST, read on 9/25 (Tokyo), the server's answer for today and a settled fetch
   const carriedDetox = {
@@ -330,6 +377,20 @@ describe('detoxStopped', () => {
     // Assert
     expect(loading).toBe(false)
     expect(yesterdays).toBe(false)
+  })
+
+  test('stays quiet when the answer lists no day at all', () => {
+    // Act
+    const stopped = detoxStopped({
+      current: carriedDetox,
+      today: '2026-09-25',
+      timeZone: 'Asia/Tokyo',
+      switchCountToday: 0,
+      stats: { ...settled, data: { days: [] } },
+    })
+
+    // Assert
+    expect(stopped).toBe(false)
   })
 })
 

@@ -1,6 +1,6 @@
 import {
   DETOX_MEASURED_DAYS_MAX,
-  type ExcludedReason,
+  type DayStats,
   localDay,
 } from '@switch-time/shared'
 
@@ -98,44 +98,53 @@ export function nowLook(
   }
 }
 
+/** Today as Home knows it: the current switch, the stored zone's day and today's own switch count. */
+type HomeToday = {
+  current: { activityId: string | null; startedAt: Date }
+  today: string
+  timeZone: string
+  /** Today's switches from the day's own list, which lands before a stats refetch does. */
+  switchCountToday: number
+}
+
 /**
- * Whether today is a day the running detox no longer measures, as the server classes it, so Home can say so. Home asks
- * `stats.day` for today only while detox runs; the answer is trusted only while it can still describe today.
- * @param input.current - The current switch.
- * @param input.today - Today in the stored zone.
- * @param input.timeZone - The stored zone.
- * @param input.switchCountToday - Today's switches from the day's own list, which lands before a stats refetch does.
+ * Whether a detox runs that was carried in from an earlier day and today has no switch of its own: the only state that can be past
+ * the detox week. Home asks `stats.day` for today only then, and {@link detoxStopped} reads the answer only then.
+ * @returns
+ * - true for a detox started before today with no tap today
+ * - false for an activity, a detox started today, and any day with a switch
+ * @example detoxCarriedIn({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0 }) // true when startedAt is 9/24 or earlier in Tokyo
+ */
+export function detoxCarriedIn(input: HomeToday): boolean {
+  const { current } = input
+  if (current.activityId !== null || input.switchCountToday > 0) return false
+  return localDay(current.startedAt, input.timeZone) < input.today
+}
+
+/**
+ * Whether today is a day the running detox no longer measures, as the server classes it, so Home can say so. The answer is trusted
+ * only while it can still describe today.
  * @param input.stats - The `stats.day` query for today: its last answer, whether its last fetch failed or waits for the network.
  * @returns
- * - true when detox runs from an earlier day, today has no switch of its own and the last trusted answer reads today as neither
- *   measured nor excluded (only a detox past its week reaches that; auto-exclusion off always measures)
+ * - true when {@link detoxCarriedIn} holds and the last trusted answer reads today as neither measured nor excluded (only a detox
+ *   past its week reaches that; auto-exclusion off always measures)
  * - false for an activity, a detox started today, a day with a switch, a manual exclusion, a measured day, and while no answer
  *   can be trusted (none yet, a failed or paused fetch, an answer for another day): unknown is not "stopped"
  * @example detoxStopped({ current: { activityId: null, startedAt }, today: '2026-09-25', timeZone: 'Asia/Tokyo', switchCountToday: 0, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
  */
-export function detoxStopped(input: {
-  current: { activityId: string | null; startedAt: Date }
-  today: string
-  timeZone: string
-  switchCountToday: number
-  stats: {
-    isError: boolean
-    isPaused: boolean
-    data:
-      | {
-          days: readonly {
-            day: string
-            measured: boolean
-            excluded: ExcludedReason | null
-          }[]
-        }
-      | undefined
-  }
-}): boolean {
-  const { current, stats } = input
-  // Only a detox carried in from an earlier day, with no tap today, can be past its week.
-  if (current.activityId !== null || input.switchCountToday > 0) return false
-  if (localDay(current.startedAt, input.timeZone) >= input.today) return false
+export function detoxStopped(
+  input: HomeToday & {
+    stats: {
+      isError: boolean
+      isPaused: boolean
+      data:
+        | { days: readonly Pick<DayStats, 'day' | 'measured' | 'excluded'>[] }
+        | undefined
+    }
+  },
+): boolean {
+  const { stats } = input
+  if (!detoxCarriedIn(input)) return false
   // A failed or paused fetch keeps an answer that may predate a tap from another device.
   if (stats.isError || stats.isPaused) return false
   const answer = stats.data?.days[0]

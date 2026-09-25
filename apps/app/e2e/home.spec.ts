@@ -319,7 +319,20 @@ test('a detox on the seventh day after it started names its start day and says n
       { exact: true },
     ),
   ).toBeVisible()
-  expect((await dayClassAnswer).ok()).toBe(true)
+  // The server still measures today; two frames later Home has rendered that answer, so the absence below is not a first-poll pass
+  const answer = await dayClassAnswer
+  expect(answer.ok()).toBe(true)
+  expect((await answer.json()).json.days[0]).toMatchObject({
+    day: today(),
+    measured: true,
+    excluded: null,
+  })
+  await page.evaluate(
+    async () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  )
   await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
 })
 

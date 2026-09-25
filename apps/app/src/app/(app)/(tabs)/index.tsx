@@ -19,6 +19,7 @@ import { useTokenColor } from '@/hooks/use-token-color'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { formatDay, formatSince } from '@/lib/format'
 import {
+  detoxCarriedIn,
   detoxStopped,
   gridActivities,
   homeFallback,
@@ -43,20 +44,16 @@ function HomeBody({ current, activity }: HomeBodyProps) {
   const switchTo = useSwitchTo()
   const { today, timeZone, ready, start, end, segments, switchCount } =
     useToday()
-  // The server's class for today says whether a detox past its week still measures it; an activity never needs the answer.
+  const homeToday = { current, today, timeZone, switchCountToday: switchCount }
+  // The server's class for today says whether a detox past its week still measures it; only a detox carried in from an earlier
+  // day with no tap today can be past its week, so nothing else asks (stats.day scans the whole history).
   const todayStats = useQuery(
     orpc.stats.day.queryOptions({
       input: { day: today },
-      enabled: ready && current.activityId === null,
+      enabled: ready && detoxCarriedIn(homeToday),
     }),
   )
-  const stopped = detoxStopped({
-    current,
-    today,
-    timeZone,
-    switchCountToday: switchCount,
-    stats: todayStats,
-  })
+  const stopped = detoxStopped({ ...homeToday, stats: todayStats })
   const ink = useTokenColor('ink')
   const pathname = usePathname()
   // Pressing the active state again changes nothing: the server keeps that state, or refuses it when its activity is archived.
