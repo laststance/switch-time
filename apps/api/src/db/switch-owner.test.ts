@@ -4,7 +4,7 @@ import { expect, test } from 'vitest'
 import { signedIn } from '../test/client'
 
 import { db } from './client'
-import { switches } from './schema/app'
+import { activities, switches } from './schema/app'
 
 // The database's own guard, below the routes' ownership checks: these writes bypass every route on purpose.
 
@@ -64,4 +64,20 @@ test('a detox switch, which names no activity, is still stored', async () => {
 
   // Assert
   expect(inserted).toMatchObject([{ userId: ownerId, activityId: null }])
+})
+
+test('deleting an activity row still deletes the switches that name it, as it did before the key took the account', async () => {
+  // Arrange
+  const owner = await signedIn('fk-cascade@example.com')
+  const [ownActivity] = await owner.activities.list()
+  if (!ownActivity) throw new Error('the owner has no activity')
+  const running = await owner.switches.switchTo({ activityId: ownActivity.id })
+
+  // Act
+  await db.delete(activities).where(eq(activities.id, ownActivity.id))
+
+  // Assert
+  expect(
+    await db.select().from(switches).where(eq(switches.id, running.id)),
+  ).toEqual([])
 })

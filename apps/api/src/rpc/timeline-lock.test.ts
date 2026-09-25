@@ -1,5 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises'
 
+import { ORPCError } from '@orpc/server'
 import {
   addDays,
   dayBounds,
@@ -8,10 +9,10 @@ import {
   type DayRow,
 } from '@switch-time/shared'
 import { eq, sql } from 'drizzle-orm'
-import { expect, onTestFinished, test } from 'vitest'
+import { expect, onTestFinished, test, vi } from 'vitest'
 
 import { REQUEST_DEADLINE_MS, db, pool, type LockedTx } from '../db/client'
-import { userSettings } from '../db/schema/app'
+import { switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
 import {
@@ -1246,7 +1247,8 @@ test('a tap queued behind another API instance’s write waits on the database l
   const { id: userId } = await api.me()
   const list = await api.activities.list()
   const otherInstance = await pool.connect()
-  onTestFinished(() => otherInstance.release())
+  // Destroyed rather than returned: a failure before `commit` would otherwise lend the open transaction to later tests
+  onTestFinished(() => otherInstance.release(true))
   await otherInstance.query('begin')
   await otherInstance.query(
     'select pg_advisory_xact_lock(1, hashtext($1::text))',
@@ -1329,11 +1331,18 @@ test('a write still queued at its deadline is refused as busy and frees its plac
     data: { reason: 'busy' },
   })
   const inFlightAfterExpiry = timelineWritesInFlight(userId)
+  // Long enough for a tap let go too early to take a connection and start waiting on the database lock
+  await delay(300)
+  const { rows: advisoryWaiters } = await pool.query<{ waiting: number }>(
+    `select count(*)::int as waiting from pg_stat_activity
+     where datname = current_database() and wait_event_type = 'Lock' and wait_event = 'advisory'`,
+  )
   await release()
 
-  // Assert: the holder and the tap are left in flight, the tap lands once the holder is done, and nothing is left behind
+  // Assert: the tap still waits in the process behind the holder, holding no connection, and lands once the holder is done
   expect(expiredWriteRan).toBe(false)
   expect(inFlightAfterExpiry).toBe(2)
+  expect(advisoryWaiters[0]?.waiting).toBe(0)
   await expect(tap).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
   expect(timelineWritesInFlight(userId)).toBe(0)
 })
@@ -1346,14 +1355,20 @@ test('a write still running at its deadline is cut off: its database session end
   const session = Promise.withResolvers<number>()
 
   // Act
-  const stuck = withUserLock(userId, Date.now() + 500, async (tx) => {
+  const stuck = withUserLock(userId, Date.now() + 2_000, async (tx) => {
     const { rows } = await tx.execute<{ pid: number }>(
       sql`select pg_backend_pid() as pid`,
     )
     session.resolve(Number(rows[0]?.pid))
     await new Promise<never>(() => {})
   })
-  const pid = await session.promise
+  // Fails at once, rather than hanging, if the deadline cut the write off before its work ran
+  const pid = await Promise.race([
+    session.promise,
+    stuck.then(() => {
+      throw new Error('the stuck write settled')
+    }),
+  ])
 
   // Assert: refused as not saved, the server drops that session (and the lock it held), and the next tap is not held up
   await expect(stuck).rejects.toMatchObject({ code: 'TIMEOUT' })
@@ -1373,13 +1388,48 @@ test('a write still running at its deadline is cut off: its database session end
   ).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
 })
 
+test('a write cut off in the middle of a long statement lets go of the account’s lock at once, so the next tap lands', async () => {
+  // Arrange: a statement the server keeps running after the socket is gone (it only notices on its next read or write)
+  const api = await signedIn('deadline-statement@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+
+  // Act
+  const stuck = withUserLock(userId, Date.now() + 1_000, async (tx) => {
+    await tx.execute(sql`select pg_sleep(30)`)
+  })
+  await expect(stuck).rejects.toMatchObject({ code: 'TIMEOUT' })
+  const tap = api.switches.switchTo({ activityId: idOf(list, '仕事') })
+
+  // Assert: the tap does not wait out its 10 s lock_timeout behind the abandoned statement
+  await expect(tap).resolves.toMatchObject({ activityId: idOf(list, '仕事') })
+})
+
+test('a call whose deadline passed before it reached the database takes no connection and never runs', async () => {
+  // Arrange
+  let workRan = false
+
+  // Act
+  const taken = await connectionsTaken(async () =>
+    boundedTransaction(Date.now() - 1, async () => {
+      workRan = true
+    }).catch((error: unknown) => {
+      expect(error).toMatchObject({ code: 'TIMEOUT' })
+    }),
+  )
+
+  // Assert
+  expect(taken).toBe(0)
+  expect(workRan).toBe(false)
+})
+
 test('a write cut off while its COMMIT is on the way answers that it may or may not have been saved', async () => {
-  // Arrange: a deferred constraint trigger makes COMMIT itself take 3 s, past the 1 s deadline
+  // Arrange: a deferred constraint trigger makes COMMIT itself take 5 s, past the 2.5 s deadline
   const prepareSlowCommit = async (tx: LockedTx): Promise<void> => {
     await tx.execute(sql`create temp table slow_commit (id int) on commit drop`)
     await tx.execute(
       sql.raw(`create function pg_temp.sleep_at_commit() returns trigger language plpgsql as $$
-        begin perform pg_sleep(3); return null; end $$`),
+        begin perform pg_sleep(5); return null; end $$`),
     )
     await tx.execute(
       sql.raw(`create constraint trigger sleep_at_commit after insert on slow_commit
@@ -1389,10 +1439,55 @@ test('a write cut off while its COMMIT is on the way answers that it may or may 
   }
 
   // Act
-  const committing = boundedTransaction(Date.now() + 1_000, prepareSlowCommit)
+  const committing = boundedTransaction(Date.now() + 2_500, prepareSlowCommit)
 
   // Assert
   await expect(committing).rejects.toMatchObject({ code: 'GATEWAY_TIMEOUT' })
+})
+
+test('a read-only transaction cut off while committing answers that nothing was saved, since a read saves nothing', async () => {
+  // Arrange: the next connection lent holds its COMMIT back for 5 s (a read-only transaction cannot create a slow trigger)
+  pool.once('acquire', (client) => {
+    const query = client.query.bind(client)
+    vi.spyOn(client, 'query').mockImplementation(async (...args: unknown[]) => {
+      if (JSON.stringify(args).toLowerCase().includes('commit'))
+        await delay(5_000)
+      return Reflect.apply(query, client, args)
+    })
+  })
+
+  // Act
+  const reading = boundedTransaction(
+    Date.now() + 1_000,
+    async (tx) => tx.execute(sql`select 1`),
+    { accessMode: 'read only' },
+  )
+
+  // Assert
+  await expect(reading).rejects.toMatchObject({ code: 'TIMEOUT' })
+})
+
+test('a transaction whose BEGIN fails passes that error on and gives its connection back to the pool', async () => {
+  // Arrange: the next connection lent fails its first statement, BEGIN
+  pool.once('acquire', (client) => {
+    vi.spyOn(client, 'query').mockRejectedValueOnce(new Error('BEGIN failed'))
+  })
+  let workRan = false
+
+  // Act
+  const failed = boundedTransaction(
+    Date.now() + REQUEST_DEADLINE_MS,
+    async () => {
+      workRan = true
+    },
+  )
+
+  // Assert
+  await expect(failed).rejects.toMatchObject({
+    cause: { message: 'BEGIN failed' },
+  })
+  expect(workRan).toBe(false)
+  await expect.poll(() => pool.idleCount).toBe(pool.totalCount)
 })
 
 test('a write whose deadline passes while every pool connection is lent out never runs, and gives the late connection back', async () => {
@@ -1496,4 +1591,155 @@ test('a day’s stats take one pool connection beyond the settings read', async 
 
   // Assert
   expect(forStats - forSettings).toBe(1)
+})
+
+test('a write that fails part-way through leaves nothing behind and answers with its own error, not a timeout', async () => {
+  // Arrange
+  const api = await signedIn('bounded-rollback@example.com')
+  const { id: userId } = await api.me()
+
+  // Act: the work inserts a switch, then refuses
+  const refused = boundedTransaction(
+    Date.now() + REQUEST_DEADLINE_MS,
+    async (tx) => {
+      await tx
+        .insert(switches)
+        .values({ userId, activityId: null, startedAt: new Date() })
+      throw new ORPCError('CONFLICT', { message: 'refused after writing' })
+    },
+  )
+
+  // Assert: the refusal reaches the caller unchanged, and the insert was rolled back
+  await expect(refused).rejects.toMatchObject({
+    code: 'CONFLICT',
+    message: 'refused after writing',
+  })
+  expect(
+    await db.select().from(switches).where(eq(switches.userId, userId)),
+  ).toEqual([])
+})
+
+test('a read in one repeatable-read snapshot does not see a switch committed between its queries', async () => {
+  // Arrange
+  const api = await signedIn('bounded-snapshot@example.com')
+  const { id: userId } = await api.me()
+
+  // Act: another connection commits a switch between the read's two counts
+  const counts = await boundedTransaction(
+    Date.now() + REQUEST_DEADLINE_MS,
+    async (tx) => {
+      const before = await tx.$count(switches, eq(switches.userId, userId))
+      await db
+        .insert(switches)
+        .values({ userId, activityId: null, startedAt: new Date() })
+      const after = await tx.$count(switches, eq(switches.userId, userId))
+      return [before, after]
+    },
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
+  )
+
+  // Assert: both counts come from the snapshot taken before the switch landed
+  expect(counts).toEqual([0, 0])
+})
+
+test('a read-only transaction refuses a write, so a read path can never change the timeline', async () => {
+  // Arrange
+  const api = await signedIn('bounded-read-only@example.com')
+  const { id: userId } = await api.me()
+
+  // Act
+  const write = boundedTransaction(
+    Date.now() + REQUEST_DEADLINE_MS,
+    async (tx) =>
+      tx
+        .insert(switches)
+        .values({ userId, activityId: null, startedAt: new Date() }),
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
+  )
+
+  // Assert: Postgres refuses it as read_only_sql_transaction, and no switch is stored
+  await expect(write).rejects.toMatchObject({ cause: { code: '25006' } })
+  expect(
+    await db.select().from(switches).where(eq(switches.userId, userId)),
+  ).toEqual([])
+})
+
+type TimelineLimits = { lockTimeout: string; statementTimeout: string }
+
+test('a timeline write waits at most 10 s for the lock and 15 s per statement, and those limits end with its transaction', async () => {
+  // Arrange
+  const userId = crypto.randomUUID()
+
+  // Act: read the limits inside the locked transaction, then on every connection the pool holds idle afterwards
+  const inside = await withUserLock(
+    userId,
+    Date.now() + REQUEST_DEADLINE_MS,
+    async (tx) => {
+      const { rows } = await tx.execute<TimelineLimits>(
+        sql`select current_setting('lock_timeout') as "lockTimeout", current_setting('statement_timeout') as "statementTimeout"`,
+      )
+      return rows[0]
+    },
+  )
+  const idle = await Promise.all(
+    Array.from({ length: pool.idleCount }, async () => pool.connect()),
+  )
+  onTestFinished(() => {
+    for (const client of idle) client.release()
+  })
+  const afterwards = await Promise.all(
+    idle.map(async (client) => {
+      const { rows } = await client.query<TimelineLimits>(
+        `select current_setting('lock_timeout') as "lockTimeout", current_setting('statement_timeout') as "statementTimeout"`,
+      )
+      return rows[0]
+    }),
+  )
+
+  // Assert: set for the write only; no connection lent later carries them
+  expect(inside).toEqual({ lockTimeout: '10s', statementTimeout: '15s' })
+  expect(afterwards.length).toBeGreaterThan(0)
+  for (const limits of afterwards)
+    expect(limits).toEqual({ lockTimeout: '0', statementTimeout: '0' })
+})
+
+test('every pool connection ends a transaction left idle for 15 s, so a cut-off write cannot hold the account’s lock for long', async () => {
+  // Arrange
+  const client = await pool.connect()
+  onTestFinished(() => client.release())
+
+  // Act
+  const { rows } = await client.query<{ timeout: string }>(
+    `select current_setting('idle_in_transaction_session_timeout') as timeout`,
+  )
+
+  // Assert
+  expect(rows[0]?.timeout).toBe('15s')
+})
+
+test('a pool connection that breaks while idle is logged rather than crashing the API, and the next query still runs', async () => {
+  // Arrange: one connection goes back to the pool idle, another stays out to end it
+  const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+  onTestFinished(() => logged.mockRestore())
+  const [idleClient, killer] = await Promise.all([
+    pool.connect(),
+    pool.connect(),
+  ])
+  onTestFinished(() => killer.release())
+  const { rows } = await idleClient.query<{ pid: number }>(
+    'select pg_backend_pid() as pid',
+  )
+  idleClient.release()
+
+  // Act: the server ends that idle session, as a failover would
+  await killer.query('select pg_terminate_backend($1)', [rows[0]?.pid])
+
+  // Assert
+  await expect
+    .poll(() => logged.mock.calls.map(([message]) => message), {
+      timeout: 3_000,
+    })
+    .toContain('database connection error')
+  const { rows: after } = await pool.query<{ one: number }>('select 1 as one')
+  expect(after).toEqual([{ one: 1 }])
 })

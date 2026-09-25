@@ -1961,3 +1961,55 @@ test('a tap ends the running record and a rewritten day moves the record carried
     0, 1, 2,
   ])
 })
+
+test('editing an activity saves its new name, colour, icon and target, and the list shows them', async () => {
+  // Arrange
+  const api = await signedIn('activity-edit@example.com')
+  const list = await api.activities.list()
+
+  // Act
+  const updated = await api.activities.update({
+    id: idOf(list, '娯楽'),
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+
+  // Assert
+  expect(updated).toMatchObject({
+    id: idOf(list, '娯楽'),
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+  const listed = (await api.activities.list()).find(
+    (row) => row.id === idOf(list, '娯楽'),
+  )
+  expect(listed).toMatchObject({ name: '読書', color: '#2BA3B5' })
+})
+
+test('editing another account’s activity is refused as not found, and that activity keeps its name', async () => {
+  // Arrange
+  const owner = await signedIn('activity-edit-owner@example.com')
+  const stranger = await signedIn('activity-edit-stranger@example.com')
+  const ownerList = await owner.activities.list()
+
+  // Act
+  const edit = stranger.activities.update({
+    id: idOf(ownerList, '仕事'),
+    name: '乗っ取り',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: 1,
+  })
+
+  // Assert
+  await expect(edit).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const [work] = await db
+    .select({ name: activities.name })
+    .from(activities)
+    .where(eq(activities.id, idOf(ownerList, '仕事')))
+  expect(work).toEqual({ name: '仕事' })
+})
