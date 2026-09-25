@@ -9,6 +9,7 @@ import {
   SETTINGS_REFETCH_ROUTERS,
   spareColor,
   targetHoursFromText,
+  zoneRow,
   zoneSyncAction,
 } from './settings'
 
@@ -19,6 +20,8 @@ test('a fresh install writes its zone once when the account holds another', () =
     device: 'Europe/London',
     lastSynced: null,
     settled: true,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
 
   // Act & Assert
@@ -32,6 +35,8 @@ test('two devices in different zones stop overwriting each other: the one that a
     device: 'Asia/Tokyo',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
 
   // Act & Assert
@@ -45,6 +50,8 @@ test('a device that moved to another zone writes its new zone', () => {
     device: 'America/New_York',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
 
   // Act & Assert
@@ -58,6 +65,8 @@ test('a fresh install whose zone the account already holds only remembers it, so
     device: 'Asia/Tokyo',
     lastSynced: null,
     settled: true,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
 
   // Act & Assert
@@ -71,6 +80,8 @@ test('nothing is written or remembered while a settings write is in flight, sinc
     device: 'Asia/Tokyo',
     lastSynced: null,
     settled: false,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
   const differs = { ...inFlight, stored: 'UTC' }
 
@@ -86,10 +97,130 @@ test('a device already in step with the account does nothing', () => {
     device: 'Asia/Tokyo',
     lastSynced: 'Asia/Tokyo',
     settled: true,
+    account: 'user-1',
+    rowAccount: 'user-1',
   }
 
   // Act & Assert
   expect(zoneSyncAction(zones)).toBe('none')
+})
+
+test('right after a switch to another account, the previous account’s cached row is neither remembered nor written as the new account’s zone', () => {
+  // Arrange: the cache still holds user-1's row (Tokyo, this device's zone) while the session is already user-2's.
+  const previousAccountsRow = {
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    lastSynced: null,
+    settled: true,
+    account: 'user-2',
+    rowAccount: 'user-1',
+  }
+  const previousAccountsOtherZone = {
+    ...previousAccountsRow,
+    stored: 'UTC',
+  }
+
+  // Act & Assert
+  expect(zoneSyncAction(previousAccountsRow)).toBe('none')
+  expect(zoneSyncAction(previousAccountsOtherZone)).toBe('none')
+})
+
+test('the zone sync waits until the settings row says whose it is', () => {
+  // Arrange
+  const unloadedRow = {
+    stored: 'Asia/Tokyo',
+    device: 'Europe/London',
+    lastSynced: null,
+    settled: true,
+    account: 'user-1',
+    rowAccount: undefined,
+  }
+  const signedOut = { ...unloadedRow, account: undefined }
+
+  // Act & Assert
+  expect(zoneSyncAction(unloadedRow)).toBe('none')
+  expect(zoneSyncAction(signedOut)).toBe('none')
+})
+
+test('設定’s タイムゾーン row shows a dash and no button until the settings row is read', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'Asia/Tokyo',
+    device: 'Europe/London',
+    ready: false,
+    failed: false,
+  })
+
+  // Assert
+  expect(row).toEqual({ summary: '—', alert: false, canTakeBack: false })
+})
+
+test('設定’s タイムゾーン row says the account already uses this device’s zone and offers no button', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failed: false,
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: 'Asia/Tokyo · この端末と同じ',
+    alert: false,
+    canTakeBack: false,
+  })
+})
+
+test('設定’s タイムゾーン row names both zones and offers この端末に合わせる when another device set the account’s zone', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'America/New_York',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failed: false,
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: 'America/New_York · この端末は Asia/Tokyo',
+    alert: false,
+    canTakeBack: true,
+  })
+})
+
+test('a failed take-back says so and keeps the button for another try', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'America/New_York',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failed: true,
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: '保存できませんでした。もう一度お試しください',
+    alert: true,
+    canTakeBack: true,
+  })
+})
+
+test('a failure line goes away once a later read shows the account already on this device’s zone', () => {
+  // Act
+  const row = zoneRow({
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failed: true,
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: 'Asia/Tokyo · この端末と同じ',
+    alert: false,
+    canTakeBack: false,
+  })
 })
 
 const activity = (

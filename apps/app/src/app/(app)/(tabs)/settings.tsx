@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/screen-header'
 import { Segmented } from '@/components/segmented'
 import { SignOutButton } from '@/components/sign-out-button'
 import { StrokeIcon } from '@/components/stroke-icon'
+import { TimeZoneRow } from '@/components/time-zone-row'
 import { Toggle } from '@/components/ui/toggle'
 import { useActivities } from '@/hooks/use-activities'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
@@ -24,7 +25,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 
 const ROW = 'min-h-16 flex-row items-center gap-3 px-[18px] py-2.5'
 
-// 設定 from `ST Phone / 設定＋除外シート`: the two sheet entries, 外観 and 秒針, sign-out and the footer. Every value is the server's settings row.
+// 設定 from `ST Phone / 設定＋除外シート`: the two sheet entries, 外観, 秒針 and タイムゾーン, sign-out and the footer. Every value is the server's settings row.
 export default function SettingsScreen() {
   const { settings, ready, isError, retry } = useSettings()
   const update = useUpdateSettings()
@@ -101,6 +102,7 @@ export default function SettingsScreen() {
                 onChange={(showSecondHand) => update.mutate({ showSecondHand })}
               />
             </View>
+            <TimeZoneRow className={cn(ROW, 'border-line border-t')} />
           </>
         )}
       </View>

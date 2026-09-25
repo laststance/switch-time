@@ -18,6 +18,8 @@ export function useSettings() {
   return {
     settings: query.data ?? SETTINGS_DEFAULTS,
     ready: query.data !== undefined,
+    // Whose row this is: right after a switch to another account the cache still holds the previous account's row for a commit.
+    owner: query.data?.userId,
     // A failed read is not the same as a fresh account: the controls would sit on {@link SETTINGS_DEFAULTS} with nothing said.
     isError: query.isError,
     retry: () => void query.refetch(),

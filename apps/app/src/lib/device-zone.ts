@@ -1,6 +1,16 @@
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
 
+/**
+ * This device's IANA zone, read at each call rather than once at load, so a device that moved while the app stayed open answers
+ * its new zone. {@link useDeviceZone}'s snapshot, re-read whenever the app comes back to the foreground.
+ * @example deviceZone() // 'Asia/Tokyo'
+ */
+export function deviceZone(): string {
+  // Browsers and Hermes both answer with the device's IANA zone; JS has no other source for it.
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
 // One entry per account, so a second account signed in on this device still gets its zone written once. SecureStore keys
 // take only letters, digits, `.`, `-` and `_`.
 const keyFor = (accountId: string): string =>

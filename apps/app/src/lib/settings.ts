@@ -51,21 +51,73 @@ export type ZoneSyncAction = 'write' | 'record' | 'none'
  * @param zones.lastSynced - The zone this device last synced for the account, null when it never did.
  * @param zones.settled - The settings row has loaded for a signed-in account, no settings write is in flight, and the last zone
  *   write did not fail.
+ * @param zones.account - The session's user id, undefined while signed out.
+ * @param zones.rowAccount - The `userId` of the settings row `stored` came from, undefined until it has loaded. In the commit
+ *   where the session turns to another account the cache still holds the previous account's row, and its zone must not be
+ *   remembered (or written over) as the new account's.
  * @returns
  * - 'write': the device's zone differs from both the account's and the one it last synced
  * - 'record': the account already holds the device's zone, which the device has not remembered yet
- * - 'none': otherwise, or while not settled
- * @example zoneSyncAction({ stored: 'UTC', device: 'Asia/Tokyo', lastSynced: 'Asia/Tokyo', settled: true }) // 'none': another device set UTC
+ * - 'none': otherwise, while not settled, or while the row is not the session account's own
+ * @example zoneSyncAction({ stored: 'UTC', device: 'Asia/Tokyo', lastSynced: 'Asia/Tokyo', settled: true, account: 'u1', rowAccount: 'u1' }) // 'none': another device set UTC
  */
 export function zoneSyncAction(zones: {
   stored: string
   device: string
   lastSynced: string | null
   settled: boolean
+  account: string | undefined
+  rowAccount: string | undefined
 }): ZoneSyncAction {
-  const { stored, device, lastSynced, settled } = zones
-  if (!settled || lastSynced === device) return 'none'
+  const { stored, device, lastSynced, settled, account, rowAccount } = zones
+  // Positive ownership: an unloaded row (undefined) or another account's row never counts.
+  const ownRow = account !== undefined && account === rowAccount
+  if (!settled || !ownRow || lastSynced === device) return 'none'
   return stored === device ? 'record' : 'write'
+}
+
+/** What 設定's タイムゾーン row shows: its sub line, whether that line is the failure alert, and whether the take-back button shows. */
+export type ZoneRow = { summary: string; alert: boolean; canTakeBack: boolean }
+
+/**
+ * The タイムゾーン row on 設定, rendered by {@link TimeZoneRow} through {@link useAccountZone}. A matching zone wins over a failed
+ * take-back, since a later read that already matches makes the failure line stale.
+ * @param zones.stored - The account's zone (the optimistic one while a take-back is in flight, so the row reads "same" at once).
+ * @param zones.device - This device's IANA zone.
+ * @param zones.ready - The settings row has been read.
+ * @param zones.failed - The last take-back write failed and nothing has been tapped since.
+ * @returns
+ * - not ready: a dash, no button
+ * - same zone: `Asia/Tokyo · この端末と同じ`, no button
+ * - failed: the alert line, button kept for another try
+ * - otherwise: `America/New_York · この端末は Asia/Tokyo`, button
+ * @example zoneRow({ stored: 'UTC', device: 'Asia/Tokyo', ready: true, failed: false }) // { summary: 'UTC · この端末は Asia/Tokyo', alert: false, canTakeBack: true }
+ */
+export function zoneRow(zones: {
+  stored: string
+  device: string
+  ready: boolean
+  failed: boolean
+}): ZoneRow {
+  const { stored, device, ready, failed } = zones
+  if (!ready) return { summary: '—', alert: false, canTakeBack: false }
+  if (stored === device)
+    return {
+      summary: `${stored} · この端末と同じ`,
+      alert: false,
+      canTakeBack: false,
+    }
+  if (failed)
+    return {
+      summary: '保存できませんでした。もう一度お試しください',
+      alert: true,
+      canTakeBack: true,
+    }
+  return {
+    summary: `${stored} · この端末は ${device}`,
+    alert: false,
+    canTakeBack: true,
+  }
 }
 
 const MINUTES_PER_HOUR = 60
