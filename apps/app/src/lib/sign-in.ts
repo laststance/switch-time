@@ -30,3 +30,33 @@ export function signInStart(registration: Registration | null): SignInStart {
     focusPassword: true,
   }
 }
+
+/**
+ * The key sign-in's form keeps: a new registration replaces it, losing one does not. Sign-in's own success resets the store (and
+ * with it the registration) while the session is still loading, and a blank key would empty the form the user just sent.
+ * @param current - The key the form has now.
+ * @param next - The key {@link signInStart} derives from the current registration ('blank' when there is none).
+ * @returns `next` for a registration, else `current`
+ * @example keptFormKey('r1', 'blank') // => 'r1'
+ * @example keptFormKey('blank', 'r2') // => 'r2'
+ */
+export function keptFormKey(current: string, next: string): string {
+  return next === 'blank' ? current : next
+}
+
+/**
+ * Whether sign-in's button waits: while the request runs, and after it went through until the session lands (the (auth) layout
+ * then leaves sign-in). A second tap in between would open a second session and spend the sign-in rate limit.
+ * @param request - The form's request: running, or through.
+ * @param sessionPending - Better Auth's session query has no answer yet (it refetches after sign-in).
+ * @returns
+ * - true while the request runs, or once it went through and the session is still loading
+ * - false otherwise, so a sign-in whose session never loads can be sent again
+ * @example signInBusy({ pending: false, succeeded: true }, true) // => true
+ */
+export function signInBusy(
+  request: { pending: boolean; succeeded: boolean },
+  sessionPending: boolean,
+): boolean {
+  return request.pending || (request.succeeded && sessionPending)
+}

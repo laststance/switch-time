@@ -102,6 +102,125 @@ test('signing up with an address that already has an account looks the same, and
   await expect(page.getByText('いま').first()).toBeVisible()
 })
 
+test('signing in after 登録 keeps the sent address on screen and the button off until the session lands', async ({
+  page,
+}) => {
+  // Arrange: hold the session read Better Auth makes after the sign-in answer.
+  const email = uniqueEmail()
+  await register(page, email)
+  await page.getByLabel('パスワード').fill(PASSWORD)
+  let release = (): void => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/auth/get-session**', async (route) => {
+    await held
+    await route.continue()
+  })
+  const asked = page.waitForRequest('**/api/auth/get-session**')
+
+  // Act
+  await page.getByRole('button', { name: 'サインイン' }).click()
+  await asked
+
+  // Assert: the form the user sent is still there and cannot be sent twice; Home follows once the session lands.
+  await expect(page.getByLabel('メールアドレス')).toHaveValue(email)
+  await expect(page.getByRole('button', { name: 'サインイン' })).toBeDisabled()
+  release()
+  await expect(
+    page.getByRole('heading', { name: 'いま何をしている？' }),
+  ).toBeVisible()
+})
+
+test('a sign-up left pending while the user registers another address does not replace that address when it answers late', async ({
+  page,
+}) => {
+  // Arrange: the first address's sign-up hangs; the user goes to sign-in and registers a second address instead.
+  const first = uniqueEmail()
+  const second = uniqueEmail()
+  let release = (): void => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/auth/sign-up/email', async (route) => {
+    if (route.request().postDataJSON().email === first) await held
+    await route.continue()
+  })
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(first)
+  await page.getByLabel('パスワード').fill(PASSWORD)
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  await page.getByRole('link', { name: '新規登録はこちら' }).click()
+  // The first sign-up and the sign-in it opened stay mounted (hidden) under the second sign-up.
+  const shown = { visible: true }
+  await page.getByLabel('名前').filter(shown).fill('E2E')
+  await page.getByLabel('メールアドレス').filter(shown).fill(second)
+  await page.getByLabel('パスワード').filter(shown).fill(PASSWORD)
+  await page
+    .getByRole('button', { name: 'アカウントを作成' })
+    .filter(shown)
+    .click()
+  await expect(page.getByRole('status')).toHaveText(REGISTERED_NOTICE)
+  await page.getByLabel('パスワード').filter(shown).fill('typed-so-far')
+  const firstAnswer = page.waitForResponse('**/api/auth/sign-up/email')
+
+  // Act
+  release()
+  await firstAnswer
+
+  // Assert: sign-in still holds the second address and what the user typed.
+  await expect(page.getByLabel('メールアドレス').filter(shown)).toHaveValue(
+    second,
+  )
+  await expect(page.getByLabel('パスワード').filter(shown)).toHaveValue(
+    'typed-so-far',
+  )
+})
+
+test('a sign-up left pending while the user goes to sign in does not take over the sign-in form when it answers late', async ({
+  page,
+}) => {
+  // Arrange: the sign-up hangs; the user goes to sign-in and starts typing an existing account's credentials.
+  const pending = uniqueEmail()
+  let release = (): void => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/auth/sign-up/email', async (route) => {
+    await held
+    await route.continue()
+  })
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(pending)
+  await page.getByLabel('パスワード').fill(PASSWORD)
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+  await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  // The sign-up stays mounted (hidden) under sign-in.
+  const shown = { visible: true }
+  await page
+    .getByLabel('メールアドレス')
+    .filter(shown)
+    .fill('someone@example.com')
+  await page.getByLabel('パスワード').filter(shown).fill('typed-so-far')
+  const lateAnswer = page.waitForResponse('**/api/auth/sign-up/email')
+
+  // Act
+  release()
+  await lateAnswer
+
+  // Assert: sign-in keeps what the user typed and shows no registration notice.
+  await expect(page.getByLabel('メールアドレス').filter(shown)).toHaveValue(
+    'someone@example.com',
+  )
+  await expect(page.getByLabel('パスワード').filter(shown)).toHaveValue(
+    'typed-so-far',
+  )
+  await expect(page.getByRole('status')).toHaveCount(0)
+})
+
 test('a wrong password after sign-up replaces the notice with the sign-in error', async ({
   page,
 }) => {

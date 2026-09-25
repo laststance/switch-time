@@ -86,6 +86,31 @@ test('a sign-up for an address that already has an account answers with what was
   )
 })
 
+test('a sign-up with a character the database refuses is turned away alike for a taken and an unused address', async () => {
+  // Arrange
+  await signUp('nul-taken@example.com')
+  const withNul = async (email: string) => {
+    const response = await app.request('/api/auth/sign-up/email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Null\u0000Byte',
+        email,
+        password: 'another password entirely',
+      }),
+    })
+    return { status: response.status, body: await response.text() }
+  }
+
+  // Act
+  const taken = await withNul('nul-taken@example.com')
+  const unused = await withNul('nul-unused@example.com')
+
+  // Assert
+  expect(taken).toEqual(unused)
+  expect(taken.status).toBe(400)
+})
+
 test('a second sign-up for an address creates no second account and no second set of activities', async () => {
   // Arrange
   const accountIds = async () =>
