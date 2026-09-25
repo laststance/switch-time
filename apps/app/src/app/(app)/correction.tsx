@@ -30,6 +30,7 @@ import {
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
+import { spanCorners } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
@@ -57,6 +58,9 @@ type BarProps = {
   selectedId: string | null
 }
 
+// The day bar's own corners, lent to a span touching either end so the rounded strip does not clip its outline open.
+const DAY_BAR_CORNERS = { first: 'rounded-l-md', last: 'rounded-r-md' }
+
 // The 12 px 24-h strip above the list: the selected row's span stays solid, the rest dim to 0.4.
 function DayBar({ rows, bounds, selectedId }: BarProps) {
   const percent = (ms: number): `${number}%` =>
@@ -76,9 +80,7 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
           className={cn(
             'absolute inset-y-0',
             row.color === null && 'border-sub border',
-            // A span touching either end takes the bar's curve, so its outline is not clipped open there.
-            row.start <= bounds.start && 'rounded-l-md',
-            row.end >= bounds.end && 'rounded-r-md',
+            spanCorners(row, bounds, DAY_BAR_CORNERS),
           )}
           style={{
             left: percent(row.start - bounds.start),

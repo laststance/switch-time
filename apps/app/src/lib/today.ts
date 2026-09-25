@@ -61,3 +61,29 @@ export function legendEntries(
     entries.push({ id: 'detox', name: DETOX.name, color: DETOX.color })
   return entries
 }
+
+/** A bar's own left and right corner classes, lent to a span that touches that end. */
+export type BarCorners = { first: string; last: string }
+
+/**
+ * The corner classes a span takes where it touches either end of its bar, so an outlined span there follows the rounded track
+ * instead of being clipped open by it; {@link TodayFlow} and the correction sheet's day bar call it for every span they draw.
+ * @param span - the span's start and end in ms
+ * @param bounds - the bar's start and end in ms; a span reaching past either end counts as touching it
+ * @param corners - the bar's own left and right corner classes
+ * @returns
+ * - `corners.first` and/or `corners.last`, space-separated, for the ends the span touches
+ * - `''` for a span inside the bar
+ * @example spanCorners({ start: 0, end: 5 }, { start: 0, end: 10 }, corners) // => corners.first
+ */
+export function spanCorners(
+  span: { start: number; end: number },
+  bounds: { start: number; end: number },
+  corners: BarCorners,
+): string {
+  const touched = [
+    span.start <= bounds.start ? corners.first : '',
+    span.end >= bounds.end ? corners.last : '',
+  ]
+  return touched.filter((className) => className !== '').join(' ')
+}

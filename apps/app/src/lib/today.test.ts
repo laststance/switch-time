@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { countSwitches, daySegments, legendEntries } from './today'
+import { countSwitches, daySegments, legendEntries, spanCorners } from './today'
 
 const row = (id: string, activityId: string, startedAt: string) => ({
   id,
@@ -83,4 +83,34 @@ test('the legend names each activity with a span today and adds detox when time 
   expect(legendEntries(activities, [{ activityId: 'work' }])).toEqual([
     { id: 'work', name: '仕事', color: '#3B7BD9' },
   ])
+})
+
+test('a span touching an end of the bar takes that end’s rounded corner, so its outline is not clipped open', () => {
+  // Arrange: a 0:00–24:00 bar in ms and its own corner classes
+  const bounds = { start: 0, end: 86_400_000 }
+  const corners = { first: 'rounded-l-md', last: 'rounded-r-md' }
+
+  // Act
+  const carriedIn = spanCorners(
+    { start: -3_600_000, end: 3_600_000 },
+    bounds,
+    corners,
+  )
+  const running = spanCorners(
+    { start: 82_800_000, end: 86_400_000 },
+    bounds,
+    corners,
+  )
+  const wholeDay = spanCorners({ start: 0, end: 86_400_000 }, bounds, corners)
+  const inside = spanCorners(
+    { start: 3_600_000, end: 7_200_000 },
+    bounds,
+    corners,
+  )
+
+  // Assert: a span reaching past the start counts as touching it; a span inside the bar keeps square ends
+  expect(carriedIn).toBe('rounded-l-md')
+  expect(running).toBe('rounded-r-md')
+  expect(wholeDay).toBe('rounded-l-md rounded-r-md')
+  expect(inside).toBe('')
 })
