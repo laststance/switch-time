@@ -1919,6 +1919,39 @@ test('an undo refused as archived after its sheet closed shows the notice on the
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
 
+test('a pick on the record a kept notice opened keeps its panel open while the pick is written', async ({
+  page,
+}) => {
+  // Arrange: the archived notice from an undo refused after its sheet closed opens the record when that day's sheet opens again.
+  const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  await dialog.getByRole('radio', { name: '睡眠' }).click()
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  await expect(slept).toBeVisible()
+  await api.activities.archive({ id: idOf(list, '仕事') })
+  const answer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/changeActivity', async (route) => {
+    const response = await route.fetch()
+    await answer.promise
+    await route.fulfill({ response })
+  })
+  await page.getByRole('button', { name: '元に戻す' }).click()
+  await page.getByRole('button', { name: '完了' }).click()
+  answer.resolve()
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, day).click()
+  await expect(slept).toHaveAttribute('aria-expanded', 'true')
+  await page.unroute('**/api/rpc/switches/changeActivity')
+
+  // Act: 休息 picked on the record the notice opened.
+  await dialog.getByRole('radio', { name: '休息' }).click()
+
+  // Assert: the record's panel stays open on the pick, and the notice is gone.
+  const rested = dialog.getByRole('button', { name: '休息 0:00 – 7:00 7h 00m' })
+  await expect(rested).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.getByRole('alert')).toBeHidden()
+})
+
 test('a split whose answer lands after midnight selects nothing on the new day, even the half that runs into it', async ({
   page,
 }) => {

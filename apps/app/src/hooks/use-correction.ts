@@ -150,8 +150,10 @@ function useCorrectionState(day: string) {
     noticeId: view.noticeId,
     focusId: current.focusId,
     refusal: view.refusal,
-    // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice.
+    // A press on this day: what the line or the notice said was about another moment. An undo keeps the notice. The row the
+    // notice selected becomes the sheet's own first, so clearing the notice leaves its panel open under the press.
     hush: (notice: boolean): void => {
+      setSheet({ ...current, selectedId: view.selectedId })
       dispatch(hushed({ epoch, day, notice }))
     },
     // A tap on a row: what the line or the notice said was about another moment.
