@@ -1,14 +1,19 @@
-import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
+import {
+  createSlice,
+  nanoid,
+  original,
+  type PayloadAction,
+} from '@reduxjs/toolkit'
 
-import type { UndoSlot } from '@/lib/correction'
+import type { DayLine, LineAfterRead, UndoSlot } from '@/lib/correction'
 
 type CorrectionSliceState = {
   /** Drawn afresh whenever the slice starts over ({@link resetApp} on sign-out, or a new account): an action from an older epoch is ignored. */
   epoch: string
   /** The armed 「元に戻す」 per day (`YYYY-MM-DD`), absent when that day has none. */
   undo: Partial<Record<string, UndoSlot>>
-  /** Why the last edit or undo pressed on each day failed ({@link refusalMessage}), until the next press, selection or undo there. */
-  refusal: Partial<Record<string, string>>
+  /** Why the last edit or undo pressed on each day failed ({@link dayLine}), until the next press, selection or undo there, or a read that shows the day moved on. */
+  line: Partial<Record<string, DayLine>>
   /** The row each day's archived notice was raised for ({@link archivedBox}), until the next press or selection there. */
   notice: Partial<Record<string, string>>
   /** The user id the slots were armed under: the last one {@link AppLayout} reported (`null` before it, and after {@link resetApp}). */
@@ -30,7 +35,7 @@ export const correctionSlice = createSlice({
   initialState: (): CorrectionSliceState => ({
     epoch: nanoid(),
     undo: {},
-    refusal: {},
+    line: {},
     notice: {},
     account: null,
   }),
@@ -43,7 +48,7 @@ export const correctionSlice = createSlice({
       return {
         epoch: nanoid(),
         undo: {},
-        refusal: {},
+        line: {},
         notice: {},
         account: action.payload,
       }
@@ -56,10 +61,42 @@ export const correctionSlice = createSlice({
       if (action.payload.epoch !== state.epoch) return
       delete state.undo[action.payload.day]
     },
-    // A failed edit or undo: the day's status line says why, whether or not its sheet is still open.
-    refused(state, action: Stamped<{ day: string; text: string }>) {
+    // A read of the day showed it no longer reads as the slot left it: a replay could only be refused. Only the slot that read
+    // judged goes: an edit that landed in between armed a new one, which the next read judges.
+    undoRetired(state, action: Stamped<{ day: string; slot: UndoSlot }>) {
       if (action.payload.epoch !== state.epoch) return
-      state.refusal[action.payload.day] = action.payload.text
+      const armedSlot = state.undo[action.payload.day]
+      if (armedSlot && original(armedSlot) === action.payload.slot)
+        delete state.undo[action.payload.day]
+    },
+    // A failed edit or undo: the day's status line says why, whether or not its sheet is still open.
+    lineRaised(state, action: Stamped<{ day: string; line: DayLine }>) {
+      if (action.payload.epoch !== state.epoch) return
+      state.line[action.payload.day] = action.payload.line
+    },
+    // The first good read after the failure (or after a failed read): what it showed, so a later read that differs expires the
+    // line. Only the failure the read judged: a newer one replaced it otherwise.
+    lineRead(
+      state,
+      action: Stamped<{ day: string; at: number; seen: string }>,
+    ) {
+      const line = judgedLine(state, action.payload)
+      if (!line) return
+      line.seen = action.payload.seen
+      line.reading = false
+      line.stale = false
+    },
+    // A read after the failure failed: the rows shown may be old.
+    lineUnread(state, action: Stamped<{ day: string; at: number }>) {
+      const line = judgedLine(state, action.payload)
+      if (!line) return
+      line.reading = false
+      line.stale = true
+    },
+    // A read shows the day moved on since the failure: its line is about another moment.
+    lineExpired(state, action: Stamped<{ day: string; at: number }>) {
+      if (judgedLine(state, action.payload))
+        delete state.line[action.payload.day]
     },
     // An archived pick, or an undo refused as archived: the row's panel shows the notice, on this day only.
     noticed(state, action: Stamped<{ day: string; id: string }>) {
@@ -70,11 +107,58 @@ export const correctionSlice = createSlice({
     // it may be the undo the notice is about.
     hushed(state, action: Stamped<{ day: string; notice: boolean }>) {
       if (action.payload.epoch !== state.epoch) return
-      delete state.refusal[action.payload.day]
+      delete state.line[action.payload.day]
       if (action.payload.notice) delete state.notice[action.payload.day]
     },
   },
 })
+
+// The day's line a read judged, while it is still the one kept: same epoch, same failure (`at`).
+function judgedLine(
+  state: CorrectionSliceState,
+  judged: { epoch: string; day: string; at: number },
+): DayLine | undefined {
+  if (judged.epoch !== state.epoch) return undefined
+  const line = state.line[judged.day]
+  return line?.at === judged.at ? line : undefined
+}
+
+/**
+ * The store actions for {@link afterDayRead}'s answer about one read of `day`. Called by {@link useDayReads}, which dispatches
+ * them in order.
+ * @param outcome - {@link afterDayRead}'s answer.
+ * @param judged - The epoch, the day, and the line and slot the answer was computed from.
+ * @returns The line's action (none for 'keep'), then {@link correctionSlice}'s `undoRetired` when the slot goes.
+ * @example afterReadActions({ line: 'expire', retireUndo: false }, { epoch, day, line, slot: undefined }) // [lineExpired({ epoch, day, at: line.at })]
+ */
+export function afterReadActions(
+  outcome: { line: LineAfterRead; retireUndo: boolean },
+  judged: {
+    epoch: string
+    day: string
+    line: DayLine | undefined
+    slot: UndoSlot | undefined
+  },
+): PayloadAction<unknown>[] {
+  const { epoch, day, line, slot } = judged
+  const actions: PayloadAction<unknown>[] = []
+  if (line && outcome.line !== 'keep')
+    actions.push(lineAction(outcome.line, { epoch, day, at: line.at }))
+  if (outcome.retireUndo && slot)
+    actions.push(correctionSlice.actions.undoRetired({ epoch, day, slot }))
+  return actions
+}
+
+// The line half of {@link afterReadActions}.
+function lineAction(
+  line: Exclude<LineAfterRead, 'keep'>,
+  stamp: { epoch: string; day: string; at: number },
+): PayloadAction<unknown> {
+  const { lineRead, lineUnread, lineExpired } = correctionSlice.actions
+  if (line === 'expire') return lineExpired(stamp)
+  if (line === 'unread') return lineUnread(stamp)
+  return lineRead({ ...stamp, seen: line.seen })
+}
 
 /**
  * What {@link useAccountScope} does when the session reports `account`: another tab can sign in as someone else, and this

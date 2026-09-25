@@ -1,7 +1,9 @@
-import { Redirect, Stack, useUnstableGlobalHref } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 import { Platform } from 'react-native'
 
 import { useAccountScope } from '@/hooks/use-account-scope'
+import { useDayReads } from '@/hooks/use-day-reads'
+import { useReturnHref } from '@/hooks/use-return-href'
 import { authClient } from '@/lib/auth-client'
 
 // Sheets are routes: native shows the system modal, web gets a transparent unanimated screen and Sheet draws the scrim itself.
@@ -13,9 +15,11 @@ const sheet = {
 // Everything under (app) needs a session: anonymous visitors go to sign-in and come back to the route they wanted.
 export default function AppLayout() {
   const { data: session, isPending } = authClient.useSession()
-  // Path plus query, so `next` brings the visitor back to the exact URL they opened (a sheet's `?day=` included).
-  const href = useUnstableGlobalHref()
+  // Path plus query, so `next` brings the visitor back to the exact URL they opened (a sheet's `?day=` included), even when
+  // the session ends while a sheet is open.
+  const href = useReturnHref(isPending || Boolean(session))
   useAccountScope(session?.user.id)
+  useDayReads()
   // Only the first load hides the shell: Better Auth keeps `data` while it refetches (isPending is true whenever data is null), and unmounting the Stack on every window focus would reset every screen and open sheet.
   if (isPending) return null
   if (!session)

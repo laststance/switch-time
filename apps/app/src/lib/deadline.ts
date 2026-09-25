@@ -7,7 +7,7 @@ export const REQUEST_TIMEOUT_MS = 30_000
 
 /**
  * What a call rejects with once its deadline passed without a whole answer. The write it carried may still have landed, so
- * {@link refusalMessage} asks the user to check the rows rather than asking for a retry.
+ * {@link failureKind} reads it as `uncertain`, and the sheet asks the user to check the rows rather than to try again.
  */
 export class RequestTimeoutError extends Error {
   override name = 'RequestTimeoutError'
