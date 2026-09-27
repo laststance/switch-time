@@ -135,9 +135,10 @@ export const userSettings = pgTable('user_settings', {
     .references(() => user.id, { onDelete: 'cascade' }),
   theme: themeMode('theme').default('auto').notNull(),
   showSecondHand: boolean('show_second_hand').default(true).notNull(),
-  // 無操作とみなす時間: a segment longer than this is left out of totals. 12h sits above the 8h work / 7h sleep targets.
+  // 無操作とみなす時間: a segment longer than this is left out of totals and drawn dashed on the 24h bar.
+  // 16h sits above a long sleep. 12h treated a recorded 12h34m sleep as idle.
   idleThresholdMinutes: integer('idle_threshold_minutes')
-    .default(720)
+    .default(960)
     .notNull(),
   autoExcludeUnusedDays: boolean('auto_exclude_unused_days')
     .default(true)

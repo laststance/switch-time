@@ -189,7 +189,7 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   await page.getByRole('tab', { name: '設定' }).click()
   await expect(
     page.getByRole('link', { name: '未使用日の自動除外' }),
-  ).toContainText('オン · 無操作 12時間以上')
+  ).toContainText('オン · 無操作 16時間以上')
   await page.getByRole('link', { name: '未使用日の自動除外' }).click()
   const sheet = page.getByRole('dialog', { name: '未使用日の扱い' })
   await expect(sheet).toBeVisible()

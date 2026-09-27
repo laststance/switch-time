@@ -488,7 +488,7 @@ test('tapping detox unpresses every activity, dims the readout and outlines the 
 test('an activity left running past the idle threshold is dashed in line on the bar, unlike detox', async ({
   page,
 }) => {
-  // Arrange: 仕事 from 9:00 yesterday runs into today until the sign-up tap, past the 12 h idle threshold
+  // Arrange: 仕事 from 0:00 yesterday runs into today until the sign-up tap, past the 16 h idle threshold at any hour
   await signUp(page)
   const api = await apiAs(page)
   const yesterday = shift(today(), -1)
@@ -497,7 +497,7 @@ test('an activity left running past the idle threshold is dashed in line on the 
     day: yesterday,
     timeZone: 'Asia/Tokyo',
     expected: [],
-    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
+    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 0) }],
   })
 
   // Act
@@ -518,7 +518,7 @@ test('an activity left running past the idle threshold is dashed in line on the 
 test('a detox left running overnight stays a solid sub outline on the bar, not an idle dash', async ({
   page,
 }) => {
-  // Arrange: detox from 9:00 yesterday runs into today until the sign-up tap, past the 12 h idle threshold
+  // Arrange: detox from 0:00 yesterday runs into today until the sign-up tap, past the 16 h default at any hour
   await signUp(page)
   const api = await apiAs(page)
   const yesterday = shift(today(), -1)
@@ -526,7 +526,7 @@ test('a detox left running overnight stays a solid sub outline on the bar, not a
     day: yesterday,
     timeZone: 'Asia/Tokyo',
     expected: [],
-    rows: [{ activityId: null, startedAt: at(yesterday, 9) }],
+    rows: [{ activityId: null, startedAt: at(yesterday, 0) }],
   })
 
   // Act

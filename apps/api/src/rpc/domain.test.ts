@@ -48,7 +48,7 @@ test('sign-up seeds 6 activities and settings', async () => {
   expect(settings).toMatchObject({
     theme: 'auto',
     showSecondHand: true,
-    idleThresholdMinutes: 720,
+    idleThresholdMinutes: 960,
     autoExcludeUnusedDays: true,
     timeZone: 'Asia/Tokyo',
   })
@@ -799,7 +799,7 @@ test('the week view gets totals over measured days only, with the unused day lis
 })
 
 test('a segment longer than the idle threshold is excluded from the day total', async () => {
-  // Arrange: two days ago 00:00 仕事 (13h → idle), 13:00 休息 (2h), 15:00 食事 (9h, closed by yesterday's 00:00 睡眠)
+  // Arrange: two days ago 00:00 仕事 (17h → idle at the 16h default), 17:00 休息 (2h), 19:00 食事 (5h, closed by yesterday's 00:00 睡眠)
   const api = await signedIn('idle@example.com')
   const list = await api.activities.list()
   const day = addDays(today, -2)
@@ -810,8 +810,8 @@ test('a segment longer than the idle threshold is excluded from the day total', 
     expected: [],
     rows: [
       { activityId: idOf(list, '仕事'), startedAt: at(day, 0) },
-      { activityId: idOf(list, '休息'), startedAt: at(day, 13) },
-      { activityId: idOf(list, '食事'), startedAt: at(day, 15) },
+      { activityId: idOf(list, '休息'), startedAt: at(day, 17) },
+      { activityId: idOf(list, '食事'), startedAt: at(day, 19) },
     ],
   })
   await api.switches.replaceDay({
@@ -827,15 +827,50 @@ test('a segment longer than the idle threshold is excluded from the day total', 
   // Assert
   expect(stats.totals).toEqual({
     [idOf(list, '休息')]: 7_200_000,
-    [idOf(list, '食事')]: 32_400_000,
+    [idOf(list, '食事')]: 18_000_000,
   })
   expect(stats.days[0]).toMatchObject({
     day,
     measured: true,
     excluded: null,
-    idleMs: 46_800_000,
+    idleMs: 61_200_000,
   })
   expect(stats.streak).toBe(2)
+})
+
+test('a 12h 34m sleep is included in the day total at the default threshold', async () => {
+  // Arrange: 1:13–13:47 睡眠, then 休息 until midnight. A 12 h line dashed this sleep and left it out of the totals.
+  const api = await signedIn('sleep-under-16h@example.com')
+  const list = await api.activities.list()
+  const day = addDays(today, -2)
+  const next = addDays(today, -1)
+  const sleepStart = new Date(dayBounds(day, TZ).start + H + 13 * 60_000)
+  const restStart = new Date(sleepStart.getTime() + 12 * H + 34 * 60_000)
+  await api.switches.replaceDay({
+    day,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '睡眠'), startedAt: sleepStart },
+      { activityId: idOf(list, '休息'), startedAt: restStart },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: next,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: idOf(list, '食事'), startedAt: at(next, 0) }],
+  })
+
+  // Act
+  const stats = await api.stats.day({ day })
+
+  // Assert: 12h 34m of 睡眠 and the 10h 13m of 休息 after it both count; nothing on the day is idle
+  expect(stats.totals).toEqual({
+    [idOf(list, '睡眠')]: 45_240_000,
+    [idOf(list, '休息')]: 36_780_000,
+  })
+  expect(stats.days[0]).toMatchObject({ day, idleMs: 0 })
 })
 
 test('switching to detox creates a state with no activity and pressing it again keeps the row', async () => {

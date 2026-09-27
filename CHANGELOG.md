@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.23.1.0] - 2026-09-27
+
+### Fixed
+
+- A recorded stretch longer than 12 hours and within 16 hours stays on the
+  24-hour bar in its own colour and in the day's totals. A 12 hour 34 minute
+  sleep was drawn as an empty dash and left out of the totals. The idle line
+  is now 16 hours. Accounts still set to 12 hours move to 16 hours. 6, 8, and
+  10 hours stay as they were.
+
+### Changed
+
+- The idle picker offers 16h next to 6h, 8h, 10h, and 12h. 16h is the default.
+
 ## [0.23.0.0] - 2026-09-25
 
 ### Added

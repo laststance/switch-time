@@ -74,6 +74,35 @@ test('a segment longer than the idle threshold is flagged on its unclipped lengt
   expect(sums).toEqual({ totals: { work: 9 * H }, idleMs: 9 * H, detoxMs: 0 })
 })
 
+test('a 12h 34m sleep stays in the totals at the 16h default', () => {
+  // Arrange: 睡眠 1:13–13:47 JST on 2026-09-27, then 1 minute of 休息. A 12 h line dashed this sleep and dropped it.
+  const dayStart = Date.parse('2026-09-26T15:00:00Z')
+  const sleepStart = Date.parse('2026-09-26T16:13:00Z')
+  const sleepEnd = Date.parse('2026-09-27T04:47:00Z')
+  const switches = [
+    { id: 'sleep', activityId: 'sleep', startedAt: sleepStart },
+    { id: 'rest', activityId: 'rest', startedAt: sleepEnd },
+  ]
+
+  // Act
+  const segments = segmentsInRange(
+    switches,
+    dayStart,
+    Date.parse('2026-09-27T15:00:00Z'),
+    Date.parse('2026-09-27T04:48:00Z'),
+    16 * H,
+  )
+  const sums = sumSegments(segments)
+
+  // Assert: 12h 34m is under 16h, so the sleep is counted and the day has no idle time
+  expect(segments[0]?.idle).toBe(false)
+  expect(sums).toEqual({
+    totals: { sleep: 45_240_000, rest: 60_000 },
+    idleMs: 0,
+    detoxMs: 0,
+  })
+})
+
 test('detox time is neither totalled nor counted as idle', () => {
   // Arrange: 仕事 9:00, detox (no activity) 12:00, 休息 15:00, still running at 18:00
   const day = dayBounds('2026-09-09', TZ)

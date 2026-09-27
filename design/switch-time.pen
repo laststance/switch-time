@@ -15670,6 +15670,38 @@
                               "fontWeight": "600"
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i6EBO",
+                          "name": "button",
+                          "context": "button",
+                          "width": "fill_container",
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "padding": [
+                            14.5,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "FKURR",
+                              "name": "16h",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "16h",
+                              "lineHeight": 1.25,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
                         }
                       ]
                     },

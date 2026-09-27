@@ -1109,9 +1109,11 @@ test('on a phone-width screen 区切る時刻 shares a line with its readout and
 test('the lines under ここで分割 follow the cut time and the day’s exclusion', async ({
   page,
 }) => {
-  // Arrange: D−3 仕事 20:00 runs until D−1 食事 0:00 (28 h, over the 12 h idle threshold), so D−2 has no row of its own.
+  // Arrange: D−3 仕事 20:00 runs until D−1 食事 0:00 (28 h). The cut times below are built for a 12 h line
+  // (11:45 leaves both parts idle, 12:45 frees the later one), so this account is pinned there. The product default is 16 h.
   await signUp(page)
   const api = await apiAs(page)
+  await api.settings.update({ idleThresholdMinutes: 720 })
   const list = await api.activities.list()
   const recordStart = shift(today(), -3)
   const day = shift(today(), -2)
