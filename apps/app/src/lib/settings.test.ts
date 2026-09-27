@@ -7,6 +7,8 @@ import {
   idleLabel,
   reorderIds,
   rolledBackSettings,
+  IDLE_OPTIONS,
+  SETTINGS_DEFAULTS,
   SETTINGS_REFETCH_ROUTERS,
   spareColor,
   targetHoursFromText,
@@ -464,6 +466,26 @@ test('moving an id one step swaps it with its neighbour and stays put at the end
   expect(aboveFirst).toBe(ids)
   expect(belowLast).toBe(ids)
   expect(unknownId).toBe(ids)
+})
+
+test('the default idle threshold is 16 hours, so a 12h 34m sleep stays under it', () => {
+  // Arrange: 1:13–13:47, the sleep production drew as an empty dash at 12 h
+  const sleepMinutes = 12 * 60 + 34
+
+  // Act
+  const threshold = SETTINGS_DEFAULTS.idleThresholdMinutes
+
+  // Assert: idle is a strict "longer than", so 754 minutes at 960 stays counted.
+  // 12h stays a choice: that stored 720 is what the migration moves, while 6h, 8h and 10h stay put.
+  expect(threshold).toBe(960)
+  expect(IDLE_OPTIONS).toEqual([
+    { value: 360, label: '6h' },
+    { value: 480, label: '8h' },
+    { value: 600, label: '10h' },
+    { value: 720, label: '12h' },
+    { value: 960, label: '16h' },
+  ])
+  expect(sleepMinutes > threshold).toBe(false)
 })
 
 test('the exclusion row and the idle picker read the stored threshold in hours', () => {

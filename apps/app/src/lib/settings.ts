@@ -22,7 +22,7 @@ export const SETTINGS_DEFAULTS: Pick<
 > = {
   theme: 'auto',
   showSecondHand: true,
-  idleThresholdMinutes: 720,
+  idleThresholdMinutes: 960,
   autoExcludeUnusedDays: true,
   timeZone: 'Asia/Tokyo',
 }
@@ -167,8 +167,11 @@ export function rolledBackSettings<Row extends { userId: string }>(
 }
 
 const MINUTES_PER_HOUR = 60
-/** 「無操作とみなす時間」 choices, the sheet's four buttons (the design's 6/8/10/12 h; the API takes any 15 min … 24 h). */
-export const IDLE_OPTIONS = [6, 8, 10, 12].map((hours) => ({
+/**
+ * 「無操作とみなす時間」 choices. 16h is the default: a 12h line drew a recorded 12h34m sleep as idle on the 24h bar.
+ * The API takes any 15 min … 24 h.
+ */
+export const IDLE_OPTIONS = [6, 8, 10, 12, 16].map((hours) => ({
   value: hours * MINUTES_PER_HOUR,
   label: `${hours}h`,
 }))

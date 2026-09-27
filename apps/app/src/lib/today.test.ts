@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 
+import { SETTINGS_DEFAULTS } from './settings'
 import { countSwitches, daySegments, legendEntries, spanCorners } from './today'
 
 const row = (id: string, activityId: string, startedAt: string) => ({
@@ -39,6 +40,38 @@ test('the bar carries yesterday’s state in and stops the current segment at no
     },
   ])
   expect(daySegments(undefined, start, end, now, 720 * 60_000)).toEqual([])
+})
+
+test('a 12h 34m sleep stays on the bar at the default idle threshold', () => {
+  // Arrange: 睡眠 1:13–13:47 JST on 2026-09-27, then 休息. Longer than the old 12 h line.
+  const list = {
+    carriedIn: null,
+    rows: [
+      row('sleep', 'sleep', '2026-09-26T16:13:00Z'),
+      row('rest', 'rest', '2026-09-27T04:47:00Z'),
+    ],
+  }
+  const dayStart = Date.parse('2026-09-26T15:00:00Z')
+  const dayEnd = Date.parse('2026-09-27T15:00:00Z')
+  const now = Date.parse('2026-09-27T04:48:00Z')
+
+  // Act
+  const segments = daySegments(
+    list,
+    dayStart,
+    dayEnd,
+    now,
+    SETTINGS_DEFAULTS.idleThresholdMinutes * 60_000,
+  )
+
+  // Assert: the sleep span is drawn in its activity colour (idle would dash it)
+  expect(segments[0]).toEqual({
+    switchId: 'sleep',
+    activityId: 'sleep',
+    start: Date.parse('2026-09-26T16:13:00Z'),
+    end: Date.parse('2026-09-27T04:47:00Z'),
+    idle: false,
+  })
 })
 
 test('the first row of a first day is the starting state, not a switch', () => {
