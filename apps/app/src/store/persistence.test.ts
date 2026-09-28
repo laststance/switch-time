@@ -249,82 +249,26 @@ test.each([
   },
 )
 
-test('a storage that keeps refusing reads is asked again only once, so a locked keychain does not spin', async () => {
-  // Arrange
+test('a device whose storage refuses the read at launch keeps what it holds, instead of losing it to that session’s saves', async () => {
+  // Arrange: a keychain locked for the launch's read only
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  const memory = createMemoryStorage()
-  const getItem = vi.spyOn(memory, 'getItem').mockImplementation(() => {
+  const storage = createMemoryStorage()
+  storage.setItem(
+    'switch-time.device',
+    '{"version":0,"state":{"syncedZone":{"byAccount":{"account-1":"Asia/Tokyo"}}}}',
+  )
+  vi.spyOn(storage, 'getItem').mockImplementationOnce(() => {
     throw new Error('keychain locked')
   })
-
-  // Act
-  createAppStore(memory)
-  await settle()
-
-  // Assert
-  expect(getItem).toHaveBeenCalledTimes(2)
-})
-
-test('a zone another tab synced is known in this tab as soon as that tab saves it, so this tab does not write its stale zone over it', async () => {
-  // Arrange: two tabs of the web app sharing one localStorage
-  const storage = createMemoryStorage()
-  const tabs = new EventTarget()
-  const thisTab = createAppStore(storage, tabs)
-  const otherTab = createAppStore(storage)
-  await settle()
-  otherTab.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
-  await settle()
-
-  // Act: the browser tells this tab that the other tab wrote the key
-  tabs.dispatchEvent(
-    Object.assign(new Event('storage'), { key: 'switch-time.device' }),
-  )
-  await settle()
-
-  // Assert
-  expect(selectSyncedZone(thisTab.getState(), 'account-1')).toBe('Asia/Tokyo')
-})
-
-test('reading another tab’s save keeps the accounts only this tab synced, so neither tab’s next save drops the other’s', async () => {
-  // Arrange
-  const storage = createMemoryStorage()
-  const tabs = new EventTarget()
-  const thisTab = createAppStore(storage, tabs)
-  const otherTab = createAppStore(storage)
-  await settle()
-  thisTab.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
-  await settle()
-  otherTab.dispatch(
-    zoneSynced({ accountId: 'account-2', zone: 'Europe/London' }),
-  )
+  const store = createAppStore(storage)
   await settle()
 
   // Act
-  tabs.dispatchEvent(
-    Object.assign(new Event('storage'), { key: 'switch-time.device' }),
-  )
+  store.dispatch(zoneSynced({ accountId: 'account-2', zone: 'Europe/London' }))
   await settle()
 
   // Assert
-  expect(thisTab.getState().syncedZone).toEqual({
-    byAccount: { 'account-1': 'Asia/Tokyo', 'account-2': 'Europe/London' },
-  })
-})
-
-test('a save another tab makes under another key is not read back', async () => {
-  // Arrange
-  const storage = createMemoryStorage()
-  const tabs = new EventTarget()
-  const getItem = vi.spyOn(storage, 'getItem')
-  createAppStore(storage, tabs)
-  await settle()
-
-  // Act
-  tabs.dispatchEvent(
-    Object.assign(new Event('storage'), { key: 'better-auth.session' }),
+  expect(storage.getItem('switch-time.device')).toBe(
+    '{"version":0,"state":{"syncedZone":{"byAccount":{"account-1":"Asia/Tokyo"}}}}',
   )
-  await settle()
-
-  // Assert
-  expect(getItem).toHaveBeenCalledTimes(1)
 })

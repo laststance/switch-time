@@ -136,6 +136,18 @@
 **Priority:** P3
 **Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
 
+### Keep a web tab's synced zones in step with the other tabs'
+
+**What:** Let a web tab learn the zones another tab of the same browser synced (the `syncedZone` slice) before it next judges a zone sync, without starting a sync from that news alone.
+
+**Why:** Each tab reads `switch-time.device` once at launch and keeps its own copy. A tab that sat hidden while another tab synced a new zone judges its next sync against its older copy, so it can write this device's zone over a take-back made on another device since; and its next save drops the accounts only the other tab synced, which then sync once more. Before the store kept the zones, each sync read `localStorage` itself.
+
+**Context:** `createAppStore` in `apps/app/src/store/index.ts`, `restoreSyncedZone` in `apps/app/src/store/synced-zone.ts`, `useTimeZoneSync` (`lastSynced` is in its effect's deps). Re-reading on the browser's `storage` event was tried and taken back in the PR that moved the zones into the store: a hidden tab still holds the device zone from its last foreground (`useDeviceZone`), so it answered the other tab's sync with a sync of its own, and two tabs could trade zones without end. A re-read must land together with a fresh device zone, for example both read when the tab comes back to the foreground, or the effect must not run on a `lastSynced` that came from another tab.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
+
 ### Bind every settings write to the account it was made for
 
 **What:** Send `forUserId` with every `settings.update`, not only the zone sync and 「この端末に合わせる」, and roll back only the fields a failed write changed.

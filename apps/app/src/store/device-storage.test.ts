@@ -30,7 +30,7 @@ afterEach(() => {
 test('in a browser a synced zone is kept in localStorage and is known again after a reload', async () => {
   // Arrange
   const localStorage = createMemoryStorage()
-  vi.stubGlobal('window', Object.assign(new EventTarget(), { localStorage }))
+  vi.stubGlobal('window', { localStorage })
   const firstLoad = createAppStore(await loadDeviceStorage())
   await settle()
   firstLoad.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
@@ -55,16 +55,13 @@ test('a browser that refuses localStorage (a private window) still remembers the
   const refusing = (): never => {
     throw new Error('SecurityError')
   }
-  vi.stubGlobal(
-    'window',
-    Object.assign(new EventTarget(), {
-      localStorage: {
-        getItem: refusing,
-        setItem: refusing,
-        removeItem: refusing,
-      },
-    }),
-  )
+  vi.stubGlobal('window', {
+    localStorage: {
+      getItem: refusing,
+      setItem: refusing,
+      removeItem: refusing,
+    },
+  })
   const store = createAppStore(await loadDeviceStorage())
   await settle()
 
