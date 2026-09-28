@@ -3683,3 +3683,37 @@ test('a landed edit arms its undo, drops the older one when it has none, and rai
   expect(noUndo).toEqual({ slot: null, archived: false })
   expect(archivedPick).toEqual({ slot: null, archived: true })
 })
+
+test('a correction row is read with its length in 時間 and 分, and a name that could pass for detox is read with 活動 in front', () => {
+  // Arrange: detox from 0:00, an activity named detox from 9:00, 仕事 from 12:05 to 18:00
+  const day = '2026-09-08'
+  const named = [
+    ...activities,
+    { id: 'fake', name: 'detox', color: '#4FA877', iconKey: 'rest' },
+  ]
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('d', null, at(day, 0)),
+      row('x', 'fake', at(day, 9)),
+      row('w', 'work', at(day, 12, 5)),
+    ],
+    carriedOut: row('h', 'home', at('2026-09-09', 18)),
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 20).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, named, bounds)
+
+  // Assert: the real detox row keeps its name; the visible length stays 11h 55m
+  expect(rows.map((r) => [r.label, r.duration])).toEqual([
+    ['仕事 12:05 – 24:00 11時間55分', '11h 55m'],
+    ['活動 detox 9:00 – 12:05 3時間5分', '3h 05m'],
+    ['detox 0:00 – 9:00 9時間', '9h 00m'],
+  ])
+})

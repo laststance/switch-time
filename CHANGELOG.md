@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.1.0] - 2026-09-29
+
+### Changed
+
+- Screen readers now hear durations in Japanese. A History day cell reads
+  `9月9日（水）、仕事 9時間、detox 6時間`, a correction sheet row reads
+  `仕事 9:00 – 18:00 9時間`, and a 状態別 row is one stop that reads
+  `仕事、合計 19時間、1日あたり 6時間20分`. The screen still shows `9h 00m`.
+- Today's History cell is named with the 今日 it shows, so voice control can
+  open it by saying 今日.
+- An activity named like detox or 平均から除外 is read with 活動 in front, an
+  archived activity that shares a name with another is read with
+  （アーカイブ済み）, and two that still share a name are numbered, so the
+  labels no longer mix them up.
+
+### Fixed
+
+- A tap or correction stored while 記録's stats were loading for the first
+  time now shows in them once they load. The older read used to answer, and
+  the stats left out the tap until the next refetch.
+
 ## [0.24.0.0] - 2026-09-29
 
 ### Added

@@ -56,13 +56,17 @@ test('the week view shows the excluded day dashed and out of the average', async
   const work = page.getByText('仕事', { exact: true }).locator('..')
   await expect(work.getByText('19h 00m')).toBeVisible()
   await expect(work.getByText('6h 20m')).toBeVisible()
+  // A screen reader gets the row as one element, its times spoken as 時間 and 分 rather than the letters on screen.
+  await expect(
+    page.getByRole('group', { name: '仕事、合計 19時間、1日あたり 6時間20分' }),
+  ).toBeVisible()
   await expect(page.getByText('3 / 7日')).toBeVisible()
   await expect(page.getByText('2日', { exact: true })).toBeVisible()
   await expect(
     page.getByRole('link', { name: /アプリを使わなかった 1日/ }),
   ).toBeVisible()
   const excluded = page.getByRole('link', {
-    name: /^\d+月\d+日（.）・平均から除外/,
+    name: /^\d+月\d+日（.）、平均から除外/,
   })
   await expect(excluded).toBeVisible()
   await expect(excluded).toHaveCount(1)
@@ -114,14 +118,14 @@ test('days a detox runs through without a tap are outlined as detox, keep the st
   await expect(detoxDays).toHaveCount(2)
   await expect(detoxDays.first()).toBeVisible()
   await expect(detoxDays.first()).toHaveAccessibleName(
-    /^\d+月\d+日（.）・detox の日 24h 00m$/,
+    /^\d+月\d+日（.）、detox の日 24時間$/,
   )
   await expect(detoxDays.last()).toBeVisible()
   await expect(detoxDays.last()).toHaveAccessibleName(
-    /^\d+月\d+日（.）・detox の日 24h 00m$/,
+    /^\d+月\d+日（.）、detox の日 24時間$/,
   )
   await expect(
-    page.getByRole('link', { name: /^\d+月\d+日（.）・平均から除外/ }),
+    page.getByRole('link', { name: /^\d+月\d+日（.）、平均から除外/ }),
   ).toHaveCount(0)
   await expect(page.getByText('4 / 7日')).toBeVisible()
   await expect(page.getByText('4日', { exact: true })).toBeVisible()
@@ -152,11 +156,11 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
   const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
   const detox = page.getByRole('link', {
-    name: new RegExp(`^${dayName}（.）・detox の日 15h 00m$`),
+    name: new RegExp(`^${dayName}（.）、detox の日 15時間$`),
   })
   await expect(detox).toHaveCount(1)
   await expect(
-    page.getByRole('link', { name: /^\d+月\d+日（.）・平均から除外/ }),
+    page.getByRole('link', { name: /^\d+月\d+日（.）、平均から除外/ }),
   ).toHaveCount(0)
   const track = detox.locator('div').first()
   // RN-web defaults every View to a solid style, so the width is what proves the outline is drawn.
@@ -180,7 +184,7 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
     page.getByRole('dialog', { name: /の記録を訂正$/ }),
   ).toBeVisible()
   await expect(
-    page.getByRole('button', { name: 'detox 9:00 – 24:00 15h 00m' }),
+    page.getByRole('button', { name: 'detox 9:00 – 24:00 15時間' }),
   ).toBeVisible()
 })
 
@@ -210,7 +214,7 @@ test('a day worked then spent in detox draws its detox part as a sub outline on 
   await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
   const dayName = `${Number(yesterday.slice(5, 7))}月${Number(yesterday.slice(8))}日`
   const cell = page.getByRole('link', {
-    name: new RegExp(`^${dayName}（.）・仕事 9h 00m・detox 6h 00m$`),
+    name: new RegExp(`^${dayName}（.）、仕事 9時間、detox 6時間$`),
   })
   await expect(cell).toBeVisible()
   await expect(cell.getByTestId('detox-glyph')).toHaveCount(0)

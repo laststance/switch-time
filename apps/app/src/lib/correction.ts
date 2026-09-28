@@ -19,7 +19,14 @@ import type { QueryState } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { DETOX } from './detox'
-import { formatDay, formatDuration, formatMonthDay, formatTime } from './format'
+import {
+  formatDay,
+  formatDuration,
+  formatMonthDay,
+  formatSpokenDuration,
+  formatTime,
+  spokenActivityName,
+} from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
 import { idleLabel } from './settings'
 
@@ -67,6 +74,11 @@ export type CorrectionRow = {
   /** `7:15 – 7:45`; the current state reads `– いま`, a past day's last state `– 24:00`. */
   range: string
   duration: string
+  /**
+   * What a screen reader says for the row's header instead of its visible texts: `仕事 9:00 – 18:00 9時間`, the name escaped when
+   * it could pass for detox ({@link spokenActivityName}) and the length spoken ({@link formatSpokenDuration}).
+   */
+  label: string
   /** The record started before the day (listed last): its panel cuts it or changes its activity, and never moves or merges it. */
   carriedIn: boolean
   /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes); empty on the day's own rows. */
@@ -267,6 +279,10 @@ function describeRow(
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
   const end = Math.min(trueEnd, bounds.end)
   const startLabel = formatTime(new Date(start), bounds.timeZone)
+  const range = `${startLabel} – ${endLabel(end, next, bounds)}`
+  // The detox row keeps its own name: the escape is there so that no activity reads like it.
+  const spokenName =
+    row.activityId === null ? activity.name : spokenActivityName(activity.name)
   return {
     id: row.id,
     activityId: row.activityId,
@@ -277,8 +293,9 @@ function describeRow(
     start,
     end,
     startLabel,
-    range: `${startLabel} – ${endLabel(end, next, bounds)}`,
+    range,
     duration: formatDuration(end - start),
+    label: `${spokenName} ${range} ${formatSpokenDuration(end - start)}`,
     carriedIn,
     ...(carriedIn ? trueStartLabels(row.startedAt, bounds) : NO_TRUE_START),
     archived: Boolean(activity.archivedAt),

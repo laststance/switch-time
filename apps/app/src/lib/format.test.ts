@@ -5,7 +5,10 @@ import {
   formatDuration,
   formatElapsed,
   formatSince,
+  formatSpokenDuration,
   formatTime,
+  spokenActivityName,
+  spokenActivityNames,
 } from './format'
 
 afterEach(() => {
@@ -65,6 +68,111 @@ test('durations read as hours and padded minutes, minutes alone under an hour', 
 
   // Assert
   expect(readouts).toEqual(['19h 00m', '6h 20m', '45m', '0m', '0m'])
+})
+
+test('a screen reader hears durations as 時間 and 分, not the letters h and m', () => {
+  // Arrange
+  const cases = [
+    9 * 3_600_000,
+    545 * 60_000,
+    22_800_000,
+    45 * 60_000,
+    29_999,
+    30_000,
+  ]
+
+  // Act
+  const spoken = cases.map(formatSpokenDuration)
+
+  // Assert: the same minute rounding as the visible 9h 00m, 9h 05m, 6h 20m, 45m, 0m, 1m
+  expect(spoken).toEqual([
+    '9時間',
+    '9時間5分',
+    '6時間20分',
+    '45分',
+    '0分',
+    '1分',
+  ])
+})
+
+test('an activity name that could pass for detox, 平均から除外 or a pause between parts is read with 活動 in front', () => {
+  // Arrange
+  const names = [
+    '仕事',
+    'detox',
+    'Detox の日',
+    'ｄｅｔｏｘ',
+    '平均から除外',
+    '今週は平均から除外',
+    '仕事 1時間、detox',
+    '活動',
+    '活動 仕事',
+    '読書・勉強',
+  ]
+
+  // Act
+  const spoken = names.map(spokenActivityName)
+
+  // Assert: a plain name and a 中黒 inside one (no longer the label's separator) read as written
+  expect(spoken).toEqual([
+    '仕事',
+    '活動 detox',
+    '活動 Detox の日',
+    '活動 ｄｅｔｏｘ',
+    '活動 平均から除外',
+    '活動 今週は平均から除外',
+    '活動 仕事 1時間、detox',
+    '活動 活動',
+    '活動 活動 仕事',
+    '読書・勉強',
+  ])
+})
+
+test('an archived activity that shares its name with a live one is read as アーカイブ済み', () => {
+  // Arrange
+  const activities = [
+    { id: 'live', name: '仕事', archivedAt: null },
+    { id: 'old', name: '仕事', archivedAt: new Date('2026-09-01T00:00:00Z') },
+    { id: 'alone', name: '読書', archivedAt: new Date('2026-09-01T00:00:00Z') },
+  ]
+
+  // Act
+  const spoken = spokenActivityNames(activities)
+
+  // Assert: an archived activity alone on its name reads as it did while live
+  expect([...spoken]).toEqual([
+    ['live', '仕事'],
+    ['old', '仕事（アーカイブ済み）'],
+    ['alone', '読書'],
+  ])
+})
+
+test('activities whose names are still alike after the archive mark are numbered in list order', () => {
+  // Arrange: two live 仕事, two archived 家事, and a live name that copies the archive mark
+  const archivedAt = new Date('2026-09-01T00:00:00Z')
+  const activities = [
+    { id: 'work-1', name: '仕事', archivedAt: null },
+    { id: 'work-2', name: '仕事', archivedAt: null },
+    { id: 'home-1', name: '家事', archivedAt },
+    { id: 'home-2', name: '家事', archivedAt },
+    { id: 'fun-copy', name: '娯楽（アーカイブ済み）', archivedAt: null },
+    { id: 'fun-old', name: '娯楽', archivedAt },
+    { id: 'fun-live', name: '娯楽', archivedAt: null },
+  ]
+
+  // Act
+  const spoken = spokenActivityNames(activities)
+
+  // Assert
+  expect([...spoken]).toEqual([
+    ['work-1', '仕事（1）'],
+    ['work-2', '仕事（2）'],
+    ['home-1', '家事（アーカイブ済み）（1）'],
+    ['home-2', '家事（アーカイブ済み）（2）'],
+    ['fun-copy', '娯楽（アーカイブ済み）（1）'],
+    ['fun-old', '娯楽（アーカイブ済み）（2）'],
+    ['fun-live', '娯楽'],
+  ])
 })
 
 test('the since line keeps failing for an unknown time zone instead of caching a broken formatter', () => {

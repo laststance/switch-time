@@ -256,8 +256,16 @@ function Breakdown({ rows }: { rows: BreakdownRow[] }) {
         <Text className="text-sub text-2xs">合計 ／ 1日あたり</Text>
       </View>
       {rows.map((row) => (
-        <View key={row.id} className="gap-1.5">
-          <View className="flex-row items-center gap-2">
+        // One element for screen readers, read from its label: the visible `19h 00m` gives a Japanese voice letters to spell.
+        // `accessible` makes it one element on native; hiding the children keeps the web from reading them after the label.
+        <View
+          key={row.id}
+          accessible
+          role="group"
+          aria-label={row.label}
+          className="gap-1.5"
+        >
+          <View aria-hidden className="flex-row items-center gap-2">
             <ActivityChip
               color={row.color}
               iconKey={row.iconKey}
@@ -272,7 +280,7 @@ function Breakdown({ rows }: { rows: BreakdownRow[] }) {
             </Text>
             <Text className="text-sub pl-3 text-xs tabular">{row.average}</Text>
           </View>
-          <View className="bg-chip h-2 overflow-hidden rounded-sm">
+          <View aria-hidden className="bg-chip h-2 overflow-hidden rounded-sm">
             <View
               className="h-full rounded-sm"
               style={{

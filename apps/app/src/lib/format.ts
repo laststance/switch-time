@@ -48,6 +48,92 @@ export function formatDuration(ms: number): string {
   return hours ? `${hours}h ${pad(minutes % 60)}m` : `${minutes}m`
 }
 
+/**
+ * A duration as a screen reader should say it, for the labels that stand in for a visible {@link formatDuration}: History's day
+ * cells and 状態別 rows, the correction sheet's rows. `9h 00m` gives a Japanese voice letters to spell; `9時間` it reads as a time.
+ * @param ms - The duration, rounded to the minute as {@link formatDuration} rounds it, so both forms name the same time.
+ * @returns
+ * - `H時間` on the hour
+ * - `H時間M分` past the first hour
+ * - `M分` below it (`0分` under half a minute)
+ * @example formatSpokenDuration(9 * 3_600_000) // '9時間'
+ * @example formatSpokenDuration(545 * 60_000) // '9時間5分'
+ * @example formatSpokenDuration(45 * 60_000) // '45分'
+ */
+export function formatSpokenDuration(ms: number): string {
+  const minutes = Math.round(ms / 60_000)
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  // Under an hour there are no hours to name.
+  if (!hours) return `${minutes}分`
+  return rest ? `${hours}時間${rest}分` : `${hours}時間`
+}
+
+// What every escaped name starts with: no name is read without it once it could be taken for the label's own words.
+const ESCAPE = '活動'
+
+/**
+ * How a label reads one activity's name, so no name can pass for the words a label adds itself: the detox part (`detox 6時間`,
+ * `detox の日`), 平均から除外, or the `、` between parts. Called for the correction sheet's rows and by
+ * {@link spokenActivityNames}; never for the built-in detox entry, which is what the escape protects.
+ * @param name - The activity's name as the user wrote it (the schema allows any 1–20 characters).
+ * @returns
+ * - `活動 <name>` for a name that, width-folded, lower-cased and without spaces, starts with `detox` or `活動`, contains
+ *   `平均から除外`, or contains `、`: every escaped part then starts with 活動 and no other part can
+ * - the name unchanged otherwise
+ * @example spokenActivityName('仕事') // '仕事'
+ * @example spokenActivityName('Detox の日') // '活動 Detox の日'
+ */
+export function spokenActivityName(name: string): string {
+  const folded = name.normalize('NFKC').toLowerCase().replace(/\s/g, '')
+  const readsAsLabelWords =
+    folded.startsWith('detox') ||
+    folded.startsWith(ESCAPE) ||
+    folded.includes('平均から除外') ||
+    folded.includes('、')
+  return readsAsLabelWords ? `${ESCAPE} ${name}` : name
+}
+
+/**
+ * Every activity's spoken name, told apart from the others, for History's day cells and 状態別 rows. Built once over the whole
+ * list (live and archived) by {@link historyView}, so one activity reads the same in every cell.
+ * @param activities - The activities in `position` order; that order numbers a group of equal names.
+ * @returns A map from activity id to its spoken name:
+ * - {@link spokenActivityName} of its name
+ * - then `（アーカイブ済み）` after an archived activity whose spoken name another activity also has
+ * - then `（1）`, `（2）`… in list order for names still shared (two live 仕事, two archived 仕事)
+ * @example spokenActivityNames([{ id: 'a', name: '仕事', archivedAt: null }, { id: 'b', name: '仕事', archivedAt: new Date() }])
+ * // => Map { 'a' => '仕事', 'b' => '仕事（アーカイブ済み）' }
+ */
+export function spokenActivityNames(
+  activities: readonly { id: string; name: string; archivedAt: Date | null }[],
+): Map<string, string> {
+  const escaped = activities.map((activity) => ({
+    ...activity,
+    spoken: spokenActivityName(activity.name),
+  }))
+  const archivedMarked = escaped.map((activity) =>
+    // Only a shared name needs the mark: an archived activity alone on its name reads as it did while live.
+    activity.archivedAt !== null && countOf(escaped, activity.spoken) > 1
+      ? { ...activity, spoken: `${activity.spoken}（アーカイブ済み）` }
+      : activity,
+  )
+  const seen = new Map<string, number>()
+  return new Map(
+    archivedMarked.map((activity) => {
+      // A name the mark did not settle is numbered across its whole group, the first one included.
+      if (countOf(archivedMarked, activity.spoken) === 1)
+        return [activity.id, activity.spoken]
+      const ordinal = (seen.get(activity.spoken) ?? 0) + 1
+      seen.set(activity.spoken, ordinal)
+      return [activity.id, `${activity.spoken}（${ordinal}）`]
+    }),
+  )
+}
+
+const countOf = (list: readonly { spoken: string }[], spoken: string) =>
+  list.filter((entry) => entry.spoken === spoken).length
+
 // One formatter per zone: the timeline and the correction sheet format every row's start on each render.
 // No cap: the app only formats the signed-in account's stored zone, unlike the API's cache in the shared time module.
 const timeFormats = new Map<string, Intl.DateTimeFormat>()

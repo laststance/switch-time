@@ -13,12 +13,13 @@ const shift = (day: string, n: number) =>
     .slice(0, 10)
 const at = (day: string, hour: number) =>
   new Date(`${day}T${String(hour).padStart(2, '0')}:00:00+09:00`)
-// A History day's link, found by the name it reads out, which starts with the day as `formatDay` writes it (`9月24日（木）`).
+// A History day's link, found by the name it reads out, which starts with the day as `formatDay` writes it (`9月24日（木）`),
+// after 今日 on today's cell.
 const dayLink = (page: Page, day: string) => {
   const date = new Date(`${day}T00:00:00Z`)
   const weekday = '日月火水木金土'.charAt(date.getUTCDay())
   const name = `${date.getUTCMonth() + 1}月${date.getUTCDate()}日（${weekday}）`
-  return page.getByRole('link', { name: new RegExp(`^${name}`) })
+  return page.getByRole('link', { name: new RegExp(`^(今日 )?${name}`) })
 }
 const idOf = (list: { id: string; name: string }[], name: string) => {
   const activity = list.find((row) => row.name === name)
@@ -54,14 +55,14 @@ test('undo restores the row that was merged away', async ({ page }) => {
   await expect(
     page.getByRole('dialog', { name: /の記録を訂正$/ }),
   ).toBeVisible()
-  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' })
   await expect(rest).toBeVisible()
 
   // Act: merge 休息 into 仕事, then undo.
   await rest.click()
   await page.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await expect(rest).toHaveCount(0)
   await page.getByRole('button', { name: '元に戻す' }).click()
@@ -69,7 +70,7 @@ test('undo restores the row that was merged away', async ({ page }) => {
   // Assert: the merged row is back with its old span, and there is nothing further to undo.
   await expect(rest).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -93,14 +94,14 @@ test('merging into the next record hands the span to the next row, and undo brin
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' })
   await expect(rest).toBeVisible()
 
   // Act: merge 休息 into 娯楽, then undo.
   await rest.click()
   await page.getByRole('button', { name: '次の記録に統合' }).click()
   await expect(
-    page.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+    page.getByRole('button', { name: '娯楽 12:00 – 24:00 12時間' }),
   ).toBeVisible()
   await expect(rest).toHaveCount(0)
   await page.getByRole('button', { name: '元に戻す' }).click()
@@ -108,7 +109,7 @@ test('merging into the next record hands the span to the next row, and undo brin
   // Assert: 休息 is back with its old span and 娯楽 starts at 18:00 again.
   await expect(rest).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' }),
+    page.getByRole('button', { name: '娯楽 18:00 – 24:00 6時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -133,11 +134,11 @@ test('undo brings back a row merged into the record of an archived activity', as
   })
   await api.activities.archive({ id: idOf(list, '休息') })
   await page.goto(`/correction?day=${yesterday}`)
-  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' })
   await work.click()
   await page.getByRole('button', { name: '次の記録に統合' }).click()
   await expect(
-    page.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+    page.getByRole('button', { name: '休息 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await expect(work).toHaveCount(0)
 
@@ -147,7 +148,7 @@ test('undo brings back a row merged into the record of an archived activity', as
   // Assert: 仕事 is back and the archived 休息 starts at 12:00 again, with nothing further to undo
   await expect(work).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+    page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -171,11 +172,11 @@ test('undo after a merge and then a 15-minute move takes back only the move', as
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' })
   await rest.click()
   await page.getByRole('button', { name: '次の記録に統合' }).click()
   const merged = page.getByRole('button', {
-    name: '娯楽 12:00 – 24:00 12h 00m',
+    name: '娯楽 12:00 – 24:00 12時間',
   })
   await expect(merged).toBeVisible()
 
@@ -183,7 +184,7 @@ test('undo after a merge and then a 15-minute move takes back only the move', as
   await merged.click()
   await page.getByRole('button', { name: '15分早める', exact: true }).click()
   await expect(
-    page.getByRole('button', { name: '娯楽 11:45 – 24:00 12h 15m' }),
+    page.getByRole('button', { name: '娯楽 11:45 – 24:00 12時間15分' }),
   ).toBeVisible()
   await page.getByRole('button', { name: '元に戻す' }).click()
 
@@ -209,10 +210,10 @@ test('undo turns a changed activity back', async ({ page }) => {
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  const work = page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' })
   await work.click()
   await page.getByRole('radio', { name: '家事' }).click()
-  const chore = page.getByRole('button', { name: '家事 9:00 – 12:00 3h 00m' })
+  const chore = page.getByRole('button', { name: '家事 9:00 – 12:00 3時間' })
   await expect(chore).toBeVisible()
 
   // Act
@@ -242,10 +243,10 @@ test('undo is refused once another device added a switch to the day, and that sw
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  await page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }).click()
+  await page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await page.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   // Another device splits 仕事 at 10:00, behind the sheet's back.
   const [work] = (await api.switches.listByDay({ day: yesterday })).rows
@@ -257,10 +258,10 @@ test('undo is refused once another device added a switch to the day, and that sw
 
   // Assert: the other device's row is still there, 休息 did not come back, and there is nothing left to undo.
   await expect(
-    page.getByRole('button', { name: '仕事 10:00 – 18:00 8h 00m' }),
+    page.getByRole('button', { name: '仕事 10:00 – 18:00 8時間' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+    page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }),
   ).toHaveCount(0)
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -285,7 +286,7 @@ test('an edit made on a list another device has since changed is refused, and th
   })
   await page.goto(`/correction?day=${yesterday}`)
   const staleRest = page.getByRole('button', {
-    name: '休息 12:00 – 18:00 6h 00m',
+    name: '休息 12:00 – 18:00 6時間',
   })
   await expect(staleRest).toBeVisible()
   // Another device moves 娯楽 15 minutes earlier; the sheet still lists 18:00.
@@ -299,10 +300,10 @@ test('an edit made on a list another device has since changed is refused, and th
 
   // Assert: the merge did not land, the sheet reads the moved 娯楽, and nothing was armed to undo.
   await expect(
-    page.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+    page.getByRole('button', { name: '休息 12:00 – 17:45 5時間45分' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -326,7 +327,7 @@ test('区切る時刻 cuts the day’s own row at the stepped time into a select
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const work = dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' })
+  const work = dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' })
   await work.click()
   const readout = dialog.getByRole('status', { name: '区切る時刻' })
   await expect(readout).toHaveText('10:30')
@@ -338,12 +339,12 @@ test('区切る時刻 cuts the day’s own row at the stepped time into a select
 
   // Assert: the later part 10:45 – 12:00 is the selected, focused row.
   const laterPart = dialog.getByRole('button', {
-    name: '仕事 10:45 – 12:00 1h 15m',
+    name: '仕事 10:45 – 12:00 1時間15分',
   })
   await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
   await expect(laterPart).toBeFocused()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 10:45 1h 45m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 10:45 1時間45分' }),
   ).toHaveAttribute('aria-expanded', 'false')
 
   // Act
@@ -380,7 +381,7 @@ test('an edit still landing after its sheet closed holds the next sheet until it
     await route.fulfill({ response })
   })
   await page.goto(`/correction?day=${yesterday}`)
-  await page.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }).click()
+  await page.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await page.getByRole('button', { name: '次の記録に統合' }).click()
 
   // Act: close the sheet with the merge in flight, then open today's from Home and select 家事.
@@ -417,7 +418,7 @@ test('the last row of a past day cannot merge into the next day’s first switch
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const fun = page.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' })
+  const fun = page.getByRole('button', { name: '娯楽 18:00 – 24:00 6時間' })
   await expect(fun).toBeVisible()
 
   // Act
@@ -449,7 +450,7 @@ test('the own-row panel’s groups sit 20 apart: the merge buttons share a line,
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' })
+  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15時間' })
   await expect(work).toBeVisible()
 
   // Act
@@ -507,7 +508,7 @@ test('on a phone-width screen the two merge buttons still share a line at equal 
     rows: [{ activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) }],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' })
+  const work = page.getByRole('button', { name: '仕事 9:00 – 24:00 15時間' })
   await expect(work).toBeVisible()
 
   // Act
@@ -600,7 +601,9 @@ test('a detox row lists as detox, outlined solid in sub on its chip and the day 
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  const detox = page.getByRole('button', { name: 'detox 12:00 – 18:00 6h 00m' })
+  const detox = page.getByRole('button', {
+    name: 'detox 12:00 – 18:00 6時間',
+  })
   await expect(detox).toBeVisible()
   // The row's chip is outlined solid in the `sub` tone of its time range, like every detox mark (dashed means no data).
   const chip = detox.locator('div').first()
@@ -624,14 +627,14 @@ test('a detox row lists as detox, outlined solid in sub on its chip and the day 
   )
   await page.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await page.getByRole('button', { name: '元に戻す' }).click()
 
   // Assert: 「元に戻す」 wrote the detox row back as a row with no activity
   await expect(detox).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+    page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }),
   ).toBeVisible()
 })
 
@@ -651,14 +654,14 @@ test('the picker turns a segment into detox', async ({ page }) => {
     ],
   })
   await page.goto(`/correction?day=${yesterday}`)
-  await page.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await page.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
 
   // Act
   await page.getByRole('radio', { name: 'detox' }).click()
 
   // Assert: the row is now detox and the picker shows it as the row's state
   await expect(
-    page.getByRole('button', { name: 'detox 9:00 – 12:00 3h 00m' }),
+    page.getByRole('button', { name: 'detox 9:00 – 12:00 3時間' }),
   ).toBeVisible()
   await expect(page.getByRole('radio', { name: 'detox' })).toHaveAttribute(
     'aria-checked',
@@ -695,7 +698,7 @@ async function openCarriedInWork(page: Page) {
   await page.goto(`/correction?day=${day}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const carriedIn = dialog.getByRole('button', {
-    name: '仕事 0:00 – 7:00 7h 00m',
+    name: '仕事 0:00 – 7:00 7時間',
   })
   await expect(carriedIn).toBeVisible()
   return { api, list, dayBefore, day, dialog, carriedIn }
@@ -718,7 +721,7 @@ test('the carried-in record opens a panel that says where it started, and a pick
   await dialog.getByRole('radio', { name: '睡眠' }).click()
 
   // Assert: the whole record is 睡眠 now, so D−2's 22:00 – 24:00 moved from 仕事 to 睡眠.
-  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' })
   await expect(slept).toBeVisible()
   const [afterPick] = (await api.stats.day({ day: dayBefore })).days
   expect([afterPick?.totals[work] ?? 0, afterPick?.totals[sleep]]).toEqual([
@@ -770,7 +773,7 @@ test('switching a weekend detox to an activity says which untapped days it measu
   const undo = page.getByRole('button', { name: '元に戻す' })
 
   // Act
-  await dialog.getByRole('button', { name: 'detox 0:00 – 9:00 9h 00m' }).click()
+  await dialog.getByRole('button', { name: 'detox 0:00 – 9:00 9時間' }).click()
 
   // Assert: the note sits under 活動を変える before any pick, and 元に戻す offers nothing yet.
   await expect(pickNote).toBeVisible()
@@ -781,7 +784,7 @@ test('switching a weekend detox to an activity says which untapped days it measu
 
   // Assert: switching back to detox would count the days again, and so would 元に戻す.
   await expect(
-    dialog.getByRole('button', { name: '睡眠 0:00 – 9:00 9h 00m' }),
+    dialog.getByRole('button', { name: '睡眠 0:00 – 9:00 9時間' }),
   ).toBeVisible()
   await expect(pickNote).toBeVisible()
   await expect(undoNote).toBeVisible()
@@ -844,7 +847,7 @@ test('a pick on the carried-in record stays after the sheet closes', async ({
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
   await expect(
-    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' }),
   ).toBeVisible()
 
   // Act
@@ -871,9 +874,9 @@ test('区切る時刻 opens at 3:15, cuts the carried-in record at 3:00 into a s
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
 
   // Assert: the new row 3:00 – 7:00 is the selected, focused one, above the shortened carried-in record.
-  const later = dialog.getByRole('button', { name: '仕事 3:00 – 7:00 4h 00m' })
+  const later = dialog.getByRole('button', { name: '仕事 3:00 – 7:00 4時間' })
   const earlier = dialog.getByRole('button', {
-    name: '仕事 0:00 – 3:00 3h 00m',
+    name: '仕事 0:00 – 3:00 3時間',
   })
   await expect(later).toHaveAttribute('aria-expanded', 'true')
   await expect(later).toBeFocused()
@@ -896,7 +899,7 @@ test('after a cut, a pick changes only the later part of the record', async ({
   await carriedIn.click()
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   await expect(
-    dialog.getByRole('button', { name: '仕事 3:15 – 7:00 3h 45m' }),
+    dialog.getByRole('button', { name: '仕事 3:15 – 7:00 3時間45分' }),
   ).toHaveAttribute('aria-expanded', 'true')
 
   // Act
@@ -904,10 +907,10 @@ test('after a cut, a pick changes only the later part of the record', async ({
 
   // Assert: the carried-in part keeps 仕事, so the earlier day is untouched.
   await expect(
-    dialog.getByRole('button', { name: '睡眠 3:15 – 7:00 3h 45m' }),
+    dialog.getByRole('button', { name: '睡眠 3:15 – 7:00 3時間45分' }),
   ).toBeVisible()
   await expect(
-    dialog.getByRole('button', { name: '仕事 0:00 – 3:15 3h 15m' }),
+    dialog.getByRole('button', { name: '仕事 0:00 – 3:15 3時間15分' }),
   ).toBeVisible()
 })
 
@@ -973,7 +976,7 @@ test('the carried-in panel warns before a pick away from an archived activity an
     '前の活動はアーカイブ済みのため、元に戻せません',
   )
   await expect(
-    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -985,7 +988,7 @@ test('undoing a pick whose previous activity was archived meanwhile is refused w
   const { api, list, dialog, carriedIn } = await openCarriedInWork(page)
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
-  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' })
   await expect(slept).toBeVisible()
   await api.activities.archive({ id: idOf(list, '仕事') })
 
@@ -1008,7 +1011,7 @@ test('undoing a pick never overwrites a change made on another device', async ({
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
   await expect(
-    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' }),
   ).toBeVisible()
   const listed = await api.switches.listByDay({ day })
   if (!listed.carriedIn) throw new Error('no carried-in record')
@@ -1022,7 +1025,7 @@ test('undoing a pick never overwrites a change made on another device', async ({
 
   // Assert: the undo is refused and says why, the sheet shows 娯楽 and not 仕事, and 元に戻す is off.
   await expect(
-    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7時間' }),
   ).toBeVisible()
   await expect(dialog.getByRole('alert')).toHaveText(
     'この記録が変わっていたため、最新の状態を表示しました',
@@ -1049,7 +1052,7 @@ test('a pick on a carried-in record changed elsewhere is refused instead of over
 
   // Assert: the refused pick leaves 娯楽 in place and arms no undo.
   await expect(
-    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7時間' }),
   ).toBeVisible()
   await expect(dialog.getByRole('button', { name: /^睡眠 / })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
@@ -1133,7 +1136,7 @@ test('the lines under ここで分割 follow the cut time and the day’s exclus
   await page.goto(`/correction?day=${day}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const carriedIn = dialog.getByRole('button', {
-    name: '仕事 0:00 – 24:00 24h 00m',
+    name: '仕事 0:00 – 24:00 24時間',
   })
   const readout = dialog.getByRole('status', { name: '区切る時刻' })
   const idleNote = dialog.getByText(
@@ -1198,7 +1201,7 @@ test('ここで分割 on a detox says the day becomes measured only after the de
   })
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const carriedIn = dialog.getByRole('button', {
-    name: 'detox 0:00 – 24:00 24h 00m',
+    name: 'detox 0:00 – 24:00 24時間',
   })
   const readout = dialog.getByRole('status', { name: '区切る時刻' })
   const measuredNote = dialog.getByText(
@@ -1262,17 +1265,17 @@ test('cutting a detox past its first week measures the cut day only, and the nex
   await page.goto(`/correction?day=${shift(today(), -3)}`)
   expect((await cutDayAnswer).ok()).toBe(true)
   await dialog
-    .getByRole('button', { name: 'detox 0:00 – 24:00 24h 00m' })
+    .getByRole('button', { name: 'detox 0:00 – 24:00 24時間' })
     .click()
   await expect(measuredNote).toBeVisible()
 
   // Act: cut at 11:45, then reopen the earlier part
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   await expect(
-    dialog.getByRole('button', { name: 'detox 11:45 – 24:00 12h 15m' }),
+    dialog.getByRole('button', { name: 'detox 11:45 – 24:00 12時間15分' }),
   ).toHaveAttribute('aria-expanded', 'true')
   await dialog
-    .getByRole('button', { name: 'detox 0:00 – 11:45 11h 45m' })
+    .getByRole('button', { name: 'detox 0:00 – 11:45 11時間45分' })
     .click()
 
   // Assert: the cut's own switch measures D−3 now, so its carried-in part no longer promises it
@@ -1286,7 +1289,7 @@ test('cutting a detox past its first week measures the cut day only, and the nex
   await page.goto(`/correction?day=${shift(today(), -2)}`)
   expect((await nextDayAnswer).ok()).toBe(true)
   await dialog
-    .getByRole('button', { name: 'detox 0:00 – 24:00 24h 00m' })
+    .getByRole('button', { name: 'detox 0:00 – 24:00 24時間' })
     .click()
 
   // Assert: the cut did not start a new week, so D−2 is still unused and a cut there would measure it
@@ -1329,7 +1332,7 @@ test('a carried-in record with no whole minute to cut at disables every step and
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
 
   // Act
-  await dialog.getByRole('button', { name: '仕事 0:00 – 0:01 1m' }).click()
+  await dialog.getByRole('button', { name: '仕事 0:00 – 0:01 1分' }).click()
 
   // Assert
   await expect(dialog.getByRole('status', { name: '区切る時刻' })).toHaveText(
@@ -1371,7 +1374,7 @@ test('a row too short for any quarter hour is cut at its middle minute, with the
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:01 – 9:14 13m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:01 – 9:14 13分' }).click()
   await expect(dialog.getByRole('status', { name: '区切る時刻' })).toHaveText(
     '9:07',
   )
@@ -1391,10 +1394,10 @@ test('a row too short for any quarter hour is cut at its middle minute, with the
 
   // Assert
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:07 – 9:14 7m' }),
+    dialog.getByRole('button', { name: '仕事 9:07 – 9:14 7分' }),
   ).toHaveAttribute('aria-expanded', 'true')
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:01 – 9:07 6m' }),
+    dialog.getByRole('button', { name: '仕事 9:01 – 9:07 6分' }),
   ).toBeVisible()
 })
 
@@ -1425,7 +1428,7 @@ test('a refused edit says why under the rows until the next selection', async ({
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const staleRest = dialog.getByRole('button', {
-    name: '休息 12:00 – 18:00 6h 00m',
+    name: '休息 12:00 – 18:00 6時間',
   })
   await expect(staleRest).toBeVisible()
   const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
@@ -1440,7 +1443,7 @@ test('a refused edit says why under the rows until the next selection', async ({
   await expect(dialog.getByRole('alert')).toHaveText(
     '記録が変わっていたため、最新の状態を表示しました',
   )
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   await expect(dialog.getByRole('alert')).toHaveCount(0)
 })
 
@@ -1460,7 +1463,9 @@ test('undo after a merge restores the day the merge was pressed on, even when a 
   await page.clock.install()
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
   // Past the 30 s staleTime before the merge starts, so its deadline is not reached by the jump.
   await page.clock.fastForward('00:31')
@@ -1470,7 +1475,7 @@ test('undo after a merge restores the day the merge was pressed on, even when a 
   await applied.promise
   await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')))
   await expect(
-    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12時間' }),
   ).toBeVisible()
   answer.resolve()
   const undo = dialog.getByRole('button', { name: '元に戻す' })
@@ -1480,7 +1485,7 @@ test('undo after a merge restores the day the merge was pressed on, even when a 
   // Assert: 休息 is back, which only a snapshot taken when the merge was pressed can do.
   await expect(rest).toBeVisible()
   await expect(
-    dialog.getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 18:00 – 24:00 6時間' }),
   ).toBeVisible()
 })
 
@@ -1492,9 +1497,7 @@ test('an edit made offline says it waits for the connection, and lands once it i
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await context.setOffline(true)
 
   // Act
@@ -1506,7 +1509,7 @@ test('an edit made offline says it waits for the connection, and lands once it i
   ).toBeVisible()
   await context.setOffline(false)
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await expect(
     dialog.getByText('オフラインです。接続が戻ると反映されます'),
@@ -1525,13 +1528,11 @@ test('an edit whose answer never arrives gives up after 30 seconds, says it is r
   await page.clock.install()
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
   await expect(dialog.getByText('反映しています…')).toBeVisible()
   // The re-read after the timeout is held too, as a hung API would hold it.
@@ -1562,7 +1563,7 @@ test('an edit whose answer never arrives gives up after 30 seconds, says it is r
     '反映されたか分かりませんでした。一覧で確かめてください',
   )
   const leisure = dialog.getByRole('button', {
-    name: '娯楽 12:00 – 24:00 12h 00m',
+    name: '娯楽 12:00 – 24:00 12時間',
   })
   await expect(leisure).toBeVisible()
   await leisure.click()
@@ -1588,9 +1589,7 @@ test('a write that lands at once says nothing, and one still in flight after 400
   await page.clock.install()
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)
   const writing = dialog.getByText('反映しています…')
 
@@ -1612,7 +1611,7 @@ test('a write that lands at once says nothing, and one still in flight after 400
   releaseMerge()
   await page.clock.resume()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await expect(writing).toHaveCount(0)
 })
@@ -1624,12 +1623,10 @@ test('a refused undo says why under the rows and turns 元に戻す off', async 
   const { api, yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   const [work] = (await api.switches.listByDay({ day: yesterday })).rows
   if (!work) throw new Error('no 仕事 row')
@@ -1643,7 +1640,7 @@ test('a refused undo says why under the rows and turns 元に戻す off', async 
     '記録が変わっていたため、最新の状態を表示しました',
   )
   await expect(
-    dialog.getByRole('button', { name: '仕事 10:00 – 18:00 8h 00m' }),
+    dialog.getByRole('button', { name: '仕事 10:00 – 18:00 8時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -1669,7 +1666,7 @@ test('a pick on a carried-in record changed on another device says that record c
     'この記録が変わっていたため、最新の状態を表示しました',
   )
   await expect(
-    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 0:00 – 7:00 7時間' }),
   ).toBeVisible()
 })
 
@@ -1681,7 +1678,7 @@ test('pressing the edit again on the refreshed list clears the refusal and lands
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const staleRest = dialog.getByRole('button', {
-    name: '休息 12:00 – 18:00 6h 00m',
+    name: '休息 12:00 – 18:00 6時間',
   })
   await expect(staleRest).toBeVisible()
   const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
@@ -1694,7 +1691,7 @@ test('pressing the edit again on the refreshed list clears the refusal and lands
     '記録が変わっていたため、最新の状態を表示しました',
   )
   await expect(
-    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5時間45分' }),
   ).toBeVisible()
 
   // Act: the row stays selected, so the same button is pressed again.
@@ -1702,7 +1699,7 @@ test('pressing the edit again on the refreshed list clears the refusal and lands
 
   // Assert: the refusal is gone and the merge landed on the day as it now reads.
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 17:45 8h 45m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 17:45 8時間45分' }),
   ).toBeVisible()
   await expect(dialog.getByRole('alert')).toHaveCount(0)
 })
@@ -1714,11 +1711,13 @@ test('an undo lost in transit says it cannot tell whether it landed, keeps 元�
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await page.route(
     '**/api/rpc/switches/replaceDay',
@@ -1756,13 +1755,11 @@ test('an edit answered with a server error after it landed says it cannot tell w
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
@@ -1772,7 +1769,7 @@ test('an edit answered with a server error after it landed says it cannot tell w
     '反映されたか分かりませんでした。一覧で確かめてください',
   )
   await expect(
-    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12時間' }),
   ).toBeVisible()
   await expect(undo).toBeDisabled()
 })
@@ -1787,12 +1784,12 @@ test('an edit the API gave up on before writing says it was not saved and keeps 
   )
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(undo).toBeEnabled()
   const rest = dialog.getByRole('button', {
-    name: '休息 12:00 – 18:00 6h 00m',
+    name: '休息 12:00 – 18:00 6時間',
   })
   await rest.click()
 
@@ -1825,9 +1822,7 @@ test('after an edit that may have landed, a list that cannot be read again says 
   )
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
@@ -1837,7 +1832,7 @@ test('after an edit that may have landed, a list that cannot be read again says 
     '一覧を読み直せませんでした。表示が古いかもしれません',
   )
   await expect(
-    dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+    dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }),
   ).toBeVisible()
 
   // Act: the list answers again, and the tab comes back into view, which reads it.
@@ -1846,7 +1841,7 @@ test('after an edit that may have landed, a list that cannot be read again says 
 
   // Assert: the merge that landed shows, and the line goes back to saying the edit's own failure.
   await expect(
-    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12時間' }),
   ).toBeVisible()
   await expect(dialog.getByRole('alert')).toHaveText(
     '反映されたか分かりませんでした。一覧で確かめてください',
@@ -1866,9 +1861,7 @@ test('an edit that may have landed while the connection went down says it is rea
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
@@ -1885,7 +1878,7 @@ test('an edit that may have landed while the connection went down says it is rea
 
   // Assert: the read lands, so the merge shows and the line says to check it.
   await expect(
-    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12h 00m' }),
+    dialog.getByRole('button', { name: '娯楽 12:00 – 24:00 12時間' }),
   ).toBeVisible()
   await expect(dialog.getByRole('alert')).toHaveText(
     '反映されたか分かりませんでした。一覧で確かめてください',
@@ -1910,9 +1903,7 @@ test('an edit refused as signed out keeps asking to sign in again while the list
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   const mergeIntoPrevious = dialog.getByRole('button', {
@@ -1946,9 +1937,7 @@ test('an edit refused as signed out takes the user to sign-in once the session r
   )
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
@@ -2077,7 +2066,7 @@ test('the sheet keeps an empty polite region that takes no room while nothing is
   // Assert: one polite region, empty and out of the column's flow, ready for the first quiet line.
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   await expect(
-    dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' }),
+    dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }),
   ).toBeVisible()
   const polite = dialog.getByRole('status')
   await expect(polite).toHaveCount(1)
@@ -2099,7 +2088,9 @@ test('a merge that lands after its sheet closed can still be undone from that da
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
 
@@ -2115,7 +2106,7 @@ test('a merge that lands after its sheet closed can still be undone from that da
   // Assert: 休息 is back with its old span.
   await expect(rest).toBeVisible()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }),
   ).toBeVisible()
   await expect(undo).toBeDisabled()
 })
@@ -2133,7 +2124,9 @@ test('a settings change made while a day’s sheet is closed keeps that day’s 
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await page.getByRole('button', { name: '完了' }).click()
@@ -2176,9 +2169,7 @@ test('元に戻す stays off once the merge’s own re-read saw another device�
   await page.clock.install()
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await merged.promise
   const work = (await api.switches.listByDay({ day: yesterday })).rows.find(
@@ -2193,7 +2184,7 @@ test('元に戻す stays off once the merge’s own re-read saw another device�
   // Act: the answer lands and the merge reads the day again, then that device puts 仕事 back and the sheet reads it once stale.
   answer.resolve()
   await expect(
-    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await api.switches.changeActivity({
     id: work.id,
@@ -2208,7 +2199,7 @@ test('元に戻す stays off once the merge’s own re-read saw another device�
 
   // Assert: the sheet lists 仕事 as the merge left it, yet offers no undo over a day that changed in between.
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -2220,7 +2211,9 @@ test('an undo that lands after its sheet closed leaves nothing to undo when that
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   const undo = page.getByRole('button', { name: '元に戻す' })
@@ -2257,9 +2250,7 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await page.getByRole('button', { name: '完了' }).click()
   await page.getByRole('tab', { name: '設定' }).click()
@@ -2307,7 +2298,7 @@ test('a merge that lands after sign-out leaves no 元に戻す for the next acco
 
   // Assert: B's sheet for that date lists B's row and offers nothing to undo.
   await expect(
-    dialog.getByRole('button', { name: '食事 9:00 – 24:00 15h 00m' }),
+    dialog.getByRole('button', { name: '食事 9:00 – 24:00 15時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -2320,9 +2311,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeEnabled()
   await page.getByRole('button', { name: '完了' }).click()
@@ -2355,7 +2344,7 @@ test('signing in as someone else in another tab leaves no 元に戻す from the 
 
   // Assert: the first tab's sheet for that date lists B's row, not A's cached ones, and offers nothing to undo.
   await expect(
-    dialog.getByRole('button', { name: '食事 9:00 – 24:00 15h 00m' }),
+    dialog.getByRole('button', { name: '食事 9:00 – 24:00 15時間' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
 })
@@ -2367,7 +2356,9 @@ test('a double tap on ここで分割 cuts once, says why the second was refused
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const rest = dialog.getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
+  const rest = dialog.getByRole('button', {
+    name: '休息 12:00 – 18:00 6時間',
+  })
   await rest.click()
 
   // Act: two presses in one task, before any render can dim the button; 区切る時刻 opens at 15:00.
@@ -2380,7 +2371,7 @@ test('a double tap on ここで分割 cuts once, says why the second was refused
 
   // Assert: one cut landed and armed 元に戻す, its later part is selected, and the second press's refusal stays.
   const laterPart = dialog.getByRole('button', {
-    name: '休息 15:00 – 18:00 3h 00m',
+    name: '休息 15:00 – 18:00 3時間',
   })
   await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
   const undo = page.getByRole('button', { name: '元に戻す' })
@@ -2404,12 +2395,12 @@ test('a cut of the day’s own row selects the later part, so the next pick chan
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
 
   // Act: 区切る時刻 opens at 10:30.
   await dialog.getByRole('button', { name: 'ここで分割' }).click()
   const laterPart = dialog.getByRole('button', {
-    name: '仕事 10:30 – 12:00 1h 30m',
+    name: '仕事 10:30 – 12:00 1時間30分',
   })
   await expect(laterPart).toHaveAttribute('aria-expanded', 'true')
   await expect(laterPart).toBeFocused()
@@ -2417,10 +2408,10 @@ test('a cut of the day’s own row selects the later part, so the next pick chan
 
   // Assert
   await expect(
-    dialog.getByRole('button', { name: '睡眠 10:30 – 12:00 1h 30m' }),
+    dialog.getByRole('button', { name: '睡眠 10:30 – 12:00 1時間30分' }),
   ).toBeVisible()
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 10:30 1h 30m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 10:30 1時間30分' }),
   ).toBeVisible()
 })
 
@@ -2431,7 +2422,7 @@ test('moving a row’s start reopens 区切る時刻 at the middle of its new sp
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   const readout = dialog.getByRole('status', { name: '区切る時刻' })
   await dialog.getByRole('button', { name: '区切る時刻を15分遅らせる' }).click()
   await expect(readout).toHaveText('10:45')
@@ -2443,7 +2434,7 @@ test('moving a row’s start reopens 区切る時刻 at the middle of its new sp
 
   // Assert: 9:15 – 12:00 cuts from 9:30 to 11:45, whose middle is 10:30; 10:45 would still fit but is not kept.
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:15 – 12:00 2h 45m' }),
+    dialog.getByRole('button', { name: '仕事 9:15 – 12:00 2時間45分' }),
   ).toHaveAttribute('aria-expanded', 'true')
   await expect(readout).toHaveText('10:30')
 })
@@ -2474,27 +2465,23 @@ test('前の記録に統合 moves keyboard focus to the joined row, so a second 
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
 
   // Assert
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 18:00 9時間' }),
   ).toBeFocused()
 
   // Act
-  await dialog
-    .getByRole('button', { name: '娯楽 18:00 – 24:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '娯楽 18:00 – 24:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
 
   // Assert
   await expect(
-    dialog.getByRole('button', { name: '仕事 9:00 – 24:00 15h 00m' }),
+    dialog.getByRole('button', { name: '仕事 9:00 – 24:00 15時間' }),
   ).toBeFocused()
 })
 
@@ -2505,14 +2492,14 @@ test('次の記録に統合 moves keyboard focus to the row that absorbed the me
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '次の記録に統合' }).click()
 
   // Assert
   await expect(
-    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9h 00m' }),
+    dialog.getByRole('button', { name: '休息 9:00 – 18:00 9時間' }),
   ).toBeFocused()
 })
 
@@ -2521,16 +2508,14 @@ test('前の記録に統合 on the day’s first row moves keyboard focus to the
 }) => {
   // Arrange: 仕事 from 22:00 the day before, 食事 from 7:00.
   const { dialog } = await openCarriedInWork(page)
-  await dialog
-    .getByRole('button', { name: '食事 7:00 – 24:00 17h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '食事 7:00 – 24:00 17時間' }).click()
 
   // Act
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
 
   // Assert
   const joined = dialog.getByRole('button', {
-    name: '仕事 0:00 – 24:00 24h 00m',
+    name: '仕事 0:00 – 24:00 24時間',
   })
   await expect(joined).toBeFocused()
   await expect(joined).toHaveAttribute('aria-expanded', 'false')
@@ -2543,7 +2528,7 @@ test('a control shows a 2 px ink ring 2 px outside it on keyboard focus, and non
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   const earlier = dialog.getByRole('button', { name: '区切る時刻を15分早める' })
   const later = dialog.getByRole('button', { name: '区切る時刻を15分遅らせる' })
 
@@ -2577,7 +2562,7 @@ test('a control dims to 70 % while pressed, and a disabled one stays at 40 %', a
   const { yesterday } = await seedYesterday(page)
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3h 00m' }).click()
+  await dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' }).click()
   const step = dialog.getByRole('button', { name: '区切る時刻を15分早める' })
   const undo = page.getByRole('button', { name: '元に戻す' })
   await expect(step).toHaveCSS('opacity', '1')
@@ -2620,7 +2605,7 @@ test('a refusal shows at once even when the connection drops before the list is 
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
   const staleRest = dialog.getByRole('button', {
-    name: '休息 12:00 – 18:00 6h 00m',
+    name: '休息 12:00 – 18:00 6時間',
   })
   await expect(staleRest).toBeVisible()
   const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
@@ -2783,9 +2768,7 @@ test('an edit refused after its sheet closed says why when that day’s sheet op
   })
   await page.goto(`/correction?day=${yesterday}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  await dialog
-    .getByRole('button', { name: '休息 12:00 – 18:00 6h 00m' })
-    .click()
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
   await dialog.getByRole('button', { name: '前の記録に統合' }).click()
   await page.getByRole('button', { name: '完了' }).click()
   const [, , leisure] = (await api.switches.listByDay({ day: yesterday })).rows
@@ -2802,7 +2785,7 @@ test('an edit refused after its sheet closed says why when that day’s sheet op
     '記録が変わっていたため、最新の状態を表示しました',
   )
   await expect(
-    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5h 45m' }),
+    dialog.getByRole('button', { name: '休息 12:00 – 17:45 5時間45分' }),
   ).toBeVisible()
 })
 
@@ -2814,7 +2797,7 @@ test('an undo refused as archived after its sheet closed shows the notice on the
   const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
-  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' })
   await expect(slept).toBeVisible()
   await api.activities.archive({ id: idOf(list, '仕事') })
   const answer = Promise.withResolvers<void>()
@@ -2846,7 +2829,7 @@ test('a pick on the record a kept notice opened keeps its panel open while the p
   const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
-  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' })
   await expect(slept).toBeVisible()
   await api.activities.archive({ id: idOf(list, '仕事') })
   const answer = Promise.withResolvers<void>()
@@ -2867,7 +2850,9 @@ test('a pick on the record a kept notice opened keeps its panel open while the p
   await dialog.getByRole('radio', { name: '休息' }).click()
 
   // Assert: the record's panel stays open on the pick, and the notice is gone.
-  const rested = dialog.getByRole('button', { name: '休息 0:00 – 7:00 7h 00m' })
+  const rested = dialog.getByRole('button', {
+    name: '休息 0:00 – 7:00 7時間',
+  })
   await expect(rested).toHaveAttribute('aria-expanded', 'true')
   await expect(dialog.getByRole('alert')).toBeHidden()
 })
@@ -2880,7 +2865,7 @@ test('an archived notice that lands while another row is selected shows once its
   const { api, list, day, dialog, carriedIn } = await openCarriedInWork(page)
   await carriedIn.click()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
-  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7h 00m' })
+  const slept = dialog.getByRole('button', { name: '睡眠 0:00 – 7:00 7時間' })
   await expect(slept).toBeVisible()
   await api.activities.archive({ id: idOf(list, '仕事') })
   const answer = Promise.withResolvers<void>()

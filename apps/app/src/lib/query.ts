@@ -31,6 +31,12 @@ if (Platform.OS !== 'web') {
 
 /**
  * Refetches every query under the given router or procedure keys: the `onSettled` of each mutation hook ({@link useSwitchTo}, {@link useCorrection}, {@link useUpdateSettings}, {@link useActivityEditor}, {@link useExcludedDays}).
+ *
+ * A query still on its first load is restarted rather than joined. TanStack Query cancels a running fetch on invalidation
+ * only when the query already holds data, so a tap stored while 記録's stats load for the first time would be answered by
+ * that older read and left out until the next refetch.
+ * @param client - The app's {@link queryClient} (a test passes its own).
+ * @param queryKeys - Router or procedure keys; every query under each is invalidated.
  * @example onSettled: () => invalidateKeys(queryClient, [orpc.switches.key(), orpc.stats.key()])
  */
 export async function invalidateKeys(
@@ -38,6 +44,30 @@ export async function invalidateKeys(
   queryKeys: QueryKey[],
 ): Promise<void> {
   await Promise.all(
-    queryKeys.map(async (queryKey) => client.invalidateQueries({ queryKey })),
+    queryKeys.map(async (queryKey) => {
+      restartFirstLoads(client, queryKey)
+      return client.invalidateQueries({ queryKey })
+    }),
   )
+}
+
+/**
+ * Cancels the first loads under a key so that the invalidation which follows starts them again, the way query-core itself
+ * restarts a refetch of a query that holds data. Called by {@link invalidateKeys} just before `invalidateQueries`.
+ *
+ * The cancel is silent and must not be awaited: the first load's promise then adopts the fetch the invalidation starts in the
+ * same tick and resolves with its data. Awaited, that promise would reject with a CancelledError before the new fetch exists.
+ * Only active queries are cancelled, the ones the invalidation refetches; an inactive one would be left with nothing to adopt.
+ * @param client - The query client.
+ * @param queryKey - The key whose queries to check.
+ * @example restartFirstLoads(queryClient, orpc.stats.key())
+ */
+function restartFirstLoads(client: QueryClient, queryKey: QueryKey): void {
+  const firstLoads = client.getQueryCache().findAll({
+    queryKey,
+    type: 'active',
+    predicate: (query) =>
+      query.state.data === undefined && query.state.fetchStatus === 'fetching',
+  })
+  for (const query of firstLoads) void query.cancel({ silent: true })
 }
