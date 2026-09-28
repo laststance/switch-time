@@ -162,9 +162,10 @@ const dayRowSchema = z.object({
 export type DayRow = z.infer<typeof dayRowSchema>
 
 /**
- * The most rows of one day a baseline lists, and 「元に戻す」 writes back. A day holds a few dozen switches; this bound keeps
- * the undo of a split on the busiest listed day (`rows` of this many, `expected` of one more) under the API's request body
- * limit. A busier day is still corrected, with a baseline that lists no rows and no 「元に戻す」.
+ * The most rows of one day a baseline lists, and 「元に戻す」 writes back with `expected` as a row list. A day holds a few
+ * dozen switches; this bound keeps the undo of a split on the busiest listed day (`rows` of this many, `expected` of one
+ * more) under the API's request body limit. A busier day names its rows by their `dayDigest` instead, and its 「元に戻す」
+ * writes back up to {@link UNDO_ROWS_MAX} rows.
  */
 export const DAY_ROWS_MAX = 300
 
