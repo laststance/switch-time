@@ -22,9 +22,11 @@ export function skipUnchangedWrites(storage: SyncStorage): SyncStorage {
       storage.setItem(key, value)
       known.set(key, value)
     },
+    // Hands back what the storage returns, so the middleware can await a delete that runs asynchronously (SecureStore).
     removeItem: (key): void => {
-      storage.removeItem(key)
+      const removed = storage.removeItem(key)
       known.set(key, null)
+      return removed
     },
   }
 }

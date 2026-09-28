@@ -11,8 +11,6 @@ import { skipUnchangedWrites } from './skip-unchanged-writes'
 export const deviceStorage = skipUnchangedWrites({
   getItem: (key) => SecureStore.getItem(key),
   setItem: (key, value) => SecureStore.setItem(key, value),
-  removeItem: (key) => {
-    // SecureStore deletes only asynchronously; the middleware removes its key only on a schema change it cannot migrate.
-    void SecureStore.deleteItemAsync(key)
-  },
+  // SecureStore deletes only asynchronously: the middleware awaits a returned promise and logs a failed delete.
+  removeItem: async (key) => SecureStore.deleteItemAsync(key),
 })
