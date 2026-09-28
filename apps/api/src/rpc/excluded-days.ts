@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { db } from '../db/client'
 import { excludedDays } from '../db/schema/app'
 
-import { authed, one } from './base'
+import { authed, boundedTransaction, one } from './base'
 
 const dayInput = z.object({ day: daySchema })
 
@@ -28,27 +28,31 @@ export const excludedDaysRouter = {
     ),
 
   exclude: authed.input(dayInput).handler(async ({ context, input }) =>
-    one(
-      await db
-        .insert(excludedDays)
-        .values({ userId: context.user.id, day: input.day, reason: 'manual' })
-        .onConflictDoUpdate({
-          target: [excludedDays.userId, excludedDays.day],
-          set: { reason: 'manual' },
-        })
-        .returning({ day: excludedDays.day, reason: excludedDays.reason }),
+    boundedTransaction(context.deadline, async (tx) =>
+      one(
+        await tx
+          .insert(excludedDays)
+          .values({ userId: context.user.id, day: input.day, reason: 'manual' })
+          .onConflictDoUpdate({
+            target: [excludedDays.userId, excludedDays.day],
+            set: { reason: 'manual' },
+          })
+          .returning({ day: excludedDays.day, reason: excludedDays.reason }),
+      ),
     ),
   ),
 
   include: authed.input(dayInput).handler(async ({ context, input }) => {
-    await db
-      .delete(excludedDays)
-      .where(
-        and(
-          eq(excludedDays.userId, context.user.id),
-          eq(excludedDays.day, input.day),
+    await boundedTransaction(context.deadline, async (tx) =>
+      tx
+        .delete(excludedDays)
+        .where(
+          and(
+            eq(excludedDays.userId, context.user.id),
+            eq(excludedDays.day, input.day),
+          ),
         ),
-      )
+    )
     return { day: input.day }
   }),
 }

@@ -8,6 +8,7 @@ import {
   DeadlineError,
   REQUEST_DEADLINE_MS,
   inTransaction,
+  requestDeadline,
   type LockedTx,
 } from '../db/client'
 import { switches } from '../db/schema/app'
@@ -15,13 +16,30 @@ import { switches } from '../db/schema/app'
 // Per-request context handed to every procedure; the session is read from these headers.
 export const base = os.$context<{ headers: Headers }>()
 
+/**
+ * The answer to a call that ended with nothing saved because time ran out: TIMEOUT, as status 500, not its default 408 (a
+ * browser resends a POST answered 408 on a reused connection, which would replay a cut-off write behind the app's back).
+ * @example throw timedOut()
+ */
+const timedOut = () =>
+  new ORPCError('TIMEOUT', { status: 500, message: 'nothing was saved' })
+
 // Stamps the request's arrival and deadline before the session lookup, so every wait after it counts against one budget, and
-// a tap is recorded from the moment it reached the server rather than after the session read and the write queue.
+// a tap is recorded from the moment it reached the server rather than after the session read and the write queue. The deadline
+// also bounds every statement run through `db` outside a transaction (the session lookup, the plain reads): they read it from
+// {@link requestDeadline}, and a call that ends because one reached it is answered as TIMEOUT here, even when Better Auth
+// wrapped the DeadlineError in its own 500.
 const withDeadline = base.use(async ({ next }) => {
   const arrivedAt = Date.now()
-  return next({
-    context: { arrivedAt, deadline: arrivedAt + REQUEST_DEADLINE_MS },
-  })
+  const clock = { deadline: arrivedAt + REQUEST_DEADLINE_MS, expired: false }
+  try {
+    return await requestDeadline.run(clock, async () =>
+      next({ context: { arrivedAt, deadline: clock.deadline } }),
+    )
+  } catch (error) {
+    if (clock.expired) throw timedOut()
+    throw error
+  }
 })
 
 // Resolves the Better Auth session (cookie, or the bearer token the Expo client sends) once per call.
@@ -58,6 +76,23 @@ export const ownSwitch = async (userId: string, id: string, tx: LockedTx) =>
       .where(and(eq(switches.userId, userId), eq(switches.id, id))),
   )
 
+// Postgres's own answers to a wait that ran out, each rolling the transaction back: `lock_timeout` (55P03) and
+// `statement_timeout` (57014), both set by {@link withUserLock}.
+const SERVER_TIMEOUT_CODES: ReadonlySet<unknown> = new Set(['55P03', '57014'])
+
+// Whether the error, or a cause of it (drizzle wraps the driver's error), is one of {@link SERVER_TIMEOUT_CODES}.
+const isServerTimeout = (error: unknown): boolean => {
+  for (
+    let depth = 0;
+    depth < 4 && typeof error === 'object' && error;
+    depth++
+  ) {
+    if ('code' in error && SERVER_TIMEOUT_CODES.has(error.code)) return true
+    error = 'cause' in error ? error.cause : undefined
+  }
+  return false
+}
+
 /**
  * {@link inTransaction} with its deadline answered as an ORPCError: TIMEOUT when nothing was committed, GATEWAY_TIMEOUT when
  * the cut-off came during a write's COMMIT, so the write may have landed (a read-only transaction always answers TIMEOUT).
@@ -74,16 +109,60 @@ export async function boundedTransaction<T>(
   try {
     return await inTransaction(deadline, work, config)
   } catch (error) {
+    // Postgres rolled the transaction back itself: nothing was saved, like a write cut off at its deadline.
+    if (isServerTimeout(error)) throw timedOut()
     if (!(error instanceof DeadlineError)) throw error
     // A read commits nothing, so its outcome is never in doubt.
     if (error.committing && config?.accessMode !== 'read only')
       throw new ORPCError('GATEWAY_TIMEOUT', {
         message: 'the write may or may not have been saved',
       })
-    throw new ORPCError('TIMEOUT', {
-      status: 500,
-      message: 'nothing was saved',
+    throw timedOut()
+  }
+}
+
+/**
+ * How many multi-query reads ({@link boundedRead}) one account may have in flight in this process. Below the pool's 10
+ * connections, and with the writes' {@link TIMELINE_WRITES_PER_USER} still under it, so one account sending a burst of
+ * reads (a script calling `stats.month`) cannot hold every connection for up to a deadline.
+ */
+const READS_PER_USER = 4
+
+// The accounts with reads in flight in this process, and how many (an account with none has no entry).
+const readsInFlight = new Map<string, number>()
+
+/**
+ * {@link boundedTransaction} for a read of several queries on one snapshot, capped per account: the caller's
+ * {@link READS_PER_USER}th read in flight is the last, and a burst above it is refused at once instead of taking a
+ * connection. Called by `stats.*`, `switches.current` and `switches.listByDay`.
+ * @param userId - Whose read; other accounts' reads never count against it.
+ * @param deadline - The request's deadline (`context.deadline`), epoch ms.
+ * @param work - The reads, all through the transaction it is handed.
+ * @returns whatever `work` returns
+ * @throws ORPCError TOO_MANY_REQUESTS (`REFUSAL.busy`) when the account already has its cap of reads in flight.
+ * @example return boundedRead(userId, context.deadline, async (tx) => latestSwitch(userId, tx))
+ */
+export async function boundedRead<T>(
+  userId: string,
+  deadline: number,
+  work: (tx: LockedTx) => Promise<T>,
+): Promise<T> {
+  const inFlight = readsInFlight.get(userId) ?? 0
+  if (inFlight >= READS_PER_USER)
+    throw new ORPCError('TOO_MANY_REQUESTS', {
+      message: 'too many reads in flight',
+      data: REFUSAL.busy,
     })
+  readsInFlight.set(userId, inFlight + 1)
+  try {
+    return await boundedTransaction(deadline, work, {
+      isolationLevel: 'repeatable read',
+      accessMode: 'read only',
+    })
+  } finally {
+    const left = (readsInFlight.get(userId) ?? 1) - 1
+    if (left > 0) readsInFlight.set(userId, left)
+    else readsInFlight.delete(userId)
   }
 }
 

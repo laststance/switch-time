@@ -44,15 +44,15 @@
 
 ## Database
 
-### Bound the calls that still run without a deadline
+### Bound Better Auth's own transactions
 
-**What:** Put the remaining calls under the request's deadline, starting with the session lookup that every procedure runs (Better Auth's `getSession` through the Drizzle adapter), then the writes `excludedDays.*` and `settings.update` without a zone change, and the reads `activities.list`, `settings.get` / `getSettings` and `switches.current`, so none of them waits on a half-open connection for longer than `REQUEST_DEADLINE_MS`.
+**What:** Put the transactions Better Auth opens through its Drizzle adapter (sign-up: the user, account and seed rows) under a deadline, so a half-open connection cannot hold one past `REQUEST_DEADLINE_MS`.
 
-**Why:** Since the PR that bounded timeline writes, every timeline write, `activities.update` and the multi-query reads run in `inTransaction` (and `activities.create`, `reorder` and `unarchive` since the PR that added `unarchive`, 2026-09-25), which destroys its connection at the deadline. The other calls still go through `db` on the pool: after a managed-database failover, a lent connection whose socket went half-open keeps such a call waiting until the OS gives up on it, minutes later. Nothing is written twice, but the request hangs past the app's 30 s, and the session lookup runs before every write, so a write can wait there before its deadline starts to matter.
+**Why:** Every statement run through `db` outside a transaction now reads the request's deadline from `requestDeadline`, and a call through `inTransaction` destroys its connection at it. Better Auth's `/api/auth/*` handler sets no request clock and its `db.transaction` (the adapter's `transaction: true`) takes a connection from the pool and runs its statements on it, so a sign-up whose socket went half-open waits until the OS gives up. Only sign-up and the writes that use the adapter's transaction are affected; sign-in and the session lookup run statement by statement and are bounded.
 
-**Context:** `inTransaction` in `apps/api/src/db/client.ts` owns its client and releases it with an error at the deadline; pg's `query_timeout` is not a way out (in non-pipeline mode it leaves the active query on the client, and the pool lends that client again). Better Auth takes the `db` instance in `apps/api/src/auth.ts`, so the session lookup needs either a per-request adapter or a `Promise.race` that evicts the client some other way. Left out of that PR. Reads also have no per-account cap like `TIMELINE_WRITES_PER_USER`: one account sending many `stats.month` calls at once can hold every pool connection (pg's default of 10) for up to the deadline, so a small in-flight cap on reads belongs with this work. A timeline write that waits out `lock_timeout` (55P03, another instance holds the lock past 10 s) or `statement_timeout` (57014) still answers a plain 500 although nothing was saved; answer it as TIMEOUT, like a write cut off at its deadline. Since the correction status PR (2026-09-25) the app reads a plain 500 as a write that may have landed: it asks the user to check the list and drops the day's older 元に戻す, which a TIMEOUT would keep.
+**Context:** `boundedPool` in `apps/api/src/db/client.ts` hands `connect` straight to the pool; it could hand back a client whose `query` is bounded the same way `queryWithinDeadline` is, or `apps/api/src/auth.ts` could stop asking for `transaction: true` and let the seed hook repair a half-made account (`seedUser` already does). The auth route also needs its own `requestDeadline.run` in `apps/api/src/app.ts`.
 
-**Effort:** M
+**Effort:** S
 **Priority:** P4
 **Depends on:** None
 
