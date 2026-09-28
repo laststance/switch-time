@@ -53931,7 +53931,7 @@
               "fill": "$sub",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "すべての Control（設定の ▲▼ と色、記録の ‹ ›、元に戻す、±、統合、区切る時刻の刻み、ここで分割）に同じ規則。押している間は不透明度 70%。キーボード（Tab）でフォーカスしたときだけ、ink の 2px の枠を 2px 外側に描く（web の :focus-visible。マウスのクリックでは出ない）。無効は 40% のままで、押しても 70% にならない。ink はテーマで反転するので、どちらのテーマでも見える。",
+              "content": "すべての Control（設定の ▲▼ と色、記録の ‹ ›、元に戻す、±、統合、区切る時刻の刻み、ここで分割）と、Control ではない押せる部品（訂正シートの行ヘッダー・活動ピル・完了・✕、設定の行、ボタン、スイッチ、区切りの選択、ホームの記録ボタンと detox の行、ナビ、サインインのリンク）に同じ規則。押している間は不透明度 70%。キーボード（Tab）でフォーカスしたときだけ、ink の 2px の枠を 2px 外側に描く（web の :focus-visible。マウスのクリックでは出ない）。行カードのように角を切る親の中の行は、枠を内側に描く。無効は 40% のままで、押しても 70% にならない。ink はテーマで反転するので、どちらのテーマでも見える。",
               "lineHeight": 1.5,
               "fontFamily": "Roboto",
               "fontSize": 12,
@@ -54586,6 +54586,676 @@
                           "fontFamily": "Roboto",
                           "fontSize": 12,
                           "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JIg93",
+          "name": "Board row (Control ではない部品)",
+          "width": "fill_container",
+          "gap": 40,
+          "children": [
+            {
+              "type": "frame",
+              "id": "SUTFL",
+              "name": "State: 通常",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "XMD06",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "通常",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "qV3wW",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "行ヘッダー・活動ピル・完了・✕",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "bPwqT",
+                  "name": "Row card",
+                  "clip": true,
+                  "width": 362,
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": 1,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wfuTe",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eLn2g",
+                          "name": "span",
+                          "context": "span",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$activity-6",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "h5Z6OA",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 18,
+                              "height": 18,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "PzSC4",
+                                  "x": 1.5,
+                                  "y": 6,
+                                  "geometry": "M3 0l9 0c1.65686 0 3 1.34315 3 3l0 2.25c-0.04941 0.97107-0.71701 1.80054-1.65508 2.05638-0.93807 0.25583-1.93434-0.11985-2.46992-0.93138l-1.125-1.125-4.5 0-1.125 1.125c-0.53558 0.81153-1.53185 1.18721-2.46992 0.93138-0.93807-0.25584-1.60567-1.08531-1.65508-2.05638l0-2.25c0-1.65685 1.34315-3 3-3m0.75 2.25l0 2.25m-1.125-1.125l2.25 0m5.625-0.375l0.0075 0m1.4925 1.125l0.0075 0",
+                                  "width": 15,
+                                  "height": 7.3858184814453125,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.5,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H9FS1o",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "H4uGC",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "TvxEY",
+                                  "name": "娯楽",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "娯楽",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Dihz9",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 18,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aYmG1",
+                                  "name": "20:00 – いま",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "20:00 – いま",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "bBIcK",
+                          "name": "1h 20m",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "1h 20m",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zivz9",
+                  "name": "Controls",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Lfyx6",
+                      "name": "Slot",
+                      "cornerRadius": 23,
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ARc01",
+                          "name": "button",
+                          "context": "button",
+                          "width": 106,
+                          "height": 38,
+                          "cornerRadius": 19,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 6,
+                          "padding": [
+                            1,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "A6PnQq",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 15,
+                              "height": 15,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "NFXVu",
+                                  "x": 1.875,
+                                  "y": 3.125,
+                                  "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
+                                  "width": 11.25,
+                                  "height": 9.375,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.375,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "hKy2c",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.25,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "K3KDw",
+                      "name": "Slot",
+                      "cornerRadius": 14,
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mwvUj",
+                          "name": "完了",
+                          "context": "button",
+                          "width": 160,
+                          "height": 52,
+                          "fill": "$ink",
+                          "cornerRadius": 10,
+                          "layout": "vertical",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "AmqeB",
+                              "fill": "$sheet-bg",
+                              "content": "完了",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "snUWz",
+                      "name": "Slot",
+                      "cornerRadius": 26,
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "JLu65",
+                          "name": "✕",
+                          "context": "button",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "$chip",
+                          "cornerRadius": 22,
+                          "layout": "vertical",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SARCo",
+                              "fill": "$ink",
+                              "content": "✕",
+                              "lineHeight": 1.11,
+                              "textAlign": "center",
+                              "fontFamily": "Arial",
+                              "fontSize": 18,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uwP9B",
+              "name": "State: キーボードフォーカス",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EL64j",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "キーボードフォーカス",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "mAtWR",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "content": "行ヘッダーは ink 2px を枠の内側（行カードが角を切る）、ほかは ink 2px・外側 2px",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "I4d14e",
+                  "name": "Row card",
+                  "clip": true,
+                  "width": 362,
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": 1,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DKL6h",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "cornerRadius": 14,
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "fRiFx",
+                          "name": "span",
+                          "context": "span",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$activity-6",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "rEuWb",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 18,
+                              "height": 18,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "otCJ0",
+                                  "x": 1.5,
+                                  "y": 6,
+                                  "geometry": "M3 0l9 0c1.65686 0 3 1.34315 3 3l0 2.25c-0.04941 0.97107-0.71701 1.80054-1.65508 2.05638-0.93807 0.25583-1.93434-0.11985-2.46992-0.93138l-1.125-1.125-4.5 0-1.125 1.125c-0.53558 0.81153-1.53185 1.18721-2.46992 0.93138-0.93807-0.25584-1.60567-1.08531-1.65508-2.05638l0-2.25c0-1.65685 1.34315-3 3-3m0.75 2.25l0 2.25m-1.125-1.125l2.25 0m5.625-0.375l0.0075 0m1.4925 1.125l0.0075 0",
+                                  "width": 15,
+                                  "height": 7.3858184814453125,
+                                  "stroke": "#FFF",
+                                  "strokeWidth": 1.5,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "xfrIH",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Hjbgm",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 23,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "OiSgw",
+                                  "name": "娯楽",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "娯楽",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wEcc4",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 18,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tlcHP",
+                                  "name": "20:00 – いま",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "20:00 – いま",
+                                  "lineHeight": 1.25,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "iuhgm",
+                          "name": "1h 20m",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "1h 20m",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "cQ8X2",
+                  "name": "Controls",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wiEAe",
+                      "name": "Focus ring",
+                      "cornerRadius": 23,
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YlgJn",
+                          "name": "button",
+                          "context": "button",
+                          "width": 106,
+                          "height": 38,
+                          "cornerRadius": 19,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 6,
+                          "padding": [
+                            1,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Czcqi",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 15,
+                              "height": 15,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "MQbmN",
+                                  "x": 1.875,
+                                  "y": 3.125,
+                                  "geometry": "M0 1.875l11.25 0 0 7.5-11.25 0 0-7.5z m3.75 0l0-1.875 3.75 0 0 1.875m-7.5 3.125l11.25 0",
+                                  "width": 11.25,
+                                  "height": 9.375,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.375,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "pKMwB",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.25,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "imf1F",
+                      "name": "Focus ring",
+                      "cornerRadius": 14,
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "J9HYOb",
+                          "name": "完了",
+                          "context": "button",
+                          "width": 160,
+                          "height": 52,
+                          "fill": "$ink",
+                          "cornerRadius": 10,
+                          "layout": "vertical",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WZfEh",
+                              "fill": "$sheet-bg",
+                              "content": "完了",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "M8duYw",
+                      "name": "Focus ring",
+                      "cornerRadius": 26,
+                      "stroke": "$ink",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "padding": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QKT5B",
+                          "name": "✕",
+                          "context": "button",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "$chip",
+                          "cornerRadius": 22,
+                          "layout": "vertical",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "A680E5",
+                              "fill": "$ink",
+                              "content": "✕",
+                              "lineHeight": 1.11,
+                              "textAlign": "center",
+                              "fontFamily": "Arial",
+                              "fontSize": 18,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -66673,6 +67343,258 @@
                               ]
                             }
                           ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "w0e72",
+      "x": 3696,
+      "y": 8563,
+      "name": "ST Phone / 無操作の破線と除外日の detox",
+      "width": 1210,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Wj9T7",
+          "name": "Board head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "YoanY",
+              "name": "Board title",
+              "fill": "$ink",
+              "content": "無操作の破線と、除外した日の detox",
+              "fontFamily": "Roboto",
+              "fontSize": 22,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "SuN9z",
+              "name": "Board note",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "破線は「データが無い」印で、24h バーの無操作（idle）のスパンも、記録の除外した日も、どちらも sub の破線（surface に対して 3:1 を超える）。pen には破線が無いので、ここでは薄い塗り＋sub の 1px 枠で置き換えて描く（実装は 1px の破線）。手動で除外した日の detox 部分は、破線の枠と同じ sub の実線が触れて破線の切れ間を埋めないよう、枠の内側に 1px の chip の隙間を空けてから輪郭を描く。",
+              "lineHeight": 1.5,
+              "fontFamily": "Roboto",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "frd0O",
+          "name": "Board row",
+          "width": "fill_container",
+          "gap": 40,
+          "children": [
+            {
+              "type": "frame",
+              "id": "uwSnA",
+              "name": "State: 24h バーの無操作",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eNraA",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "24h バーの無操作",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "YQUNT",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "放置（idle）のスパンは sub の破線。detox は sub の実線の輪郭（塗らない）",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "O4UhP",
+                  "name": "24h bar",
+                  "clip": true,
+                  "width": 360,
+                  "height": 10,
+                  "fill": "$chip",
+                  "cornerRadius": 5,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "id": "Kg2LU",
+                      "name": "仕事",
+                      "fill": "$activity-2",
+                      "width": 120,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "CyJSJ",
+                      "name": "無操作（idle）",
+                      "fill": "$line",
+                      "width": 70,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "FoOhO",
+                      "name": "食事",
+                      "fill": "$activity-5",
+                      "width": 30,
+                      "height": 10
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "j0AFo",
+                      "name": "detox",
+                      "width": 60,
+                      "height": 10,
+                      "stroke": "$sub",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "q6KAj",
+                      "name": "娯楽",
+                      "fill": "$activity-6",
+                      "width": 40,
+                      "height": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "S8FlA",
+              "name": "State: 手動で除外した detox の日",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "x35c6",
+                  "name": "State title",
+                  "fill": "$ink",
+                  "content": "手動で除外した、detox だけの日",
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "BgY7f",
+                  "name": "State note",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "左: 自動除外の日（斜線＋sub の枠）。右: 手動で除外した detox の日（枠の内側に 1px の chip の隙間、その内側に sub の実線の輪郭）",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "KP1fy",
+                  "name": "Cells",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "BAVTp",
+                      "name": "自動除外の日",
+                      "context": "div",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": -135,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#ffffff0f",
+                            "position": 0
+                          },
+                          {
+                            "color": "#ffffff0f",
+                            "position": 0.0303
+                          },
+                          {
+                            "color": "#00000000",
+                            "position": 0.0303
+                          },
+                          {
+                            "color": "#00000000",
+                            "position": 0.0606
+                          }
+                        ]
+                      },
+                      "width": 40,
+                      "height": 132,
+                      "stroke": "$sub",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tqx6U",
+                      "name": "手動で除外した detox の日",
+                      "width": 40,
+                      "height": 132,
+                      "fill": "$chip",
+                      "cornerRadius": 6,
+                      "stroke": "$sub",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KTp84",
+                          "name": "detox outline",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "cornerRadius": 5,
+                          "stroke": "$sub",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner"
                         }
                       ]
                     }
