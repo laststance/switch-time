@@ -84,7 +84,9 @@ async function endSession(backendPid: number, lentAt: Date): Promise<void> {
  * A transaction opened by {@link inTransaction}. Opened through {@link withUserLock}, it holds the user's lock until it
  * commits or rolls back; the reads and `activities.update` open one without the lock.
  */
-export type LockedTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+export type LockedTx = Parameters<
+  Parameters<typeof drizzleOnBoundedPool.transaction>[0]
+>[0]
 
 /** `db` or a transaction: the reads and writes below run in whichever the procedure opened. */
 export type Executor = typeof db | LockedTx
@@ -220,6 +222,17 @@ export async function inTransaction<T>(
 type RequestClock = { deadline: number; expired: boolean }
 
 /**
+ * A request's clock, started at its arrival. Called by the router's first middleware and by the auth route, which then run
+ * the call under {@link requestDeadline}.
+ * @param arrivedAt - Epoch ms the request reached the server.
+ * @example requestDeadline.run(startRequestClock(Date.now()), () => auth.handler(request))
+ */
+export const startRequestClock = (arrivedAt: number): RequestClock => ({
+  deadline: arrivedAt + REQUEST_DEADLINE_MS,
+  expired: false,
+})
+
+/**
  * The {@link RequestClock} of the request being served. Set by the router's first middleware around the whole call, so a
  * statement run through {@link db} (Better Auth's session lookup included) reads the deadline without being handed it, and
  * the middleware can tell a statement ran out of time even when the library that ran it wrapped the error.
@@ -238,13 +251,28 @@ export const requestDeadline = new AsyncLocalStorage<RequestClock>()
  * @returns the driver's result
  */
 async function queryWithinDeadline(config: QueryConfig, values?: unknown[]) {
-  const clock = requestDeadline.getStore()
-  try {
-    return await onClientUntil(
-      clock?.deadline ?? Date.now() + REQUEST_DEADLINE_MS,
+  return underRequestClock(async (deadline) =>
+    onClientUntil(
+      deadline,
       () => false,
       async (client) => client.query(config, values),
-    )
+    ),
+  )
+}
+
+/**
+ * Runs `run` with the request's deadline ({@link requestDeadline}; outside a request, a whole {@link REQUEST_DEADLINE_MS}
+ * from now), and marks the request's clock `expired` when `run` ends in a {@link DeadlineError}, however the library that
+ * called it wraps that error. Called by {@link queryWithinDeadline} and by the `transaction` of {@link db}.
+ * @param run - The bounded call, handed the deadline.
+ * @returns whatever `run` returns
+ */
+async function underRequestClock<T>(
+  run: (deadline: number) => Promise<T>,
+): Promise<T> {
+  const clock = requestDeadline.getStore()
+  try {
+    return await run(clock?.deadline ?? Date.now() + REQUEST_DEADLINE_MS)
   } catch (error) {
     if (clock && error instanceof DeadlineError) clock.expired = true
     throw error
@@ -259,4 +287,23 @@ const boundedPool: Pool = Object.assign(Object.create(pool), {
   connect: pool.connect.bind(pool),
 })
 
-export const db = drizzle({ client: boundedPool, relations })
+const drizzleOnBoundedPool = drizzle({ client: boundedPool, relations })
+
+/**
+ * The database as procedures, Better Auth's adapter and {@link seedUser} use it. Its statements run under the request's
+ * deadline ({@link queryWithinDeadline}), and so do its transactions: drizzle's own `transaction` would lend a connection and
+ * run every statement of the transaction on it with no deadline, so `transaction` here is {@link inTransaction} (a
+ * {@link DeadlineError} cuts the connection and rolls the transaction back).
+ */
+export const db: typeof drizzleOnBoundedPool = Object.assign(
+  Object.create(drizzleOnBoundedPool),
+  {
+    transaction: async <T>(
+      work: (tx: LockedTx) => Promise<T>,
+      config?: PgTransactionConfig,
+    ) =>
+      underRequestClock(async (deadline) =>
+        inTransaction(deadline, work, config),
+      ),
+  },
+)

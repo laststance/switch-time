@@ -42,20 +42,6 @@
 **Priority:** P3
 **Depends on:** None (the macOS check needs no native build)
 
-## Database
-
-### Bound Better Auth's own transactions
-
-**What:** Put the transactions Better Auth opens through its Drizzle adapter (sign-up: the user, account and seed rows) under a deadline, so a half-open connection cannot hold one past `REQUEST_DEADLINE_MS`.
-
-**Why:** Every statement run through `db` outside a transaction now reads the request's deadline from `requestDeadline`, and a call through `inTransaction` destroys its connection at it. Better Auth's `/api/auth/*` handler sets no request clock and its `db.transaction` (the adapter's `transaction: true`) takes a connection from the pool and runs its statements on it, so a sign-up whose socket went half-open waits until the OS gives up. Only sign-up and the writes that use the adapter's transaction are affected; sign-in and the session lookup run statement by statement and are bounded.
-
-**Context:** `boundedPool` in `apps/api/src/db/client.ts` hands `connect` straight to the pool; it could hand back a client whose `query` is bounded the same way `queryWithinDeadline` is, or `apps/api/src/auth.ts` could stop asking for `transaction: true` and let the seed hook repair a half-made account (`seedUser` already does). The auth route also needs its own `requestDeadline.run` in `apps/api/src/app.ts`.
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
 ## Auth
 
 ### Prove that an e-mail address belongs to the person signing up
