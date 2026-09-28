@@ -36,7 +36,11 @@ export function useAuthForm<T extends Record<string, string>>(
       }))
       if (error) throw new Error(authErrorMessage(error))
     },
-    onSuccess: (_result, sent) => onDone?.(sent),
+    onSuccess: (_result, sent) => {
+      // A later try must not show the error of an earlier one while it is out.
+      setLastError(null)
+      onDone?.(sent)
+    },
     onError: (error) => setLastError(error.message),
   })
 
