@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.8.0] - 2026-09-29
+
+### Added
+
+- The correction sheet says when a merge would leave a record longer than the
+  idle threshold (無操作とみなす時間), which takes it out of the totals:
+  「前の記録に統合すると、無操作扱い（16時間超）になり集計から外れます」 under
+  the merge buttons. A ±15分 step on 開始時刻 says the same when it carries the
+  row or the record before it across the threshold, either way.
+
+### Fixed
+
+- Home's 「今日 n 回切替」 no longer counts a row of the same activity as the
+  one before it, as a merge (仕事, 読書, 仕事 → merge 読書) or a cut leaves. A
+  detox pressed again to start a new run still counts.
+
 ## [0.24.7.0] - 2026-09-29
 
 ### Changed
