@@ -32,10 +32,16 @@ import {
 import type { ActivityRow, SwitchRow } from './orpc'
 import { idleLabel } from './settings'
 
-/** One `switches.listByDay` answer: the day's rows plus the states carried in from before and out to after. */
-export type ListedDay = Awaited<
+type ListByDayAnswer = Awaited<
   ReturnType<AppRouterClient['switches']['listByDay']>
 >
+/**
+ * One `switches.listByDay` answer: the day's rows plus the states carried in from before and out to after. `carriedOutRun`
+ * (the switches the carried-out detox run still reaches) may be missing, as in an answer from an API before it, and then
+ * reads as none: the untapped-day notes take the carried-out record as still running.
+ */
+export type ListedDay = Omit<ListByDayAnswer, 'carriedOutRun'> &
+  Partial<Pick<ListByDayAnswer, 'carriedOutRun'>>
 /** What a row is drawn with; `color` null is detox, which has no colour of its own (outlined, never filled). */
 export type CorrectionActivity = Pick<ActivityRow, 'id' | 'name' | 'iconKey'> &
   Partial<Pick<ActivityRow, 'archivedAt'>> & {

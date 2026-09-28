@@ -17,16 +17,20 @@ import type {
 } from './correction'
 import { formatMonthDay } from './format'
 
-/** What the untapped-day notes read besides the list: the viewed day, today and the stored zone and unused-day rule. */
+/**
+ * What the untapped-day notes read besides the list: the viewed day, today, the stored zone and unused-day rule, and the
+ * days excluded by hand, which count for nothing whatever an edit does.
+ */
 export type UntappedFacts = {
   day: string
   today: string
   timeZone: string
   autoExcludeUnusedDays: boolean
+  manualExcluded: ReadonlySet<string>
 }
 
-/** The first and last day ('YYYY-MM-DD') whose counting an edit may change. */
-type UntappedSpan = { from: string; to: string }
+/** The days ('YYYY-MM-DD', oldest first, never empty) whose counting an edit may change. */
+type UntappedDays = readonly [string, ...string[]]
 
 /**
  * An edit or undo as the notes simulate it: `pick` changes a row's activity (null = detox), the merges fold a row into its
@@ -55,11 +59,12 @@ const tapOf = (row: {
 })
 
 /**
- * The listed day as the run rule reads it, oldest first: the carried-in record, the day's rows and the first switch after
- * the day. A carried-in detox whose run started on an earlier day gets a plain detox row at 0:00 of that day in front, so
- * {@link runStartDays} counts its week from where it really started (the API's `carriedInRunStart`); taps before that are
- * not listed and cannot change anything the day's edits do. A carried-in activity gets the same row when a detox run ends
- * at it, so a pick to detox joins that run as the API would.
+ * The listed day as the run rule reads it, oldest first: the carried-in record, the day's rows, the first switch after
+ * the day and the switches after it that its detox run reaches (`carriedOutRun`, up to the one that ends it). A carried-in
+ * detox whose run started on an earlier day gets a plain detox row at 0:00 of that day in front, so {@link runStartDays}
+ * counts its week from where it really started (the API's `carriedInRunStart`); taps before that are not listed and cannot
+ * change anything the day's edits do. A carried-in activity gets the same row when a detox run ends at it, so a pick to
+ * detox joins that run as the API would.
  * @example timeline(list, 'Asia/Tokyo') // [{ id: '', activityId: null, … }, carriedIn, …rows, carriedOut]
  */
 function timeline(list: ListedDay, timeZone: string): Tap[] {
@@ -82,6 +87,7 @@ function timeline(list: ListedDay, timeZone: string): Tap[] {
     ...(carriedIn ? [carriedIn] : []),
     ...list.rows.map(tapOf),
     ...(list.carriedOut ? [tapOf(list.carriedOut)] : []),
+    ...(list.carriedOutRun ?? []).map(tapOf),
   ]
 }
 
@@ -156,8 +162,10 @@ function countedDays(
  * The untapped days whose counting `edit` may change, compared by the same rule the stats use ({@link detoxCarriedDays}):
  * from the day after the carried-in record started (or the viewed day) to today, or to {@link DETOX_MEASURED_DAYS_MAX}
  * days after the first switch after the day (the viewed day when there is none), the furthest a run the day's edits can
- * start or move reaches. That switch is taken as still running, since later taps are not listed, so days past it are only
- * possibly affected. A window that has not begun (a future day) holds no day and changes nothing.
+ * start or move reaches ({@link untappedWindow}). The switches after that one that its detox run reaches are listed up to
+ * the one that ends it (`carriedOutRun`), so a run a later tap ends stops there; a run the list does not see end is taken
+ * as still running, so days past it are only possibly affected. A day excluded by hand counts for nothing either way, so it
+ * never changes. A window that has not begun (a future day) holds no day and changes nothing.
  * @param list - The day's `switches.listByDay` answer.
  * @param edit - The edit or undo to simulate.
  * @param facts - The viewed day, today, the stored zone and whether unused days are excluded at all.
@@ -170,18 +178,10 @@ function untappedChange(
   list: ListedDay,
   edit: UntappedEdit,
   facts: UntappedFacts,
-): UntappedSpan | null {
+): UntappedDays | null {
   if (!facts.autoExcludeUnusedDays) return null
   const { timeZone } = facts
-  const from = list.carriedIn
-    ? addDays(localDay(list.carriedIn.startedAt, timeZone), 1)
-    : facts.day
-  // The latest run an edit here can start or move begins on the viewed day or at the first switch after it.
-  const lastRunStart = list.carriedOut
-    ? localDay(list.carriedOut.startedAt, timeZone)
-    : facts.day
-  const reach = addDays(lastRunStart, DETOX_MEASURED_DAYS_MAX)
-  const window = { from, to: facts.today < reach ? facts.today : reach }
+  const window = untappedWindow(list, facts)
   const before = timeline(list, timeZone)
   const after = afterEdit(
     before,
@@ -191,27 +191,103 @@ function untappedChange(
   )
   const counted = countedDays(before, timeZone, window)
   const countedAfter = countedDays(after, timeZone, window)
-  const changed = [...new Set([...counted, ...countedAfter])]
-    .filter((day) => counted.has(day) !== countedAfter.has(day))
-    .sort()
-  const first = changed.at(0)
-  const last = changed.at(-1)
-  return first && last ? { from: first, to: last } : null
+  const changed = [...new Set([...counted, ...countedAfter])].filter(
+    (day) =>
+      counted.has(day) !== countedAfter.has(day) &&
+      !facts.manualExcluded.has(day),
+  )
+  return nonEmptyDays(changed)
 }
 
-// `9月24日` or `9月24日〜9月26日`, each with its year when that is not the viewed day's.
-const spanLabel = ({ from, to }: UntappedSpan, viewedDay: string): string =>
-  from === to
-    ? formatMonthDay(from, viewedDay)
-    : `${formatMonthDay(from, viewedDay)}〜${formatMonthDay(to, viewedDay)}`
+// The days oldest first, or null when there are none.
+function nonEmptyDays(days: readonly string[]): UntappedDays | null {
+  const [first, ...rest] = [...new Set(days)].sort()
+  return first ? [first, ...rest] : null
+}
+
+/**
+ * The days an edit on the listed day can change the counting of, whose manual exclusions the notes read: from the day after
+ * the carried-in record started (or the viewed day) to today, or to {@link DETOX_MEASURED_DAYS_MAX} days after the first
+ * switch after the day (the viewed day when there is none), the furthest a run the day's edits can start or move reaches.
+ * Called by {@link untappedChange} and by {@link untappedExclusions}, which asks `excludedDays.list` for the same days.
+ * @param list - The day's `switches.listByDay` answer.
+ * @param facts - The viewed day, today and the stored zone.
+ * @returns The first and last day; `from` after `to` when the window has not begun (a future day).
+ * @example untappedWindow(mondayList, { day: '2026-09-21', today: '2026-09-25', timeZone: 'Asia/Tokyo' }) // { from: '2026-09-19', to: '2026-09-25' }
+ */
+function untappedWindow(
+  list: Pick<ListedDay, 'carriedIn' | 'carriedOut'>,
+  facts: Pick<UntappedFacts, 'day' | 'today' | 'timeZone'>,
+): { from: string; to: string } {
+  const { timeZone } = facts
+  const from = list.carriedIn
+    ? addDays(localDay(list.carriedIn.startedAt, timeZone), 1)
+    : facts.day
+  // The latest run an edit here can start or move begins on the viewed day or at the first switch after it.
+  const lastRunStart = list.carriedOut
+    ? localDay(list.carriedOut.startedAt, timeZone)
+    : facts.day
+  const reach = addDays(lastRunStart, DETOX_MEASURED_DAYS_MAX)
+  return { from, to: facts.today < reach ? facts.today : reach }
+}
+
+/**
+ * The `excludedDays.list` read the notes need: the manual exclusions of the day's {@link untappedWindow}. Nothing is asked
+ * while the list loads, with the unused-day rule off (no note is shown) or for a window that has not begun.
+ * @param list - The day's list; undefined while it loads.
+ * @param facts - The viewed day, today, the stored zone and unused-day rule.
+ * @returns
+ * - `enabled`: whether to ask; `input`: the window (the viewed day alone while nothing is asked, never sent)
+ * - `excluded`: the answer's days as a set, empty until it lands
+ * @example untappedExclusions(list, facts) // { enabled: true, input: { from: '2026-09-19', to: '2026-09-25' }, excluded }
+ */
+export function untappedExclusions(
+  list: ListedDay | undefined,
+  facts: Omit<UntappedFacts, 'manualExcluded'>,
+): {
+  enabled: boolean
+  input: { from: string; to: string }
+  excluded: (answer: readonly { day: string }[] | undefined) => Set<string>
+} {
+  const window = list ? untappedWindow(list, facts) : null
+  const enabled =
+    window !== null && facts.autoExcludeUnusedDays && window.from <= window.to
+  return {
+    enabled,
+    input: window && enabled ? window : { from: facts.day, to: facts.day },
+    excluded: (answer) => new Set(answer?.map((row) => row.day)),
+  }
+}
+
+/**
+ * The changed days as the notes name them: each run of consecutive days apart, joined with 「、」, a run of one day by its
+ * date, a longer one first〜last; each date with its year when that is not the viewed day's.
+ * @example daysLabel(['2026-09-09', '2026-09-16', '2026-09-17'], '2026-09-08') // '9月9日、9月16日〜9月17日'
+ */
+function daysLabel(days: UntappedDays, viewedDay: string): string {
+  const runs: { from: string; to: string }[] = []
+  for (const day of days) {
+    const last = runs.at(-1)
+    // A day right after the current run extends it; any gap starts a new one.
+    if (last && addDays(last.to, 1) === day) last.to = day
+    else runs.push({ from: day, to: day })
+  }
+  return runs
+    .map(({ from, to }) =>
+      from === to
+        ? formatMonthDay(from, viewedDay)
+        : `${formatMonthDay(from, viewedDay)}〜${formatMonthDay(to, viewedDay)}`,
+    )
+    .join('、')
+}
 
 const untappedLine = (
   lead: string,
-  span: UntappedSpan,
+  days: UntappedDays,
   verb: string,
   viewedDay: string,
 ): string =>
-  `${lead}、タップのない日（${spanLabel(span, viewedDay)}）の計測${verb}変わることがあります`
+  `${lead}、タップのない日（${daysLabel(days, viewedDay)}）の計測${verb}変わることがあります`
 
 /**
  * The line under 活動を変える when switching the row between detox and an activity may change which untapped days count:
@@ -229,19 +305,19 @@ export function untappedPickNote(
 ): string | null {
   if (!list || !facts) return null
   const other = row.activityId === null ? ANY_ACTIVITY : null
-  const span = untappedChange(
+  const days = untappedChange(
     list,
     { kind: 'pick', id: row.id, activityId: other },
     facts,
   )
-  return span
-    ? untappedLine('detox と活動を切り替えると', span, 'が', facts.day)
+  return days
+    ? untappedLine('detox と活動を切り替えると', days, 'が', facts.day)
     : null
 }
 
 /**
  * The line under the merge buttons when a merge the row allows may change which untapped days count; it names the button
- * when only one of them does, and spans the days of both.
+ * when only one of them does, and names the days of both.
  * @param list - The day's list; undefined while it loads.
  * @param row - The selected row, with which merges it allows.
  * @param facts - {@link UntappedFacts}; undefined until the settings are read.
@@ -260,13 +336,8 @@ export function untappedMergeNote(
   const next = row.canMergeNext
     ? untappedChange(list, { kind: 'mergeNext', id: row.id }, facts)
     : null
-  if (previous && next) {
-    const span = {
-      from: previous.from < next.from ? previous.from : next.from,
-      to: previous.to > next.to ? previous.to : next.to,
-    }
-    return untappedLine('統合すると', span, 'が', facts.day)
-  }
+  const both = previous && next && nonEmptyDays([...previous, ...next])
+  if (both) return untappedLine('統合すると', both, 'が', facts.day)
   if (previous)
     return untappedLine('前の記録に統合すると', previous, 'が', facts.day)
   if (next) return untappedLine('次の記録に統合すると', next, 'が', facts.day)
@@ -316,8 +387,8 @@ export function untappedUndoNote(
     slot.kind === 'day'
       ? { kind: 'restoreDay', rows: slot.rows }
       : { kind: 'pick', id: slot.id, activityId: slot.to }
-  const span = untappedChange(list, edit, facts)
-  return span ? untappedLine('元に戻すと', span, 'も', facts.day) : null
+  const days = untappedChange(list, edit, facts)
+  return days ? untappedLine('元に戻すと', days, 'も', facts.day) : null
 }
 
 type RowNotes = ReturnType<typeof untappedRowNotes>
@@ -327,12 +398,13 @@ const rowNotesByList = new WeakMap<ListedDay, Map<string, RowNotes>>()
 
 /**
  * The sheet's untapped-day notes, worked out from the list (never stored); {@link useCorrection} spreads them into what it
- * returns. Until the stored settings are read, the zone and the unused-day rule may be defaults, so every note is null
- * rather than wrong. The panel asks for its row's lines on every clock tick, with the row rebuilt each time, so they are
- * kept per listed day ({@link rowNotesByList}) and worked out again only once a read brings a new list.
+ * returns. Until the stored settings and the window's manual exclusions are read, the zone and the unused-day rule may be
+ * defaults and an excluded day may look changed, so every note is null rather than wrong. The panel asks for its row's
+ * lines on every clock tick, with the row rebuilt each time, so they are kept per listed day ({@link rowNotesByList}) and
+ * worked out again only once a read brings a new list.
  * @param list - The day's list; undefined while it loads.
  * @param slot - The undo the sheet offers; undefined when none.
- * @param facts - {@link UntappedFacts}, with `ready` once the stored settings are read.
+ * @param facts - {@link UntappedFacts}, with `ready` once the stored settings and the manual exclusions are read.
  * @returns `undoNote` ({@link untappedUndoNote}) and `untappedNotes`, the selected row's lines ({@link untappedRowNotes}).
  * @example untappedSheetNotes(list, slot, { ...facts, ready: true }).undoNote // '元に戻すと、…の計測も変わることがあります'
  */
@@ -357,6 +429,7 @@ export function untappedSheetNotes(
         known.today,
         known.timeZone,
         known.autoExcludeUnusedDays,
+        [...known.manualExcluded].sort().join(','),
       ].join('|')
       const kept = rowNotesByList.get(list) ?? new Map<string, RowNotes>()
       rowNotesByList.set(list, kept)
