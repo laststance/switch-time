@@ -274,10 +274,12 @@ function firstMinuteAt(
 export function repeatedWallTime(date: Date, timeZone: string): 1 | 2 | null {
   const at = date.getTime()
   const year = date.getUTCFullYear()
-  // A window found in the year before can run past New Year UTC.
+  // A window can straddle New Year UTC either way: one found in the year before runs into this one, and one whose clocks
+  // go back just after New Year starts in this one.
   const windows = [
     ...fallBackWindows(timeZone, year - 1),
     ...fallBackWindows(timeZone, year),
+    ...fallBackWindows(timeZone, year + 1),
   ]
   const repeated = windows.find(({ start, end }) => at >= start && at < end)
   if (!repeated) return null
