@@ -2946,13 +2946,14 @@ test('at midnight the running record the user opened stays open as the new day�
     Date.now() - at(today(), 0).getTime() < 17 * 60_000,
     'the Tokyo day is under 17 minutes old, so the old day’s running row could read like the new day’s',
   )
-  // Arrange: today's sheet opens the running 仕事 from 0:00.
+  // Arrange: today's sheet opens the running 仕事 from 0:00. The day is read once, before any setup, so the rest of the
+  // test names the day the sheet opened on.
+  const day = today()
   await openTodayWorkSinceMidnight(page)
   await page.clock.install()
   await page.goto('/correction')
   const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
   await dialog.getByRole('button', { name: /^仕事 0:00 – / }).click()
-  const day = today()
 
   // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick.
   const newDay = shift(day, 1)
