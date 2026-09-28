@@ -575,13 +575,14 @@ test('an edit made under a time zone the account no longer uses is refused', asy
   await api.settings.update({ timeZone: 'Europe/London' })
 
   // Act
-  const split = api.switches.splitInHalf({
+  const cut = api.switches.splitAt({
     id: work.id,
+    at: at(yesterday, 10.5),
     baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
   })
 
   // Assert
-  await expect(split).rejects.toMatchObject({
+  await expect(cut).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { reason: 'day-changed' },
   })
@@ -901,45 +902,6 @@ test('a move that would take the day’s last row past its midnight is refused w
   ).toEqual(at(dayBefore, 23 + 50 / 60))
 })
 
-test('半分で分割 is refused when the half-way point falls on the next day, so the new row never leaves the sheet’s day', async () => {
-  // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00 (midpoint 1:00 yesterday)
-  const api = await signedIn('baseline-split-midpoint@example.com')
-  const list = await api.activities.list()
-  const dayBefore = addDays(yesterday, -1)
-  await api.switches.replaceDay({
-    day: dayBefore,
-    timeZone: TZ,
-    expected: [],
-    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 20) }],
-  })
-  await api.switches.replaceDay({
-    day: yesterday,
-    timeZone: TZ,
-    expected: [],
-    rows: [{ activityId: idOf(list, '休息'), startedAt: at(yesterday, 6) }],
-  })
-  const listed = await api.switches.listByDay({ day: dayBefore })
-  const [work] = listed.rows
-  if (!work) throw new Error('fixture has no row')
-
-  // Act
-  const split = api.switches.splitInHalf({
-    id: work.id,
-    baseline: { day: dayBefore, timeZone: TZ, rows: listedRows(listed.rows) },
-  })
-
-  // Assert: refused, and yesterday still holds only 休息
-  await expect(split).rejects.toMatchObject({
-    code: 'CONFLICT',
-    data: { reason: 'cannot-split' },
-  })
-  expect(
-    (await api.switches.listByDay({ day: yesterday })).rows.map(
-      (row) => row.activityId,
-    ),
-  ).toEqual([idOf(list, '休息')])
-})
-
 test('merging the day’s last row into the next day’s first switch is refused when the sheet names its day, and the next day keeps its row', async () => {
   // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00
   const api = await signedIn('baseline-merge-next-day@example.com')
@@ -1038,10 +1000,6 @@ const carriedInEdits: [string, CarriedInEdit][] = [
     '前の記録に統合',
     async (api, id, baseline) =>
       api.switches.mergeIntoPrevious({ id, baseline }),
-  ],
-  [
-    '半分で分割',
-    async (api, id, baseline) => api.switches.splitInHalf({ id, baseline }),
   ],
 ]
 
