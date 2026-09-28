@@ -2924,7 +2924,7 @@ test('a cut whose answer lands after midnight selects nothing on the new day, ev
   await page.clock.setSystemTime(new Date(`${newDay}T00:00:30+09:00`))
   // Only the new day lists 仕事 at under 2 minutes: the skip above keeps the old day's running row at 17 minutes or more.
   const carriedIn = dialog.getByRole('button', {
-    name: /^仕事 0:00 – いま [01]m$/,
+    name: /^仕事 0:00 – いま [01]分$/,
   })
   await expect(carriedIn).toBeVisible()
   // The line stays while the cut is in flight, its re-read included, and goes once it settles; the selection its answer
