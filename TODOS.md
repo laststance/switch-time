@@ -118,7 +118,7 @@
 
 **Why:** The row can only write the zone this device reports (「この端末に合わせる」). A user who wants another zone (a second home, a browser that reports UTC to resist fingerprinting) has no control, and the row shows raw IANA ids (`America/New_York`) that a screen reader spells out.
 
-**Context:** `useAccountZone` (`apps/app/src/hooks/use-account-zone.ts`) and `zoneRow` (`apps/app/src/lib/settings.ts`) drive the row; `settings.update` already takes any zone `timeZoneSchema` accepts. A picked zone must also be remembered as this device's sync (`rememberSyncedZone`), or `useTimeZoneSync` would write the device's zone over it when the device moves. Needs a pen design first (the 設定 board and `ST Phone / 設定・タイムゾーン行の状態`). Split off when the take-back shipped (2026-09-25).
+**Context:** `useAccountZone` (`apps/app/src/hooks/use-account-zone.ts`) and `zoneRow` (`apps/app/src/lib/settings.ts`) drive the row; `settings.update` already takes any zone `timeZoneSchema` accepts. A picked zone must also be remembered as this device's sync (`zoneSynced` in `apps/app/src/store/synced-zone.ts`), or `useTimeZoneSync` would write the device's zone over it when the device moves. Needs a pen design first (the 設定 board and `ST Phone / 設定・タイムゾーン行の状態`). Split off when the take-back shipped (2026-09-25).
 
 **Effort:** M
 **Priority:** P4
@@ -135,6 +135,18 @@
 **Effort:** S
 **Priority:** P3
 **Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
+
+### Keep a web tab's synced zones in step with the other tabs'
+
+**What:** Let a web tab learn the zones another tab of the same browser synced (the `syncedZone` slice) before it next judges a zone sync, without starting a sync from that news alone.
+
+**Why:** Each tab reads `switch-time.device` once at launch and keeps its own copy. A tab that sat hidden while another tab synced a new zone judges its next sync against its older copy, so it can write this device's zone over a take-back made on another device since; and its next save drops the accounts only the other tab synced, which then sync once more. Before the store kept the zones, each sync read `localStorage` itself.
+
+**Context:** `createAppStore` in `apps/app/src/store/index.ts`, `restoreSyncedZone` in `apps/app/src/store/synced-zone.ts`, `useTimeZoneSync` (`lastSynced` is in its effect's deps). Re-reading on the browser's `storage` event was tried and taken back in the PR that moved the zones into the store: a hidden tab still holds the device zone from its last foreground (`useDeviceZone`), so it answered the other tab's sync with a sync of its own, and two tabs could trade zones without end. A re-read must land together with a fresh device zone, for example both read when the tab comes back to the foreground, or the effect must not run on a `lastSynced` that came from another tab.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** None
 
 ### Bind every settings write to the account it was made for
 

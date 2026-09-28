@@ -4,9 +4,10 @@ import { useEffect } from 'react'
 import { useDeviceZone } from '@/hooks/use-device-zone'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
 import { authClient } from '@/lib/auth-client'
-import { readSyncedZone, rememberSyncedZone } from '@/lib/device-zone'
 import { orpc } from '@/lib/orpc'
 import { zoneSyncAction } from '@/lib/settings'
+import { useAppDispatch, useAppSelector } from '@/store'
+import { selectSyncedZone, zoneSynced } from '@/store/synced-zone'
 
 /**
  * Writes the device's zone into `settings.timeZone` when this device's zone changed since it last synced the account (a fresh
@@ -21,6 +22,10 @@ export function useTimeZoneSync(): void {
   const device = useDeviceZone()
   const { data: session } = authClient.useSession()
   const accountId = session?.user.id
+  const dispatch = useAppDispatch()
+  const lastSynced = useAppSelector((state) =>
+    selectSyncedZone(state, accountId),
+  )
   const { mutate, reset, isError, variables } = useUpdateSettings()
   const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
   // A sign-in (the same account after an expired cookie, or back from another) is a fresh start: a write that failed before it
@@ -36,26 +41,31 @@ export function useTimeZoneSync(): void {
     const action = zoneSyncAction({
       stored: settings.timeZone,
       device,
-      lastSynced: readSyncedZone(accountId),
+      lastSynced,
       settled,
       failedWrite,
       account: accountId,
       rowAccount: owner,
     })
-    if (action === 'record') rememberSyncedZone(accountId, device)
+    if (action === 'record') dispatch(zoneSynced({ accountId, zone: device }))
     if (action === 'write')
       mutate(
         { timeZone: device, forUserId: accountId },
         // The row the API wrote says whose it was: the session may have turned to another account while the write was out.
-        { onSuccess: (row) => rememberSyncedZone(row.userId, device) },
+        {
+          onSuccess: (row) =>
+            dispatch(zoneSynced({ accountId: row.userId, zone: device })),
+        },
       )
   }, [
     settled,
     settings.timeZone,
     device,
+    lastSynced,
     accountId,
     owner,
     failedWrite,
     mutate,
+    dispatch,
   ])
 }

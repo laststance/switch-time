@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.23.2.0] - 2026-09-28
+
+### Changed
+
+- The time zone this device last wrote to each account is now kept in one
+  place on the device (`localStorage` on the web, the keychain on a phone)
+  and saved only when it changes, not every second. The first launch after
+  this update writes the device's zone to the account once more, since the
+  zones kept by earlier builds are not read.
+
+### Fixed
+
+- A damaged value where the app keeps those zones no longer makes every
+  launch write the device's zone to the account again. The next zone written
+  replaces it.
+
 ## [0.23.1.0] - 2026-09-27
 
 ### Fixed
