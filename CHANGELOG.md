@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.12.0] - 2026-09-29
+
+### Changed
+
+- The API now refuses an edit of a day whose baseline names neither the day's
+  rows nor their digest, on a busy day as on any other. Every version of the app
+  sends one of them, so nothing the app does changes; an edit from a client that
+  sends neither could not have noticed another device's change to the day.
+
 ## [0.24.11.0] - 2026-09-29
 
 ### Changed
