@@ -10,6 +10,7 @@ export {
   activityColorSchema,
   activityInputSchema,
   activityNameSchema,
+  AUTH_FIELD_MESSAGE,
   changeActivityInputSchema,
   DAY_ROWS_MAX,
   daySchema,

@@ -7,7 +7,7 @@ import { registrationSlice } from '@/store/registration'
 
 /**
  * The registration sign-up hands to sign-in ({@link registrationSlice}): sign-up calls `register` once Better Auth answers,
- * sign-in reads `registration` (prefill, notice) and calls `dismissNotice` on the first keystroke or submit.
+ * sign-in reads `registration` (prefill, notice) and calls `dismissNotice` when the address is edited.
  * @returns
  * - `registration`: the address just registered and whether its notice shows, or `null`
  * - `register(email)`: records it and goes back to sign-in (keeping `next`), unless the user already left sign-up

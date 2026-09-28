@@ -4,13 +4,16 @@ import type { Href } from 'expo-router'
 import { useState } from 'react'
 import type { ZodType } from 'zod'
 
-type AuthResult = { error: { message?: string } | null }
+import { type AuthError, authErrorMessage } from '@/lib/auth-errors'
+
+type AuthResult = { error: AuthError | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, the request as a mutation (the button waits on
- * `isPending`, Better Auth's message is its error). Success runs `onDone` from the mutation's own options, so it also runs when the
- * form has gone by the time the answer lands: sign-in's session lands anyway, and its reset must not be skipped. Sign-up passes
- * `register`, which moves on only while sign-up is still in front.
+ * `isPending`, and its error is the Japanese line {@link authErrorMessage} gives for Better Auth's error code). Success runs
+ * `onDone` from the mutation's own options, so it also runs when the form has gone by the time the answer lands: sign-in's
+ * session lands anyway, and its reset must not be skipped. Sign-up passes `register`, which moves on only while sign-up is still
+ * in front.
  * @param onDone - Runs after a successful submit with the submitted values, even if the form has unmounted since.
  * @example const form = useAuthForm(signInSchema, { email: '', password: '' }, (v) => authClient.signIn.email(v), resetForNewSession)
  * @example useAuthForm(signUpSchema, blank, (v) => authClient.signUp.email(v), (v) => register(v.email))
@@ -29,7 +32,7 @@ export function useAuthForm<T extends Record<string, string>>(
       const { error } = await submit(input).catch((): AuthResult => ({
         error: {},
       }))
-      if (error) throw new Error(error.message ?? 'もう一度お試しください')
+      if (error) throw new Error(authErrorMessage(error))
     },
     onSuccess: (_result, sent) => onDone?.(sent),
   })

@@ -14,6 +14,13 @@ const signOut = async (page: Page): Promise<void> => {
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
 }
 
+// The address field's top edge; it moves when the card above it grows or shrinks.
+const addressTop = async (page: Page): Promise<number> => {
+  const box = await page.getByLabel('メールアドレス').boundingBox()
+  if (!box) throw new Error('the address field has no box')
+  return box.y
+}
+
 test('a new user signs up, signs in with the address already filled in, and lands on the first-launch screen', async ({
   page,
 }) => {
@@ -52,20 +59,39 @@ test('after sign-up the sign-in screen says the account was made, fills in the a
   await expect(password).toHaveAccessibleDescription(REGISTERED_NOTICE)
 })
 
-test('typing after sign-up hides the notice and keeps the address and every typed character', async ({
+test('typing the password after sign-up keeps the notice, the address and every typed character, and the card does not move', async ({
   page,
 }) => {
   // Arrange
   const email = uniqueEmail()
   await register(page, email)
+  const addressTopBefore = await addressTop(page)
 
   // Act: straight into the focused field, as a user would.
   await page.keyboard.type('corr')
 
   // Assert
-  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('status')).toHaveText(REGISTERED_NOTICE)
   await expect(page.getByLabel('パスワード')).toHaveValue('corr')
   await expect(page.getByLabel('メールアドレス')).toHaveValue(email)
+  // Sub-pixel layout may differ; a moved card differs by whole pixels.
+  expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
+})
+
+test('editing the address after sign-up hides the notice, which was about the address just registered, and keeps what was typed', async ({
+  page,
+}) => {
+  // Arrange
+  await register(page, uniqueEmail())
+  await page.keyboard.type('corr')
+
+  // Act
+  await page.getByLabel('メールアドレス').fill('someone@example.com')
+
+  // Assert
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByLabel('パスワード')).toHaveValue('corr')
+  await expect(page.getByLabel('パスワード')).toHaveAccessibleDescription('')
 })
 
 test('coming back from sign-up without registering leaves the focus where the user put it', async ({
@@ -261,23 +287,108 @@ test('a sign-up left pending while the user tries to sign in does not clear the 
   )
 })
 
-test('a wrong password after sign-up replaces the notice with the sign-in error', async ({
+test('a wrong password after sign-up replaces the notice with the sign-in error, in Japanese and in the notice’s own place', async ({
   page,
 }) => {
   // Arrange
   await register(page, uniqueEmail())
+  const addressTopBefore = await addressTop(page)
 
   // Act
   await page.getByLabel('パスワード').fill('not the password')
   await page.getByRole('button', { name: 'サインイン' }).click()
 
   // Assert
-  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveText(
+    'メールアドレスかパスワードが違います',
+  )
   await expect(page.getByRole('status')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
+  // Sub-pixel layout may differ; a moved card differs by whole pixels.
+  expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
 })
 
-test('submitting right after sign-up without a password hides the notice, shows the field error and keeps the address', async ({
+test('a sign-in the rate limit refuses asks to wait, in Japanese', async ({
+  page,
+}) => {
+  // Arrange
+  await page.route('**/api/auth/sign-in/email', async (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'Too many requests. Please try again later.',
+      }),
+    }),
+  )
+  await page.goto('/sign-in')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+
+  // Act
+  await page.getByRole('button', { name: 'サインイン' }).click()
+
+  // Assert
+  await expect(page.getByRole('alert')).toHaveText(
+    '短い間に何度も試されました。少し待ってからもう一度お試しください',
+  )
+})
+
+test('a sign-up the server refuses says it could not register, in Japanese, and stays on sign-up', async ({
+  page,
+}) => {
+  // Arrange
+  await page.route('**/api/auth/sign-up/email', async (route) =>
+    route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 'FAILED_TO_CREATE_USER',
+        message: 'Failed to create user',
+      }),
+    }),
+  )
+  await page.goto('/sign-up')
+  await page.getByLabel('名前').fill('E2E')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+
+  // Act
+  await page.getByRole('button', { name: 'アカウントを作成' }).click()
+
+  // Assert
+  await expect(page.getByRole('alert')).toHaveText(
+    '登録できませんでした。もう一度お試しください',
+  )
+  await expect(page).toHaveURL(/\/sign-up/)
+})
+
+test('an error the app has no words for asks to try again instead of showing Better Auth’s English', async ({
+  page,
+}) => {
+  // Arrange
+  await page.route('**/api/auth/sign-in/email', async (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 'SOMETHING_NEW',
+        message: 'Something new went wrong',
+      }),
+    }),
+  )
+  await page.goto('/sign-in')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+
+  // Act
+  await page.getByRole('button', { name: 'サインイン' }).click()
+
+  // Assert
+  await expect(page.getByRole('alert')).toHaveText('もう一度お試しください')
+})
+
+test('submitting right after sign-up without a password keeps the notice, shows the field error and keeps the address', async ({
   page,
 }) => {
   // Arrange
@@ -288,21 +399,24 @@ test('submitting right after sign-up without a password hides the notice, shows 
   await page.getByRole('button', { name: 'サインイン' }).click()
 
   // Assert
-  await expect(page.getByRole('status')).toHaveCount(0)
   await expect(
     page.getByText('パスワードは8文字以上にしてください'),
   ).toBeVisible()
+  await expect(page.getByRole('status')).toHaveText(REGISTERED_NOTICE)
   await expect(page.getByLabel('メールアドレス')).toHaveValue(email)
-  // The notice is gone, so the password field no longer points a screen reader at it.
-  await expect(page.getByLabel('パスワード')).toHaveAccessibleDescription('')
+  // The notice is still there, so the password field keeps pointing a screen reader at it.
+  await expect(page.getByLabel('パスワード')).toHaveAccessibleDescription(
+    REGISTERED_NOTICE,
+  )
 })
 
 test('a second sign-up in the same tab refills sign-in with the new address and shows the notice again', async ({
   page,
 }) => {
-  // Arrange: the first registration's notice is dismissed by typing, as a user who changes their mind would.
+  // Arrange: the first registration's notice is dismissed by editing the address, as a user who changes their mind would.
   await register(page, uniqueEmail())
-  await page.keyboard.type('corr')
+  await page.getByLabel('メールアドレス').fill('someone@example.com')
+  await expect(page.getByRole('status')).toHaveCount(0)
   await page.getByRole('link', { name: '新規登録はこちら' }).click()
   const second = uniqueEmail()
   // Sign-up is pushed over sign-in, which stays mounted (hidden) underneath.

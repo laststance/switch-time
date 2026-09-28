@@ -31,18 +31,28 @@ export const activityInputSchema = z.object({
 })
 export type ActivityInput = z.infer<typeof activityInputSchema>
 
+/**
+ * What the auth forms say when a field is refused: by the client's own checks ({@link signInSchema}) and, in the same words, when
+ * Better Auth refuses the same thing (`authErrorMessage` in the app).
+ */
+export const AUTH_FIELD_MESSAGE = {
+  emailInvalid: 'メールアドレスの形式が正しくありません',
+  passwordTooShort: 'パスワードは8文字以上にしてください',
+  passwordTooLong: 'パスワードは128文字以内にしてください',
+} as const
+
 /** Better Auth's password bounds (8–128), checked client-side first so the error is inline and instant. */
 export const passwordSchema = z
   .string()
-  .min(8, { error: 'パスワードは8文字以上にしてください' })
-  .max(128, { error: 'パスワードは128文字以内にしてください' })
+  .min(8, { error: AUTH_FIELD_MESSAGE.passwordTooShort })
+  .max(128, { error: AUTH_FIELD_MESSAGE.passwordTooLong })
 
 /**
  * Sign-in form payload; {@link signUpSchema} extends it with the display name.
  * @example signInSchema.safeParse({ email: 'a@b.co', password: 'hunter22' }).success // true
  */
 export const signInSchema = z.object({
-  email: z.email({ error: 'メールアドレスの形式が正しくありません' }),
+  email: z.email({ error: AUTH_FIELD_MESSAGE.emailInvalid }),
   password: passwordSchema,
 })
 export type SignInInput = z.infer<typeof signInSchema>
