@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.11.0] - 2026-09-29
+
+### Changed
+
+- Sign-in and sign-up now show their server errors in Japanese instead of
+  Better Auth's English: 「メールアドレスかパスワードが違います」 for a wrong
+  password, a request to wait when the rate limit answers, the form's own
+  messages when the server finds an address or a password out of bounds, and
+  one 「登録できませんでした」 for every refusal to register, which does not tell
+  whether the address already has an account. Anything unknown asks to try again.
+- The 「登録しました。サインインしてください」 notice on sign-in stays while you
+  type the password and after a failed try, where the error takes its place in
+  the same box, so the card no longer moves while you type. It goes when you edit
+  the address, which is what it was about.
+
 ## [0.24.10.0] - 2026-09-29
 
 ### Changed

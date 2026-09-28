@@ -47368,7 +47368,7 @@
       "fill": "$sub",
       "textGrowth": "fixed-width",
       "width": 402,
-      "content": "登録直後（autoSignIn: false）：お知らせ（chip, role=status）とメールアドレス入力済み。パスワードは空、フォーカスはパスワードへ。お知らせは入力・送信で消える。エラーは同じ位置の chip（role=alert）",
+      "content": "登録直後（autoSignIn: false）：お知らせ（chip, role=status）とメールアドレス入力済み。パスワードは空、フォーカスはパスワードへ。お知らせはパスワードを打っても残り、メールアドレスを直すか、サインインの失敗で消える（「ST Phone / サインイン・入力中と失敗」）。エラーは同じ位置の chip（role=alert）",
       "lineHeight": 1.5,
       "fontFamily": "Roboto",
       "fontSize": 10,
@@ -67597,6 +67597,1033 @@
                           "strokeAlignment": "inner"
                         }
                       ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "naPEU",
+      "x": 4966,
+      "y": 3337,
+      "name": "ST Phone / サインイン・入力中と失敗",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "j56Qw",
+          "name": "入力中（お知らせは残る）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "zTrfF",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "入力中。パスワードを打っても、お知らせ（chip, role=status）はそのまま残り、カードは動かない。お知らせは登録した住所のことなので、メールアドレスを直したときだけ消える",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "XZfnA",
+              "name": "AuthCard",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": "$radius-card",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YwFTZ",
+                  "name": "Title",
+                  "fill": "$ink",
+                  "content": "サインイン",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "f7aNV2",
+                  "name": "登録済みのお知らせ（role=status）",
+                  "width": "fill_container",
+                  "fill": "$chip",
+                  "cornerRadius": "$radius-chip",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rj5hG",
+                      "name": "Notice",
+                      "fill": "$ink",
+                      "content": "登録しました。サインインしてください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xFEQz",
+                  "name": "メールアドレス",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SuIKj",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "メールアドレス",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c1Z87v",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x0RsZH",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "you@example.com",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ywHVD",
+                  "name": "パスワード",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zZybN",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "パスワード",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JUvwu",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "O74Gt",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "••••••••",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rMIYy",
+                  "name": "サインイン",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$accent",
+                  "cornerRadius": "$radius-chip",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rdqZz",
+                      "name": "Label",
+                      "fill": "#FFFFFF",
+                      "content": "サインイン",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mSXlW",
+                  "name": "新規登録はこちら",
+                  "width": "fill_container",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "G8nEd",
+                      "name": "Label",
+                      "fill": "$accent",
+                      "content": "新規登録はこちら",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Gel53",
+          "name": "住所を直したあと（お知らせが消える）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "iq4ej",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "メールアドレスを直したあと。お知らせは箱ごと消え、カードは中央のまま約 25px 動く（別の住所で入る人だけが通る道）。次のサインインの失敗は、また同じ位置の箱に入る",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "TqB8w",
+              "name": "AuthCard",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": "$radius-card",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MfCZj",
+                  "name": "Title",
+                  "fill": "$ink",
+                  "content": "サインイン",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "vBq1i",
+                  "name": "メールアドレス",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "E5s91",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "メールアドレス",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kojVD",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "riCWg",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "other@example.com",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AWhd6",
+                  "name": "パスワード",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DaUxE",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "パスワード",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m030qm",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g3d53",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "••••••••",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Cj1u8",
+                  "name": "サインイン",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$accent",
+                  "cornerRadius": "$radius-chip",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dDpcQ",
+                      "name": "Label",
+                      "fill": "#FFFFFF",
+                      "content": "サインイン",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "E9Xij9",
+                  "name": "新規登録はこちら",
+                  "width": "fill_container",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "E9vySI",
+                      "name": "Label",
+                      "fill": "$accent",
+                      "content": "新規登録はこちら",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "oFN4d",
+          "name": "失敗（role=alert）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "YBmKx",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "失敗（role=alert）。お知らせの箱に、日本語のエラーがそのまま入れ替わる。カードは動かず、入力した住所とパスワードは残る。英語の message は画面に出さない。文言は右の表",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "rqRXJ",
+              "name": "AuthCard",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": "$radius-card",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jCMNz",
+                  "name": "Title",
+                  "fill": "$ink",
+                  "content": "サインイン",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "Vlua8",
+                  "name": "エラー（role=alert）",
+                  "width": "fill_container",
+                  "fill": "$chip",
+                  "cornerRadius": "$radius-chip",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fDaX0",
+                      "name": "Notice",
+                      "fill": "$ink",
+                      "content": "メールアドレスかパスワードが違います",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "q7ySW4",
+                  "name": "メールアドレス",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xPE02",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "メールアドレス",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MQYzH",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Shmrn",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "you@example.com",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "M9kyEW",
+                  "name": "パスワード",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ljg1g",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "パスワード",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UlwA6",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "T9xDMP",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "••••••••",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "doCia",
+                  "name": "サインイン",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$accent",
+                  "cornerRadius": "$radius-chip",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "KWgGo",
+                      "name": "Label",
+                      "fill": "#FFFFFF",
+                      "content": "サインイン",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "acNes",
+                  "name": "新規登録はこちら",
+                  "width": "fill_container",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lfw72",
+                      "name": "Label",
+                      "fill": "$accent",
+                      "content": "新規登録はこちら",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "V88TE",
+          "name": "エラーの文言",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "OTS7W",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "エラーの文言。Better Auth の code で決める（429 だけは code がないので status）。登録できませんでした は、住所がすでにあっても新しくても同じ言葉で、住所の有無を伝えない",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "YVsEZ",
+              "name": "Card",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "So7vK",
+                  "name": "INVALID_EMAIL_OR_PASSWORD（401）",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "M9TBFw",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "INVALID_EMAIL_OR_PASSWORD（401）",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "t49wk",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "メールアドレスかパスワードが違います",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "h9uoT",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "BEJsn",
+                  "name": "429（回数制限。code なし）",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fS96j",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "429（回数制限。code なし）",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uBiW8",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "短い間に何度も試されました。少し待ってからもう一度お試しください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "iD4Qp",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "qC4zz",
+                  "name": "PASSWORD_TOO_SHORT",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rihIf",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "PASSWORD_TOO_SHORT",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "B9KkA",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "パスワードは8文字以上にしてください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "S1Mv5",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "Cup1h",
+                  "name": "PASSWORD_TOO_LONG",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hJk7X",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "PASSWORD_TOO_LONG",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "W26Ek",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "パスワードは128文字以内にしてください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "LvrTl",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "n4Gnu",
+                  "name": "INVALID_EMAIL",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "T0dtp",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "INVALID_EMAIL",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "f4gtes",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "メールアドレスの形式が正しくありません",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "nZI6t",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "r732h",
+                  "name": "FAILED_TO_CREATE_USER・USER_ALREADY_EXISTS",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DUYHm",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "FAILED_TO_CREATE_USER・USER_ALREADY_EXISTS",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tTFJl",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "登録できませんでした。もう一度お試しください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "L5pXVz",
+                  "name": "Divider",
+                  "fill": "$line",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "h3k3Rg",
+                  "name": "それ以外・通信できない",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ad4uv",
+                      "name": "Code",
+                      "fill": "$sub",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "それ以外・通信できない",
+                      "lineHeight": 1.4,
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "oCDee",
+                      "name": "Text",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "もう一度お試しください",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
                     }
                   ]
                 }

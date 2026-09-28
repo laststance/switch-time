@@ -67,16 +67,14 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
   // Better Auth starts the session reload a moment after the request answers: until it has started, the session is not loading yet.
   const reloadStarted = useLatchedFlag(form.succeeded && sessionPending)
 
+  // The notice is about the address just registered: it stays through the password and a failed try (the error takes its box, so
+  // the card does not move), and goes when the address is edited.
   const set =
     (key: 'email' | 'password') =>
     (text: string): void => {
-      dismissNotice()
+      if (key === 'email') dismissNotice()
       form.set(key)(text)
     }
-  const onSubmit = (): void => {
-    dismissNotice()
-    form.onSubmit()
-  }
 
   return (
     <AuthCard title="サインイン" error={form.serverError} notice={start.notice}>
@@ -94,7 +92,7 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
           pending: sessionPending,
           reloadStarted,
         })}
-        onPress={onSubmit}
+        onPress={form.onSubmit}
       />
       <Link
         href={{ pathname: '/sign-up', params: next ? { next } : {} }}

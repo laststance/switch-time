@@ -76,23 +76,11 @@
 
 **Why:** Since 0.17.0.0 (`autoSignIn: false`) the answer to one sign-up request no longer tells whether an address has an account: Better Auth answers both the same way. The flow still does: sign up with a fresh password, then sign in with it, and only an unused address lets you in (leaving an account behind). Two overlapping sign-ups for an unused address can also differ: one may hit the unique index and get 422 `FAILED_TO_CREATE_USER`, while an existing address answers 200 twice. And someone who forgot they had an account and "registers" again with a new password gets 「登録しました」, then a sign-in error, with no way back without a reset. The same dead end hides squatting: someone can register another person's address first with a password of their own, and its owner now meets 「登録しました」 and a sign-in error instead of "already exists".
 
-**Context:** `apps/api/src/auth.ts` sets `emailAndPassword: { enabled: true, autoSignIn: false }`; the branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`; with it, `onExistingUserSignUp` can mail the owner of an address that someone tried to register again. The 登録しました notice on sign-in (pen board 「ST Phone / サインイン（登録後）」) would then say to check the inbox, so change the board first. `switchtime://` stays host-less for now because the Expo client sends `expo-origin: switchtime://` (`Linking.createURL('', { scheme })`), which a `switchtime://auth` pattern rejects (`matchesOriginPattern`), so every native POST that carries cookies would get 403; the narrowing needs that origin to change too. A new account also takes longer to answer than an existing one (the inserts, and `seedUser`, which Better Auth waits for), so the timing of one request still tells, and a probe of an existing address leaves nothing behind; padding the duplicate path or seeding in the background would close that part without a mailer. Production rate limiting (Better Auth's rule for `/sign-up` and `/sign-in`, 3 per 10 s per `do-connecting-ip`) slows both, but its counts live in memory: per API instance, and reset on every deploy.
+**Context:** `apps/api/src/auth.ts` sets `emailAndPassword: { enabled: true, autoSignIn: false }`; the branch is `shouldReturnGenericDuplicateResponse` in `better-auth/dist/api/routes/sign-up.mjs`. `requireEmailVerification` needs `sendVerificationEmail`; with it, `onExistingUserSignUp` can mail the owner of an address that someone tried to register again. The 登録しました notice on sign-in (pen boards 「ST Phone / サインイン（登録後）」 and 「ST Phone / サインイン・入力中と失敗」) would then say to check the inbox, so change the boards first. `switchtime://` stays host-less for now because the Expo client sends `expo-origin: switchtime://` (`Linking.createURL('', { scheme })`), which a `switchtime://auth` pattern rejects (`matchesOriginPattern`), so every native POST that carries cookies would get 403; the narrowing needs that origin to change too. A new account also takes longer to answer than an existing one (the inserts, and `seedUser`, which Better Auth waits for), so the timing of one request still tells, and a probe of an existing address leaves nothing behind; padding the duplicate path or seeding in the background would close that part without a mailer. Production rate limiting (Better Auth's rule for `/sign-up` and `/sign-in`, 3 per 10 s per `do-connecting-ip`) slows both, but its counts live in memory: per API instance, and reset on every deploy.
 
 **Effort:** M
 **Priority:** P3
 **Depends on:** A mailer
-
-### Say the auth errors in Japanese
-
-**What:** Show the sign-in and sign-up server errors in Japanese: map Better Auth's error codes (`INVALID_EMAIL_OR_PASSWORD`, `PASSWORD_TOO_SHORT`, the rate limit's 429, …) to the app's words instead of showing its English `message`.
-
-**Why:** A wrong password shows "Invalid email or password" in an otherwise Japanese app. Since 0.17.0.0 every sign-up goes through sign-in, so more people see it.
-
-**Context:** `useAuthForm` (`apps/app/src/hooks/use-auth-form.ts`) throws `error.message ?? 'もう一度お試しください'` and `AuthCard` shows it as the role=alert line. Put the copy on a pen board first (the text on a screen is a design change). Raised by the design review of the 0.17.0.0 plan.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** The copy on a pen board
 
 ### Check on a phone that the 登録しました notice is spoken
 
@@ -106,17 +94,17 @@
 **Priority:** P3
 **Depends on:** Starting native builds
 
-### Keep the sign-in card still when the 登録しました notice goes
+### Keep the error's place while a sign-in retry runs
 
-**What:** Decide on the pen board 「ST Phone / サインイン（登録後）」 what happens to the space of the notice once it goes, and make sign-in match: keep the chip's space, top-align the card on this screen, or keep the notice until the sign-in lands.
+**What:** Hold the alert box's height while a retry is in flight, so the card does not jump when its error goes and comes back.
 
-**Why:** The first keystroke in the focused password field dismisses the notice. `AuthCard` centres the card vertically, so losing the chip and its gap (about 50px) moves the whole card by about 25px while the user types.
+**Why:** `useAuthForm` reads `request.error`, which TanStack Query clears the moment the next request starts. On a card with no registration notice, the error box (about 50px) disappears when the button is pressed again and returns with the next error, and the centred card moves about 25px each way. The registration notice already keeps the box: it comes back while a retry runs, and an error takes its place again.
 
-**Context:** `dismissNotice()` runs in sign-in's `set` wrapper (`apps/app/src/app/(auth)/sign-in.tsx`); the card is centred by `items-center justify-center` in `apps/app/src/components/auth-card.tsx`. The board's caption says the notice goes on input but does not draw the card after it. Raised by the design review of 0.17.0.0.
+**Context:** `serverError` in `apps/app/src/hooks/use-auth-form.ts`; the box is drawn by `AuthCard` (`apps/app/src/components/auth-card.tsx`). Left by the PR that put the auth errors in Japanese and kept the notice through typing (0.24.11.0). Draw the retry state on the pen board 「ST Phone / サインイン・入力中と失敗」 first.
 
 **Effort:** S
-**Priority:** P3
-**Depends on:** The after-input state on the pen board
+**Priority:** P4
+**Depends on:** The retry state on the pen board
 
 ### Draw the auth screens with the keyboard open
 
