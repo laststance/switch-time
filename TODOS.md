@@ -54,17 +54,17 @@
 **Priority:** P3
 **Depends on:** Starting native builds
 
-### Draw the auth screens with the keyboard open
+### Check on an Android phone that the sign-in card clears the keyboard
 
-**What:** Add a keyboard-open state of the sign-in and sign-up boards to the pen file, then keep the focused field and the submit button above the keyboard on iOS and Android (a `KeyboardAvoidingView` or a scrollable card).
+**What:** On an Android phone (or an emulator), open sign-in, focus the password field, and check that the card sits above the keyboard with the サインイン button in view, and that a short screen scrolls the card. On a phone with a display cutout or three-button navigation, check that nothing sits under the system bars.
 
-**Why:** Since 0.17.0.0 sign-in focuses the password field after 登録, so the keyboard opens as soon as sign-in comes into view after 登録. The auth screens have nothing that moves out of its way: on a phone the keyboard (about 336pt) can cover the サインイン button, and the password field on a short one.
+**Why:** `AuthCard` wraps the card in `KeyboardAvoidingView` (`behavior="padding"`) and a `ScrollView`. On iOS this was checked on the simulator (an iPhone 17: the button that the keyboard used to half-cover is in view). Android draws edge to edge under SDK 57 and can size the window itself, so `padding` may double the shift or do nothing there; `behavior="height"` is the other value to try. No Android SDK was available when this was written.
 
-**Context:** `useScreenFocusField` (`apps/app/src/hooks/use-screen-focus-field.ts`) focuses the password from `sign-in.tsx`; `AuthCard` has no keyboard handling. The web build is not affected. Raised by the design review of 0.17.0.0.
+**Context:** `apps/app/src/components/auth-card.tsx`; the pen board 「ST Phone / サインイン・キーボード表示中」. A build for Android needs `expo prebuild --platform android` (the peers are lined up since 0.24.17.0).
 
 **Effort:** S
 **Priority:** P3
-**Depends on:** Starting native builds; the keyboard-open state on the pen board
+**Depends on:** An Android device or emulator
 
 ## Infrastructure
 
