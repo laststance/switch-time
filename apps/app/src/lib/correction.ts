@@ -3,6 +3,7 @@ import type { AppRouterClient } from '@switch-time/api'
 import {
   DAY_ROWS_MAX,
   clampStart,
+  dayBounds,
   dayDigest,
   daySchema,
   LIVE_ACTIVITIES_MAX,
@@ -10,7 +11,6 @@ import {
   MIN_SEGMENT_MS,
   REFUSAL,
   refusalDataSchema,
-  UNDO_ROWS_MAX,
   type DayBaseline,
   type DayRow,
   type ExcludedReason,
@@ -1061,9 +1061,8 @@ export type CorrectionEdit = {
 /**
  * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed (the baseline the API
  * checked). A pick on the carried-in record arms an activity undo, or nothing when its activity is archived (the picker
- * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo, unless the day
- * listed more than {@link UNDO_ROWS_MAX} rows, more than one request carries back. Called by the sheet's edits once they
- * land.
+ * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo, whatever the day's
+ * size ({@link undoRequest} sends only the rows the edit changed on a busy day). Called by the sheet's edits once they land.
  * @param edit - The edit just made and the row it returned.
  * @param row - The row it was made on, before the edit.
  * @param pressed - The day as the sheet listed it when the button was pressed; undefined before the day's list arrived.
@@ -1071,7 +1070,7 @@ export type CorrectionEdit = {
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
  * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, and the row to select after the undo
- * - null with no list or one over {@link UNDO_ROWS_MAX} rows: no undo, and the caller drops any older one
+ * - null with no list: no undo, and the caller drops any older one
  * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, pressedDay(day, tz, list), bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
 export function undoSlotFor(
@@ -1092,7 +1091,6 @@ export function undoSlotFor(
       revision: edit.returned.revision,
     }
   }
-  if (rows.length > UNDO_ROWS_MAX) return null
   return {
     kind: 'day',
     day: baseline.day,
@@ -1340,11 +1338,115 @@ export type UndoRequest =
     }
   | { procedure: 'changeActivity'; input: ChangeActivityInput }
 
+// Whether two rows, the day as it was and as the edit left it, read the same: what an undo would write back.
+const sameRow = (
+  a: Pick<DayRow, 'activityId' | 'startedAt' | 'startsRun'>,
+  b: Pick<DayRow, 'activityId' | 'startedAt' | 'startsRun'>,
+): boolean =>
+  a.activityId === b.activityId &&
+  a.startedAt.getTime() === b.startedAt.getTime() &&
+  Boolean(a.startsRun) === Boolean(b.startsRun)
+
+// How many rows the two lists share from their start (or, with `fromEnd`, from their end), never more than `limit`.
+function sharedRun(
+  before: DaySnapshot,
+  after: readonly DayRow[],
+  limit: number,
+  fromEnd: boolean,
+): number {
+  let count = 0
+  while (count < limit) {
+    const index = fromEnd ? -1 - count : count
+    const kept = before.at(index)
+    const left = after.at(index)
+    if (!kept || !left || !sameRow(kept, left)) break
+    count += 1
+  }
+  return count
+}
+
+/**
+ * The part of a busy day a 「元に戻す」 has to rewrite: the rows between the ones the edit left as they were at the start and
+ * at the end of the day. An edit changes a few neighbouring rows, so this is a handful however long the day is, which keeps
+ * the request under the body limit on a day of any size. Called by {@link undoRequest} on a day that names its rows by digest.
+ * @param before - The day's rows as they were before the edit.
+ * @param after - The rows the edit left.
+ * @param keep - The start (epoch ms) of the row a cut was made on, which the undo selects again from the rows it writes, so
+ *   it is written back even when the cut left it unchanged; null after any other edit.
+ * @param window - The day's [start, end) in epoch ms.
+ * @returns `range`: from the first changed row's start up to the start of the first row left alone after them (or the day's
+ *   end); `rows`: the rows of `before` inside it, which `switches.replaceDay` writes in place of what it deletes there.
+ * @example undoRegion(before, after, null, bounds) // { range: { from: nineOClock, to: tenOClock }, rows: [nineOClockRow] }
+ */
+export function undoRegion(
+  before: DaySnapshot,
+  after: readonly DayRow[],
+  keep: number | null,
+  window: Pick<DayBounds, 'start' | 'end'>,
+): { range: { from: Date; to: Date }; rows: DaySnapshot } {
+  const most = Math.min(before.length, after.length)
+  let head = sharedRun(before, after, most, false)
+  let tail = sharedRun(before, after, most - head, true)
+  const keptIndex =
+    keep === null
+      ? -1
+      : before.findIndex((row) => row.startedAt.getTime() === keep)
+  if (keptIndex >= 0) {
+    head = Math.min(head, keptIndex)
+    tail = Math.min(tail, before.length - 1 - keptIndex)
+  }
+  // The edit changed nothing the lists show: still rewrite one row, so the range is never empty.
+  const unchanged =
+    before.length - head - tail === 0 && after.length - head - tail === 0
+  if (unchanged && before.length > 0) {
+    if (head > 0) head -= 1
+    else tail -= 1
+  }
+  const rows = before.slice(head, before.length - tail)
+  const starts = [rows[0], after[head]].flatMap((row) =>
+    row ? [row.startedAt.getTime()] : [],
+  )
+  const firstKeptAfter = tail > 0 ? before.at(-tail) : undefined
+  return {
+    range: {
+      from: new Date(starts.length > 0 ? Math.min(...starts) : window.start),
+      to: new Date(firstKeptAfter?.startedAt.getTime() ?? window.end),
+    },
+    rows,
+  }
+}
+
+// The `replaceDay` input of a day undo: the whole day on a day that lists its rows, only the changed part on a busy one.
+function dayUndoInput(
+  slot: Extract<UndoSlot, { kind: 'day' }>,
+): ReplaceDayInput {
+  const common = {
+    day: slot.day,
+    timeZone: slot.timeZone,
+    carriedOutId: slot.carriedOutId,
+    account: slot.account,
+  }
+  if (slot.rows.length <= DAY_ROWS_MAX)
+    return { ...common, expected: slot.expected, rows: slot.rows }
+  const keep =
+    slot.reselect && 'startedAt' in slot.reselect
+      ? slot.reselect.startedAt
+      : null
+  const { range, rows } = undoRegion(
+    slot.rows,
+    slot.expected,
+    keep,
+    dayBounds(slot.day, slot.timeZone),
+  )
+  return { ...common, expectedDigest: dayDigest(slot.expected), range, rows }
+}
+
 /**
  * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, conditional on the day still
  * holding the rows the edit left under the same zone (named by their {@link dayDigest} when the day listed more than
- * {@link DAY_ROWS_MAX}, so the request stays under the body limit), or the carried-in record's previous activity through
- * `changeActivity`, conditional on the record still being at the revision the pick left.
+ * {@link DAY_ROWS_MAX}, and then only the rows the edit changed are sent ({@link undoRegion}), so the request stays under the
+ * body limit whatever the day's size), or the carried-in record's previous activity through `changeActivity`, conditional on
+ * the record still being at the revision the pick left.
  * @param slot - The armed undo.
  * @returns The procedure and its input; a day undo also names the row to select after it (after a cut).
  * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
@@ -1353,16 +1455,7 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
   if (slot.kind === 'day')
     return {
       procedure: 'replaceDay',
-      input: {
-        day: slot.day,
-        timeZone: slot.timeZone,
-        ...(slot.rows.length > DAY_ROWS_MAX
-          ? { expectedDigest: dayDigest(slot.expected) }
-          : { expected: slot.expected }),
-        carriedOutId: slot.carriedOutId,
-        rows: slot.rows,
-        account: slot.account,
-      },
+      input: dayUndoInput(slot),
       reselect: slot.reselect,
     }
   return {

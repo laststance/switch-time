@@ -7,6 +7,7 @@ import {
   dayDigest,
   localDay,
   type DayRow,
+  UNDO_ROWS_MAX,
 } from '@switch-time/shared'
 import type { PoolClient } from 'pg'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -638,6 +639,185 @@ test('元に戻す on a busy day lands with the digest of the rows its edit left
   expect([after.rows.length, after.rows[0]?.activityId]).toEqual([
     DAY_ROWS_MAX + 1,
     work,
+  ])
+})
+
+// Picks 睡眠 for the first row of a busy day with the digest baseline the sheet sends; returns what an undo of it would name.
+async function pickFirstRow(
+  fixture: Awaited<ReturnType<typeof busyDay>>,
+  carriedIn: { id: string; revision: number } | null = null,
+) {
+  const { api, list, listed, carriedOutId } = fixture
+  const [first, second, ...rest] = listed.rows
+  if (!first || !second) throw new Error('fixture has no rows')
+  const picked = await api.switches.changeActivity({
+    id: first.id,
+    activityId: idOf(list, '睡眠'),
+    baseline: {
+      day: yesterday,
+      timeZone: TZ,
+      digest: dayDigest(listed.rows),
+      carriedIn,
+      carriedOutId,
+    },
+  })
+  return {
+    first,
+    second,
+    rest,
+    expectedDigest: dayDigest([picked, second, ...rest]),
+  }
+}
+
+test('元に戻す on a day of more than 600 switches writes back only the row its edit changed, and every other row keeps its id', async () => {
+  // Arrange: the sheet picks 睡眠 for the first row of a 650-row day
+  const fixture = await busyDay(
+    'big-day-range-undo@example.com',
+    UNDO_ROWS_MAX + 50,
+  )
+  const { api, work, carriedOutId } = fixture
+  const { first, second, expectedDigest } = await pickFirstRow(fixture)
+
+  // Act
+  const written = await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expectedDigest,
+    range: { from: first.startedAt, to: second.startedAt },
+    carriedOutId,
+    rows: [{ activityId: work, startedAt: first.startedAt }],
+  })
+
+  // Assert
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(written).toHaveLength(1)
+  expect(after.rows).toHaveLength(UNDO_ROWS_MAX + 50)
+  expect(after.rows[0]).toMatchObject({
+    activityId: work,
+    startedAt: first.startedAt,
+  })
+  expect(after.rows[0]?.id).not.toBe(first.id)
+  expect(after.rows.slice(1).map((row) => row.id)).toEqual(
+    fixture.listed.rows.slice(1).map((row) => row.id),
+  )
+})
+
+test('元に戻す with a range is refused once another device changed a row outside the range, and writes nothing', async () => {
+  // Arrange: the sheet's pick, then another device picks 娯楽 for a row far from it
+  const fixture = await busyDay(
+    'big-day-range-stale@example.com',
+    DAY_ROWS_MAX + 50,
+  )
+  const { api, list, work, carriedOutId } = fixture
+  const { first, second, rest, expectedDigest } = await pickFirstRow(fixture)
+  const far = rest[100]
+  if (!far) throw new Error('fixture has no far row')
+  await api.switches.changeActivity({
+    id: far.id,
+    activityId: idOf(list, '娯楽'),
+  })
+
+  // Act
+  const undo = api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expectedDigest,
+    range: { from: first.startedAt, to: second.startedAt },
+    carriedOutId,
+    rows: [{ activityId: work, startedAt: first.startedAt }],
+  })
+
+  // Assert
+  await expect(undo).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect(after.rows[0]?.activityId).toBe(idOf(list, '睡眠'))
+})
+
+test('元に戻す with a range that leaves the day, or rows outside its range, is refused as bad input', async () => {
+  // Arrange
+  const fixture = await busyDay('big-day-range-bad@example.com', 3)
+  const { api, work, listed, carriedOutId } = fixture
+  const [first, second] = listed.rows
+  if (!first || !second) throw new Error('fixture has no rows')
+  const send = async (range: { from: Date; to: Date }, startedAt: Date) =>
+    api.switches.replaceDay({
+      day: yesterday,
+      timeZone: TZ,
+      expectedDigest: dayDigest(listed.rows),
+      range,
+      carriedOutId,
+      rows: [{ activityId: work, startedAt }],
+    })
+
+  // Act
+  const leavesDay = send(
+    {
+      from: first.startedAt,
+      to: new Date(dayBounds(yesterday, TZ).end + MINUTE),
+    },
+    first.startedAt,
+  )
+  const rowOutside = send(
+    { from: first.startedAt, to: second.startedAt },
+    second.startedAt,
+  )
+
+  // Assert
+  await expect(leavesDay).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(rowOutside).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+})
+
+test('元に戻す with a range that starts after the day’s first row leaves the carried-in record alone, and one that reaches that row bumps it', async () => {
+  // Arrange: a record before the day, and a 3-row day
+  const fixture = await busyDay('big-day-range-carried-in@example.com', 3)
+  const { api, work, listed, carriedOutId } = fixture
+  const { id: userId } = await api.me()
+  await db.insert(switches).values({
+    userId,
+    activityId: work,
+    startedAt: at(dayBefore, 23),
+  })
+  const relisted = await api.switches.listByDay({ day: yesterday })
+  const [first, second, third] = relisted.rows
+  if (!relisted.carriedIn || !first || !second || !third)
+    throw new Error('fixture has no carried-in record')
+  const revisionOf = async () =>
+    (await api.switches.listByDay({ day: yesterday })).carriedIn?.revision
+  const digest = dayDigest(relisted.rows)
+  const rewrite = async (from: Date, to: Date, startedAt: Date) =>
+    api.switches.replaceDay({
+      day: yesterday,
+      timeZone: TZ,
+      expectedDigest: digest,
+      range: { from, to },
+      carriedOutId,
+      rows: [{ activityId: work, startedAt }],
+    })
+  expect(listed.rows).toHaveLength(3)
+
+  // Act
+  await rewrite(second.startedAt, third.startedAt, second.startedAt)
+  const afterLaterRange = await revisionOf()
+  const digestAfterFirst = dayDigest(
+    (await api.switches.listByDay({ day: yesterday })).rows,
+  )
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expectedDigest: digestAfterFirst,
+    range: { from: first.startedAt, to: second.startedAt },
+    carriedOutId,
+    rows: [{ activityId: work, startedAt: first.startedAt }],
+  })
+  const afterFirstRowRange = await revisionOf()
+
+  // Assert
+  expect([afterLaterRange, afterFirstRowRange]).toEqual([
+    relisted.carriedIn.revision,
+    relisted.carriedIn.revision + 1,
   ])
 })
 

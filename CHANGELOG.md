@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.15.0] - 2026-09-29
+
+### Changed
+
+- 「元に戻す」 now works after an edit on a day of more than 600 switches, where
+  it used to be left off. On a day that busy the undo sends only the rows the
+  edit changed (a range of the day) instead of every row, so its size no longer
+  depends on the day's; the rest of the day is not rewritten, and keeps its
+  records as they were. It still lands only when nothing else changed the day.
+
 ## [0.24.14.0] - 2026-09-29
 
 ### Changed
