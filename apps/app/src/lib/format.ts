@@ -95,18 +95,20 @@ export function spokenActivityName(name: string): string {
 }
 
 /**
- * Every activity's spoken name, told apart from the others, for History's day cells and 状態別 rows. Built once over the whole
- * list (live and archived) by {@link historyView}, so one activity reads the same in every cell.
- * @param activities - The activities in `position` order; that order numbers a group of equal names.
- * @returns A map from activity id to its spoken name:
+ * Every activity's spoken name, told apart from the others, for History's day cells and 状態別 rows and the correction sheet's
+ * rows. Built once over the whole list (live and archived) by {@link historyView} and {@link correctionRows}, so one activity
+ * reads the same in every label.
+ * @param activities - The activities in `position` order; that order numbers a group of equal names. No `archivedAt` means live.
+ * @returns A map from activity id to its spoken name, no two alike:
  * - {@link spokenActivityName} of its name
  * - then `（アーカイブ済み）` after an archived activity whose spoken name another activity also has
- * - then `（1）`, `（2）`… in list order for names still shared (two live 仕事, two archived 仕事)
+ * - then `（1）`, `（2）`… in list order for names still shared (two live 仕事, two archived 仕事), skipping a number another
+ *   activity's own name already reads as (a third activity named 仕事（1）)
  * @example spokenActivityNames([{ id: 'a', name: '仕事', archivedAt: null }, { id: 'b', name: '仕事', archivedAt: new Date() }])
  * // => Map { 'a' => '仕事', 'b' => '仕事（アーカイブ済み）' }
  */
 export function spokenActivityNames(
-  activities: readonly { id: string; name: string; archivedAt: Date | null }[],
+  activities: readonly { id: string; name: string; archivedAt?: Date | null }[],
 ): Map<string, string> {
   const escaped = activities.map((activity) => ({
     ...activity,
@@ -114,19 +116,30 @@ export function spokenActivityNames(
   }))
   const archivedMarked = escaped.map((activity) =>
     // Only a shared name needs the mark: an archived activity alone on its name reads as it did while live.
-    activity.archivedAt !== null && countOf(escaped, activity.spoken) > 1
+    Boolean(activity.archivedAt) && countOf(escaped, activity.spoken) > 1
       ? { ...activity, spoken: `${activity.spoken}（アーカイブ済み）` }
       : activity,
   )
-  const seen = new Map<string, number>()
+  const isSettled = (activity: { spoken: string }) =>
+    countOf(archivedMarked, activity.spoken) === 1
+  // Names already final: every settled one, then each number as it is given.
+  const taken = new Set(
+    archivedMarked.filter(isSettled).map((activity) => activity.spoken),
+  )
+  const lastOrdinal = new Map<string, number>()
   return new Map(
     archivedMarked.map((activity) => {
+      if (isSettled(activity)) return [activity.id, activity.spoken]
       // A name the mark did not settle is numbered across its whole group, the first one included.
-      if (countOf(archivedMarked, activity.spoken) === 1)
-        return [activity.id, activity.spoken]
-      const ordinal = (seen.get(activity.spoken) ?? 0) + 1
-      seen.set(activity.spoken, ordinal)
-      return [activity.id, `${activity.spoken}（${ordinal}）`]
+      let ordinal = lastOrdinal.get(activity.spoken) ?? 0
+      let numbered: string
+      do {
+        ordinal += 1
+        numbered = `${activity.spoken}（${ordinal}）`
+      } while (taken.has(numbered))
+      lastOrdinal.set(activity.spoken, ordinal)
+      taken.add(numbered)
+      return [activity.id, numbered]
     }),
   )
 }

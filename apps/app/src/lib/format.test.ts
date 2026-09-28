@@ -175,6 +175,25 @@ test('activities whose names are still alike after the archive mark are numbered
   ])
 })
 
+test('a number given to two alike names skips one that another activity is already named, so no two labels read the same', () => {
+  // Arrange: two 仕事, and a third activity named 仕事（1） by hand, listed after them
+  const activities = [
+    { id: 'work-1', name: '仕事', archivedAt: null },
+    { id: 'work-2', name: '仕事', archivedAt: null },
+    { id: 'work-named-1', name: '仕事（1）', archivedAt: null },
+  ]
+
+  // Act
+  const spoken = spokenActivityNames(activities)
+
+  // Assert
+  expect([...spoken]).toEqual([
+    ['work-1', '仕事（2）'],
+    ['work-2', '仕事（3）'],
+    ['work-named-1', '仕事（1）'],
+  ])
+})
+
 test('the since line keeps failing for an unknown time zone instead of caching a broken formatter', () => {
   // Arrange
   const instant = new Date('2026-09-09T00:05:00Z')

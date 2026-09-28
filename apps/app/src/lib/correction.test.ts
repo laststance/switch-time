@@ -3717,3 +3717,39 @@ test('a correction row is read with its length in 時間 and 分, and a name tha
     ['detox 0:00 – 9:00 9時間', '9h 00m'],
   ])
 })
+
+test('a correction row of an archived activity is read apart from a live one with the same name', () => {
+  // Arrange: an archived 仕事 from 9:00, then a new 仕事 from 12:00 to 18:00
+  const day = '2026-09-08'
+  const twins = [
+    { id: 'work-new', name: '仕事', color: '#3B7BD9', iconKey: 'work' },
+    {
+      id: 'work-old',
+      name: '仕事',
+      color: '#3B7BD9',
+      iconKey: 'work',
+      archivedAt: new Date('2026-09-05T00:00:00Z'),
+    },
+    { id: 'home', name: '家事', color: '#E0A431', iconKey: 'home' },
+  ]
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [row('o', 'work-old', at(day, 9)), row('n', 'work-new', at(day, 12))],
+    carriedOut: row('h', 'home', at('2026-09-09', 0)),
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 20).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const rows = correctionRows(list, twins, bounds)
+
+  // Assert: both rows still show 仕事 on screen
+  expect(rows.map((r) => [r.label, r.name])).toEqual([
+    ['仕事 12:00 – 24:00 12時間', '仕事'],
+    ['仕事（アーカイブ済み） 9:00 – 12:00 3時間', '仕事'],
+  ])
+})
