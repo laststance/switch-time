@@ -20,7 +20,6 @@ import { authClient } from '@/lib/auth-client'
 import {
   afterUndoFailure,
   correctionRows,
-  dayBaseline,
   dayLine,
   dayTitle,
   failureKind,
@@ -32,6 +31,7 @@ import {
   offeredUndo,
   onPressedDay,
   pickRequest,
+  pressedDay,
   reselectedRow,
   sheetView,
   statusLine,
@@ -345,16 +345,17 @@ function useCorrectionEdits(
   // pressed on: an answer that lands once the sheet shows another day selects nothing there ({@link useCorrectionState}).
   const press = (row: CorrectionRow) => {
     state.hush(true)
-    const baseline = listed
-      ? dayBaseline(day, bounds.timeZone, listed)
+    const pressed = listed
+      ? pressedDay(day, bounds.timeZone, listed)
       : undefined
+    const baseline = pressed?.baseline
     const landed =
       (kind: CorrectionEdit['kind']) =>
       (returned: SwitchRow): void => {
-        // No undo for this edit (no list yet, a busy day's baseline, an archived pick) also drops the older one: it no longer
-        // matches the day.
+        // No undo for this edit (no list yet, a day over UNDO_ROWS_MAX rows, an archived pick) also drops the older one: it
+        // no longer matches the day.
         const { slot, archived } = landedUndo(
-          undoSlotFor({ kind, returned }, row, baseline, bounds),
+          undoSlotFor({ kind, returned }, row, pressed, bounds),
         )
         dispatch(slot ? armed({ epoch, slot }) : dropped({ epoch, day }))
         // The edit's own re-read landed before the slot existed, so the slot meets that read now.

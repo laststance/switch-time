@@ -34,6 +34,7 @@ import {
   openedCut,
   noteDayClass,
   pickRequest,
+  pressedDay,
   reselectedRow,
   revealOffset,
   rowsAfterEdit,
@@ -350,7 +351,14 @@ test('the title names the day unless it is today, and the baseline an edit sends
   expect(dayBaseline('2026-09-08', TZ, list)).toEqual({
     day: '2026-09-08',
     timeZone: TZ,
-    rows: [{ id: 'w', activityId: 'work', startedAt: at('2026-09-08', 9) }],
+    rows: [
+      {
+        id: 'w',
+        activityId: 'work',
+        startedAt: at('2026-09-08', 9),
+        revision: 0,
+      },
+    ],
     carriedIn: { id: 's', revision: 3 },
     carriedOutId: 't',
   })
@@ -375,8 +383,14 @@ test('the day undo writes a detox re-tap back as one, so the run it started does
 
   // Assert: only the re-tap carries the mark
   expect(baseline.rows).toEqual([
-    { id: 'd', activityId: null, startedAt: at(day, 9), startsRun: true },
-    { id: 'w', activityId: 'work', startedAt: at(day, 12) },
+    {
+      id: 'd',
+      activityId: null,
+      startedAt: at(day, 9),
+      revision: 0,
+      startsRun: true,
+    },
+    { id: 'w', activityId: 'work', startedAt: at(day, 12), revision: 0 },
   ])
   expect(snapshot).toEqual([
     { activityId: null, startedAt: at(day, 9), startsRun: true },
@@ -412,7 +426,7 @@ test('undoing a pick on a detox re-tap writes the re-tap back with its mark, so 
   const slot = undoSlotFor(
     { kind: 'pick', returned: picked },
     retap,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -423,7 +437,13 @@ test('undoing a pick on a detox re-tap writes the re-tap back with its mark, so 
     timeZone: TZ,
     rows: [{ activityId: null, startedAt: at(day, 9), startsRun: true }],
     expected: [
-      { id: 'd', activityId: 'work', startedAt: at(day, 9), startsRun: true },
+      {
+        id: 'd',
+        activityId: 'work',
+        startedAt: at(day, 9),
+        revision: 1,
+        startsRun: true,
+      },
     ],
     carriedOutId: null,
     reselect: null,
@@ -448,17 +468,17 @@ test('a day with no switch before it sends a baseline that says so, so a record 
   expect(baseline.carriedOutId).toBeNull()
 })
 
-// A day of 301 one-minute switches from 9:00: one more than a baseline lists.
-const busyDay = (): ListedDay => ({
+// A day of `count` one-minute switches from 9:00; the default is one more than a baseline lists.
+const busyDay = (count = 301): ListedDay => ({
   carriedInRunStart: null,
   carriedIn: row('c', 'sleep', at('2026-09-07', 23)),
-  rows: Array.from({ length: 301 }, (_, index) =>
+  rows: Array.from({ length: count }, (_, index) =>
     row(`r${index}`, 'work', at('2026-09-08', 9, index)),
   ),
   carriedOut: row('t', 'home', at('2026-09-09', 8)),
 })
 
-test('a day busier than a baseline can list is still corrected: the edit sends the zone and the records on either side, without the rows', () => {
+test('a day busier than a baseline can list is still corrected: the edit sends the zone, the records on either side and a digest of the rows in their place', () => {
   // Arrange
   const list = busyDay()
 
@@ -469,6 +489,7 @@ test('a day busier than a baseline can list is still corrected: the edit sends t
   expect(baseline).toEqual({
     day: '2026-09-08',
     timeZone: TZ,
+    digest: '301:5ddd5eb3ab1dc',
     carriedIn: { id: 'c', revision: 0 },
     carriedOutId: 't',
   })
@@ -494,11 +515,12 @@ test('a day of exactly 300 switches, the most a baseline lists, still sends its 
     id: 'r299',
     activityId: 'work',
     startedAt: at('2026-09-08', 13, 59),
+    revision: 0,
   })
 })
 
-test('an edit on a day busier than a baseline can list arms no 元に戻す, since there are no listed rows to write back', () => {
-  // Arrange
+test('an edit on a day busier than a baseline can list still arms 元に戻す, which names the rows the edit left by their digest', () => {
+  // Arrange: a pick on the first of 301 rows
   const day = '2026-09-08'
   const list = busyDay()
   const bounds = {
@@ -506,15 +528,49 @@ test('an edit on a day busier than a baseline can list arms no 元に戻す, sin
     now: at('2026-09-09', 10).getTime(),
     timeZone: TZ,
   }
-  const edited = correctionRows(list, activities, bounds)[0]
+  const edited = correctionRows(list, activities, bounds).at(-2)
+  if (edited?.id !== 'r0') throw new Error('no first row')
+  const slot = undoSlotFor(
+    {
+      kind: 'pick',
+      returned: { ...row('r0', 'sleep', at(day, 9)), revision: 1 },
+    },
+    edited,
+    pressedDay(day, TZ, list),
+    bounds,
+  )
+  if (!slot || 'blocked' in slot || slot.kind !== 'day')
+    throw new Error('no day undo armed')
+
+  // Act
+  const { input } = undoRequest(slot)
+
+  // Assert
+  expect(input).toMatchObject({
+    expectedDigest: '301:10346416235f27',
+    rows: expect.any(Array),
+  })
+  expect('expected' in input).toBe(false)
+  expect('rows' in input && input.rows).toHaveLength(301)
+})
+
+test('an edit on a day of more than 600 switches arms no 元に戻す, since one request cannot carry the rows back', () => {
+  // Arrange
+  const day = '2026-09-08'
+  const list = busyDay(601)
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-09-09', 10).getTime(),
+    timeZone: TZ,
+  }
+  const edited = correctionRows(list, activities, bounds).at(-2)
   if (!edited) throw new Error('no row')
-  const baseline = dayBaseline(day, TZ, list)
 
   // Act
   const slot = undoSlotFor(
     { kind: 'move', returned: row(edited.id, 'work', at(day, 9, 10)) },
     edited,
-    baseline,
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -557,7 +613,6 @@ test('a pick on the carried-in record of a busy day still arms its own 元に戻
   }
   const carriedIn = correctionRows(list, activities, bounds).at(-1)
   if (!carriedIn?.carriedIn) throw new Error('no carried-in row')
-  const baseline = dayBaseline(day, TZ, list)
 
   // Act
   const slot = undoSlotFor(
@@ -566,7 +621,7 @@ test('a pick on the carried-in record of a busy day still arms its own 元に戻
       returned: { ...row('c', 'work', at('2026-09-07', 23)), revision: 1 },
     },
     carriedIn,
-    baseline,
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1454,7 +1509,7 @@ test('a pick on the carried-in record arms an undo that puts only its previous a
   const slot = undoSlotFor(
     { kind: 'pick', returned },
     carriedIn,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1490,7 +1545,7 @@ test('a pick on a carried-in detox record arms an undo back to detox', () => {
   const slot = undoSlotFor(
     { kind: 'pick', returned },
     carriedIn,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1526,7 +1581,7 @@ test('a pick away from an archived activity on the carried-in record arms no und
   const slot = undoSlotFor(
     { kind: 'pick', returned },
     carriedIn,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1543,7 +1598,7 @@ test('a cut arms the day undo, which expects the new row, writes back the day wi
   const slot = undoSlotFor(
     { kind: 'cut', returned: inserted },
     carriedIn,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1554,8 +1609,8 @@ test('a cut arms the day undo, which expects the new row, writes back the day wi
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [
-      { id: 'n', activityId: 'work', startedAt: at(day, 3, 15) },
-      { id: 'h', activityId: 'home', startedAt: at(day, 7) },
+      { id: 'n', activityId: 'work', startedAt: at(day, 3, 15), revision: 0 },
+      { id: 'h', activityId: 'home', startedAt: at(day, 7), revision: 0 },
     ],
     carriedOutId: null,
     reselect: { id: 'w' },
@@ -1568,13 +1623,13 @@ test('a move of the day’s own row arms the day undo that expects the moved sta
   const { day, list, bounds, rows } = carriedWork()
   const ownRow = rows[0]
   if (!ownRow) throw new Error('no own row')
-  const moved = row('h', 'home', at(day, 7, 15))
+  const moved = { ...row('h', 'home', at(day, 7, 15)), revision: 1 }
 
   // Act
   const slot = undoSlotFor(
     { kind: 'move', returned: moved },
     ownRow,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1584,7 +1639,9 @@ test('a move of the day’s own row arms the day undo that expects the moved sta
     day,
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
-    expected: [{ id: 'h', activityId: 'home', startedAt: at(day, 7, 15) }],
+    expected: [
+      { id: 'h', activityId: 'home', startedAt: at(day, 7, 15), revision: 1 },
+    ],
     carriedOutId: null,
     reselect: null,
     account: 'u',
@@ -1602,7 +1659,7 @@ test('a cut of the day’s own row arms the day undo that selects that row again
   const slot = undoSlotFor(
     { kind: 'cut', returned: laterHalf },
     ownRow,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1613,8 +1670,13 @@ test('a cut of the day’s own row arms the day undo that selects that row again
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
     expected: [
-      { id: 'h', activityId: 'home', startedAt: at(day, 7) },
-      { id: 'h2', activityId: 'home', startedAt: at(day, 15, 30) },
+      { id: 'h', activityId: 'home', startedAt: at(day, 7), revision: 1 },
+      {
+        id: 'h2',
+        activityId: 'home',
+        startedAt: at(day, 15, 30),
+        revision: 0,
+      },
     ],
     carriedOutId: null,
     reselect: { startedAt: at(day, 7).getTime() },
@@ -1660,7 +1722,7 @@ test('a pick on the day’s own row goes through the day undo, which expects the
   const slot = undoSlotFor(
     { kind: 'pick', returned: picked },
     ownRow,
-    dayBaseline(day, TZ, list),
+    pressedDay(day, TZ, list),
     bounds,
   )
 
@@ -1670,7 +1732,9 @@ test('a pick on the day’s own row goes through the day undo, which expects the
     day,
     timeZone: TZ,
     rows: [{ activityId: 'home', startedAt: at(day, 7) }],
-    expected: [{ id: 'h', activityId: 'sleep', startedAt: at(day, 7) }],
+    expected: [
+      { id: 'h', activityId: 'sleep', startedAt: at(day, 7), revision: 1 },
+    ],
     carriedOutId: null,
     reselect: null,
     account: 'u',
@@ -1681,11 +1745,11 @@ test('the day after a merge into the previous row lacks the merged row, and the 
   // Arrange: 仕事 9:00, 休息 12:00, 家 18:00; 休息 merges into 仕事.
   const day = '2026-09-08'
   const before = [
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'r', activityId: 'rest', startedAt: at(day, 12) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 2 },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12), revision: 0 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 5 },
   ]
-  const kept = row('w', 'work', at(day, 9))
+  const kept = { ...row('w', 'work', at(day, 9)), revision: 3 }
 
   // Act
   const after = rowsAfterEdit(
@@ -1697,8 +1761,8 @@ test('the day after a merge into the previous row lacks the merged row, and the 
 
   // Assert
   expect(after).toEqual([
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 3 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 5 },
   ])
 })
 
@@ -1706,11 +1770,11 @@ test('the day after a merge into the next row lacks the merged row, and the kept
   // Arrange: 休息 merges into 家, which takes 休息's 12:00 start.
   const day = '2026-09-08'
   const before = [
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'r', activityId: 'rest', startedAt: at(day, 12) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 2 },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12), revision: 0 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 5 },
   ]
-  const kept = row('h', 'home', at(day, 12))
+  const kept = { ...row('h', 'home', at(day, 12)), revision: 6 }
 
   // Act
   const after = rowsAfterEdit(
@@ -1722,8 +1786,8 @@ test('the day after a merge into the next row lacks the merged row, and the kept
 
   // Assert
   expect(after).toEqual([
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 12) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 2 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 12), revision: 6 },
   ])
 })
 
@@ -1750,12 +1814,12 @@ test('the day after a merge into the carried-in record keeps only the rows still
   ])
 })
 
-test('the day after a cut of its own row holds the new later part in start order', () => {
+test('the day after a cut of its own row holds the new later part in start order, and the cut row one revision on, as the cut left it', () => {
   // Arrange: 仕事 9:00 – 18:00 is cut at 13:30.
   const day = '2026-09-08'
   const before = [
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 2 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 0 },
   ]
   const inserted = row('n', 'work', at(day, 13, 30))
 
@@ -1769,9 +1833,35 @@ test('the day after a cut of its own row holds the new later part in start order
 
   // Assert
   expect(after).toEqual([
-    { id: 'w', activityId: 'work', startedAt: at(day, 9) },
-    { id: 'n', activityId: 'work', startedAt: at(day, 13, 30) },
-    { id: 'h', activityId: 'home', startedAt: at(day, 18) },
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 3 },
+    { id: 'n', activityId: 'work', startedAt: at(day, 13, 30), revision: 0 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 0 },
+  ])
+})
+
+test('the day after a ±15分 move holds the previous row one revision on, since the move changed where it ends', () => {
+  // Arrange: 休息 12:00 moves to 12:15, so 仕事 now ends at 12:15.
+  const day = '2026-09-08'
+  const before = [
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 2 },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12), revision: 0 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 4 },
+  ]
+  const moved = { ...row('r', 'rest', at(day, 12, 15)), revision: 1 }
+
+  // Act
+  const after = rowsAfterEdit(
+    before,
+    { kind: 'move', returned: moved },
+    'r',
+    dayBounds(day, TZ),
+  )
+
+  // Assert: 家 is untouched, its start did not move
+  expect(after).toEqual([
+    { id: 'w', activityId: 'work', startedAt: at(day, 9), revision: 3 },
+    { id: 'r', activityId: 'rest', startedAt: at(day, 12, 15), revision: 1 },
+    { id: 'h', activityId: 'home', startedAt: at(day, 18), revision: 4 },
   ])
 })
 
@@ -1978,7 +2068,9 @@ test('a pick on the carried-in record only writes if no other write reached the 
     baseline: {
       day: '2026-09-08',
       timeZone: TZ,
-      rows: [{ id: 'h', activityId: 'home', startedAt: at(day, 7) }],
+      rows: [
+        { id: 'h', activityId: 'home', startedAt: at(day, 7), revision: 0 },
+      ],
       carriedIn: { id: 'w', revision: 0 },
       carriedOutId: null,
     },
@@ -3364,6 +3456,44 @@ test('元に戻す stays on while the listed day still reads as the edit left it
 
   // Assert
   expect(offered).toBe(slot)
+})
+
+test('元に戻す turns off once another device changed a row and changed it back, since the row’s revision moved on', () => {
+  // Arrange: the pick left 睡眠 at revision 1; another device then picked 娯楽 and 睡眠 again (revision 3)
+  const picked = {
+    ...row('w', 'sleep', new Date('2026-09-08T09:00:00+09:00')),
+    revision: 1,
+  }
+  const slot: UndoSlot = {
+    kind: 'day',
+    day: '2026-09-08',
+    timeZone: 'Asia/Tokyo',
+    rows: [],
+    expected: [
+      {
+        id: 'w',
+        activityId: 'sleep',
+        startedAt: picked.startedAt,
+        revision: 1,
+      },
+    ],
+    carriedOutId: null,
+    reselect: null,
+    account: 'u',
+  }
+  const listedAt = (revision: number) => ({
+    carriedInRunStart: null,
+    rows: [{ ...picked, revision }],
+    carriedIn: null,
+    carriedOut: null,
+  })
+
+  // Act
+  const asLeft = offeredUndo(slot, listedAt(1), 'Asia/Tokyo')
+  const changedBack = offeredUndo(slot, listedAt(3), 'Asia/Tokyo')
+
+  // Assert
+  expect([asLeft, changedBack]).toEqual([slot, undefined])
 })
 
 test('元に戻す turns off once the list shows the day changed: a tap added a row, a row moved, the next switch or the zone changed, or no list yet', () => {

@@ -28,28 +28,28 @@
 **Priority:** P3
 **Depends on:** None
 
-### Notice another device's edit on a day busier than a baseline can list
+### Offer 「元に戻す」 on a day of more than 600 switches
 
-**What:** Let the sheet detect a change another device made to the day's own rows when the day lists more than `DAY_ROWS_MAX` (300) rows, and offer 「元に戻す」 there, for example by comparing a hash or a revision of the day instead of every row.
+**What:** Arm the day's 「元に戻す」 after an edit on a day that lists more than `UNDO_ROWS_MAX` (600) rows, for example by writing back only the rows the edit changed instead of the whole day.
 
-**Why:** Since 0.5.0.0, such a day sends a baseline without `rows`: its zone and the records carried in and out are still checked, and an edit on a row of another day is refused, but an edit another device made to one of the day's own rows is not noticed, and no day 「元に戻す」 is offered. `DAY_ROWS_MAX` comes from the 100 KB body limit on `/api/*`: 300 rows twice (`expected` and `rows`) serialize to about 87 KB.
+**Why:** Since 0.24.7.0 a day busier than `DAY_ROWS_MAX` (300) names its rows by a digest (`dayDigest`), so its edits notice another device's change and its undo writes back up to 600 rows under the 100 KB body limit on `/api/*`. Above 600 the edit still lands with the digest baseline, but no undo is armed, since the rows to write back no longer fit one request.
 
-**Context:** `dayBaseline` and `undoSlotFor` in `apps/app/src/lib/correction.ts`, `checkBaseline` and `checkOwnRowBaseline` in `apps/api/src/rpc/switches.ts`, `DAY_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit test in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 300 switches in a day. The API also accepts a baseline without `rows` on a day that holds 300 rows or fewer (the app never sends one, but a busy day another device has since thinned out still passes); refusing that as a changed day, by counting the day's rows, belongs with the same fix. Left over from "Let a day with more than 500 switches still be corrected", which 0.5.0.0 closed. Since the correction status PR (2026-09-25), a failure that may have landed (a timeout, a lost answer, a 5xx) says 「反映されたか分かりませんでした。一覧で確かめてください」 once the list is read again, but on such a day redoing a ±15分 move or a split that did land passes the rowless baseline and applies twice.
+**Context:** `undoSlotFor` and `undoRequest` in `apps/app/src/lib/correction.ts`, `replaceDay` in `apps/api/src/rpc/switches.ts`, `UNDO_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit tests in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 600 switches in a day.
 
 **Effort:** M
 **Priority:** P4
 **Depends on:** None
 
-### Refuse a day undo whose day changed and changed back while nobody read it
+### Refuse a baseline with neither rows nor a digest once older clients are gone
 
-**What:** Retire a day's armed 「元に戻す」 when the day was changed and then changed back while no read of it landed, for example by giving each day a revision the API bumps on every write, which the slot keeps and `replaceDay` checks.
+**What:** Refuse, as a changed day, an edit whose baseline names neither `rows` nor `digest`, on any day.
 
-**Why:** A slot is retired only when a read shows the day moved on. On a past day whose sheet is closed, nothing reads it: another device can change a row and change it back (pick 娯楽, then 仕事 again), and the reopened sheet still offers the undo, since the day compares rows by id, activity and start, not by revision. Pressing it then undoes an edit from before those changes. The rows it restores are what the edit replaced, so nothing is lost that the day did not already show, but the undo reaches past changes the user never saw.
+**Why:** Since 0.24.7.0 the app sends a digest on a busy day, and the API refuses a baseline with neither on a day of 300 rows or fewer. It still accepts one on a busier day, so that a client from before 0.24.7.0 can correct such a day; an edit from that client does not notice another device's change to the day's own rows, and a redo of an edit that did land applies twice.
 
-**Context:** `undoOutlived`, `offeredUndo` and `dayRowsMatch` in `apps/app/src/lib/correction.ts`; `checkBaseline` in `apps/api/src/rpc/switches.ts`. Left over from the PR that retires the undo by later reads (2026-09-25), which closed "Drop a day's 元に戻す once a settled read shows the day moved on" for every change a read sees.
+**Context:** `matchesDay` in `apps/api/src/rpc/switches.ts`. Safe once every installed app sends the digest (the web bundle updates on reload; a native build would pin the oldest version in use).
 
-**Effort:** M
-**Priority:** P3
+**Effort:** S
+**Priority:** P4
 **Depends on:** None
 
 ### Name only the untapped days an edit really changes

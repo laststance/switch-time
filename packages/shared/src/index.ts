@@ -5,6 +5,7 @@ export {
   type ActivityColor,
   type DefaultActivity,
 } from './activity-palette'
+export { dayDigest, type DigestRow } from './day-digest'
 export {
   activityColorSchema,
   activityInputSchema,
@@ -31,6 +32,7 @@ export {
   THEME_MODES,
   themeModeSchema,
   timeZoneSchema,
+  UNDO_ROWS_MAX,
   type ActivityInput,
   type DayBaseline,
   type DayRow,

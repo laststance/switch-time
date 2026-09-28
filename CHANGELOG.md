@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.7.0] - 2026-09-29
+
+### Changed
+
+- On a day with more than 300 switches, the correction sheet now notices a
+  change another device made to the day's rows: an edit on a stale list is
+  refused and the sheet shows the day as it now reads, as on any other day.
+  Such a day also offers 「元に戻す」 after an edit, up to 600 switches.
+
+### Fixed
+
+- 「元に戻す」 turns off when another device changed a row and changed it back
+  (picked 娯楽, then 仕事 again) while the day's sheet was closed. Before, the
+  reopened sheet still offered the undo, and pressing it reached past changes
+  you never saw.
+- On a busy day, redoing a ±15分 move or a split that already landed after an
+  uncertain failure is refused instead of applying twice.
+
 ## [0.24.6.0] - 2026-09-29
 
 ### Changed

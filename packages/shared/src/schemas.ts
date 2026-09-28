@@ -148,22 +148,35 @@ export type SwitchToInput = z.infer<typeof switchToInputSchema>
 
 /**
  * One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares (id,
- * activity and start). `startsRun` rides along so 「元に戻す」 can write a detox re-tap back as one; nothing compares it.
+ * activity, start and, when named, revision). The revision catches a row changed and changed back (pick 娯楽, then 仕事
+ * again), which reads the same otherwise; left out (clients from before it was sent), it is not compared. `startsRun` rides
+ * along so 「元に戻す」 can write a detox re-tap back as one; nothing compares it.
  */
 const dayRowSchema = z.object({
   id: z.uuid(),
   activityId: z.uuid().nullable(),
   startedAt: z.coerce.date(),
+  revision: z.int().nonnegative().optional(),
   startsRun: z.boolean().optional(),
 })
 export type DayRow = z.infer<typeof dayRowSchema>
 
 /**
- * The most rows of one day a baseline lists, and 「元に戻す」 writes back. A day holds a few dozen switches; this bound keeps
- * the undo of a split on the busiest listed day (`rows` of this many, `expected` of one more) under the API's request body
- * limit. A busier day is still corrected, with a baseline that lists no rows and no 「元に戻す」.
+ * The most rows of one day a baseline lists, and 「元に戻す」 writes back with `expected` as a row list. A day holds a few
+ * dozen switches; this bound keeps the undo of a split on the busiest listed day (`rows` of this many, `expected` of one
+ * more) under the API's request body limit. A busier day names its rows by their `dayDigest` instead, and its 「元に戻す」
+ * writes back up to {@link UNDO_ROWS_MAX} rows.
  */
 export const DAY_ROWS_MAX = 300
+
+/**
+ * The most rows 「元に戻す」 writes back on a day busier than {@link DAY_ROWS_MAX}, whose expectation is a digest rather than
+ * a row list: 600 rows alone stay well under the API's request body limit. A busier day is still corrected, without 「元に戻す」.
+ */
+export const UNDO_ROWS_MAX = 2 * DAY_ROWS_MAX
+
+// A busy day's rows as `dayDigest` sums them up (`${count}:${hex}`), in place of the row list.
+const dayDigestSchema = z.string().min(1).max(64)
 
 // The rows an edit is checked against; one over {@link DAY_ROWS_MAX}, since a split on the busiest listed day leaves one
 // more, which its undo must name as `expected`.
@@ -186,13 +199,15 @@ const carriedInSchema = z
  * The day a correction-sheet edit was made on, as the sheet saw it: the stored zone, the day's own rows, oldest first, the
  * record carried into it and the switch its last row runs into. The router refuses the edit (CONFLICT,
  * `REFUSAL.dayChanged`) unless the day still reads exactly so, which makes the sheet's snapshot the day's true state
- * before the edit and lets 「元に戻す」 know the state the edit left. `rows` is left out on a day busier than
- * {@link DAY_ROWS_MAX}: the router then checks the rest, and that the edited row is inside the day.
+ * before the edit and lets 「元に戻す」 know the state the edit left. A day busier than {@link DAY_ROWS_MAX} sends `digest`
+ * (`dayDigest` of its rows) instead of `rows`: the router compares that, and that the edited row is inside the day. A baseline
+ * with neither is accepted only on a day that holds more than {@link DAY_ROWS_MAX} rows (clients from before the digest).
  */
 const dayBaselineSchema = z.object({
   day: daySchema,
   timeZone: timeZoneSchema,
   rows: dayRowsSchema.optional(),
+  digest: dayDigestSchema.optional(),
   carriedIn: carriedInSchema,
   carriedOutId: carriedOutIdSchema,
 })
@@ -291,26 +306,44 @@ export const REFUSAL = Object.freeze({
 
 /**
  * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only
- * while the stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left, and its last
- * row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's). `account` is the user the edit was
+ * while the stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left (on a day
+ * busier than {@link DAY_ROWS_MAX}, `expectedDigest`, their `dayDigest`, with up to {@link UNDO_ROWS_MAX} rows; exactly one
+ * of the two), and its last row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's). `account` is the user the edit was
  * written as (its returned row's `userId`): a tab that another tab has since signed in as someone else still sends the new session's cookie, and a detox-only
  * day passes every other check on an empty day. Left out, it is not compared (seeds and the API's own tests).
  */
-export const replaceDayInputSchema = z.object({
-  day: daySchema,
-  timeZone: timeZoneSchema,
-  expected: dayRowsSchema,
-  carriedOutId: carriedOutIdSchema,
-  account: z.string().optional(),
-  rows: z
-    .array(
-      z.object({
-        activityId: z.uuid().nullable(),
-        startedAt: z.coerce.date(),
-        // A detox re-tap that started a new run keeps doing so once written back; left out (older clients), it is false.
-        startsRun: z.boolean().optional(),
-      }),
-    )
-    .max(DAY_ROWS_MAX),
-})
+export const replaceDayInputSchema = z
+  .object({
+    day: daySchema,
+    timeZone: timeZoneSchema,
+    expected: dayRowsSchema.optional(),
+    expectedDigest: dayDigestSchema.optional(),
+    carriedOutId: carriedOutIdSchema,
+    account: z.string().optional(),
+    rows: z
+      .array(
+        z.object({
+          activityId: z.uuid().nullable(),
+          startedAt: z.coerce.date(),
+          // A detox re-tap that started a new run keeps doing so once written back; left out (older clients), it is false.
+          startsRun: z.boolean().optional(),
+        }),
+      )
+      .max(UNDO_ROWS_MAX),
+  })
+  .refine(
+    (input) =>
+      (input.expected === undefined) !== (input.expectedDigest === undefined),
+    {
+      message: 'name exactly one of expected and expectedDigest',
+    },
+  )
+  // A row list as the expectation keeps the request to the size the body limit was sized for.
+  .refine(
+    (input) =>
+      input.expected === undefined || input.rows.length <= DAY_ROWS_MAX,
+    {
+      message: `rows beyond ${DAY_ROWS_MAX} need expectedDigest`,
+    },
+  )
 export type ReplaceDayInput = z.infer<typeof replaceDayInputSchema>
