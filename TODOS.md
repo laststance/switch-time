@@ -54,18 +54,6 @@
 **Priority:** P3
 **Depends on:** Starting native builds
 
-### Keep the error's place while a sign-in retry runs
-
-**What:** Hold the alert box's height while a retry is in flight, so the card does not jump when its error goes and comes back.
-
-**Why:** `useAuthForm` reads `request.error`, which TanStack Query clears the moment the next request starts. On a card with no registration notice, the error box (about 50px) disappears when the button is pressed again and returns with the next error, and the centred card moves about 25px each way. The registration notice already keeps the box: it comes back while a retry runs, and an error takes its place again.
-
-**Context:** `serverError` in `apps/app/src/hooks/use-auth-form.ts`; the box is drawn by `AuthCard` (`apps/app/src/components/auth-card.tsx`). Left by the PR that put the auth errors in Japanese and kept the notice through typing (0.24.11.0). Draw the retry state on the pen board 「ST Phone / サインイン・入力中と失敗」 first.
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** The retry state on the pen board
-
 ### Draw the auth screens with the keyboard open
 
 **What:** Add a keyboard-open state of the sign-in and sign-up boards to the pen file, then keep the focused field and the submit button above the keyboard on iOS and Android (a `KeyboardAvoidingView` or a scrollable card).

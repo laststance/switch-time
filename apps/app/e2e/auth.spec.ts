@@ -308,6 +308,51 @@ test('a wrong password after sign-up replaces the notice with the sign-in error,
   expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
 })
 
+test('a sign-in retried after an error keeps the error in its box, and the card in place, until the answer lands', async ({
+  page,
+}) => {
+  // Arrange: the first try is refused at once, the second waits for the test to let it answer
+  let answerRetry = (): void => {}
+  const retryMayAnswer = new Promise<void>((resolve) => {
+    answerRetry = resolve
+  })
+  let tries = 0
+  await page.route('**/api/auth/sign-in/email', async (route) => {
+    tries += 1
+    if (tries === 2) await retryMayAnswer
+    await route.fulfill({
+      status: tries === 1 ? 401 : 500,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        tries === 1
+          ? { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email' }
+          : { message: 'Internal Server Error' },
+      ),
+    })
+  })
+  await page.goto('/sign-in')
+  await page.getByLabel('メールアドレス').fill(uniqueEmail())
+  await page.getByLabel('パスワード').fill(PASSWORD)
+  await page.getByRole('button', { name: 'サインイン' }).click()
+  await expect(page.getByRole('alert')).toHaveText(
+    'メールアドレスかパスワードが違います',
+  )
+  const addressTopBefore = await addressTop(page)
+
+  // Act
+  await page.getByRole('button', { name: 'サインイン' }).click()
+
+  // Assert: while the retry is out, the first error stays and the card has not moved
+  await expect(page.getByRole('button', { name: 'サインイン' })).toBeDisabled()
+  await expect(page.getByRole('alert')).toHaveText(
+    'メールアドレスかパスワードが違います',
+  )
+  expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
+  answerRetry()
+  await expect(page.getByRole('alert')).toHaveText('もう一度お試しください')
+  expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
+})
+
 test('a sign-in the rate limit refuses asks to wait, in Japanese', async ({
   page,
 }) => {

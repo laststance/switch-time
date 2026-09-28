@@ -68270,6 +68270,233 @@
         },
         {
           "type": "frame",
+          "id": "LRM9a",
+          "name": "再試行中（エラーの箱は残る）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "ppGDG",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "再試行中。ボタンを押し直しても、直前のエラーの箱は同じ位置に同じ高さで残り、カードは動かない。ボタンだけが薄くなって待つ。次の答えが来たら、箱の文言が入れ替わる（成功なら画面ごと移る）",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ZjlHi",
+              "name": "AuthCard",
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": "$radius-card",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "WGRcZ",
+                  "name": "Title",
+                  "fill": "$ink",
+                  "content": "サインイン",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "GYLNR",
+                  "name": "エラー（role=alert）",
+                  "width": "fill_container",
+                  "fill": "$chip",
+                  "cornerRadius": "$radius-chip",
+                  "layout": "vertical",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JzkNI",
+                      "name": "Notice",
+                      "fill": "$ink",
+                      "content": "メールアドレスかパスワードが違います",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MCtgd",
+                  "name": "メールアドレス",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "M9NFb",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "メールアドレス",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JAgAo",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tlCmp",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "you@example.com",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UcY0U",
+                  "name": "パスワード",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "f6I1Gy",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "パスワード",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "amDYi",
+                      "name": "Input",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-chip",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fz2do",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "••••••••",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ux4rj",
+                  "name": "サインイン",
+                  "opacity": 0.4,
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$accent",
+                  "cornerRadius": "$radius-chip",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "GP8xa",
+                      "name": "Label",
+                      "fill": "#FFFFFF",
+                      "content": "サインイン",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b6LVd",
+                  "name": "新規登録はこちら",
+                  "width": "fill_container",
+                  "padding": [
+                    8,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "T468qY",
+                      "name": "Label",
+                      "fill": "$accent",
+                      "content": "新規登録はこちら",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "V88TE",
           "name": "エラーの文言",
           "width": 362,
