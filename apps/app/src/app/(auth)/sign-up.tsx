@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { useAuthForm } from '@/hooks/use-auth-form'
 import { useRegistration } from '@/hooks/use-registration'
 import { authClient } from '@/lib/auth-client'
+import { FOCUS_RING, pressLook } from '@/lib/press'
+import { cn } from '@/lib/utils'
 
 export default function SignUpScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>()
@@ -48,7 +50,10 @@ export default function SignUpScreen() {
         href={{ pathname: '/sign-in', params: next ? { next } : {} }}
         asChild
       >
-        <Pressable role="link" className="items-center py-2">
+        <Pressable
+          role="link"
+          className={cn(FOCUS_RING, pressLook(false), 'items-center py-2')}
+        >
           <Text className="text-accent text-xs">サインインはこちら</Text>
         </Pressable>
       </Link>

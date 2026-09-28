@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 
 import { StrokeIcon } from '@/components/stroke-icon'
 import { useTokenColor } from '@/hooks/use-token-color'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 // Nav glyphs straight from the design (ST Web NAV_ICONS).
@@ -46,6 +47,8 @@ export function NavItem({
       role="tab"
       aria-selected={isFocused}
       className={cn(
+        FOCUS_RING,
+        pressLook(false),
         'rounded-chip',
         VARIANTS[variant].item,
         isFocused && VARIANTS[variant].focused,

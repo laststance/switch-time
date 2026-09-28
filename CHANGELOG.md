@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.10.0] - 2026-09-29
+
+### Changed
+
+- Every tap target now shows where keyboard focus is and answers a press, as
+  the correction sheet's buttons already did: a 2 px `ink` ring on Tab focus
+  (never after a mouse click) and 70 % opacity while pressed. It covers the
+  correction sheet's row headers, activity pills, 完了 and ✕, the buttons and
+  switches on ホーム, 記録 and 設定, the tab bar, the 区切りの選択 and the
+  sign-in links. A row inside a card that clips its edges draws the ring
+  inside.
+- The idle spans of the 24-h bar on ホーム are dashed in `sub` instead of
+  `line`, like 記録's dashed days, so the dash clears 3:1 against the card.
+
+### Fixed
+
+- A day excluded by hand after a day of detox no longer loses its dashes on
+  記録: the detox outline sits inside the dashed border with a 1 px gap, so its
+  solid lines no longer fill the dashes' gaps and the cell reads as excluded.
+
 ## [0.24.9.0] - 2026-09-29
 
 ### Fixed

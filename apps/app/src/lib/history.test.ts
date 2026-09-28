@@ -7,6 +7,7 @@ import {
   weekStart,
   type HistoryActivity,
   type HistoryStats,
+  type Slice,
 } from './history'
 
 const H = 3_600_000
@@ -406,6 +407,66 @@ test('a detox part alone on the track is outlined with all four corners rounded,
   })
 })
 
+test('the detox outline inside an excluded cell has corners tighter than the cell, so it stays concentric with the dashes', () => {
+  // Arrange: a detox outline and an activity fill, each the top slice of an excluded cell
+  const detoxOnTop: Slice = {
+    activityId: null,
+    color: null,
+    height: 33,
+    top: true,
+    bottom: false,
+  }
+  const workOnFloor: Slice = {
+    activityId: 'work',
+    color: '#3B7BD9',
+    height: 33,
+    top: false,
+    bottom: true,
+  }
+
+  // Act
+  const detoxLook = sliceLook(detoxOnTop, true)
+  const workLook = sliceLook(workOnFloor, true)
+
+  // Assert
+  expect(detoxLook.className).toBe('rounded-t-sm border-sub border')
+  expect(workLook.className).toBe('rounded-b-sm')
+})
+
+test('a day excluded by hand after a whole day of detox draws its outline 2 px inside the cell, off the dashed border', () => {
+  // Arrange: 9/9 was excluded by hand after 24 h of detox
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-03'),
+      day('2026-09-04'),
+      day('2026-09-05'),
+      day('2026-09-06'),
+      day('2026-09-07'),
+      day('2026-09-08'),
+      day('2026-09-09', { excluded: 'manual', detoxMs: 24 * H }),
+    ],
+    totals: {},
+    measuredDays: 0,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: the 132 px track less the 1 px dash and the 1 px gap at both ends; still an excluded day, not a detox day
+  expect(view.rows[0]?.[6]?.kind).toBe('excluded')
+  expect(view.rows[0]?.[6]?.slices).toEqual([
+    { activityId: null, color: null, height: 128, top: true, bottom: true },
+  ])
+})
+
 test('a few minutes of detox draw no stray line in the short month cells', () => {
   // Arrange: 9/9 had 8 h of 仕事 and 30 min of detox; a month cell is 48 px, so 30 min is 1 px
   const stats: HistoryStats = {
@@ -474,17 +535,17 @@ test('an excluded day still draws its detox part, stacked inside the dashed bord
     activities,
   })
 
-  // Assert: the 132 px track keeps 130 px inside its 1 px border
+  // Assert: the 132 px track keeps 128 px inside its 1 px border and 1 px gap
   expect(view.rows[0]?.[6]?.kind).toBe('excluded')
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 32.5,
+      height: 32,
       top: false,
       bottom: true,
     },
-    { activityId: null, color: null, height: 16.25, top: true, bottom: false },
+    { activityId: null, color: null, height: 16, top: true, bottom: false },
   ])
 })
 
@@ -519,16 +580,16 @@ test('a whole excluded day fits inside its dashed border, so the top of its deto
     activities,
   })
 
-  // Assert: 97.5 + 32.5 = the 130 px inside the border, not the 132 px track
+  // Assert: 96 + 32 = the 128 px inside the border and the gap, not the 132 px track
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 97.5,
+      height: 96,
       top: false,
       bottom: true,
     },
-    { activityId: null, color: null, height: 32.5, top: true, bottom: false },
+    { activityId: null, color: null, height: 32, top: true, bottom: false },
   ])
 })
 
@@ -703,8 +764,8 @@ test('an excluded day that still holds time reads 平均から除外, then each 
 })
 
 test('an excluded fall-back day whose lower activities fill the bar exactly keeps the rounded top on its last drawn slice', () => {
-  // Arrange: on the excluded 25-h day 2 h of 仕事 and 22 h of 家事 fill the 130 px inside the border, then 1 h of 旧 has no room;
-  // 130 - 10.83 - 119.17 leaves a 1e-14 px float residue rather than 0
+  // Arrange: on the excluded 25-h day 2 h of 仕事 and 22 h of 家事 fill the 128 px inside the border and the gap, then 1 h of 旧 has no room;
+  // 128 - 10.67 - 117.33 leaves a float residue rather than 0
   const stats: HistoryStats = {
     days: [
       day('2026-09-03'),
@@ -1374,12 +1435,12 @@ test('an excluded 25-hour fall-back day is cut at the inside of its dashed borde
     activities,
   })
 
-  // Assert: 130 px inside the 1 px border, and the label keeps the full 25 h
+  // Assert: 128 px inside the 1 px border and 1 px gap, and the label keeps the full 25 h
   expect(view.rows[0]?.[6]?.slices).toEqual([
     {
       activityId: 'work',
       color: '#3B7BD9',
-      height: 130,
+      height: 128,
       top: true,
       bottom: true,
     },

@@ -3,6 +3,7 @@ import { Pressable, Text } from 'react-native'
 import { StrokeIcon } from '@/components/stroke-icon'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { activityIcon } from '@/lib/icons'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type ActivityPillProps = {
@@ -59,9 +60,10 @@ export function ActivityPill({
       disabled={disabled}
       onPress={onPress}
       className={cn(
+        FOCUS_RING,
         'h-9.5 flex-row items-center gap-1.5 rounded-pill border px-3.5',
         look.root,
-        disabled && 'opacity-40',
+        pressLook(disabled),
       )}
       style={look.style}
     >

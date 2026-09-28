@@ -4,6 +4,7 @@ import { StrokeIcon } from '@/components/stroke-icon'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { DETOX } from '@/lib/detox'
 import { activityIcon } from '@/lib/icons'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -51,7 +52,9 @@ export function DetoxRow({
       aria-keyshortcuts={hotkey}
       onPress={onPress}
       className={cn(
+        FOCUS_RING,
         'h-12 w-full flex-row items-center justify-center gap-2.25 rounded-chip border px-4',
+        pressLook(false),
         look.root,
       )}
     >

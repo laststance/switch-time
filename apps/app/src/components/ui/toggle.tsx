@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native'
 
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type ToggleProps = {
@@ -35,9 +36,10 @@ export function Toggle({
         onChange(!value)
       }}
       className={cn(
+        FOCUS_RING,
         'h-7.5 w-13 justify-center rounded-pill px-0.5',
         value ? 'bg-accent items-end' : 'bg-chip items-start',
-        disabled && 'opacity-40',
+        pressLook(disabled),
       )}
     >
       <View className="h-6.5 w-6.5 rounded-pill bg-white" />

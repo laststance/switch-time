@@ -39,12 +39,12 @@ type Segment = {
 }
 
 // Spans with no colour of their own are outlined over the `chip` track: detox solid in `sub` (the same mark as detox on 記録),
-// idle dashed in `line` (dashed = no data, as 記録's 「点線の日」, whose dash is `sub`; TODOS.md has raising this one to 3:1).
+// idle dashed in `sub` (dashed = no data, as 記録's 「点線の日」, and `sub` clears 3:1 against the card where `line` does not).
 // Detox differs from idle by shape as well as tone.
 const LOOK = {
   detox: { className: 'border border-sub', backgroundColor: undefined },
   idle: {
-    className: 'border border-dashed border-line',
+    className: 'border border-dashed border-sub',
     backgroundColor: undefined,
   },
 }
@@ -70,7 +70,7 @@ type TodayFlowProps = {
 
 /**
  * The 24-hour bar: one absolutely placed slice per segment in its activity colour over the `chip` fill. Detox spans (no activity)
- * are outlined solid in `sub`; idle segments (past the idle threshold) are dashed in `line` on both platforms. Ponytail: the native
+ * are outlined solid in `sub`; idle segments (past the idle threshold) are dashed in `sub` on both platforms. Ponytail: the native
  * hatch pattern is skipped, dashed reads the same.
  * The wide legend ({@link legendEntries}) names every activity drawn, and detox when a span was recorded to nothing.
  * @example <TodayFlow segments={segments} activities={activities} start={start} end={end} />

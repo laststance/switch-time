@@ -3,6 +3,8 @@ import { Pressable, Text, View } from 'react-native'
 
 import { Control } from '@/components/control'
 import { useAccountZone } from '@/hooks/use-account-zone'
+import { FOCUS_RING, pressLook } from '@/lib/press'
+import { cn } from '@/lib/utils'
 
 /**
  * 設定's タイムゾーン row (`ST Phone / 設定・タイムゾーン行の状態`): a link to the タイムゾーン sheet showing the account's zone against
@@ -18,7 +20,11 @@ export function TimeZoneRow({ className }: { className: string }) {
       <Link href="/time-zone" asChild>
         <Pressable
           aria-label="タイムゾーン"
-          className="min-h-11 flex-1 flex-row items-center gap-3"
+          className={cn(
+            FOCUS_RING,
+            pressLook(false),
+            'min-h-11 flex-1 flex-row items-center gap-3',
+          )}
         >
           <View className="flex-1 gap-0.5">
             <Text className="text-ink text-sm font-semibold">タイムゾーン</Text>

@@ -2637,6 +2637,75 @@ test('a control shows a 2 px ink ring 2 px outside it on keyboard focus, and non
   await expect(later).toHaveCSS('outline-offset', '2px')
 })
 
+test('the sheet’s own buttons show the ring on keyboard focus (a row header inside, the rest outside) and dim to 70 % while pressed', async ({
+  page,
+}) => {
+  // Arrange: 仕事 9:00 – 12:00 with its panel open, so the row header, the picker's pills, ✕ and 完了 are all on screen
+  const { yesterday } = await seedYesterday(page)
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const header = dialog.getByRole('button', { name: '仕事 9:00 – 12:00 3時間' })
+  await header.click()
+  const done = dialog.getByRole('button', { name: '完了' })
+  const close = dialog.getByRole('button', { name: '閉じる' })
+  const pill = dialog.getByRole('radio', { name: '休息' })
+
+  // Assert: a mouse click left no ring on the header it landed on
+  await expect(header).toHaveCSS('outline-style', 'none')
+
+  // Act: keyboard focus arrives on each in turn, by Tab from the element before it
+  await close.focus()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+
+  // Assert: ✕ takes the 2 px ring 2 px outside
+  await expect(close).toBeFocused()
+  await expect(close).toHaveCSS('outline-style', 'solid')
+  await expect(close).toHaveCSS('outline-width', '2px')
+  await expect(close).toHaveCSS('outline-offset', '2px')
+
+  // Act
+  await pill.focus()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+
+  // Assert
+  await expect(pill).toBeFocused()
+  await expect(pill).toHaveCSS('outline-style', 'solid')
+  await expect(pill).toHaveCSS('outline-offset', '2px')
+
+  // Act
+  await done.focus()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+
+  // Assert
+  await expect(done).toBeFocused()
+  await expect(done).toHaveCSS('outline-style', 'solid')
+  await expect(done).toHaveCSS('outline-offset', '2px')
+
+  // Act: the row header is inside a card that clips its edges, so its ring sits 2 px inside
+  await header.focus()
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+
+  // Assert
+  await expect(header).toBeFocused()
+  await expect(header).toHaveCSS('outline-style', 'solid')
+  await expect(header).toHaveCSS('outline-width', '2px')
+  await expect(header).toHaveCSS('outline-offset', '-2px')
+
+  // Act: a press dims 完了 to 70 %; the pointer leaves before it lets go, so the click never lands and the sheet stays open
+  await expect(done).toHaveCSS('opacity', '1')
+  await done.hover()
+  await page.mouse.down()
+
+  // Assert
+  await expect(done).toHaveCSS('opacity', '0.7')
+  await page.mouse.move(0, 0)
+  await page.mouse.up()
+})
+
 test('a control dims to 70 % while pressed, and a disabled one stays at 40 %', async ({
   page,
 }) => {

@@ -500,7 +500,7 @@ test('tapping detox unpresses every activity, dims the readout and outlines the 
   await expect(span).toHaveCSS('border-top-color', sub)
 })
 
-test('an activity left running past the idle threshold is dashed in line on the bar, unlike detox', async ({
+test('an activity left running past the idle threshold is dashed in sub on the bar, unlike detox', async ({
   page,
 }) => {
   // Arrange: 仕事 from 0:00 yesterday runs into today until the sign-up tap, past the 16 h idle threshold at any hour
@@ -518,7 +518,8 @@ test('an activity left running past the idle threshold is dashed in line on the 
   // Act
   await page.reload()
 
-  // Assert: the carried-in span is idle, dashed and not in the `sub` tone of the bar's own hour labels
+  // Assert: the carried-in span is idle, dashed, and in the `sub` tone of the bar's own hour labels (as History's dashed days), so
+  // the dash clears 3:1 against the card
   const span = page
     .getByRole('img', { name: '今日の流れ' })
     .locator('div')
@@ -527,7 +528,7 @@ test('an activity left running past the idle threshold is dashed in line on the 
   const sub = await page
     .getByText('0:00', { exact: true })
     .evaluate((el) => getComputedStyle(el).color)
-  await expect(span).not.toHaveCSS('border-top-color', sub)
+  await expect(span).toHaveCSS('border-top-color', sub)
 })
 
 test('a detox left running overnight stays a solid sub outline on the bar, not an idle dash', async ({
