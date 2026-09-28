@@ -14,7 +14,7 @@ import { z } from 'zod'
 
 import { excludedDays, switches } from '../db/schema/app'
 
-import { authed, boundedTransaction } from './base'
+import { authed, boundedRead } from './base'
 import { getSettings } from './settings'
 
 // Totals, streak and exclusions for `count` days from `first`, all in the user's own time zone.
@@ -31,7 +31,8 @@ async function rangeStats(
   const { end } = dayBounds(addDays(first, count - 1), timeZone)
   const today = localDay(new Date(now), timeZone)
   // Both reads on one connection and one snapshot: one connection per request, and exclusions that match the timeline.
-  const { tapped, manual } = await boundedTransaction(
+  const { tapped, manual } = await boundedRead(
+    userId,
     deadline,
     async (tx) => ({
       // Every tap, oldest first, in one read: the window's timeline and which days count both come from it, so an edit
@@ -54,7 +55,6 @@ async function rangeStats(
         .from(excludedDays)
         .where(eq(excludedDays.userId, userId)),
     }),
-    { isolationLevel: 'repeatable read', accessMode: 'read only' },
   )
   // The window's rows plus its neighbours, as switchesBetween reads them: the state carried in and the switch that closes the last row.
   const carriedIn =

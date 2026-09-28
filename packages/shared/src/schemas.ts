@@ -294,7 +294,8 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  * - `cannotSplit`: CONFLICT, a split would leave a part under a minute, or fall outside its record or the baseline's day.
  * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of writes under the user's lock in flight (timeline writes,
  *   the activity writes that pick or check the live set, a zone change share it), or the write reached the
- *   request's deadline while queued behind the account's earlier writes. Nothing was saved either way.
+ *   request's deadline while queued behind the account's earlier writes, or a read of several queries (`stats.*`,
+ *   `switches.current`, `switches.listByDay`) finds the account's cap of them in flight. Nothing was saved either way.
  * - `inUse`: CONFLICT, `archive` names the activity the clock is running, or the account's last live one.
  * - `tooManyActivities`: CONFLICT, `create` or `unarchive` would take the live set past {@link LIVE_ACTIVITIES_MAX}.
  * - `listChanged`: CONFLICT, `reorder` names a live set another device or tab has added to or archived from since.

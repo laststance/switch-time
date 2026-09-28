@@ -1,6 +1,8 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import { drizzle } from 'drizzle-orm/node-postgres'
 import type { PgTransactionConfig } from 'drizzle-orm/pg-core'
-import { Pool } from 'pg'
+import { Pool, type PoolClient, type QueryConfig } from 'pg'
 
 import { dbEnv } from './env'
 import { relations } from './relations'
@@ -78,8 +80,6 @@ async function endSession(backendPid: number, lentAt: Date): Promise<void> {
   }
 }
 
-export const db = drizzle({ client: pool, relations })
-
 /**
  * A transaction opened by {@link inTransaction}. Opened through {@link withUserLock}, it holds the user's lock until it
  * commits or rolls back; the reads and `activities.update` open one without the lock.
@@ -113,29 +113,25 @@ export class DeadlineError extends Error {
 }
 
 /**
- * Runs `work` in one transaction on a pool connection the call owns, and gives up at `deadline`: the connection is then
- * destroyed (a stuck socket never returns to the pool), its server session is ended with `pg_terminate_backend` so the
- * transaction and the lock it holds go at once (when that does not reach or match the session, an idle one ends after
- * {@link IDLE_IN_TRANSACTION_TIMEOUT_MS} and a running statement at its `statement_timeout`), and the call rejects with
- * {@link DeadlineError} without waiting for `work`. A call already past its
- * deadline takes no connection at all.
- * `db.transaction` cannot do this: it releases its connection itself, only once the transaction settles, and never when
- * BEGIN fails. Called only through {@link boundedTransaction}, which answers the {@link DeadlineError} as an ORPCError.
+ * Runs `use` on a pool connection the call owns and gives up at `deadline`: the connection is then destroyed (a stuck socket
+ * never returns to the pool), its server session is ended with `pg_terminate_backend` so a transaction and the lock it holds go
+ * at once (when that does not reach or match the session, an idle one ends after {@link IDLE_IN_TRANSACTION_TIMEOUT_MS} and a
+ * running statement at its `statement_timeout`), and the call rejects with {@link DeadlineError} without waiting for `use`. A
+ * call already past its deadline takes no connection at all. The pool's own release cannot do this: it waits for the
+ * statement, and a half-open socket never answers.
  * @param deadline - Epoch ms; a call that reaches it before it has a connection releases the late connection unused.
- * @param work - Reads and writes, all through the transaction it is handed.
- * @param config - Isolation level and access mode for BEGIN.
- * @returns whatever `work` returns, once committed
- * @example await inTransaction(deadline, (tx) => tx.select().from(switches), { accessMode: 'read only' })
+ * @param isCommitting - Read when the deadline passes, for {@link DeadlineError.committing}: whether only COMMIT was left.
+ * @param use - Runs on the connection; its rejection is passed on, and the connection is released when it settles.
+ * @returns whatever `use` returns
  */
-export async function inTransaction<T>(
+async function onClientUntil<T>(
   deadline: number,
-  work: (tx: LockedTx) => Promise<T>,
-  config?: PgTransactionConfig,
+  isCommitting: () => boolean,
+  use: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
   // A request that spent its budget before this point (a slow session lookup) never takes a connection.
   if (Date.now() >= deadline) throw new DeadlineError(false)
   let expired = false
-  let committing = false
   let release: ((error?: Error) => void) | undefined
   let abandon: (() => void) | undefined
   const cutOff = Promise.withResolvers<never>()
@@ -143,7 +139,7 @@ export async function inTransaction<T>(
     () => {
       expired = true
       abandon?.()
-      cutOff.reject(new DeadlineError(committing))
+      cutOff.reject(new DeadlineError(isCommitting()))
     },
     Math.max(0, deadline - Date.now()),
   )
@@ -151,7 +147,7 @@ export async function inTransaction<T>(
     const client = await pool.connect()
     const lentAt = new Date()
     let released = false
-    // Exactly once, whichever of the deadline and the settled transaction comes first.
+    // Exactly once, whichever of the deadline and the settled call comes first.
     release = (error): void => {
       if (released) return
       released = true
@@ -177,14 +173,7 @@ export async function inTransaction<T>(
       throw new DeadlineError(false)
     }
     try {
-      return await drizzle({ client, relations }).transaction(async (tx) => {
-        const result = await work(tx)
-        // Past the deadline, roll back instead of sending a COMMIT the app may no longer wait for.
-        if (Date.now() >= deadline) throw new DeadlineError(false)
-        // Only COMMIT is left from here: a cut-off now cannot tell whether it landed.
-        committing = true
-        return result
-      }, config)
+      return await use(client)
     } finally {
       release()
     }
@@ -195,3 +184,79 @@ export async function inTransaction<T>(
     clearTimeout(timer)
   }
 }
+
+/**
+ * Runs `work` in one transaction on a connection the call owns, and gives up at `deadline` ({@link onClientUntil}).
+ * `db.transaction` cannot do this: it releases its connection itself, only once the transaction settles, and never when
+ * BEGIN fails. Called only through {@link boundedTransaction}, which answers the {@link DeadlineError} as an ORPCError.
+ * @param deadline - Epoch ms; a call that reaches it before it has a connection releases the late connection unused.
+ * @param work - Reads and writes, all through the transaction it is handed.
+ * @param config - Isolation level and access mode for BEGIN.
+ * @returns whatever `work` returns, once committed
+ * @example await inTransaction(deadline, (tx) => tx.select().from(switches), { accessMode: 'read only' })
+ */
+export async function inTransaction<T>(
+  deadline: number,
+  work: (tx: LockedTx) => Promise<T>,
+  config?: PgTransactionConfig,
+): Promise<T> {
+  let committing = false
+  return onClientUntil(
+    deadline,
+    () => committing,
+    async (client) =>
+      drizzle({ client, relations }).transaction(async (tx) => {
+        const result = await work(tx)
+        // Past the deadline, roll back instead of sending a COMMIT the app may no longer wait for.
+        if (Date.now() >= deadline) throw new DeadlineError(false)
+        // Only COMMIT is left from here: a cut-off now cannot tell whether it landed.
+        committing = true
+        return result
+      }, config),
+  )
+}
+
+/** The request being served: its deadline (epoch ms), and whether a statement of it has reached that deadline. */
+type RequestClock = { deadline: number; expired: boolean }
+
+/**
+ * The {@link RequestClock} of the request being served. Set by the router's first middleware around the whole call, so a
+ * statement run through {@link db} (Better Auth's session lookup included) reads the deadline without being handed it, and
+ * the middleware can tell a statement ran out of time even when the library that ran it wrapped the error.
+ */
+export const requestDeadline = new AsyncLocalStorage<RequestClock>()
+
+/**
+ * Runs one statement on a pooled connection the call owns, under the request's deadline ({@link requestDeadline}; a
+ * statement outside a request gets a whole {@link REQUEST_DEADLINE_MS} from now). Stands in for the pool's own query, which
+ * lends a connection and waits for it, however long a half-open socket takes to give up. Called by drizzle for every
+ * statement run through {@link db} outside a transaction; a statement that reaches the deadline rejects with
+ * {@link DeadlineError}, whose `committing` is false: what runs here is a read (the writes go through
+ * {@link inTransaction}), or a seed that repeats harmlessly. It also marks the request's clock `expired`.
+ * @param config - Drizzle's query config (text, row mode, type parsers).
+ * @param values - The statement's parameters.
+ * @returns the driver's result
+ */
+async function queryWithinDeadline(config: QueryConfig, values?: unknown[]) {
+  const clock = requestDeadline.getStore()
+  try {
+    return await onClientUntil(
+      clock?.deadline ?? Date.now() + REQUEST_DEADLINE_MS,
+      () => false,
+      async (client) => client.query(config, values),
+    )
+  } catch (error) {
+    if (clock && error instanceof DeadlineError) clock.expired = true
+    throw error
+  }
+}
+
+// The pool as drizzle sees it: the pool itself (so a transaction opened on `db` still lends a connection from it), with
+// `query` bounded. Drizzle tells a pool from a client by its prototype chain, and calls `query` for a statement and `connect`
+// for a transaction.
+const boundedPool: Pool = Object.assign(Object.create(pool), {
+  query: queryWithinDeadline,
+  connect: pool.connect.bind(pool),
+})
+
+export const db = drizzle({ client: boundedPool, relations })

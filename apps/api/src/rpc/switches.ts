@@ -29,13 +29,7 @@ import { z } from 'zod'
 import { db, type Executor, type LockedTx } from '../db/client'
 import { activities, switches } from '../db/schema/app'
 
-import {
-  authed,
-  boundedTransaction,
-  one,
-  ownSwitch,
-  withUserLock,
-} from './base'
+import { authed, boundedRead, one, ownSwitch, withUserLock } from './base'
 import { getSettings } from './settings'
 
 type SwitchRow = typeof switches.$inferSelect
@@ -364,46 +358,42 @@ async function switchesBetween(
   timeZone: string,
   deadline: number,
 ) {
-  return boundedTransaction(
-    deadline,
-    async (tx) => {
-      const [carriedIn] = await tx
-        .select()
-        .from(switches)
-        .where(and(own(userId), lt(switches.startedAt, new Date(start))))
-        .orderBy(desc(switches.startedAt))
-        .limit(1)
-      const rows = await tx
-        .select()
-        .from(switches)
-        .where(inDay(userId, { start, end }))
-        .orderBy(asc(switches.startedAt))
-      const [carriedOut] = await tx
-        .select()
-        .from(switches)
-        .where(and(own(userId), gte(switches.startedAt, new Date(end))))
-        .orderBy(asc(switches.startedAt))
-        .limit(1)
-      return {
-        carriedIn: carriedIn ?? null,
-        rows,
-        carriedOut: carriedOut ?? null,
-        carriedOutRun: carriedOut
-          ? await carriedOutRunOf(tx, userId, carriedOut, timeZone)
-          : [],
-        // Read as detox even when an activity is carried in: a pick to detox joins the run before it.
-        carriedInRunStart: carriedIn
-          ? await runStartOf(
-              tx,
-              userId,
-              { ...carriedIn, activityId: null },
-              timeZone,
-            )
-          : null,
-      }
-    },
-    { isolationLevel: 'repeatable read', accessMode: 'read only' },
-  )
+  return boundedRead(userId, deadline, async (tx) => {
+    const [carriedIn] = await tx
+      .select()
+      .from(switches)
+      .where(and(own(userId), lt(switches.startedAt, new Date(start))))
+      .orderBy(desc(switches.startedAt))
+      .limit(1)
+    const rows = await tx
+      .select()
+      .from(switches)
+      .where(inDay(userId, { start, end }))
+      .orderBy(asc(switches.startedAt))
+    const [carriedOut] = await tx
+      .select()
+      .from(switches)
+      .where(and(own(userId), gte(switches.startedAt, new Date(end))))
+      .orderBy(asc(switches.startedAt))
+      .limit(1)
+    return {
+      carriedIn: carriedIn ?? null,
+      rows,
+      carriedOut: carriedOut ?? null,
+      carriedOutRun: carriedOut
+        ? await carriedOutRunOf(tx, userId, carriedOut, timeZone)
+        : [],
+      // Read as detox even when an activity is carried in: a pick to detox joins the run before it.
+      carriedInRunStart: carriedIn
+        ? await runStartOf(
+            tx,
+            userId,
+            { ...carriedIn, activityId: null },
+            timeZone,
+          )
+        : null,
+    }
+  })
 }
 
 // The day's own rows as a baseline or 「元に戻す」's expectation lists them (or digests them), oldest first.
@@ -702,18 +692,14 @@ export const switchesRouter = {
   current: authed.handler(async ({ context }) => {
     const userId = context.user.id
     const { timeZone } = await getSettings(userId)
-    return boundedTransaction(
-      context.deadline,
-      async (tx) => {
-        const latest = await latestSwitch(userId, tx)
-        if (!latest) return null
-        return {
-          ...latest,
-          runStartDay: await runStartOf(tx, userId, latest, timeZone),
-        }
-      },
-      { isolationLevel: 'repeatable read', accessMode: 'read only' },
-    )
+    return boundedRead(userId, context.deadline, async (tx) => {
+      const latest = await latestSwitch(userId, tx)
+      if (!latest) return null
+      return {
+        ...latest,
+        runStartDay: await runStartOf(tx, userId, latest, timeZone),
+      }
+    })
   }),
 
   switchTo: authed

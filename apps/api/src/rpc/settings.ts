@@ -6,7 +6,7 @@ import { db, type Executor } from '../db/client'
 import { userSettings } from '../db/schema/app'
 import { seedUser } from '../db/seed-user'
 
-import { authed, one, withUserLock } from './base'
+import { authed, boundedTransaction, one, withUserLock } from './base'
 
 /**
  * The user's settings row (time zone, idle threshold…); seeded at sign-up, so a miss is a bug rather than a first-launch case.
@@ -58,7 +58,9 @@ export const settingsRouter = {
         })
       // A zone change moves every day's window, so it waits for (and holds off) the timeline's writes, which read the zone.
       if (changes.timeZone === undefined)
-        return updateSettings(userId, changes, db)
+        return boundedTransaction(context.deadline, async (tx) =>
+          updateSettings(userId, changes, tx),
+        )
       return withUserLock(userId, context.deadline, async (tx) =>
         updateSettings(userId, changes, tx),
       )

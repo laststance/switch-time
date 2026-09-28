@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.13.0] - 2026-09-29
+
+### Changed
+
+- Every call to the API now stops waiting on the database at the request's 25 s
+  deadline, the session lookup that runs before each one included; before, only
+  the timeline writes and the multi-query reads did, so a database connection
+  that went half-open after a failover could hold any other call for minutes. A
+  call that runs out of time answers "nothing was saved" (status 500) instead of
+  hanging.
+- A write that Postgres cuts off itself (another instance holds the lock past
+  10 s, or a statement runs past 15 s) now answers "nothing was saved" like a
+  write cut off at the deadline, instead of a plain 500 that the app reads as
+  "may have been saved" and answers by dropping the day's older 「元に戻す」.
+- One account can have 4 multi-query reads (`stats.*`, `switches.current`,
+  `switches.listByDay`) in flight at once; a fifth is refused as busy, so a
+  script calling `stats.month` in a burst cannot hold every database connection.
+- Turning a day on or off in the excluded list, and a settings change that
+  leaves the time zone alone, are now one transaction each (the settings row was
+  created and updated as two separate statements).
+
 ## [0.24.12.0] - 2026-09-29
 
 ### Changed
