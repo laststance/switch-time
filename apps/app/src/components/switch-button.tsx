@@ -13,6 +13,8 @@ type Props = {
   active: boolean
   /** Icon colour when inactive; the first-launch row tints each glyph with its own activity colour. */
   tint?: string
+  /** The digit key that presses it on web ({@link hotkeyFor}), named to assistive tech; none past the ninth button. */
+  hotkey?: string
   onPress: () => void
 }
 
@@ -28,6 +30,7 @@ export function SwitchButton({
   iconKey,
   active,
   tint,
+  hotkey,
   onPress,
 }: Props) {
   const ink = useTokenColor('ink')
@@ -50,6 +53,7 @@ export function SwitchButton({
       role="button"
       // aria-selected is only valid on option / tab / row-like roles; a toggle button reports its state with aria-pressed.
       aria-pressed={active}
+      aria-keyshortcuts={hotkey}
       onPress={onPress}
       className={cn(
         'h-15 shrink grow basis-37.5 flex-row items-center justify-center gap-2 rounded-chip border',

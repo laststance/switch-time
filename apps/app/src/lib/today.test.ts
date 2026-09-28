@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 
 import { SETTINGS_DEFAULTS } from './settings'
-import { countSwitches, daySegments, legendEntries, spanCorners } from './today'
+import { countSwitches, daySegments, legendEntries, spanBox } from './today'
 
 const row = (id: string, activityId: string, startedAt: string) => ({
   id,
@@ -118,32 +118,67 @@ test('the legend names each activity with a span today and adds detox when time 
   ])
 })
 
-test('a span touching an end of the bar takes that end’s rounded corner, so its outline is not clipped open', () => {
+test('a span touching an end of the bar takes that end’s rounded corner and width above its neighbour, so its outline is not clipped open', () => {
   // Arrange: a 0:00–24:00 bar in ms and its own corner classes
   const bounds = { start: 0, end: 86_400_000 }
-  const corners = { first: 'rounded-l-md', last: 'rounded-r-md' }
+  const corners = {
+    first: 'rounded-l-md',
+    last: 'rounded-r-md',
+    endSpan: 'min-w-1.5 z-10 bg-chip',
+  }
 
   // Act
-  const carriedIn = spanCorners(
+  const carriedIn = spanBox(
     { start: -3_600_000, end: 3_600_000 },
     bounds,
     corners,
   )
-  const running = spanCorners(
+  const running = spanBox(
     { start: 82_800_000, end: 86_400_000 },
     bounds,
     corners,
   )
-  const wholeDay = spanCorners({ start: 0, end: 86_400_000 }, bounds, corners)
-  const inside = spanCorners(
-    { start: 3_600_000, end: 7_200_000 },
+  const wholeDay = spanBox({ start: 0, end: 86_400_000 }, bounds, corners)
+  const inside = spanBox({ start: 3_600_000, end: 7_200_000 }, bounds, corners)
+
+  // Assert: a span reaching past the start counts as touching it; a span inside the bar keeps square ends and no minimum
+  expect(carriedIn).toEqual({
+    className: 'rounded-l-md min-w-1.5 z-10 bg-chip',
+    style: { left: '-4.166666666666666%', width: '8.333333333333332%' },
+  })
+  expect(running).toEqual({
+    className: 'rounded-r-md min-w-1.5 z-10 bg-chip',
+    style: { right: 0, width: '4.166666666666666%' },
+  })
+  expect(wholeDay).toEqual({
+    className: 'rounded-l-md rounded-r-md min-w-1.5 z-10 bg-chip',
+    style: { left: '0%', width: '100%' },
+  })
+  expect(inside).toEqual({
+    className: '',
+    style: { left: '4.166666666666666%', width: '4.166666666666666%' },
+  })
+})
+
+test('five minutes of detox just before midnight stay a closed outline: the span is placed from the right, so its minimum width grows into the bar', () => {
+  // Arrange: 23:55–24:00 on a 0:00–24:00 bar, narrower on screen than the bar's 7px corner
+  const bounds = { start: 0, end: 86_400_000 }
+  const corners = {
+    first: 'rounded-l-[7px]',
+    last: 'rounded-r-[7px]',
+    endSpan: 'min-w-[7px] z-10 bg-chip',
+  }
+
+  // Act
+  const lastMinutes = spanBox(
+    { start: 86_100_000, end: 86_400_000 },
     bounds,
     corners,
   )
 
-  // Assert: a span reaching past the start counts as touching it; a span inside the bar keeps square ends
-  expect(carriedIn).toBe('rounded-l-md')
-  expect(running).toBe('rounded-r-md')
-  expect(wholeDay).toBe('rounded-l-md rounded-r-md')
-  expect(inside).toBe('')
+  // Assert
+  expect(lastMinutes).toEqual({
+    className: 'rounded-r-[7px] min-w-[7px] z-10 bg-chip',
+    style: { right: 0, width: '0.3472222222222222%' },
+  })
 })

@@ -1,43 +1,5 @@
 # TODOS
 
-## Home
-
-### Say why a tap on ホーム was refused
-
-**What:** Show a short line on ホーム when a tap (or a hotkey) is refused, reusing the correction sheet's messages (`failureKind` and `failureMessage` in `apps/app/src/lib/correction.ts`): `busy` (TOO_MANY_REQUESTS), `archived`, a failure that may have landed (a timeout, a lost answer, a 5xx), or a plain failure.
-
-**Why:** A refused tap only falls back to the last state the server confirmed (`src/lib/optimistic-switch.ts`), so the clock jumps back without a word. On the first-launch screen (a button, the detox row or a digit hotkey), a refused first tap swaps Home back to the first-launch screen just as silently. Since 0.5.0.0 a burst of taps from several devices can reach the account's cap of writes under its lock (`TIMELINE_WRITES_PER_USER`, which the activity writes share since 0.14.0.0), and every refusal now carries a reason the app can read.
-
-**Context:** The correction sheet got its status line in the PR that closed "Say why a correction was refused" (2026-09-25); ホーム has no slot for it yet, so it needs a pen design first. Queued taps share one mutation scope (`switches.switchTo`), so a refused tap does not stop the ones queued after it.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Tell keyboard and screen-reader users about the digit hotkeys
-
-**What:** Expose the web hotkeys on the buttons they press: `aria-keyshortcuts` (`1`…`9` by position, `0` for detox) on `SwitchButton` and `DetoxRow`, on ホーム and on the first-launch screen alike, and decide in pen whether a visible key hint belongs next to them.
-
-**Why:** The digit keys pick activities and `0` starts detox on both screens, but nothing on screen or in the accessibility tree says so, so only someone who read the README finds them.
-
-**Context:** `useSwitchHotkeys` (`apps/app/src/hooks/use-switch-hotkeys.ts`) and `hotkeyPick` (`apps/app/src/lib/hotkeys.ts`) map a key to the list the buttons are drawn from, so the button knows its own key. Check that react-native-web passes `aria-keyshortcuts` through before relying on it; a visible hint is a design change and starts in pen.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep a detox span's outline whole when it is narrower than the bar's rounded end
-
-**What:** Draw a detox span that touches an end of the 24-h bar (or the correction sheet's day bar) but is narrower than that end's corner radius so its outline stays closed, for example by capping the lent radius at half the span's width or giving such a span a minimum width.
-
-**Why:** `spanCorners` lends the bar's own corner to a span touching that end, which keeps an ordinary span's outline from being clipped open. A span only a few pixels wide (a few minutes of detox right after midnight, or just before now) is still cut by the bar's `overflow-hidden` rounded corner, so its `sub` outline shows as a broken arc.
-
-**Context:** `spanCorners` in `apps/app/src/lib/today.ts`, `BANDS` in `apps/app/src/components/today-flow.tsx` (7 px wide, 5 px narrow) and `DAY_BAR_CORNERS` in `apps/app/src/app/(app)/correction.tsx` (`rounded-md`). Raised by the red-team review of the PR that outlined detox spans solid (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
 ## Settings
 
 ### Say in the unused-day hint that an untapped day ends the streak

@@ -2,8 +2,10 @@ import type { SwitchToInput } from '@switch-time/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { authClient } from '@/lib/auth-client'
+import { tapFailureMessage } from '@/lib/home'
 import {
   confirmTap,
+  isCurrentSession,
   isLastTap,
   placeTap,
   rollBackTap,
@@ -12,6 +14,8 @@ import {
 } from '@/lib/optimistic-switch'
 import { orpc } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
+import { useAppDispatch } from '@/store'
+import { homeSlice } from '@/store/home'
 
 /** One tap as {@link useSwitchTo} queues it: the pick, the account whose screen it was made on, and when it was pressed (epoch ms). */
 type TapInput = Pick<SwitchToInput, 'activityId' | 'forUserId'> & {
@@ -23,13 +27,15 @@ type TapInput = Pick<SwitchToInput, 'activityId' | 'forUserId'> & {
  * a refused tap falls back to the last state the server confirmed, and the current switch, the day list and every stats query (and
  * the settings, when that tap is detox and no settings write is in flight) refetch once the last queued tap has been answered. Taps from this device reach the server one at a time, in
  * the order they were made, each for the account whose screen it was pressed on (another account's cookie by then is refused) and
- * stored at the time it was pressed ({@link sendTap}).
+ * stored at the time it was pressed ({@link sendTap}). A refused tap of the running session leaves ホーム's refusal line saying why
+ * ({@link homeSlice}, {@link tapFailureMessage}); the next tap clears it.
  * @returns the tap: `activityId` is the picked activity, or `null` for detox
  * @example const switchTo = useSwitchTo(); switchTo(activityId)
  */
 export function useSwitchTo(): (activityId: string | null) => void {
   const queryClient = useQueryClient()
   const { data: session } = authClient.useSession()
+  const dispatch = useAppDispatch()
   const queryKey = orpc.switches.current.queryKey()
   const { mutate } = useMutation({
     mutationKey: orpc.switches.switchTo.mutationKey(),
@@ -47,8 +53,10 @@ export function useSwitchTo(): (activityId: string | null) => void {
     onSuccess: (row, _input, context) => {
       if (context) confirmTap(context, row)
     },
-    onError: (_error, _input, context) => {
+    onError: (error, _input, context) => {
       if (context) rollBackTap(queryClient, queryKey, context)
+      if (isCurrentSession(queryClient, context))
+        dispatch(homeSlice.actions.tapRefused(tapFailureMessage(error)))
     },
     onSettled: async (_row, _error, { activityId }, context) => {
       // A refetch now would replace the rows of the taps still queued behind this one; the last of them refetches.
@@ -72,6 +80,8 @@ export function useSwitchTo(): (activityId: string | null) => void {
       ])
     },
   })
-  return (activityId): void =>
+  return (activityId): void => {
+    dispatch(homeSlice.actions.tapPressed())
     mutate({ activityId, forUserId: session?.user.id, pressedAt: Date.now() })
+  }
 }

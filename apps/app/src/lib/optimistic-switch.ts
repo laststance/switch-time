@@ -207,6 +207,25 @@ export function isLastTap(
 }
 
 /**
+ * Whether a failed tap belongs to the session of taps still running, for ホーム's refusal line ({@link useSwitchTo}): a tap from
+ * before a sign-out or another account's sign-in says nothing on the screen the next account now sees.
+ * @param client - The app's query client.
+ * @param context - What {@link placeTap} returned for this tap; undefined when `onMutate` threw and nothing was placed.
+ * @returns
+ * - `true` when the tap was placed in the current session
+ * - `false` for a tap of an ended session ({@link startTapSession}), or one that placed nothing
+ * @example if (isCurrentSession(queryClient, context)) dispatch(homeSlice.actions.tapRefused(tapFailureMessage(error)))
+ */
+export function isCurrentSession(
+  client: QueryClient,
+  context: TapContext | undefined,
+): boolean {
+  return (
+    context !== undefined && context.confirmed === confirmedStates.get(client)
+  )
+}
+
+/**
  * A tap's `mutationFn`: waits for the taps of earlier sessions still out ({@link startTapSession}), then sends, with how long the tap
  * waited on this device since it was pressed. The server records the tap that long before it arrived, so a tap queued behind the
  * last tap's refetch, or behind a sign-out, is stored at its press. Every tap is tracked until it returns, for the next session to wait

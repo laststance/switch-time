@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native'
 
 import { useWide } from '@/hooks/use-wide'
-import { legendEntries, spanCorners } from '@/lib/today'
+import { legendEntries, spanBox } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 // Wide web frames the bar as the 「今日の流れ」 card with a legend; phones show the bare 10 px bar under the switch row.
@@ -9,14 +9,22 @@ const BANDS = {
   wide: {
     root: 'gap-3 rounded-card border border-line bg-surface px-5 pb-4 pt-[18px]',
     bar: 'h-3.5 rounded-[7px]',
-    // A span touching either end of the bar takes its curve (spanCorners), so the rounded track does not clip an outline open.
-    corners: { first: 'rounded-l-[7px]', last: 'rounded-r-[7px]' },
+    // A span touching either end of the bar takes its curve and width, above its neighbour (spanBox), so the rounded track does not clip an outline open.
+    corners: {
+      first: 'rounded-l-[7px]',
+      last: 'rounded-r-[7px]',
+      endSpan: 'min-w-[7px] z-10 bg-chip',
+    },
     labels: ['0:00', '6:00', '12:00', '18:00', '24:00'],
   },
   narrow: {
     root: 'gap-1.5 py-2',
     bar: 'h-2.5 rounded-[5px]',
-    corners: { first: 'rounded-l-[5px]', last: 'rounded-r-[5px]' },
+    corners: {
+      first: 'rounded-l-[5px]',
+      last: 'rounded-r-[5px]',
+      endSpan: 'min-w-[5px] z-10 bg-chip',
+    },
     labels: ['0:00', '12:00', '24:00'],
   },
 }
@@ -80,7 +88,6 @@ export function TodayFlow({
   )
   // ponytail: labels are spaced evenly while slices are placed by elapsed time, so on the two DST days a year they drift
   // by up to an hour of the bar's width; place each label at its own wall-clock percentage if a DST zone ever matters.
-  const percent = (ms: number): `${number}%` => `${(ms / (end - start)) * 100}%`
   return (
     <View className={band.root}>
       {wide && (
@@ -112,19 +119,16 @@ export function TodayFlow({
       >
         {segments.map((segment) => {
           const look = slice(segment, colors)
+          const box = spanBox(segment, { start, end }, band.corners)
           return (
             <View
               key={segment.switchId}
               className={cn(
                 'absolute inset-y-0',
                 look.className,
-                spanCorners(segment, { start, end }, band.corners),
+                box.className,
               )}
-              style={{
-                left: percent(segment.start - start),
-                width: percent(segment.end - segment.start),
-                backgroundColor: look.backgroundColor,
-              }}
+              style={{ ...box.style, backgroundColor: look.backgroundColor }}
             />
           )
         })}

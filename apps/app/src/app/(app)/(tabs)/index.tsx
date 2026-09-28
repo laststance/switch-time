@@ -10,6 +10,7 @@ import { Screen } from '@/components/screen'
 import { ScreenHeader } from '@/components/screen-header'
 import { StrokeIcon } from '@/components/stroke-icon'
 import { SwitchButton } from '@/components/switch-button'
+import { TapRefusalLine } from '@/components/tap-refusal-line'
 import { TodayFlow } from '@/components/today-flow'
 import { useActivities, useAllActivities } from '@/hooks/use-activities'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
@@ -28,6 +29,7 @@ import {
   nowLook,
   sendsPick,
 } from '@/lib/home'
+import { DETOX_HOTKEY, hotkeyFor } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
 import { type CurrentSwitch, orpc } from '@/lib/orpc'
 
@@ -113,22 +115,28 @@ function HomeBody({ current, activity }: HomeBodyProps) {
         <Text className="text-sub text-xs">押した瞬間から積み上がります</Text>
       </View>
       <View className="flex-row flex-wrap gap-2.5">
-        {activities.map((item) => (
+        {activities.map((item, index) => (
           <SwitchButton
             key={item.id}
             name={item.name}
             color={item.color}
             iconKey={item.iconKey}
             active={item.id === current.activityId}
+            hotkey={hotkeyFor(index)}
             onPress={() => pick(item.id)}
           />
         ))}
       </View>
-      <DetoxRow
-        active={current.activityId === null}
-        renewable={renewable}
-        onPress={() => pick(null)}
-      />
+      {/* The refusal line sits 10px under the detox row, as in the pen's ホーム・拒否の行 board. */}
+      <View className="gap-2.5">
+        <DetoxRow
+          active={current.activityId === null}
+          renewable={renewable}
+          hotkey={DETOX_HOTKEY}
+          onPress={() => pick(null)}
+        />
+        <TapRefusalLine />
+      </View>
       <TodayFlow
         segments={segments}
         activities={allActivities}

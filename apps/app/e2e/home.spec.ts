@@ -21,6 +21,21 @@ const idOf = (list: { id: string; name: string }[], name: string) => {
   return activity.id
 }
 
+// An oRPC error answer as the API sends it, with the refusal's reason when it has one.
+const rpcRefusal = (code: string, status: number, reason?: string) => ({
+  status,
+  contentType: 'application/json',
+  body: JSON.stringify({
+    json: {
+      defined: false,
+      code,
+      status,
+      message: code,
+      ...(reason === undefined ? {} : { data: { reason } }),
+    },
+  }),
+})
+
 test('the first launch screen disappears after the first switch', async ({
   page,
 }) => {
@@ -1043,4 +1058,139 @@ test('a tap that queued behind the last tap’s refetch is recorded at its press
   expect(
     Math.abs((current?.startedAt.getTime() ?? 0) - restPressedAt),
   ).toBeLessThan(1500)
+})
+
+test('a tap answered busy says under the detox row why it went back, and the next tap clears the line', async ({
+  page,
+}) => {
+  // Arrange: 家事 runs; the next tap is answered busy
+  await signUp(page)
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await page.route(
+    '**/api/rpc/switches/switchTo',
+    async (route) =>
+      route.fulfill(rpcRefusal('TOO_MANY_REQUESTS', 429, 'busy')),
+    { times: 1 },
+  )
+
+  // Act
+  await page.getByRole('button', { name: '仕事' }).click()
+
+  // Assert: 家事 is back, and the line says the server is busy
+  const refusal = page.getByRole('alert')
+  await expect(refusal).toHaveText(
+    '処理が混み合っています。少し待ってからもう一度お試しください',
+  )
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  // Act: the next tap goes through
+  await page.getByRole('button', { name: '休息' }).click()
+
+  // Assert
+  await expect(refusal).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '休息' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+})
+
+test('a first tap that may have landed brings the first-launch screen back with a line asking to look before tapping again', async ({
+  page,
+}) => {
+  // Arrange: a new account's first tap is answered with a 5xx
+  await createAccount(page)
+  const firstLaunch = page.getByRole('heading', { name: 'いま何をしている？' })
+  await expect(firstLaunch).toBeVisible()
+  await page.route(
+    '**/api/rpc/switches/switchTo',
+    async (route) => route.fulfill(rpcRefusal('INTERNAL_SERVER_ERROR', 500)),
+    { times: 1 },
+  )
+
+  // Act
+  await page.getByRole('button', { name: '仕事' }).click()
+
+  // Assert
+  await expect(firstLaunch).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveText(
+    '反映されたか分かりませんでした。表示が変わらなければもう一度押してください',
+  )
+})
+
+test('the switch buttons name their digit key and the detox row names 0 to assistive tech', async ({
+  page,
+}) => {
+  // Act
+  await signUp(page)
+
+  // Assert: 家事 and 仕事 are the first two buttons
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-keyshortcuts',
+    '1',
+  )
+  await expect(page.getByRole('button', { name: '仕事' })).toHaveAttribute(
+    'aria-keyshortcuts',
+    '2',
+  )
+  await expect(page.getByRole('button', { name: /^detox/ })).toHaveAttribute(
+    'aria-keyshortcuts',
+    '0',
+  )
+})
+
+test('two minutes of detox right after midnight stay at least as wide as the bar’s rounded end, so the outline is not cut open', async ({
+  page,
+}) => {
+  // Arrange: today starts on detox at 0:00 and switches to 仕事 at 0:02
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const { rows: firstLaunch } = await api.switches.listByDay({ day: today() })
+  await api.switches.replaceDay({
+    day: today(),
+    timeZone: 'Asia/Tokyo',
+    expected: firstLaunch.map(({ id, activityId, startedAt }) => ({
+      id,
+      activityId,
+      startedAt,
+    })),
+    rows: [
+      { activityId: null, startedAt: at(today(), 0) },
+      {
+        activityId: idOf(list, '仕事'),
+        startedAt: new Date(at(today(), 0).getTime() + 2 * 60_000),
+      },
+    ],
+  })
+
+  // Act
+  await page.reload()
+
+  // Assert: the detox span keeps the bar's curve and is no narrower than it
+  const span = page
+    .getByRole('img', { name: '今日の流れ' })
+    .locator('div')
+    .first()
+  await expect(span).toHaveCSS('border-top-style', 'solid')
+  const radius = Number.parseFloat(
+    await span.evaluate((el) => getComputedStyle(el).borderTopLeftRadius),
+  )
+  const box = await span.boundingBox()
+  expect(radius).toBeGreaterThan(0)
+  expect(box?.width ?? 0).toBeGreaterThanOrEqual(radius)
+  // Assert: 仕事's span, which starts right after it, does not cover the width it gained
+  const onTop = await span.evaluate((el) => {
+    const rect = el.getBoundingClientRect()
+    return (
+      document.elementFromPoint(rect.right - 1, rect.top + rect.height / 2) ===
+      el
+    )
+  })
+  expect(onTop).toBe(true)
 })

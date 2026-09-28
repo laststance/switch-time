@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { clockSlice } from './clock'
 import { correctionSlice } from './correction'
 import { deviceStorage } from './device-storage'
+import { homeSlice } from './home'
 import { registrationSlice } from './registration'
 import { savedStateSerializer } from './saved-state-serializer'
 import { restoreSyncedZone, syncedZoneSlice } from './synced-zone'
@@ -20,6 +21,7 @@ import { restoreSyncedZone, syncedZoneSlice } from './synced-zone'
 const appReducer = combineReducers({
   clock: clockSlice.reducer,
   correction: correctionSlice.reducer,
+  home: homeSlice.reducer,
   registration: registrationSlice.reducer,
   syncedZone: syncedZoneSlice.reducer,
 })
@@ -79,7 +81,7 @@ export function createAppStore(storage: StateStorage) {
 }
 
 /**
- * Client-only state (the clock, the correction sheet's 「元に戻す」, the address sign-up hands to sign-in, the zone this device
+ * Client-only state (the clock, the correction sheet's 「元に戻す」, ホーム's refusal line, the address sign-up hands to sign-in, the zone this device
  * last synced per account). Server data, the user's settings included, lives in TanStack Query via {@link orpc}, never here.
  * @example <ReduxProvider store={store}>
  */

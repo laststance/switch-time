@@ -55612,6 +55612,3304 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "G5BvW",
+      "x": 3696,
+      "y": 5653,
+      "name": "ST Phone / ホーム・拒否の行",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "kR9L4",
+          "name": "混み合い（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "WnNvd",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "混み合い（role=alert, ink 500）。タップや数字キーの切替が断られたとき、detox 行の下に出る（中央揃え）。表示は最後にサーバーが認めた状態に戻る。文言は訂正シートと同じ（failureMessage）。次のタップで消える",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "uLopu",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KrD17",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "V6HaIj",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jJq9m",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "ZF6hH",
+                              "x": 2.5,
+                              "y": 2.5,
+                              "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                              "width": 15,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "C8MKgW",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "IPsdf",
+                              "name": "家事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "家事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g93gMG",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "x6e5H",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "SSlaY",
+                              "x": 2.5,
+                              "y": 4.166666507720947,
+                              "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                              "width": 15,
+                              "height": 12.499999523162842,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QTneh",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "zrjqw",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "McOfm",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FdBUs",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "K228V",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "dJq0y",
+                              "x": 3.3333325386047363,
+                              "y": 2.5,
+                              "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                              "width": 13.333333492279053,
+                              "height": 13.333333015441895,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BGKpE",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H28Pd",
+                              "name": "休息",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "休息",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iWyMb",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KiH6g",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "xebYO",
+                              "x": 3.8692193031311035,
+                              "y": 3.3333332538604736,
+                              "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                              "width": 12.797446727752686,
+                              "height": 12.797447919845581,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Lwd6p",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Qsfpr",
+                              "name": "睡眠",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "睡眠",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fKcHp",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aGAW6",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "a59nV",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "hbE0e",
+                              "x": 3.3333332538604736,
+                              "y": 2.5,
+                              "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                              "width": 11.993587255477905,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wWRpB",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sdbFG",
+                              "name": "食事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "食事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U2c0O",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$activity-6",
+                      "cornerRadius": 10,
+                      "stroke": "$activity-6",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nr1y7",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "pRIFU",
+                              "x": 1.6666666269302368,
+                              "y": 6.666666507720947,
+                              "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                              "width": 16.66666543483734,
+                              "height": 8.206464290618896,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dFF9f",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UqPTd",
+                              "name": "娯楽",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "content": "娯楽",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "k0NMN",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "I4p1fk",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FZUZU",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "oMy8p",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "u3YmJ",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "処理が混み合っています。少し待ってからもう一度お試しください",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LyZxD",
+          "name": "アーカイブ済み（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "bAyNJ",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "アーカイブ済み（role=alert, ink 500）。別の端末でアーカイブされた活動のボタンを、一覧が読み直される前に押したとき。ホーム用の文言（訂正シートの「〜になるため、変更できません」は記録の書き換え向け）",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "AWlYg",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aPfgU",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NIN1i",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "RQyAR",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "a1PYzK",
+                              "x": 2.5,
+                              "y": 2.5,
+                              "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                              "width": 15,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FWEBw",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H4vd5",
+                              "name": "家事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "家事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vcABc",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uTepO",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "YkP1Q",
+                              "x": 2.5,
+                              "y": 4.166666507720947,
+                              "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                              "width": 15,
+                              "height": 12.499999523162842,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "a7Ych",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "I4IKVE",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "YPbe6",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "m8wGU",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IUjLu",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "H80qBp",
+                              "x": 3.3333325386047363,
+                              "y": 2.5,
+                              "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                              "width": 13.333333492279053,
+                              "height": 13.333333015441895,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GY9m5",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vwQD1",
+                              "name": "休息",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "休息",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KtAJ2",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "t5pelJ",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "XZ8nL",
+                              "x": 3.8692193031311035,
+                              "y": 3.3333332538604736,
+                              "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                              "width": 12.797446727752686,
+                              "height": 12.797447919845581,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kwOR4",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "LxqA7",
+                              "name": "睡眠",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "睡眠",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ywu1N",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Kf0Qz",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PIVCs",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "pPz2c",
+                              "x": 3.3333332538604736,
+                              "y": 2.5,
+                              "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                              "width": 11.993587255477905,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "suwLL",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "CDJtm",
+                              "name": "食事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "食事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DGSYI",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$activity-6",
+                      "cornerRadius": 10,
+                      "stroke": "$activity-6",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QIeUB",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "qnk2Q",
+                              "x": 1.6666666269302368,
+                              "y": 6.666666507720947,
+                              "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                              "width": 16.66666543483734,
+                              "height": 8.206464290618896,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Td2L9",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "VFaKw",
+                              "name": "娯楽",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "content": "娯楽",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ou5ei",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "QeqCf",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L2tw9I",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "SrL4B",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "A33KMv",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "アーカイブ済みの活動には切り替えられません",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rDmJ3",
+          "name": "反映されたか不明（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Q7nnuN",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "反映されたか不明（role=alert, ink 500）。時間切れや 5xx など、切替が届いたか分からない失敗。最後のタップの読み直しで、届いていればボタンがその活動に戻る。ホーム用の文言（訂正シートの「一覧で確かめて」はホームに一覧が無いため使わない）",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "w0lWcH",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "FqID7",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "sCGxw",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Kt4YO",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "KllW7",
+                              "x": 2.5,
+                              "y": 2.5,
+                              "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                              "width": 15,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RpYs8",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "fECKA",
+                              "name": "家事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "家事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f8LNro",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "C2uif8",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "adAuL",
+                              "x": 2.5,
+                              "y": 4.166666507720947,
+                              "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                              "width": 15,
+                              "height": 12.499999523162842,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Fl8h0",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PBYWx",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gVg97",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "n8SddP",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "HJX4T",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "Y5Nts",
+                              "x": 3.3333325386047363,
+                              "y": 2.5,
+                              "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                              "width": 13.333333492279053,
+                              "height": 13.333333015441895,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gLnAJ",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EJyDU",
+                              "name": "休息",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "休息",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mfaHJ",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eh3QT",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "yFrqo",
+                              "x": 3.8692193031311035,
+                              "y": 3.3333332538604736,
+                              "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                              "width": 12.797446727752686,
+                              "height": 12.797447919845581,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XweNv",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "k54IrQ",
+                              "name": "睡眠",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "睡眠",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I9W8D",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ZlL0I",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iMbkQ",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "jT4KU",
+                              "x": 3.3333332538604736,
+                              "y": 2.5,
+                              "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                              "width": 11.993587255477905,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ulHWl",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vQc6y",
+                              "name": "食事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "食事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y1UbVs",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$activity-6",
+                      "cornerRadius": 10,
+                      "stroke": "$activity-6",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "lHEpi",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "C8CYJ",
+                              "x": 1.6666666269302368,
+                              "y": 6.666666507720947,
+                              "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                              "width": 16.66666543483734,
+                              "height": 8.206464290618896,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EnsgF",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Kii5H",
+                              "name": "娯楽",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "content": "娯楽",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "l69lY",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "s3hVj",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "UYvpR",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zZg5q",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "whHuP",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "反映されたか分かりませんでした。表示が変わらなければもう一度押してください",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "YDBip",
+          "name": "保存できませんでした（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Dbchj",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "保存できませんでした（role=alert, ink 500）。サーバーが書く前に断った失敗。別のタブで別のアカウントにサインインした後に、この画面で押した切替もこれになる（CONFLICT）。サインイン切れは訂正シートと同じ「サインインが切れました…」",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "zdddh",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PpBKJ",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "fqVsq",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "z8V8t",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "SUxfF",
+                              "x": 2.5,
+                              "y": 2.5,
+                              "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                              "width": 15,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jixzR",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s9dlNg",
+                              "name": "家事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "家事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h3YUs",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UaJNL",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "qYPum",
+                              "x": 2.5,
+                              "y": 4.166666507720947,
+                              "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                              "width": 15,
+                              "height": 12.499999523162842,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vtfz0",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "RFAML",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OAzNn",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "gzf8A",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DsKQv",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "jRHPh",
+                              "x": 3.3333325386047363,
+                              "y": 2.5,
+                              "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                              "width": 13.333333492279053,
+                              "height": 13.333333015441895,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kXEkz",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "t0b5u",
+                              "name": "休息",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "休息",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e8NTiN",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "XHSwv",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "Cp7X0",
+                              "x": 3.8692193031311035,
+                              "y": 3.3333332538604736,
+                              "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                              "width": 12.797446727752686,
+                              "height": 12.797447919845581,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "SYONI",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "LSn9z",
+                              "name": "睡眠",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "睡眠",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ilqoM",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NUPWM",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "m1ybUx",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "B0PgRI",
+                              "x": 3.3333332538604736,
+                              "y": 2.5,
+                              "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                              "width": 11.993587255477905,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XTQFm",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MTvsm",
+                              "name": "食事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "食事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RegFf",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$activity-6",
+                      "cornerRadius": 10,
+                      "stroke": "$activity-6",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vKTGN",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "FVIwO",
+                              "x": 1.6666666269302368,
+                              "y": 6.666666507720947,
+                              "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                              "width": 16.66666543483734,
+                              "height": 8.206464290618896,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u9QFaI",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "FPVvk",
+                              "name": "娯楽",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "content": "娯楽",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "cQYDH",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "t8ikU5",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "roJGj",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nBd9u",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "irUyJ",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "保存できませんでした。もう一度お試しください",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tzsEe",
+          "name": "初回起動（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Q5QfZi",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "初回起動（role=alert, ink 500）。最初のタップが断られると初回起動の画面に戻る。そのときも同じ行が detox 行の下に出て、理由は上の 4 つと同じ文言。次のタップで消える",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ImIsX",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MlGhb",
+                  "width": "fill_container",
+                  "height": 64,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "iEzOO",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "D6g2g",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "VoRHA",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "v1qEx",
+                                  "x": 2.5,
+                                  "y": 2.5,
+                                  "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                                  "width": 15,
+                                  "height": 15,
+                                  "stroke": "$activity-1",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "WXRLv",
+                          "name": "家事",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "家事",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "usDKZ",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "sq8Me",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lf5lH",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "EOJlS",
+                                  "x": 2.5,
+                                  "y": 4.166666507720947,
+                                  "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                                  "width": 15,
+                                  "height": 12.499999523162842,
+                                  "stroke": "$activity-2",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "KMzUF",
+                          "name": "仕事",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "仕事",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "D5Jd21",
+                  "width": "fill_container",
+                  "height": 64,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "RxiE8",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YTG07",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "F19gQI",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "codEq",
+                                  "x": 3.3333325386047363,
+                                  "y": 2.5,
+                                  "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                                  "width": 13.333333492279053,
+                                  "height": 13.333333015441895,
+                                  "stroke": "$activity-3",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ILq4J",
+                          "name": "休息",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "休息",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qeBLk",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "m9E8G",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "g1ipUu",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "iMRUw",
+                                  "x": 3.8692193031311035,
+                                  "y": 3.3333332538604736,
+                                  "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                                  "width": 12.797446727752686,
+                                  "height": 12.797447919845581,
+                                  "stroke": "$activity-4",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "H3H1T",
+                          "name": "睡眠",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "睡眠",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ZKL5H",
+                  "width": "fill_container",
+                  "height": 64,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pOhWc",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ePWwH",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "vekbl",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "nYxV6",
+                                  "x": 3.3333332538604736,
+                                  "y": 2.5,
+                                  "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                                  "width": 11.993587255477905,
+                                  "height": 15,
+                                  "stroke": "$activity-5",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "kGpt4",
+                          "name": "食事",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "食事",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i3Htss",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "H1qBuS",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "J4AuAN",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 20,
+                              "height": 20,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "V3N6qR",
+                                  "x": 1.6666666269302368,
+                                  "y": 6.666666507720947,
+                                  "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                                  "width": 16.66666543483734,
+                                  "height": 8.206464290618896,
+                                  "stroke": "$activity-6",
+                                  "strokeWidth": 1.6666666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "g4YyWM",
+                          "name": "娯楽",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "娯楽",
+                          "lineHeight": 1.2,
+                          "textAlign": "center",
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ArSMU",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "qaxsG",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "UxNW5",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Bwqi2",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "KXsYi",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "処理が混み合っています。少し待ってからもう一度お試しください",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ZcyC5",
+      "x": 3696,
+      "y": 6166,
+      "name": "ST Phone / ホーム・数字キー",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "XVlUd",
+          "name": "数字キー（aria-keyshortcuts だけ、画面には出さない）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "qom83",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "数字キー（web）。ボタンは並び順に 1〜9、detox 行は 0。キーは aria-keyshortcuts でボタン自身が名乗る（ホームと初回起動の両方）。画面にキーの手掛かりは出さない：スマホとタッチでは押せないキーが並ぶだけになり、ボタンの見た目はこのまま。見た目は下のとおり変わらない",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "HPtSU",
+              "name": "Switch area",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cdLF0",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ocJwF",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YTm5X",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "zwbpB",
+                              "x": 2.5,
+                              "y": 2.5,
+                              "geometry": "M0 6.66667l7.5-6.66667 7.5 6.66667 0 8.33333-15 0 0-8.33333z",
+                              "width": 15,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gmaGq",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cSdMx",
+                              "name": "家事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "家事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YoVey",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "t6qMg",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "hDXkv",
+                              "x": 2.5,
+                              "y": 4.166666507720947,
+                              "geometry": "M0 2.5l15 0 0 10-15 0 0-10z m5 0l0-2.5 5 0 0 2.5m-10 4.16667l15 0",
+                              "width": 15,
+                              "height": 12.499999523162842,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EVLmO",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ffuif",
+                              "name": "仕事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "仕事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RZeZw",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zdorh",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FY2oU",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "bsgEz",
+                              "x": 3.3333325386047363,
+                              "y": 2.5,
+                              "geometry": "M0 5l10 0 0 5c0 1.84095-1.49238 3.33333-3.33333 3.33333l-3.33334 0c-1.84095 0-3.33333-1.49238-3.33333-3.33333l0-5z m10 1.66667l1.66667 0c0.92047 0 1.66667 0.74619 1.66666 1.66666 0 0.92047-0.74619 1.66667-1.66666 1.66667l-1.66667 0m-7.5-10l0 2.5m3.33333-2.5l0 2.5",
+                              "width": 13.333333492279053,
+                              "height": 13.333333015441895,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "PL5Rt",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Xjzwg",
+                              "name": "休息",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "休息",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UY7bn",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B3Csrx",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "YuP92",
+                              "x": 3.8692193031311035,
+                              "y": 3.3333332538604736,
+                              "geometry": "M12.79745 8.75c-2.50437 1.07012-5.40785 0.50935-7.3336-1.4164-1.92575-1.92575-2.48652-4.82923-1.4164-7.3336-2.75779 1.17841-4.38928 4.05323-3.98681 7.02512 0.40247 2.97188 2.73981 5.30923 5.71169 5.71169 2.97188 0.40247 5.84671-1.22902 7.02512-3.98681",
+                              "width": 12.797446727752686,
+                              "height": 12.797447919845581,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FkGOc",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "j3pA8v",
+                              "name": "睡眠",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "睡眠",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ErR6b",
+                  "width": "fill_container",
+                  "height": 60,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "A0itWJ",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$surface",
+                      "cornerRadius": 10,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ttRn2",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "ZwFNN",
+                              "x": 3.3333332538604736,
+                              "y": 2.5,
+                              "geometry": "M2.5 0l0 15m-2.5-15l0 4.16667c0 1.38071 1.11929 2.5 2.5 2.5 1.38071 0 2.5-1.11929 2.5-2.5l0-4.16667m5 0c-1.66667 1.66667-1.66667 6.66667 0 8.33333l0 6.66667m0-6.66667c1.66667-1.66667 2.5-5 1.66667-8.33333",
+                              "width": 11.993587255477905,
+                              "height": 15,
+                              "stroke": "$ink",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q3bpOO",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eFJ5O",
+                              "name": "食事",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "食事",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zZ9SU",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 60,
+                      "fill": "$activity-6",
+                      "cornerRadius": 10,
+                      "stroke": "$activity-6",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 9,
+                      "padding": [
+                        2,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MoI7T",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 20,
+                          "height": 20,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "BFq73",
+                              "x": 1.6666666269302368,
+                              "y": 6.666666507720947,
+                              "geometry": "M3.33333 0l10 0c1.84095 0 3.33333 1.49238 3.33334 3.33333l0 2.5c-0.0549 1.07897-0.79668 2.0006-1.83898 2.28487-1.04229 0.28426-2.14927-0.13317-2.74436-1.03487l-1.25-1.25-5 0-1.25 1.25c-0.59508 0.9017-1.70206 1.31913-2.74435 1.03487-1.0423-0.28426-1.78407-1.2059-1.83898-2.28487l0-2.5c0-1.84095 1.49238-3.33333 3.33333-3.33333m0.83334 2.5l0 2.5m-1.25-1.25l2.5 0m6.25-0.41667l0.00833 0m1.65833 1.25l0.00834 0",
+                              "width": 16.66666543483734,
+                              "height": 8.206464290618896,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.6666666666666667,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hyiGX",
+                          "name": "span",
+                          "context": "span",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "dsvNk",
+                              "name": "娯楽",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "content": "娯楽",
+                              "lineHeight": 1.2,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DjII3",
+                  "name": "detox row",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 9,
+                  "padding": [
+                    2,
+                    7
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "yE1lj",
+                      "name": "detox icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "wind",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "C9biWP",
+                      "name": "detox label",
+                      "fill": "$ink",
+                      "content": "detox",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "XQ1pi",
+                      "name": "detox hint",
+                      "fill": "$sub",
+                      "content": "どの行動にも記録しない",
+                      "lineHeight": 1.25,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

@@ -32,7 +32,7 @@ import {
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
-import { spanCorners } from '@/lib/today'
+import { spanBox } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
 const DIMMED = 0.4
@@ -60,13 +60,15 @@ type BarProps = {
   selectedId: string | null
 }
 
-// The day bar's own corners, lent to a span touching either end so the rounded strip does not clip its outline open.
-const DAY_BAR_CORNERS = { first: 'rounded-l-md', last: 'rounded-r-md' }
+// The day bar's own corners (6px), lent with their width to a span touching either end so the rounded strip does not clip its outline open.
+const DAY_BAR_CORNERS = {
+  first: 'rounded-l-md',
+  last: 'rounded-r-md',
+  endSpan: 'min-w-1.5 z-10 bg-chip',
+}
 
 // The 12 px 24-h strip above the list: the selected row's span stays solid, the rest dim to 0.4.
 function DayBar({ rows, bounds, selectedId }: BarProps) {
-  const percent = (ms: number): `${number}%` =>
-    `${(ms / (bounds.end - bounds.start)) * 100}%`
   // A merged or undone row's id lingers in the selection; with no row to highlight, nothing dims.
   const active = rows.some((row) => row.id === selectedId) ? selectedId : null
   const dim = (id: string) => (active === null || active === id ? 1 : DIMMED)
@@ -78,23 +80,25 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
       {/* A device clock behind the server can end the latest row before it starts; its outline would draw as a stray line. */}
       {rows
         .filter((row) => row.end > row.start)
-        .map((row) => (
-          <View
-            key={row.id}
-            // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
-            className={cn(
-              'absolute inset-y-0',
-              row.color === null && 'border-sub border',
-              spanCorners(row, bounds, DAY_BAR_CORNERS),
-            )}
-            style={{
-              left: percent(row.start - bounds.start),
-              width: percent(row.end - row.start),
-              backgroundColor: row.color ?? undefined,
-              opacity: dim(row.id),
-            }}
-          />
-        ))}
+        .map((row) => {
+          const box = spanBox(row, bounds, DAY_BAR_CORNERS)
+          return (
+            <View
+              key={row.id}
+              // A detox span has no colour: outlined solid in `sub`, as on the 24-h bar (dashed is kept for no data).
+              className={cn(
+                'absolute inset-y-0',
+                row.color === null && 'border-sub border',
+                box.className,
+              )}
+              style={{
+                ...box.style,
+                backgroundColor: row.color ?? undefined,
+                opacity: dim(row.id),
+              }}
+            />
+          )
+        })}
     </View>
   )
 }
