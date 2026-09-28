@@ -7,6 +7,7 @@ import {
   untappedPickNote,
   untappedRowNotes,
   untappedSheetNotes,
+  untappedExclusions,
   untappedUndoNote,
   type UntappedFacts,
 } from './untapped'
@@ -35,6 +36,7 @@ const facts = (day: string, today: string): UntappedFacts => ({
   today,
   timeZone: TZ,
   autoExcludeUnusedDays: true,
+  manualExcluded: new Set(),
 })
 
 test('switching a weekend detox carried into Monday to an activity names the untapped weekend it measured', () => {
@@ -169,9 +171,9 @@ test('switching an activity to detox names the days past the next switch whose r
     facts('2026-09-10', '2026-09-25'),
   )
 
-  // Assert
+  // Assert: 9/12 is tapped and 9/13–9/17 are carried either way, so the line names the two runs that change apart.
   expect(note).toBe(
-    'detox と活動を切り替えると、タップのない日（9月11日〜9月19日）の計測が変わることがあります',
+    'detox と活動を切り替えると、タップのない日（9月11日、9月18日〜9月19日）の計測が変わることがあります',
   )
 })
 
@@ -790,4 +792,101 @@ test('a day after today shows no untapped-day note, since none of the days it co
 
   // Assert
   expect(note).toBeNull()
+})
+
+test('a detox after midnight that the next morning’s tap ends names no day a week later when the last row turns detox', () => {
+  // Arrange: 仕事 on 9/10, detox at 0:30 on 9/11 (the next switch), and 仕事 at 8:00 on 9/11 ending that run.
+  const list: ListedDay = {
+    carriedIn: null,
+    carriedInRunStart: null,
+    rows: [row('w', 'work', at('2026-09-10', 9))],
+    carriedOut: row('n', null, at('2026-09-11', 0, 30)),
+    carriedOutRun: [row('m', 'work', at('2026-09-11', 8))],
+  }
+
+  // Act: detox on 仕事 moves the run's start to 9/10, but the run ends on 9/11 either way.
+  const note = untappedPickNote(
+    list,
+    { id: 'w', activityId: 'work' },
+    facts('2026-09-10', '2026-09-25'),
+  )
+
+  // Assert
+  expect(note).toBeNull()
+})
+
+test('without the switches after the next one, the notes take the next switch’s detox as still running', () => {
+  // Arrange: the same day as an older API lists it, with nothing after the detox at 0:30 on 9/11.
+  const list: ListedDay = {
+    carriedIn: null,
+    carriedInRunStart: null,
+    rows: [row('w', 'work', at('2026-09-10', 9))],
+    carriedOut: row('n', null, at('2026-09-11', 0, 30)),
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'w', activityId: 'work' },
+    facts('2026-09-10', '2026-09-25'),
+  )
+
+  // Assert: a run from 9/10 would stop carrying after 9/17, one from 9/11 after 9/18.
+  expect(note).toBe(
+    'detox と活動を切り替えると、タップのない日（9月18日）の計測が変わることがあります',
+  )
+})
+
+test('a day excluded by hand is left out of the days a pick names', () => {
+  // Arrange: detox from Friday 22:00, 仕事 on Monday 9:00, viewed on Monday; Saturday excluded by hand.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'c', activityId: null },
+    {
+      ...facts('2026-09-21', '2026-09-25'),
+      manualExcluded: new Set(['2026-09-19']),
+    },
+  )
+
+  // Assert
+  expect(note).toBe(
+    'detox と活動を切り替えると、タップのない日（9月20日）の計測が変わることがあります',
+  )
+})
+
+test('the notes ask for the manual exclusions of the days an edit can reach, and nothing with the unused-day rule off', () => {
+  // Arrange: detox from Friday 22:00, 仕事 on Monday 9:00, viewed on Monday, today Friday.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2026-09-18', 22)),
+    carriedInRunStart: '2026-09-18',
+    rows: [row('w', 'work', at('2026-09-21', 9))],
+    carriedOut: null,
+  }
+  const { manualExcluded: _unused, ...base } = facts('2026-09-21', '2026-09-25')
+
+  // Act
+  const on = untappedExclusions(list, base)
+  const off = untappedExclusions(list, {
+    ...base,
+    autoExcludeUnusedDays: false,
+  })
+  const loading = untappedExclusions(undefined, base)
+
+  // Assert: from the day after the carried-in record started to today.
+  expect([on.enabled, on.input]).toEqual([
+    true,
+    { from: '2026-09-19', to: '2026-09-25' },
+  ])
+  expect(off.enabled).toBe(false)
+  expect(loading.enabled).toBe(false)
+  expect([...on.excluded([{ day: '2026-09-19' }])]).toEqual(['2026-09-19'])
+  expect([...on.excluded(undefined)]).toEqual([])
 })

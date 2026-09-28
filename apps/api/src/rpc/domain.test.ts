@@ -377,6 +377,49 @@ test('the correction sheet reads a detox re-tap as the start of the run it carri
   expect(afterReTap.carriedInRunStart).toBe(renewDay)
 })
 
+test('the correction sheet reads the switches after a carried-out detox up to the one that ends its run', async () => {
+  // Arrange: 仕事 on a day ten days ago; the next day detox at 1:00, 仕事 at 8:00 ending it, 休息 at 12:00 after that
+  const api = await signedIn('detox-carried-out-run@example.com')
+  const list = await api.activities.list()
+  const work = idOf(list, '仕事')
+  const rest = idOf(list, '休息')
+  const viewed = addDays(today, -10)
+  const nextDay = addDays(viewed, 1)
+  await api.switches.replaceDay({
+    day: viewed,
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: work, startedAt: at(viewed, 9) }],
+  })
+  await api.switches.replaceDay({
+    day: nextDay,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: null, startedAt: at(nextDay, 1) },
+      { activityId: work, startedAt: at(nextDay, 8) },
+      { activityId: rest, startedAt: at(nextDay, 12) },
+    ],
+  })
+
+  // Act
+  const detoxCarriedOut = await api.switches.listByDay({ day: viewed })
+  const workCarriedOut = await api.switches.listByDay({
+    day: addDays(viewed, -1),
+  })
+
+  // Assert: the detox's run ends at the 仕事 at 8:00, so 休息 is left out; an activity carried out reads no run
+  expect(detoxCarriedOut.carriedOut?.activityId).toBeNull()
+  expect(
+    detoxCarriedOut.carriedOutRun.map(({ activityId, startedAt }) => ({
+      activityId,
+      startedAt,
+    })),
+  ).toEqual([{ activityId: work, startedAt: new Date(at(nextDay, 8)) }])
+  expect(workCarriedOut.carriedOut?.activityId).toBe(work)
+  expect(workCarriedOut.carriedOutRun).toEqual([])
+})
+
 test('Home reads no detox run while an activity runs', async () => {
   // Arrange
   const api = await signedIn('detox-run-activity@example.com')

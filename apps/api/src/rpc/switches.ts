@@ -1,5 +1,6 @@
 import { ORPCError } from '@orpc/server'
 import {
+  addDays,
   changeActivityInputSchema,
   clampStart,
   MIN_SEGMENT_MS,
@@ -7,6 +8,7 @@ import {
   dayBounds,
   dayDigest,
   daySchema,
+  DETOX_MEASURED_DAYS_MAX,
   detoxRunPastWeek,
   detoxRunStartDay,
   localDay,
@@ -303,11 +305,56 @@ async function withNeighbours(tx: LockedTx, userId: string, id: string) {
   return { row, prev: prev ?? null, next: next ?? null }
 }
 
+// How many switches past a day's first switch after it the list reads for that switch's detox run (see carriedOutRunOf).
+const CARRIED_OUT_RUN_MAX = 32
+
+/**
+ * The switches after `carriedOut` that its detox run still reaches, oldest first: the detox rows that carry it on (cuts,
+ * which renew nothing) and the switch that ends it (an activity, or a detox re-tap that starts a run of its own). The
+ * sheet's untapped-day notes read them, so a run a later tap ends is not taken to run through its whole week. Only up to
+ * the last day an edit on the viewed day can reach (`carriedOut`'s day + {@link DETOX_MEASURED_DAYS_MAX}), and at most
+ * {@link CARRIED_OUT_RUN_MAX} rows; the notes take a run the list does not see end as still running.
+ * @param tx - The list's read-only transaction, so the rows share its snapshot.
+ * @param carriedOut - The first switch after the viewed day.
+ * @returns Nothing after an activity, which ends every run; otherwise the rows up to and including the one that ends it.
+ * @example await carriedOutRunOf(tx, userId, mondayDetox, 'Asia/Tokyo') // [tuesdayWork]
+ */
+async function carriedOutRunOf(
+  tx: Executor,
+  userId: string,
+  carriedOut: SwitchRow,
+  timeZone: string,
+): Promise<SwitchRow[]> {
+  if (carriedOut.activityId !== null) return []
+  const reachEnd = dayBounds(
+    addDays(
+      localDay(carriedOut.startedAt, timeZone),
+      DETOX_MEASURED_DAYS_MAX + 1,
+    ),
+    timeZone,
+  ).start
+  const later = await tx
+    .select()
+    .from(switches)
+    .where(
+      and(
+        own(userId),
+        gt(switches.startedAt, carriedOut.startedAt),
+        lt(switches.startedAt, new Date(reachEnd)),
+      ),
+    )
+    .orderBy(asc(switches.startedAt))
+    .limit(CARRIED_OUT_RUN_MAX)
+  const end = later.findIndex((row) => row.activityId !== null || row.startsRun)
+  return end === -1 ? later : later.slice(0, end + 1)
+}
+
 /**
  * Every switch inside [start, end) plus its neighbours: the state carried in from before and the first switch after,
- * which closes the last segment, and the day the carried-in record's detox run started ({@link runStartOf}; for an activity,
- * the day it would have started were the record detox; null with no carried-in state), which the sheet's untapped-day notes
- * need to place that run's week. Oldest first: the input for
+ * which closes the last segment, the switches after that one its detox run reaches ({@link carriedOutRunOf}), and the day
+ * the carried-in record's detox run started ({@link runStartOf}; for an activity, the day it would have started were the
+ * record detox; null with no carried-in state), which the sheet's untapped-day notes need to place that run's week. Oldest
+ * first: the input for
  * segments. The reads share one connection (one per request, however fast a client refetches) and one snapshot, so a write
  * landing between them cannot pair rows with neighbours from before it.
  * @example const { carriedIn, rows, carriedOut, carriedInRunStart } = await switchesBetween(userId, { start, end }, 'Asia/Tokyo', context.deadline)
@@ -342,6 +389,9 @@ async function switchesBetween(
         carriedIn: carriedIn ?? null,
         rows,
         carriedOut: carriedOut ?? null,
+        carriedOutRun: carriedOut
+          ? await carriedOutRunOf(tx, userId, carriedOut, timeZone)
+          : [],
         // Read as detox even when an activity is carried in: a pick to detox joins the run before it.
         carriedInRunStart: carriedIn
           ? await runStartOf(

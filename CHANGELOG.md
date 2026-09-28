@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.9.0] - 2026-09-29
+
+### Fixed
+
+- The correction sheet's untapped-day notes (「タップのない日（…）の計測が変わることがあります」)
+  name only the days an edit really changes. A run that a later tap ends is no
+  longer treated as running through its week, days you excluded by hand are left
+  out, and separate runs of days are named separately (「9月9日、9月16日〜9月17日」)
+  instead of one range that could include the viewed day's own tapped day. The
+  notes wait for your excluded days to be read before they show.
+
 ## [0.24.8.0] - 2026-09-29
 
 ### Added

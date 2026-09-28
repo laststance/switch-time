@@ -49,7 +49,11 @@ import {
 } from '@/lib/correction'
 import { orpc, type SwitchRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
-import { untappedSheetNotes } from '@/lib/untapped'
+import {
+  untappedExclusions,
+  untappedSheetNotes,
+  type UntappedFacts,
+} from '@/lib/untapped'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { correctionSlice } from '@/store/correction'
 
@@ -123,14 +127,12 @@ export function useCorrection(dayParam: string | undefined) {
     selectedId: state.selectedId,
     noticeId: state.noticeId,
     focusId: state.focusId,
-    totalsFacts: useTotalsFacts(day, today, list.data, ready),
-    ...untappedSheetNotes(list.data, slot, {
-      day,
-      today,
-      timeZone,
-      autoExcludeUnusedDays,
+    ...useSheetNotes(
+      list.data,
+      slot,
+      { day, today, timeZone, autoExcludeUnusedDays },
       ready,
-    }),
+    ),
     select: state.select,
     ...edits,
     undo,
@@ -460,6 +462,59 @@ function useCorrectionUndo(
         .mutateAsync(request.input)
         .then(() => dispatch(dropped({ epoch, day })), failed)
   }
+}
+
+/**
+ * The facts behind the sheet's notes and the notes themselves: the totals facts ({@link useTotalsFacts}) and the untapped-day
+ * notes ({@link useUntappedNotes}), read together so {@link useCorrection} counts one hook for both.
+ * @param listed - The day's list; undefined while it loads.
+ * @param slot - The undo slot offered on the day, if any.
+ * @param base - The viewed day, today, the stored zone and unused-day rule.
+ * @param settingsReady - Whether the stored settings are read.
+ * @returns `totalsFacts`, `untappedNotes` and `undoNote`.
+ * @example useSheetNotes(list.data, slot, { day, today, timeZone, autoExcludeUnusedDays }, ready)
+ */
+function useSheetNotes(
+  listed: ListedDay | undefined,
+  slot: UndoSlot | undefined,
+  base: Omit<UntappedFacts, 'manualExcluded'>,
+  settingsReady: boolean,
+) {
+  return {
+    totalsFacts: useTotalsFacts(base.day, base.today, listed, settingsReady),
+    ...useUntappedNotes(listed, slot, base, settingsReady),
+  }
+}
+
+/**
+ * The untapped-day notes of the sheet ({@link untappedSheetNotes}), read against the stored settings and the days excluded by
+ * hand in the notes' window, which `excludedDays.list` answers for just those days. The notes wait for both (`ready`), so none
+ * names an excluded day while the answer loads; an exclusion made since invalidates `excludedDays.*`, which refetches it.
+ * @param listed - The day's list, which places the window; undefined while it loads.
+ * @param slot - The undo slot offered on the day, if any.
+ * @param base - The viewed day, today, the stored zone and unused-day rule.
+ * @param settingsReady - Whether the stored settings are read.
+ * @returns The per-row and undo notes ({@link untappedSheetNotes}).
+ * @example useUntappedNotes(list.data, slot, { day, today, timeZone, autoExcludeUnusedDays }, ready)
+ */
+function useUntappedNotes(
+  listed: ListedDay | undefined,
+  slot: UndoSlot | undefined,
+  base: Omit<UntappedFacts, 'manualExcluded'>,
+  settingsReady: boolean,
+) {
+  const ask = untappedExclusions(listed, base)
+  const exclusions = useQuery(
+    orpc.excludedDays.list.queryOptions({
+      input: ask.input,
+      enabled: settingsReady && ask.enabled,
+    }),
+  )
+  return untappedSheetNotes(listed, slot, {
+    ...base,
+    manualExcluded: ask.excluded(exclusions.data),
+    ready: settingsReady && (!ask.enabled || exclusions.isSuccess),
+  })
 }
 
 // What the lines under 「ここで分割」 read: the idle threshold and the viewed day's class as the stats answer it.
