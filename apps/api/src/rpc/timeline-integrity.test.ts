@@ -4,6 +4,7 @@ import {
   addDays,
   DAY_ROWS_MAX,
   dayBounds,
+  dayDigest,
   localDay,
   type DayRow,
 } from '@switch-time/shared'
@@ -31,6 +32,14 @@ const idOf = (list: { id: string; name: string }[], name: string) => {
 // A listed day's rows as a baseline or 「元に戻す」's `expected` names them, the way the correction sheet sends them.
 const listedRows = (rows: DayRow[]): DayRow[] =>
   rows.map(({ id, activityId, startedAt }) => ({ id, activityId, startedAt }))
+// The same with each row's revision, as the sheet sends them since the day compares revisions.
+const revisedRows = (rows: (DayRow & { revision: number })[]): DayRow[] =>
+  rows.map(({ id, activityId, startedAt, revision }) => ({
+    id,
+    activityId,
+    startedAt,
+    revision,
+  }))
 
 afterEach(() => {
   vi.useRealTimers()
@@ -396,8 +405,268 @@ test('an edit on a busy day is still refused once the account’s time zone chan
   })
 })
 
-test('an edit sent with a rowless baseline on a row from another day is refused as bad input', async () => {
-  // Arrange: a record the day before, which yesterday's rowless baseline does not cover
+// Seeds yesterday with 仕事 at 9:00 and 休息 at 12:00 (the running state), and lists the day with revisions, as the sheet does.
+async function twoRowDay(email: string) {
+  const api = await signedIn(email)
+  const list = await api.activities.list()
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+  const listed = await api.switches.listByDay({ day: yesterday })
+  const [work, rest] = listed.rows
+  if (!work || !rest) throw new Error('fixture has no rows')
+  const baseline = {
+    day: yesterday,
+    timeZone: TZ,
+    rows: revisedRows(listed.rows),
+    carriedIn: null,
+    carriedOutId: null,
+  }
+  return { api, list, work, rest, baseline }
+}
+
+test('元に戻す is refused once another device changed a row and changed it back, since the row’s revision moved on', async () => {
+  // Arrange: device A picks 睡眠 for 仕事; device B then picks 娯楽 and 睡眠 again, which reads the same
+  const { api, list, work, rest, baseline } = await twoRowDay(
+    'undo-after-change-back@example.com',
+  )
+  const picked = await api.switches.changeActivity({
+    id: work.id,
+    activityId: idOf(list, '睡眠'),
+    baseline,
+  })
+  for (const name of ['娯楽', '睡眠'])
+    await api.switches.changeActivity({
+      id: work.id,
+      activityId: idOf(list, name),
+    })
+
+  // Act: device A's 元に戻す names the rows its pick left
+  const undo = api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [...revisedRows([picked]), ...revisedRows([rest])],
+    carriedOutId: null,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert
+  await expect(undo).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows[0]?.activityId,
+  ).toBe(idOf(list, '睡眠'))
+})
+
+test('an edit is refused when its baseline lists a row at a revision another write has moved on from', async () => {
+  // Arrange: another device picks 娯楽 for 仕事 and then 仕事 again after the sheet listed the day
+  const { api, list, work, rest, baseline } = await twoRowDay(
+    'edit-after-change-back@example.com',
+  )
+  for (const name of ['娯楽', '仕事'])
+    await api.switches.changeActivity({
+      id: work.id,
+      activityId: idOf(list, name),
+    })
+
+  // Act
+  const move = api.switches.moveStart({
+    id: rest.id,
+    deltaMinutes: 15,
+    baseline,
+  })
+
+  // Assert
+  await expect(move).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+})
+
+test('元に戻す of a ±15分 move lands with the previous row one revision on, as the move left it', async () => {
+  // Arrange: moving 休息 moves where 仕事 ends, which bumps 仕事's revision
+  const { api, list, work, rest, baseline } = await twoRowDay(
+    'undo-move-revisions@example.com',
+  )
+  const moved = await api.switches.moveStart({
+    id: rest.id,
+    deltaMinutes: 15,
+    baseline,
+  })
+
+  // Act
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: [
+      ...revisedRows([{ ...work, revision: work.revision + 1 }]),
+      ...revisedRows([moved]),
+    ],
+    carriedOutId: null,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert: 休息 starts at 12:00 again
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(yesterday, 9), at(yesterday, 12)])
+})
+
+test('元に戻す of ここで分割 lands with the cut row one revision on and the new part at revision 0', async () => {
+  // Arrange: cut 仕事 at 10:00
+  const { api, list, work, rest, baseline } = await twoRowDay(
+    'undo-cut-revisions@example.com',
+  )
+  const cut = await api.switches.splitAt({
+    id: work.id,
+    at: at(yesterday, 10),
+    baseline,
+  })
+
+  // Act
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expected: revisedRows([
+      { ...work, revision: work.revision + 1 },
+      { ...cut, revision: 0 },
+      rest,
+    ]),
+    carriedOutId: null,
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(yesterday, 9) },
+      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 12) },
+    ],
+  })
+
+  // Assert
+  expect(
+    (await api.switches.listByDay({ day: yesterday })).rows.map(
+      (row) => row.startedAt,
+    ),
+  ).toEqual([at(yesterday, 9), at(yesterday, 12)])
+})
+
+test('an edit with a baseline that names neither rows nor a digest is refused on a day that is not busy', async () => {
+  // Arrange: a client from before the digest sends no rows only on a busy day; this day holds two
+  const { api, list, work } = await twoRowDay('rowless-quiet-day@example.com')
+
+  // Act
+  const pick = api.switches.changeActivity({
+    id: work.id,
+    activityId: idOf(list, '睡眠'),
+    baseline: {
+      day: yesterday,
+      timeZone: TZ,
+      carriedIn: null,
+      carriedOutId: null,
+    },
+  })
+
+  // Assert
+  await expect(pick).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+})
+
+test('an edit on a busy day is refused once another device changed one of its rows, and lands with the digest of the day it read', async () => {
+  // Arrange: another device picks 睡眠 for the first row after the sheet digested the day
+  const { api, list, listed, carriedOutId } = await busyDay(
+    'busy-day-digest-edit@example.com',
+    DAY_ROWS_MAX + 1,
+  )
+  const [first, second] = listed.rows
+  if (!first || !second) throw new Error('fixture has no rows')
+  const staleDigest = dayDigest(listed.rows)
+  await api.switches.changeActivity({
+    id: first.id,
+    activityId: idOf(list, '睡眠'),
+  })
+  const pick = async (digest: string) =>
+    api.switches.changeActivity({
+      id: second.id,
+      activityId: idOf(list, '娯楽'),
+      baseline: {
+        day: yesterday,
+        timeZone: TZ,
+        digest,
+        carriedIn: null,
+        carriedOutId,
+      },
+    })
+
+  // Act
+  const stale = pick(staleDigest)
+  await expect(stale).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'day-changed' },
+  })
+  const relisted = await api.switches.listByDay({ day: yesterday })
+  const fresh = await pick(dayDigest(relisted.rows))
+
+  // Assert
+  expect(fresh).toMatchObject({ id: second.id, activityId: idOf(list, '娯楽') })
+})
+
+test('元に戻す on a busy day lands with the digest of the rows its edit left, and puts back all 301 rows', async () => {
+  // Arrange: the sheet picks 睡眠 for the first row of a 301-row day
+  const { api, list, work, listed, carriedOutId } = await busyDay(
+    'busy-day-digest-undo@example.com',
+    DAY_ROWS_MAX + 1,
+  )
+  const [first, ...rest] = listed.rows
+  if (!first) throw new Error('fixture has no rows')
+  const picked = await api.switches.changeActivity({
+    id: first.id,
+    activityId: idOf(list, '睡眠'),
+    baseline: {
+      day: yesterday,
+      timeZone: TZ,
+      digest: dayDigest(listed.rows),
+      carriedIn: null,
+      carriedOutId,
+    },
+  })
+
+  // Act
+  await api.switches.replaceDay({
+    day: yesterday,
+    timeZone: TZ,
+    expectedDigest: dayDigest([picked, ...rest]),
+    carriedOutId,
+    rows: listed.rows.map(({ activityId, startedAt }) => ({
+      activityId,
+      startedAt,
+    })),
+  })
+
+  // Assert
+  const after = await api.switches.listByDay({ day: yesterday })
+  expect([after.rows.length, after.rows[0]?.activityId]).toEqual([
+    DAY_ROWS_MAX + 1,
+    work,
+  ])
+})
+
+test('an edit sent with a digest baseline on a row from another day is refused as bad input', async () => {
+  // Arrange: a record the day before, which yesterday's digest baseline (an empty day's) does not cover
   const api = await signedIn('rowless-other-day@example.com')
   const list = await api.activities.list()
   const [record] = await api.switches.replaceDay({
@@ -415,6 +684,7 @@ test('an edit sent with a rowless baseline on a row from another day is refused 
     baseline: {
       day: yesterday,
       timeZone: TZ,
+      digest: dayDigest([]),
       carriedIn: { id: record.id, revision: record.revision },
       carriedOutId: null,
     },

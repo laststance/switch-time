@@ -1,10 +1,13 @@
 import { expect, test } from 'vitest'
 
 import {
+  DAY_ROWS_MAX,
   daySchema,
   monthSchema,
   reorderInputSchema,
+  replaceDayInputSchema,
   switchToInputSchema,
+  UNDO_ROWS_MAX,
 } from './schemas'
 
 test('a day before 1970 or without a plain four-digit year is refused', () => {
@@ -117,4 +120,47 @@ test('a tap with a negative or fractional wait is refused', () => {
   // Assert
   expect(parsedNegative.success).toBe(false)
   expect(parsedFractional.success).toBe(false)
+})
+
+// A 元に戻す request's rows: `count` rows of detox, one minute apart.
+const undoRows = (count: number) =>
+  Array.from({ length: count }, (_, index) => ({
+    activityId: null,
+    startedAt: new Date(Date.UTC(2026, 8, 28, 0, index)),
+  }))
+const undoCall = { day: '2026-09-28', timeZone: 'Asia/Tokyo' }
+
+test('元に戻す names what the day should hold as a row list or a digest, never both and never neither', () => {
+  // Act
+  const accepted = [
+    { expected: [] },
+    { expectedDigest: '0:bdcb81aee8d83' },
+    { expected: [], expectedDigest: '0:bdcb81aee8d83' },
+    {},
+  ].map(
+    (expectation) =>
+      replaceDayInputSchema.safeParse({
+        ...undoCall,
+        ...expectation,
+        rows: [],
+      }).success,
+  )
+
+  // Assert
+  expect(accepted).toEqual([true, true, false, false])
+})
+
+test('元に戻す writes back up to 600 rows on a busy day named by its digest, and up to 300 with a row list', () => {
+  // Act
+  const accepted = [
+    { expectedDigest: '600:1', rows: undoRows(UNDO_ROWS_MAX) },
+    { expectedDigest: '601:1', rows: undoRows(UNDO_ROWS_MAX + 1) },
+    { expected: [], rows: undoRows(DAY_ROWS_MAX) },
+    { expected: [], rows: undoRows(DAY_ROWS_MAX + 1) },
+  ].map(
+    (call) => replaceDayInputSchema.safeParse({ ...undoCall, ...call }).success,
+  )
+
+  // Assert
+  expect(accepted).toEqual([true, false, true, false])
 })

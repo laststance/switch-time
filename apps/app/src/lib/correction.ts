@@ -3,12 +3,14 @@ import type { AppRouterClient } from '@switch-time/api'
 import {
   DAY_ROWS_MAX,
   clampStart,
+  dayDigest,
   daySchema,
   LIVE_ACTIVITIES_MAX,
   localDay,
   MIN_SEGMENT_MS,
   REFUSAL,
   refusalDataSchema,
+  UNDO_ROWS_MAX,
   type DayBaseline,
   type DayRow,
   type ExcludedReason,
@@ -392,33 +394,35 @@ export function daySnapshot(
 const runMark = (startsRun: boolean | undefined) =>
   startsRun ? { startsRun } : {}
 
-// A row as a baseline or 「元に戻す」's `expected` compares it (id, activity and start), with the re-tap mark the undo writes back.
+// A row as a baseline or 「元に戻す」's `expected` compares it (id, activity, start and revision), with the re-tap mark the
+// undo writes back.
 const listedRow = ({
   id,
   activityId,
   startedAt,
+  revision,
   startsRun,
 }: Pick<
   SwitchRow,
-  'id' | 'activityId' | 'startedAt' | 'startsRun'
+  'id' | 'activityId' | 'startedAt' | 'revision' | 'startsRun'
 >): DayRow => ({
   id,
   activityId,
   startedAt,
+  revision,
   ...runMark(startsRun),
 })
 
 /**
  * The day as the sheet listed it, sent with every edit the day undo covers: the API refuses the edit unless the day still
  * reads exactly so under the same stored zone, which makes the list the day's true state before the edit. On a day busier
- * than {@link DAY_ROWS_MAX} it lists no rows, so the request stays small: the API still checks the zone and the records on
- * either side, and no day undo is armed.
+ * than {@link DAY_ROWS_MAX} it sends the rows' {@link dayDigest} instead of the rows, so the request stays small.
  * @param day - The sheet's day.
  * @param timeZone - The stored zone the list was windowed in.
  * @param list - The `switches.listByDay` answer the button was pressed on.
- * @returns The baseline: the day's own rows with their ids, oldest first (left out on a busy day), the carried-in record with
- *   its revision and the first switch after the day (null: none).
- * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt }, …], carriedIn: { id: 'c', revision: 2 }, carriedOutId: 'n' }
+ * @returns The baseline: the day's own rows with their ids and revisions, oldest first (on a busy day, their digest), the
+ *   carried-in record with its revision and the first switch after the day (null: none).
+ * @example dayBaseline('2026-09-08', 'Asia/Tokyo', list) // { day, timeZone, rows: [{ id, activityId, startedAt, revision }, …], carriedIn: { id: 'c', revision: 2 }, carriedOutId: 'n' }
  */
 export function dayBaseline(
   day: string,
@@ -433,16 +437,61 @@ export function dayBaseline(
       : null,
     carriedOutId: list.carriedOut?.id ?? null,
   }
-  if (list.rows.length > DAY_ROWS_MAX) return sides
+  if (list.rows.length > DAY_ROWS_MAX)
+    return { ...sides, digest: dayDigest(list.rows) }
   return { ...sides, rows: list.rows.map(listedRow) }
 }
+
+/**
+ * The day as the sheet listed it when an edit's button was pressed: the baseline the edit sends ({@link dayBaseline}), and
+ * every listed row, which a busy day's baseline leaves out but its 「元に戻す」 still writes back ({@link undoSlotFor}).
+ */
+export type PressedDay = { baseline: DayBaseline; rows: DayRow[] }
+
+/**
+ * {@link PressedDay} for the list the button was pressed on. Called by the sheet's edits at the press.
+ * @example pressedDay('2026-09-08', 'Asia/Tokyo', list) // { baseline: dayBaseline(…), rows: [{ id, activityId, startedAt, revision }, …] }
+ */
+export function pressedDay(
+  day: string,
+  timeZone: string,
+  list: ListedDay,
+): PressedDay {
+  return {
+    baseline: dayBaseline(day, timeZone, list),
+    rows: list.rows.map(listedRow),
+  }
+}
+
+/**
+ * The row whose span an edit changed without the API returning it, which the write moved one revision on: a ±15分 move's
+ * previous row (it now ends elsewhere; none when the edited row is the day's first, whose previous is the carried-in
+ * record) and a cut's row (it now ends at the cut; not a day row when the cut was of the carried-in record).
+ * @returns The row's id, or null when the edit changed only the row it returned
+ * @example bumpedRowId([work, rest], 'move', rest.id) // work.id
+ */
+function bumpedRowId(
+  before: readonly DayRow[],
+  kind: CorrectionEdit['kind'],
+  editedId: string,
+): string | null {
+  if (kind === 'cut') return editedId
+  if (kind !== 'move') return null
+  const index = before.findIndex((row) => row.id === editedId)
+  return index > 0 ? (before[index - 1]?.id ?? null) : null
+}
+
+// A row one revision on, as the API's write left it; a row listed without one (never, since listByDay names it) stays so.
+const bumped = (row: DayRow): DayRow =>
+  row.revision === undefined ? row : { ...row, revision: row.revision + 1 }
 
 /**
  * The day's own rows once an edit has landed, from the baseline the API checked and the row the edit returned: the edit
  * wrote nothing else, since the API ran it under the user's lock right after that check. A merge deletes the edited row;
  * the returned row (moved, re-activitied, the merge's kept neighbour, a cut's new part) replaces its id or joins; rows
- * outside the day drop (a merge into the carried-in record keeps that record on its own day). 「元に戻す」 sends these as
- * `expected`, so it is refused once anything else has touched the day.
+ * outside the day drop (a merge into the carried-in record keeps that record on its own day); the row the write reshaped
+ * without returning it moves one revision on ({@link bumpedRowId}). 「元に戻す」 sends these as `expected`, so it is refused
+ * once anything else has touched the day, even a change changed back.
  * @param before - The baseline's rows.
  * @param edit - The edit and the row it returned.
  * @param editedId - The row the edit was made on.
@@ -457,10 +506,14 @@ export function rowsAfterEdit(
   window: Pick<DayBounds, 'start' | 'end'>,
 ): DayRow[] {
   const returned = listedRow(edit.returned)
-  const untouched = before.filter(
-    (row) =>
-      row.id !== returned.id && !(edit.kind === 'merge' && row.id === editedId),
-  )
+  const bumpedId = bumpedRowId(before, edit.kind, editedId)
+  const untouched = before
+    .filter(
+      (row) =>
+        row.id !== returned.id &&
+        !(edit.kind === 'merge' && row.id === editedId),
+    )
+    .map((row) => (row.id === bumpedId ? bumped(row) : row))
   return [...untouched, returned]
     .filter((row) => {
       const time = row.startedAt.getTime()
@@ -784,26 +837,27 @@ export type CorrectionEdit = {
 /**
  * The undo an edit arms once it succeeds, from the rows as they were when the button was pressed (the baseline the API
  * checked). A pick on the carried-in record arms an activity undo, or nothing when its activity is archived (the picker
- * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo, unless the baseline
- * listed no rows (a day busier than {@link DAY_ROWS_MAX}), which leaves nothing to write back. Called by the sheet's edits
- * once they land.
+ * cannot offer it back, and an older undo must not replay either); every other edit arms the day undo, unless the day
+ * listed more than {@link UNDO_ROWS_MAX} rows, more than one request carries back. Called by the sheet's edits once they
+ * land.
  * @param edit - The edit just made and the row it returned.
  * @param row - The row it was made on, before the edit.
- * @param baseline - The day as the sheet listed it when the button was pressed; undefined before the day's list arrived.
+ * @param pressed - The day as the sheet listed it when the button was pressed; undefined before the day's list arrived.
  * @param window - The day's [start, end) in epoch ms.
  * @returns
  * - A carried-in pick: `{ kind: 'activity', … }`, or `{ blocked: 'archived' }`
  * - Anything else: `{ kind: 'day', … }` with the rows the edit left as `expected`, and the row to select after the undo
- * - null with no baseline or a busy day's: no undo, and the caller drops any older one
- * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, baseline, bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
+ * - null with no list or one over {@link UNDO_ROWS_MAX} rows: no undo, and the caller drops any older one
+ * @example undoSlotFor({ kind: 'pick', returned }, carriedIn, pressedDay(day, tz, list), bounds) // { kind: 'activity', id, to: 'work', revision: 4, … }
  */
 export function undoSlotFor(
   edit: CorrectionEdit,
   row: CorrectionRow,
-  baseline: DayBaseline | undefined,
+  pressed: PressedDay | undefined,
   window: Pick<DayBounds, 'start' | 'end'>,
 ): UndoSlot | { blocked: 'archived' } | null {
-  if (!baseline) return null
+  if (!pressed) return null
+  const { baseline, rows } = pressed
   if (edit.kind === 'pick' && row.carriedIn) {
     if (row.archived) return { blocked: 'archived' }
     return {
@@ -814,13 +868,13 @@ export function undoSlotFor(
       revision: edit.returned.revision,
     }
   }
-  if (!baseline.rows) return null
+  if (rows.length > UNDO_ROWS_MAX) return null
   return {
     kind: 'day',
     day: baseline.day,
     timeZone: baseline.timeZone,
-    rows: daySnapshot(baseline.rows),
-    expected: rowsAfterEdit(baseline.rows, edit, row.id, window),
+    rows: daySnapshot(rows),
+    expected: rowsAfterEdit(rows, edit, row.id, window),
     carriedOutId: baseline.carriedOutId,
     reselect: reselectAfterUndo(edit.kind, row),
     account: edit.returned.userId,
@@ -901,7 +955,8 @@ function dayRowsMatch(
       expected !== undefined &&
       row.id === expected.id &&
       row.activityId === expected.activityId &&
-      row.startedAt.getTime() === expected.startedAt.getTime()
+      row.startedAt.getTime() === expected.startedAt.getTime() &&
+      (expected.revision === undefined || row.revision === expected.revision)
     )
   })
 }
@@ -1063,8 +1118,9 @@ export type UndoRequest =
 
 /**
  * The call behind 「元に戻す」 for the armed slot: the day's rows back through `replaceDay`, conditional on the day still
- * holding the rows the edit left under the same zone, or the carried-in record's previous activity through `changeActivity`,
- * conditional on the record still being at the revision the pick left.
+ * holding the rows the edit left under the same zone (named by their {@link dayDigest} when the day listed more than
+ * {@link DAY_ROWS_MAX}, so the request stays under the body limit), or the carried-in record's previous activity through
+ * `changeActivity`, conditional on the record still being at the revision the pick left.
  * @param slot - The armed undo.
  * @returns The procedure and its input; a day undo also names the row to select after it (after a cut).
  * @example undoRequest({ kind: 'activity', day, id: 'w', to: 'work', revision: 4 }) // { procedure: 'changeActivity', input: { id: 'w', activityId: 'work', revision: 4 } }
@@ -1076,7 +1132,9 @@ export function undoRequest(slot: UndoSlot): UndoRequest {
       input: {
         day: slot.day,
         timeZone: slot.timeZone,
-        expected: slot.expected,
+        ...(slot.rows.length > DAY_ROWS_MAX
+          ? { expectedDigest: dayDigest(slot.expected) }
+          : { expected: slot.expected }),
         carriedOutId: slot.carriedOutId,
         rows: slot.rows,
         account: slot.account,

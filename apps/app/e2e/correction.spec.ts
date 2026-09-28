@@ -2097,6 +2097,42 @@ test('元に戻す stays off once ホーム read the day changed elsewhere, even
   await expect(undo).toBeDisabled()
 })
 
+test('元に戻す of a past day stays off once another device changed a row and changed it back while no sheet read the day', async ({
+  page,
+}) => {
+  // Arrange: 休息 merged into 仕事 on yesterday's sheet, which then closes
+  const { api, yesterday } = await seedYesterday(page)
+  const list = await api.activities.list()
+  await page.clock.install()
+  await page.goto(`/correction?day=${yesterday}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  await dialog.getByRole('button', { name: '休息 12:00 – 18:00 6時間' }).click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  const undo = page.getByRole('button', { name: '元に戻す' })
+  await expect(undo).toBeEnabled()
+  await page.getByRole('button', { name: '完了' }).click()
+  const [work] = (await api.switches.listByDay({ day: yesterday })).rows
+  if (!work) throw new Error('no 仕事 row')
+
+  // Act: another device picks 娯楽 for 仕事 and then 仕事 again, the day's list goes stale, then History opens the day.
+  for (const name of ['娯楽', '仕事'])
+    await api.switches.changeActivity({
+      id: work.id,
+      activityId: idOf(list, name),
+    })
+  await page.clock.fastForward('00:31')
+  await page.getByRole('tab', { name: '記録' }).click()
+  await dayLink(page, yesterday).click()
+
+  // Assert: the sheet lists 仕事 as the merge left it and has settled (its panel takes edits again), yet offers no undo over
+  // a day that changed in between.
+  await dialog.getByRole('button', { name: /^仕事 9:00 – 18:00/ }).click()
+  await expect(
+    dialog.getByRole('button', { name: '次の記録に統合' }),
+  ).toBeEnabled()
+  await expect(undo).toBeDisabled()
+})
+
 test('the sheet keeps an empty polite region that takes no room while nothing is said', async ({
   page,
 }) => {

@@ -3,7 +3,9 @@ import {
   changeActivityInputSchema,
   clampStart,
   MIN_SEGMENT_MS,
+  DAY_ROWS_MAX,
   dayBounds,
+  dayDigest,
   daySchema,
   detoxRunPastWeek,
   detoxRunStartDay,
@@ -18,6 +20,7 @@ import {
   switchToInputSchema,
   type DayBaseline,
   type DayRow,
+  type DigestRow,
 } from '@switch-time/shared'
 import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -354,17 +357,18 @@ async function switchesBetween(
   )
 }
 
-// The day's own rows as a baseline or 「元に戻す」's expectation lists them, oldest first.
+// The day's own rows as a baseline or 「元に戻す」's expectation lists them (or digests them), oldest first.
 const dayRows = async (
   tx: LockedTx,
   userId: string,
   window: DayWindow,
-): Promise<DayRow[]> =>
+): Promise<(DayRow & { revision: number })[]> =>
   tx
     .select({
       id: switches.id,
       activityId: switches.activityId,
       startedAt: switches.startedAt,
+      revision: switches.revision,
     })
     .from(switches)
     .where(inDay(userId, window))
@@ -372,7 +376,8 @@ const dayRows = async (
 
 /**
  * Whether the day reads exactly as the client listed it: the same rows in the same order, each with the same activity and
- * start. An edit in place (±15 min, 活動を変える) keeps the row's id, so ids alone would miss it.
+ * start, and the same revision where the client named one. An edit in place (±15 min, 活動を変える) keeps the row's id, so
+ * ids alone would miss it; a row changed and changed back (pick 娯楽, then 仕事 again) reads the same but for its revision.
  * @example sameRows(await dayRows(tx, userId, window), input.expected) // false once another device tapped
  */
 function sameRows(actual: readonly DayRow[], listed: readonly DayRow[]) {
@@ -384,10 +389,34 @@ function sameRows(actual: readonly DayRow[], listed: readonly DayRow[]) {
         other !== undefined &&
         row.id === other.id &&
         row.activityId === other.activityId &&
-        row.startedAt.getTime() === other.startedAt.getTime()
+        row.startedAt.getTime() === other.startedAt.getTime() &&
+        // Clients from before the revision was sent name none.
+        (other.revision === undefined || row.revision === other.revision)
       )
     })
   )
+}
+
+/**
+ * Whether the day's rows, read under the user's lock, are the ones the client named: the listed rows, or on a day busier
+ * than `DAY_ROWS_MAX`, their {@link dayDigest}. Called by {@link checkBaseline} and replaceDay.
+ * @param actual - The day's rows now ({@link dayRows}).
+ * @param expected - The client's rows or digest; neither is accepted only on a day busier than `DAY_ROWS_MAX` (clients from
+ *   before the digest), since the app lists every row of any other day.
+ * @returns true when the day still reads as the client saw it
+ * @example matchesDay(await dayRows(tx, userId, window), { digest: '301:1a2b' }) // false once another device picked a row
+ */
+function matchesDay(
+  actual: readonly DigestRow[],
+  expected: {
+    rows?: readonly DayRow[] | undefined
+    digest?: string | undefined
+  },
+): boolean {
+  if (expected.rows) return sameRows(actual, expected.rows)
+  if (expected.digest !== undefined)
+    return dayDigest(actual) === expected.digest
+  return actual.length > DAY_ROWS_MAX
 }
 
 /**
@@ -470,7 +499,7 @@ const dayChanged = () => conflict('day changed elsewhere', REFUSAL.dayChanged)
  * Checks, under the user's lock, that the day an edit was made on still reads as the sheet listed it: the stored zone is
  * the sheet's, the day's rows are exactly the baseline's, and the records on either side of the day are the ones it saw.
  * That makes the sheet's snapshot the day's real state before the edit, and the rows the edit leaves follow from it and the
- * row the edit returns. A baseline without rows (a day busier than `DAY_ROWS_MAX`) skips only the row comparison.
+ * row the edit returns. A day busier than `DAY_ROWS_MAX` is compared by its digest ({@link matchesDay}).
  * @returns the day's window, or null when the call named no baseline: a pick on the carried-in record (guarded by its
  *   `revision` instead, since that record reaches another day) and the API's own tests
  * @example const window = await checkBaseline(tx, userId, input.baseline) // CONFLICT day-changed after another device's tap
@@ -484,10 +513,7 @@ async function checkBaseline(
   const { timeZone } = await getSettings(userId, tx)
   if (timeZone !== baseline.timeZone) throw dayChanged()
   const window = dayBounds(baseline.day, timeZone)
-  if (
-    baseline.rows &&
-    !sameRows(await dayRows(tx, userId, window), baseline.rows)
-  )
+  if (!matchesDay(await dayRows(tx, userId, window), baseline))
     throw dayChanged()
   if (!(await sameCarriedIn(tx, userId, window, baseline.carriedIn)))
     throw dayChanged()
@@ -512,7 +538,7 @@ async function checkOwnRowBaseline(
 ): Promise<DayWindow | null> {
   const window = await checkBaseline(tx, userId, baseline)
   if (!baseline || !window) return window
-  // A baseline without rows (a busy day) names no rows to look in: the row's own start must fall inside the day.
+  // A baseline without rows (a busy day's digest) names no rows to look in: the row's own start must fall inside the day.
   const isOwnRow = baseline.rows
     ? baseline.rows.some((row) => row.id === id)
     : !outsideWindow(
@@ -809,7 +835,7 @@ export const switchesRouter = {
     }),
 
   // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction, only while the day still
-  // holds exactly the rows the edit left (`expected`) under the same stored zone. Past rows on an archived activity are
+  // holds exactly the rows the edit left (`expected`, or a busy day's `expectedDigest`) under the same stored zone. Past rows on an archived activity are
   // accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good. The row that
   // becomes the current state is not: an archived activity never runs.
   replaceDay: authed
@@ -831,7 +857,8 @@ export const switchesRouter = {
           input.rows.map((row) => row.activityId),
         )
         // Under the lock no other write can land between this read and the delete below.
-        if (!sameRows(await dayRows(tx, userId, window), input.expected))
+        const expected = { rows: input.expected, digest: input.expectedDigest }
+        if (!matchesDay(await dayRows(tx, userId, window), expected))
           throw dayChanged()
         const carriedOut = await carriedOutOf(tx, userId, window)
         if (!sameCarriedOut(carriedOut, input.carriedOutId)) throw dayChanged()

@@ -1,7 +1,7 @@
 import { createORPCClient } from '@orpc/client'
 import { RPCLink } from '@orpc/client/fetch'
 import type { RouterClient } from '@orpc/server'
-import { DAY_ROWS_MAX } from '@switch-time/shared'
+import { DAY_ROWS_MAX, UNDO_ROWS_MAX } from '@switch-time/shared'
 import { expect, test } from 'vitest'
 
 import { app } from './app'
@@ -71,10 +71,13 @@ test('the largest 元に戻す the correction sheet can send stays under the bod
     id: crypto.randomUUID(),
     activityId: crypto.randomUUID(),
     startedAt: new Date(start + index * minute),
+    revision: 99_999,
+    startsRun: true,
   }))
   const rows = Array.from({ length: DAY_ROWS_MAX }, (_, index) => ({
     activityId: crypto.randomUUID(),
     startedAt: new Date(start + index * minute),
+    startsRun: true,
   }))
 
   // Act: signed out, so a request that got past the body limit stops at the session check.
@@ -82,6 +85,29 @@ test('the largest 元に戻す the correction sheet can send stays under the bod
     day: '2026-09-25',
     timeZone: 'America/Argentina/ComodRivadavia',
     expected,
+    carriedOutId: crypto.randomUUID(),
+    rows,
+  })
+
+  // Assert
+  await expect(undo).rejects.toMatchObject({ code: 'UNAUTHORIZED' })
+})
+
+test('the largest 元に戻す on a busy day, named by its digest, stays under the body limit and reaches the procedure', async () => {
+  // Arrange: a busy day's undo writes back up to UNDO_ROWS_MAX rows, with the digest of the rows its edit left.
+  const start = Date.parse('2026-09-24T15:00:00.000Z')
+  const second = 1_000
+  const rows = Array.from({ length: UNDO_ROWS_MAX }, (_, index) => ({
+    activityId: crypto.randomUUID(),
+    startedAt: new Date(start + index * second),
+    startsRun: true,
+  }))
+
+  // Act: signed out, so a request that got past the body limit stops at the session check.
+  const undo = client.switches.replaceDay({
+    day: '2026-09-25',
+    timeZone: 'America/Argentina/ComodRivadavia',
+    expectedDigest: `${UNDO_ROWS_MAX + 1}:1fffffffffffff`,
     carriedOutId: crypto.randomUUID(),
     rows,
   })
