@@ -366,8 +366,10 @@ test('a screen too short for the sign-in card still lets the button and the firs
   await button.scrollIntoViewIfNeeded()
 
   // Assert
+  await expect(button).toBeVisible()
   await expect(button).toBeInViewport({ ratio: 0.9 })
   await address.scrollIntoViewIfNeeded()
+  await expect(address).toBeVisible()
   await expect(address).toBeInViewport({ ratio: 0.9 })
 })
 
