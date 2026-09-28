@@ -1028,13 +1028,17 @@ test('a tap that queued behind the last tap’s refetch is recorded at its press
   // Act: 休息 is pressed and waits 4 s behind the held refetch
   const restPressedAt = Date.now()
   await page.getByRole('button', { name: '休息' }).click()
-  await page.waitForTimeout(4000)
-  const tapsSentWhileHeld = tapRequests
+  // 休息 must still be unsent once 4 s have gone by (a second request before then fails the poll at its timeout)
+  await expect
+    .poll(() => tapRequests === 1 && Date.now() - restPressedAt >= 4000, {
+      timeout: 8000,
+    })
+    .toBe(true)
   dayListAnswer.resolve()
   await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
 
   // Assert: 休息 went out only after the refetch, yet starts at its press
-  expect(tapsSentWhileHeld).toBe(1)
+  expect(tapRequests).toBe(2)
   const current = await (await apiAs(page)).switches.current()
   expect(
     Math.abs((current?.startedAt.getTime() ?? 0) - restPressedAt),
