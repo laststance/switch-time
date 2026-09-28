@@ -30,6 +30,17 @@ export const syncedZoneSlice = createSlice({
       // Signed out: nothing is kept, so the next account to sign in starts unsynced.
       if (accountId) state.byAccount[accountId] = zone
     },
+    /**
+     * The zones the device holds now ({@link savedSyncedZones}), laid over this tab's copy: another tab of the same browser may
+     * have synced an account since this one read them, and that zone is the newer one. Accounts only this tab synced stay.
+     * Dispatched by {@link useTimeZoneSync} each time the app comes to the foreground.
+     */
+    syncedZonesReread(state, action: PayloadAction<unknown>) {
+      const parsed = syncedZoneStateSchema.safeParse(action.payload)
+      // Nothing saved, or a value that is not trusted: this tab keeps its own copy.
+      if (parsed.success)
+        state.byAccount = { ...state.byAccount, ...parsed.data.byAccount }
+    },
   },
   selectors: {
     /**
@@ -44,7 +55,7 @@ export const syncedZoneSlice = createSlice({
   },
 })
 
-export const { zoneSynced } = syncedZoneSlice.actions
+export const { zoneSynced, syncedZonesReread } = syncedZoneSlice.actions
 export const { selectSyncedZone } = syncedZoneSlice.selectors
 
 /**

@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.4.0] - 2026-09-29
+
+### Changed
+
+- The hint on 未使用日の扱い now says an untapped day ends the streak there
+  (「連続記録もその日で途切れます」), instead of reading as if the streak
+  skips it.
+
+### Fixed
+
+- A 外観, 秒針 or 未使用日 change still on its way when another tab signs in
+  as someone else is refused, instead of being saved into the other account.
+- When two settings changes are out and the first one fails, only the first
+  one's field goes back; the second change keeps its value on screen.
+- A web tab brought back to the foreground now knows the zones another tab of
+  the same browser synced while it was hidden, so it no longer judges its next
+  zone sync against an older copy or drops the other tab's accounts when it
+  saves.
+
 ## [0.24.3.0] - 2026-09-29
 
 ### Added
