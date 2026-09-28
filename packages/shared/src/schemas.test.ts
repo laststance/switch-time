@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { daySchema, monthSchema } from './schemas'
+import { daySchema, monthSchema, reorderInputSchema } from './schemas'
 
 test('a day before 1970 or without a plain four-digit year is refused', () => {
   // Act
@@ -44,4 +44,32 @@ test('a day or month so late that a week after it would pass year 9999 is refuse
   // Assert
   expect(days).toEqual([true, false, false])
   expect(months).toEqual([true, false])
+})
+
+test('a reorder can name a full grid of 100 activities, and one more id is refused', () => {
+  // Arrange: distinct v4 uuids, 101 of them
+  const ids = Array.from(
+    { length: 101 },
+    (_, index) =>
+      `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`,
+  )
+
+  // Act
+  const full = reorderInputSchema.safeParse({ ids: ids.slice(0, 100) }).success
+  const overFull = reorderInputSchema.safeParse({ ids }).success
+
+  // Assert
+  expect([full, overFull]).toEqual([true, false])
+})
+
+test('a reorder that names one activity twice is refused before it reaches the live set check', () => {
+  // Arrange
+  const work = '00000000-0000-4000-8000-000000000001'
+  const rest = '00000000-0000-4000-8000-000000000002'
+
+  // Act
+  const repeated = reorderInputSchema.safeParse({ ids: [work, rest, work] })
+
+  // Assert
+  expect(repeated.success).toBe(false)
 })

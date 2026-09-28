@@ -1381,43 +1381,6 @@ test('a merge of a record that another device has just merged away is refused, s
   ])
 })
 
-test('splitting in half creates a second row at the midpoint with the same activity', async () => {
-  // Arrange: yesterday 仕事 9:00 then 休息 13:00.
-  const api = await signedIn('split@example.com')
-  const list = await api.activities.list()
-  const 仕事 = idOf(list, '仕事')
-  await api.switches.replaceDay({
-    day: yesterday,
-    timeZone: TZ,
-    expected: [],
-    rows: [
-      { activityId: 仕事, startedAt: at(yesterday, 9) },
-      { activityId: idOf(list, '休息'), startedAt: at(yesterday, 13) },
-    ],
-  })
-  const before = await api.switches.listByDay({ day: yesterday })
-  const work = before.rows[0]
-  if (!work) throw new Error('fixture has no first row')
-
-  // Act
-  const created = await api.switches.splitInHalf({ id: work.id })
-
-  // Assert
-  expect(created).toMatchObject({
-    activityId: 仕事,
-    startedAt: at(yesterday, 11),
-    source: 'split',
-  })
-  const after = await api.switches.listByDay({ day: yesterday })
-  expect(
-    after.rows.map((row) => [row.activityId === 仕事, row.startedAt]),
-  ).toEqual([
-    [true, at(yesterday, 9)],
-    [true, at(yesterday, 11)],
-    [false, at(yesterday, 13)],
-  ])
-})
-
 test('moving a start time cannot cross the neighbouring rows', async () => {
   // Arrange: three rows five minutes apart, so ±15 min always meets a neighbour.
   const api = await signedIn('move@example.com')
@@ -1469,7 +1432,7 @@ test('moving a start time cannot cross the neighbouring rows', async () => {
   ).rejects.toMatchObject({ code: 'CONFLICT', data: { reason: 'no-room' } })
 })
 
-test('reorder rejects a position set that is not a permutation', async () => {
+test('reorder refuses a set that is not the live grid as a changed list, and repeated ids as a bad request', async () => {
   // Arrange
   const api = await signedIn('reorder@example.com')
   const ids = (await api.activities.list()).map((row) => row.id)
@@ -1477,7 +1440,10 @@ test('reorder rejects a position set that is not a permutation', async () => {
   // Act + Assert
   await expect(
     api.activities.reorder({ ids: ids.slice(1) }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   await expect(
     api.activities.reorder({ ids: [...ids.slice(0, 5), ...ids.slice(0, 1)] }),
   ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
@@ -1503,7 +1469,10 @@ test('a reorder that still names an activity archived before it is refused, and 
   const reorder = api.activities.reorder({ ids: [...ids].reverse() })
 
   // Assert
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   const live = (await api.activities.list()).filter(
     (row) => row.archivedAt === null,
   )
@@ -1885,41 +1854,6 @@ test('a corrected segment cannot be moved onto an archived activity', async () =
   })
 })
 
-test('splitting keeps both halves at least a minute long', async () => {
-  // Arrange
-  const api = await signedIn('split@example.com')
-  const { id: userId } = await api.me()
-  const work = idOf(await api.activities.list(), '仕事')
-  const yesterday = addDays(today, -1)
-  const [long, , short] = await db
-    .insert(switches)
-    .values([
-      { userId, activityId: work, startedAt: at(yesterday, 10) },
-      { userId, activityId: work, startedAt: at(yesterday, 12) },
-      { userId, activityId: work, startedAt: at(yesterday, 14) },
-      {
-        userId,
-        activityId: work,
-        startedAt: new Date(at(yesterday, 14).getTime() + 90_000),
-      },
-    ])
-    .returning()
-  if (!long || !short) throw new Error('seed failed')
-
-  // Act
-  const half = await api.switches.splitInHalf({ id: long.id })
-
-  // Assert
-  expect(half.startedAt).toEqual(at(yesterday, 11))
-  expect(half.source).toBe('split')
-  await expect(
-    api.switches.splitInHalf({ id: short.id }),
-  ).rejects.toMatchObject({
-    code: 'CONFLICT',
-    data: { reason: 'cannot-split' },
-  })
-})
-
 test('an empty settings update is rejected as input, not as a database error', async () => {
   // Arrange
   const api = await signedIn('empty-settings@example.com')
@@ -2189,7 +2123,7 @@ test('a replaced day that slips in another account’s activity beside the user�
   ])
 })
 
-test('splitting a record of an archived activity keeps both halves on that activity', async () => {
+test('cutting a record of an archived activity keeps both parts on that activity', async () => {
   // Arrange: yesterday 休息 10:00 then 仕事 12:00; 家事 is the current state, so 休息 can be archived
   const api = await signedIn('split-archived@example.com')
   const list = await api.activities.list()
@@ -2210,10 +2144,13 @@ test('splitting a record of an archived activity keeps both halves on that activ
   await api.activities.archive({ id: rest })
 
   // Act
-  const half = await api.switches.splitInHalf({ id: restRow.id })
+  const created = await api.switches.splitAt({
+    id: restRow.id,
+    at: at(yesterday, 11),
+  })
 
   // Assert: the new row at 11:00 stays 休息; only the writes that pick an activity refuse an archived one
-  expect(half).toMatchObject({
+  expect(created).toMatchObject({
     activityId: rest,
     startedAt: at(yesterday, 11),
     source: 'split',
@@ -2364,7 +2301,7 @@ test('an account whose seed rows are missing gets them on the first settings rea
   expect(names).toEqual(['家事', '仕事', '休息', '睡眠', '食事', '娯楽'])
 })
 
-test('splitting a detox span keeps both halves detox', async () => {
+test('cutting a detox span keeps both parts detox', async () => {
   // Arrange: yesterday 仕事 9:00, detox 12:00, 休息 18:00; the detox row is the one in the middle
   const api = await signedIn('split-detox@example.com')
   const list = await api.activities.list()
@@ -2383,10 +2320,13 @@ test('splitting a detox span keeps both halves detox', async () => {
   if (!detox) throw new Error('fixture has no second row')
 
   // Act
-  const half = await api.switches.splitInHalf({ id: detox.id })
+  const created = await api.switches.splitAt({
+    id: detox.id,
+    at: at(yesterday, 15),
+  })
 
   // Assert: the new row at 15:00 is detox too, so the time stays recorded to nothing on both sides of the cut
-  expect(half).toMatchObject({
+  expect(created).toMatchObject({
     activityId: null,
     startedAt: at(yesterday, 15),
     source: 'split',
@@ -2823,11 +2763,14 @@ test('every write that moves where a record ends moves that record’s revision 
     )?.revision
 
   // Act + Assert: each write that moves 仕事's end moves its revision on by one
-  const half = await api.switches.splitInHalf({ id: work.id })
+  const cut = await api.switches.splitAt({
+    id: work.id,
+    at: at(yesterday, 11),
+  })
   expect(await revisionOf(work.id)).toBe(1)
-  await api.switches.moveStart({ id: half.id, deltaMinutes: 15 })
-  expect([await revisionOf(work.id), await revisionOf(half.id)]).toEqual([2, 1])
-  await api.switches.mergeIntoPrevious({ id: half.id })
+  await api.switches.moveStart({ id: cut.id, deltaMinutes: 15 })
+  expect([await revisionOf(work.id), await revisionOf(cut.id)]).toEqual([2, 1])
+  await api.switches.mergeIntoPrevious({ id: cut.id })
   expect(await revisionOf(work.id)).toBe(3)
   await api.switches.splitAt({ id: work.id, at: at(yesterday, 10) })
   expect(await revisionOf(work.id)).toBe(4)

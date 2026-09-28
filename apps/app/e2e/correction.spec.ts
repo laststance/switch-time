@@ -2645,6 +2645,11 @@ test('a refusal shows at once even when the connection drops before the list is 
 test('a refusal on today’s sheet does not follow the sheet into the next day at midnight', async ({
   page,
 }) => {
+  // 15分早める on a record tapped just now stays inside today only once the day is over 15 minutes old.
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 17 * 60_000,
+    'the Tokyo day is under 17 minutes old, so 15分早める on the sign-up tap would leave the day',
+  )
   // Arrange: today's sheet lists 家事 where signing up tapped it, then another device moves it 15 minutes earlier.
   await signUp(page)
   const api = await apiAs(page)

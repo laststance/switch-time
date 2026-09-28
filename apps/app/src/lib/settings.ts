@@ -269,3 +269,27 @@ export function editorRows(
     canArchive: row.id !== currentActivityId && live.length > 1,
   }))
 }
+
+/**
+ * The 活動項目 sheet's アーカイブ済み section from `activities.list`: the archived rows, most recently archived first, each of which
+ * 戻す brings back through `activities.unarchive`. It is how a record merged away on an archived activity can be rebuilt once
+ * 「元に戻す」 is gone: 活動を変える lists live activities only. Undefined input (still loading) gives no rows.
+ * @param activities - `activities.list`'s answer, archived rows included.
+ * @returns
+ * - the archived rows, newest archive first
+ * - [] while loading, or when nothing is archived (the sheet then leaves the section out)
+ * @example archivedRows([{ name: '休息', archivedAt: new Date('2026-09-01') }, …]) // [休息 row]
+ */
+export function archivedRows(
+  activities: ActivityRow[] | undefined,
+): ActivityRow[] {
+  return (
+    (activities ?? [])
+      .filter((row) => row.archivedAt !== null)
+      // `sort` on the narrowed copy above rather than `toSorted`, which Safari before 16 lacks.
+      .sort(
+        (a, b) =>
+          (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0),
+      )
+  )
+}

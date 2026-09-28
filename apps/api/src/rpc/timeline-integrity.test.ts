@@ -308,8 +308,8 @@ async function busyDay(email: string, count: number) {
   return { api, list, work, listed, carriedOutId: listed.carriedOut.id }
 }
 
-test('半分で分割 on the busiest day a baseline can list lands, and its 元に戻す, one row longer, still goes through', async () => {
-  // Arrange: the last row runs from 5:59 to midnight, long enough to split
+test('ここで分割 on the busiest day a baseline can list lands, and its 元に戻す, one row longer, still goes through', async () => {
+  // Arrange: the last row runs from 5:59 to midnight, cut at 15:00
   const { api, work, listed, carriedOutId } = await busyDay(
     'busy-day-split-undo@example.com',
     DAY_ROWS_MAX,
@@ -317,8 +317,9 @@ test('半分で分割 on the busiest day a baseline can list lands, and its 元�
   const last = listed.rows.at(-1)
   if (!last) throw new Error('fixture has no rows')
   const before = listedRows(listed.rows)
-  const half = await api.switches.splitInHalf({
+  const cut = await api.switches.splitAt({
     id: last.id,
+    at: at(yesterday, 15),
     baseline: {
       day: yesterday,
       timeZone: TZ,
@@ -332,7 +333,7 @@ test('半分で分割 on the busiest day a baseline can list lands, and its 元�
   await api.switches.replaceDay({
     day: yesterday,
     timeZone: TZ,
-    expected: [...before, ...listedRows([half])],
+    expected: [...before, ...listedRows([cut])],
     carriedOutId,
     rows: before.map(({ activityId, startedAt }) => ({
       activityId,
@@ -408,8 +409,9 @@ test('an edit sent with a rowless baseline on a row from another day is refused 
   if (!record) throw new Error('seed failed')
 
   // Act
-  const split = api.switches.splitInHalf({
+  const move = api.switches.moveStart({
     id: record.id,
+    deltaMinutes: 15,
     baseline: {
       day: yesterday,
       timeZone: TZ,
@@ -419,7 +421,7 @@ test('an edit sent with a rowless baseline on a row from another day is refused 
   })
 
   // Assert
-  await expect(split).rejects.toThrow("row is not one of the day's own rows")
+  await expect(move).rejects.toThrow("row is not one of the day's own rows")
 })
 
 test('two taps in the same millisecond both land, the second 1 ms after the first, so the timeline keeps one order', async () => {

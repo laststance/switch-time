@@ -13,7 +13,7 @@ import type { PoolClient } from 'pg'
 import { expect, onTestFinished, test, vi } from 'vitest'
 
 import { REQUEST_DEADLINE_MS, db, pool, type LockedTx } from '../db/client'
-import { switches, userSettings } from '../db/schema/app'
+import { activities, switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
 import {
@@ -222,7 +222,10 @@ test('a reorder queued behind the addition of an activity is refused, since the 
 
   // Assert: 読書 lands at the end, the reorder is refused, and the grid keeps its order
   await expect(create).resolves.toMatchObject({ name: '読書', position: 6 })
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   expect(
     (await api.activities.list()).map((row) => [row.name, row.position]),
   ).toEqual([
@@ -253,7 +256,10 @@ test('a reorder queued behind the archive of an activity it names is refused, an
 
   // Assert
   await expect(archive).resolves.toMatchObject({ archivedAt: expect.any(Date) })
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   const live = (await api.activities.list()).filter(
     (row) => row.archivedAt === null,
   )
@@ -295,6 +301,48 @@ test('an unarchive queued behind the addition of an activity comes back after it
     archivedAt: null,
     position: 7,
   })
+})
+
+test('an addition and an unarchive queued at 99 live activities cannot both land, so the grid never passes 100', async () => {
+  // Arrange: 休息 archived, the live set topped up to 99 past the API, then another device holds the lock
+  const api = await signedIn('lock-cap-create-unarchive@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await api.activities.archive({ id: rest })
+  await db.insert(activities).values(
+    Array.from({ length: 94 }, (_, index) => ({
+      userId,
+      name: `項目${index}`,
+      color: '#E0A431',
+      iconKey: 'home',
+      position: 6 + index,
+    })),
+  )
+  const release = await holdTimelineLock(userId)
+
+  // Act: the addition queues first, the unarchive second
+  const create = api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: null,
+  })
+  await waitForLockQueue(userId, 1)
+  const unarchive = api.activities.unarchive({ id: rest })
+  await waitForLockQueue(userId, 2)
+  await release()
+
+  // Assert: the addition takes the 100th slot, the unarchive is refused and 休息 stays archived
+  await expect(create).resolves.toMatchObject({ name: '読書' })
+  await expect(unarchive).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'too-many-activities' },
+  })
+  const after = await api.activities.list()
+  expect(after.filter((row) => row.archivedAt === null)).toHaveLength(100)
+  expect(after.find((row) => row.id === rest)?.archivedAt).not.toBeNull()
 })
 
 test('an activity added while four of the account’s writes are in flight is refused at once as busy, and nothing is added', async () => {
@@ -575,13 +623,14 @@ test('an edit made under a time zone the account no longer uses is refused', asy
   await api.settings.update({ timeZone: 'Europe/London' })
 
   // Act
-  const split = api.switches.splitInHalf({
+  const cut = api.switches.splitAt({
     id: work.id,
+    at: at(yesterday, 10.5),
     baseline: { day: yesterday, timeZone: TZ, rows: listedRows(listed.rows) },
   })
 
   // Assert
-  await expect(split).rejects.toMatchObject({
+  await expect(cut).rejects.toMatchObject({
     code: 'CONFLICT',
     data: { reason: 'day-changed' },
   })
@@ -901,45 +950,6 @@ test('a move that would take the day’s last row past its midnight is refused w
   ).toEqual(at(dayBefore, 23 + 50 / 60))
 })
 
-test('半分で分割 is refused when the half-way point falls on the next day, so the new row never leaves the sheet’s day', async () => {
-  // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00 (midpoint 1:00 yesterday)
-  const api = await signedIn('baseline-split-midpoint@example.com')
-  const list = await api.activities.list()
-  const dayBefore = addDays(yesterday, -1)
-  await api.switches.replaceDay({
-    day: dayBefore,
-    timeZone: TZ,
-    expected: [],
-    rows: [{ activityId: idOf(list, '仕事'), startedAt: at(dayBefore, 20) }],
-  })
-  await api.switches.replaceDay({
-    day: yesterday,
-    timeZone: TZ,
-    expected: [],
-    rows: [{ activityId: idOf(list, '休息'), startedAt: at(yesterday, 6) }],
-  })
-  const listed = await api.switches.listByDay({ day: dayBefore })
-  const [work] = listed.rows
-  if (!work) throw new Error('fixture has no row')
-
-  // Act
-  const split = api.switches.splitInHalf({
-    id: work.id,
-    baseline: { day: dayBefore, timeZone: TZ, rows: listedRows(listed.rows) },
-  })
-
-  // Assert: refused, and yesterday still holds only 休息
-  await expect(split).rejects.toMatchObject({
-    code: 'CONFLICT',
-    data: { reason: 'cannot-split' },
-  })
-  expect(
-    (await api.switches.listByDay({ day: yesterday })).rows.map(
-      (row) => row.activityId,
-    ),
-  ).toEqual([idOf(list, '休息')])
-})
-
 test('merging the day’s last row into the next day’s first switch is refused when the sheet names its day, and the next day keeps its row', async () => {
   // Arrange: the day before yesterday ends on 仕事 at 20:00, and yesterday starts on 休息 at 6:00
   const api = await signedIn('baseline-merge-next-day@example.com')
@@ -1038,10 +1048,6 @@ const carriedInEdits: [string, CarriedInEdit][] = [
     '前の記録に統合',
     async (api, id, baseline) =>
       api.switches.mergeIntoPrevious({ id, baseline }),
-  ],
-  [
-    '半分で分割',
-    async (api, id, baseline) => api.switches.splitInHalf({ id, baseline }),
   ],
 ]
 

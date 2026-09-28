@@ -155,7 +155,7 @@ async function ownActivities(
 /**
  * Rejects an archived activity (the user can no longer pick it) or one that is not the user's, for the writes that pick an
  * activity (switchTo and changeActivity) and those that make an existing record the current state: replaceDay for the row
- * its day leaves latest, mergeIntoPrevious when it merges the running record. The splits copy their row's own activity and
+ * its day leaves latest, mergeIntoPrevious when it merges the running record. splitAt copies its row's own activity and
  * mergeIntoNext keeps the latest record, so neither calls it. Read under the user's lock, so an archive cannot land in between.
  * @example await assertLiveActivities(tx, userId, [input.activityId])
  */
@@ -237,8 +237,7 @@ async function changeActivityAt(
   throw conflict('record changed elsewhere', REFUSAL.recordChanged)
 }
 
-// A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitAt inserts
-// it, and so does splitInHalf for clients before 0.23.
+// A split's new row: the split row's owner and activity from `startedAt` on; the split row now ends there. splitAt inserts it.
 const insertSplit = async (tx: LockedTx, row: SwitchRow, startedAt: Date) => {
   await bumpRevision(tx, row.id)
   return one(
@@ -526,6 +525,25 @@ async function checkOwnRowBaseline(
   return window
 }
 
+/**
+ * The row a correction-sheet edit names, with its neighbours and the day window it was checked against: the opening every
+ * edit that moves or merges one of the day's own rows shares. Runs inside that edit's locked transaction.
+ * @param tx - The edit's locked transaction.
+ * @param userId - Whose switches.
+ * @param input - The edit's row id and, from the sheet, its baseline.
+ * @returns {@link withNeighbours}'s row, prev and next, plus {@link checkOwnRowBaseline}'s window (null without a baseline).
+ * @throws What those two throw: the day changed, the row is not one of the day's own, or it is gone.
+ * @example const { window, row, next } = await editedRow(tx, userId, input)
+ */
+async function editedRow(
+  tx: LockedTx,
+  userId: string,
+  input: { id: string; baseline?: DayBaseline },
+) {
+  const window = await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
+  return { window, ...(await withNeighbours(tx, userId, input.id)) }
+}
+
 // The end of the day a switch starts on, in the stored zone.
 async function rowDayEnd(tx: LockedTx, userId: string, startedAt: Date) {
   const { timeZone } = await getSettings(userId, tx)
@@ -662,13 +680,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, context.deadline, async (tx) => {
-        const window = await checkOwnRowBaseline(
-          tx,
-          userId,
-          input.baseline,
-          input.id,
-        )
-        const { row, prev, next } = await withNeighbours(tx, userId, input.id)
+        const { window, row, prev, next } = await editedRow(tx, userId, input)
         const startedAt = clampStart(
           row.startedAt.getTime() + input.deltaMinutes * 60_000,
           prev?.startedAt.getTime() ?? null,
@@ -708,8 +720,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, context.deadline, async (tx) => {
-        await checkOwnRowBaseline(tx, userId, input.baseline, input.id)
-        const { row, prev, next } = await withNeighbours(tx, userId, input.id)
+        const { row, prev, next } = await editedRow(tx, userId, input)
         // The first state ever has nothing to merge into; deleting it would leave the clock with no state.
         if (!prev) throw conflict('no previous state', REFUSAL.noNeighbour)
         // Merging the running record makes the previous one the current state, which an archived activity can never be.
@@ -731,13 +742,7 @@ export const switchesRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.user.id
       return withUserLock(userId, context.deadline, async (tx) => {
-        const window = await checkOwnRowBaseline(
-          tx,
-          userId,
-          input.baseline,
-          input.id,
-        )
-        const { row, next } = await withNeighbours(tx, userId, input.id)
+        const { window, row, next } = await editedRow(tx, userId, input)
         // The current state has no later state to hand its time to.
         if (!next) throw conflict('no next state', REFUSAL.noNeighbour)
         // 元に戻す rewrites the row's day only: a next state pulled back from a later day would be deleted with it, for good.
@@ -751,31 +756,6 @@ export const switchesRouter = {
           startedAt: row.startedAt,
           startsRun: mergedIntoNextMark(row, next),
         })
-      })
-    }),
-
-  // 半分で分割, which the sheet no longer offers (区切る時刻 cuts every row since 0.23). Kept for one release so a client still
-  // open from before it keeps working; TODOS.md tracks its removal.
-  splitInHalf: authed
-    .input(rowEditInputSchema)
-    .handler(async ({ context, input }) => {
-      const userId = context.user.id
-      return withUserLock(userId, context.deadline, async (tx) => {
-        const window = await checkOwnRowBaseline(
-          tx,
-          userId,
-          input.baseline,
-          input.id,
-        )
-        const { row, next } = await withNeighbours(tx, userId, input.id)
-        const end = next?.startedAt.getTime() ?? Date.now()
-        const midpoint = Math.floor((row.startedAt.getTime() + end) / 2)
-        // Both halves must keep the 1-minute floor that moveStart enforces through clampStart.
-        if (end - row.startedAt.getTime() < 2 * MIN_SEGMENT_MS)
-          throw conflict('segment too short to split', REFUSAL.cannotSplit)
-        if (outsideWindow(window, midpoint))
-          throw conflict('midpoint is on another day', REFUSAL.cannotSplit)
-        return insertSplit(tx, row, new Date(midpoint))
       })
     }),
 
