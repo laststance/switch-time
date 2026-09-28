@@ -14,20 +14,6 @@
 **Priority:** P3
 **Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
 
-## Correction
-
-### Offer 「元に戻す」 on a day of more than 600 switches
-
-**What:** Arm the day's 「元に戻す」 after an edit on a day that lists more than `UNDO_ROWS_MAX` (600) rows, for example by writing back only the rows the edit changed instead of the whole day.
-
-**Why:** Since 0.24.7.0 a day busier than `DAY_ROWS_MAX` (300) names its rows by a digest (`dayDigest`), so its edits notice another device's change and its undo writes back up to 600 rows under the 100 KB body limit on `/api/*`. Above 600 the edit still lands with the digest baseline, but no undo is armed, since the rows to write back no longer fit one request.
-
-**Context:** `undoSlotFor` and `undoRequest` in `apps/app/src/lib/correction.ts`, `replaceDay` in `apps/api/src/rpc/switches.ts`, `UNDO_ROWS_MAX` in `packages/shared/src/schemas.ts`, the body-limit tests in `apps/api/src/app.test.ts`. Only a script or a hotkey burst reaches 600 switches in a day.
-
-**Effort:** M
-**Priority:** P4
-**Depends on:** None
-
 ## Stats
 
 ### Listen to History's and the correction sheet's spoken labels

@@ -180,8 +180,9 @@ export type DayRow = z.infer<typeof dayRowSchema>
 export const DAY_ROWS_MAX = 300
 
 /**
- * The most rows 「元に戻す」 writes back on a day busier than {@link DAY_ROWS_MAX}, whose expectation is a digest rather than
- * a row list: 600 rows alone stay well under the API's request body limit. A busier day is still corrected, without 「元に戻す」.
+ * The most rows one `replaceDay` writes back, whole day or `range`: 600 rows alone stay well under the API's request body
+ * limit. The app never nears it: a day busier than {@link DAY_ROWS_MAX} is undone through a `range` that holds only the
+ * rows the edit changed, so a day of any size has its 「元に戻す」.
  */
 export const UNDO_ROWS_MAX = 2 * DAY_ROWS_MAX
 
@@ -316,10 +317,13 @@ export const REFUSAL = Object.freeze({
 } as const satisfies Record<string, z.infer<typeof refusalDataSchema>>)
 
 /**
- * Whole-day rewrite behind 「元に戻す」: the day's previous rows, oldest first (`activityId` null is a detox row), written only
- * while the stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left (on a day
- * busier than {@link DAY_ROWS_MAX}, `expectedDigest`, their `dayDigest`, with up to {@link UNDO_ROWS_MAX} rows; exactly one
- * of the two), and its last row still runs into `carriedOutId` (an edit never changes it, so it is the baseline's). `account` is the user the edit was
+ * Rewrite behind 「元に戻す」: the previous rows, oldest first (`activityId` null is a detox row), written only while the
+ * stored zone is still `timeZone`, the day's rows are still exactly `expected`, the rows the edit left (on a day busier than
+ * {@link DAY_ROWS_MAX}, `expectedDigest`, their `dayDigest`; exactly one of the two), and its last row still runs into
+ * `carriedOutId` (an edit never changes it, so it is the baseline's). Without `range` the whole day is rewritten, with up to
+ * {@link UNDO_ROWS_MAX} rows. With `range` (`from` inclusive, `to` exclusive, inside the day) only the rows that start in it
+ * are deleted and `rows` are written in their place, all of them inside it: the rest of the day is not touched, and keeps
+ * its ids. The expectation still names the whole day, so the undo lands only when nothing else changed. `account` is the user the edit was
  * written as (its returned row's `userId`): a tab that another tab has since signed in as someone else still sends the new session's cookie, and a detox-only
  * day passes every other check on an empty day. Left out, it is not compared (seeds and the API's own tests).
  */
@@ -329,6 +333,12 @@ export const replaceDayInputSchema = z
     timeZone: timeZoneSchema,
     expected: dayRowsSchema.optional(),
     expectedDigest: dayDigestSchema.optional(),
+    range: z
+      .object({ from: z.coerce.date(), to: z.coerce.date() })
+      .refine((range) => range.from < range.to, {
+        message: 'range must start before it ends',
+      })
+      .optional(),
     carriedOutId: carriedOutIdSchema,
     account: z.string().optional(),
     rows: z

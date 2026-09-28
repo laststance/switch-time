@@ -354,7 +354,7 @@ function useCorrectionEdits(
     const landed =
       (kind: CorrectionEdit['kind']) =>
       (returned: SwitchRow): void => {
-        // No undo for this edit (no list yet, a day over UNDO_ROWS_MAX rows, an archived pick) also drops the older one: it
+        // No undo for this edit (no list yet, an archived pick) also drops the older one: it
         // no longer matches the day.
         const { slot, archived } = landedUndo(
           undoSlotFor({ kind, returned }, row, pressed, bounds),

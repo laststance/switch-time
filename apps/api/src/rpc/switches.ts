@@ -30,6 +30,7 @@ import { db, type Executor, type LockedTx } from '../db/client'
 import { activities, switches } from '../db/schema/app'
 
 import { authed, boundedRead, one, ownSwitch, withUserLock } from './base'
+import { rewritePlan, rewriteSpan } from './day-rewrite'
 import { getSettings } from './settings'
 
 type SwitchRow = typeof switches.$inferSelect
@@ -871,7 +872,8 @@ export const switchesRouter = {
     }),
 
   // 「元に戻す」: the client keeps the day's previous rows and writes them back in one transaction, only while the day still
-  // holds exactly the rows the edit left (`expected`, or a busy day's `expectedDigest`) under the same stored zone. Past rows on an archived activity are
+  // holds exactly the rows the edit left (`expected`, or a busy day's `expectedDigest`) under the same stored zone. With a
+  // `range`, only the rows that start in it are replaced (a busy day sends just the rows the edit changed). Past rows on an archived activity are
   // accepted: refusing them made every undo fail on a day that holds one, and lost a merged-away row for good. The row that
   // becomes the current state is not: an archived activity never runs.
   replaceDay: authed
@@ -883,7 +885,9 @@ export const switchesRouter = {
         throw dayChanged()
       // The window the client meant; the lock below refuses the call when the stored zone is no longer this one.
       const window = dayBounds(input.day, input.timeZone)
-      assertRowsFitDay(input.rows, window)
+      // The part of the day this rewrites: all of it, or the `range` the client named.
+      const written = rewriteSpan(window, input.range)
+      assertRowsFitDay(input.rows, written)
       return withUserLock(userId, context.deadline, async (tx) => {
         const { timeZone } = await getSettings(userId, tx)
         if (timeZone !== input.timeZone) throw dayChanged()
@@ -894,19 +898,27 @@ export const switchesRouter = {
         )
         // Under the lock no other write can land between this read and the delete below.
         const expected = { rows: input.expected, digest: input.expectedDigest }
-        if (!matchesDay(await dayRows(tx, userId, window), expected))
-          throw dayChanged()
+        const current = await dayRows(tx, userId, window)
+        if (!matchesDay(current, expected)) throw dayChanged()
         const carriedOut = await carriedOutOf(tx, userId, window)
         if (!sameCarriedOut(carriedOut, input.carriedOutId)) throw dayChanged()
         // The carried-in record is not compared: this rewrites the day's own rows only, and a change another device made to
         // that record (its activity) survives it. The record ends at the day's first row, which this write may move.
         const carriedIn = await carriedInto(tx, userId, window)
-        // With nothing after the day, the day's last row (or, once emptied, the carried-in record) becomes the current
-        // state, which an archived activity can never be; earlier rows of one are written back as they were.
-        const latest = carriedOut ? null : (input.rows.at(-1) ?? carriedIn)
+        // With nothing after the day, the day's last row (or, once emptied, the row before the range, or the carried-in
+        // record) becomes the current state, which an archived activity can never be; earlier rows of one are written back
+        // as they were. A range that stops short of the day's last row leaves that row the current state as it was.
+        const { latest, bumpCarriedIn } = rewritePlan(
+          current,
+          written,
+          input.rows,
+          carriedOut,
+          carriedIn,
+        )
         if (latest) await assertLiveActivities(tx, userId, [latest.activityId])
-        if (carriedIn) await bumpRevision(tx, carriedIn.id)
-        await tx.delete(switches).where(inDay(userId, window))
+        // The carried-in record ends at the day's first row: only a write that reaches that row can move it.
+        if (carriedIn && bumpCarriedIn) await bumpRevision(tx, carriedIn.id)
+        await tx.delete(switches).where(inDay(userId, written))
         if (input.rows.length === 0) return []
         return tx
           .insert(switches)

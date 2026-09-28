@@ -42,6 +42,7 @@ import {
   sheetView,
   statusLine,
   statusSlots,
+  undoRegion,
   undoRequest,
   undoSlotFor,
   type CorrectionSheet,
@@ -520,7 +521,7 @@ test('a day of exactly 300 switches, the most a baseline lists, still sends its 
   })
 })
 
-test('an edit on a day busier than a baseline can list still arms 元に戻す, which names the rows the edit left by their digest', () => {
+test('an edit on a day busier than a baseline can list still arms 元に戻す, which names the rows the edit left by their digest and sends only the row it changed', () => {
   // Arrange: a pick on the first of 301 rows
   const day = '2026-09-08'
   const list = busyDay()
@@ -546,17 +547,17 @@ test('an edit on a day busier than a baseline can list still arms 元に戻す, 
   // Act
   const { input } = undoRequest(slot)
 
-  // Assert
+  // Assert: the digest names the whole day, the range and rows only the changed first minute
   expect(input).toMatchObject({
     expectedDigest: '301:10346416235f27',
-    rows: expect.any(Array),
+    range: { from: at(day, 9), to: at(day, 9, 1) },
+    rows: [{ activityId: 'work', startedAt: at(day, 9) }],
   })
   expect('expected' in input).toBe(false)
-  expect('rows' in input && input.rows).toHaveLength(301)
 })
 
-test('an edit on a day of more than 600 switches arms no 元に戻す, since one request cannot carry the rows back', () => {
-  // Arrange
+test('an edit on a day of more than 600 switches still arms 元に戻す, which carries back only the row the edit changed', () => {
+  // Arrange: a pick on the first of 601 rows, more than one request could carry back whole
   const day = '2026-09-08'
   const list = busyDay(601)
   const bounds = {
@@ -565,18 +566,130 @@ test('an edit on a day of more than 600 switches arms no 元に戻す, since one
     timeZone: TZ,
   }
   const edited = correctionRows(list, activities, bounds).at(-2)
-  if (!edited) throw new Error('no row')
+  if (edited?.id !== 'r0') throw new Error('no first row')
 
   // Act
   const slot = undoSlotFor(
-    { kind: 'move', returned: row(edited.id, 'work', at(day, 9, 10)) },
+    {
+      kind: 'pick',
+      returned: { ...row('r0', 'sleep', at(day, 9)), revision: 1 },
+    },
     edited,
     pressedDay(day, TZ, list),
     bounds,
   )
+  if (!slot || 'blocked' in slot || slot.kind !== 'day')
+    throw new Error('no day undo armed')
+  const { input } = undoRequest(slot)
 
   // Assert
-  expect(slot).toBeNull()
+  expect(input).toMatchObject({
+    expectedDigest: expect.stringMatching(/^601:/),
+    range: { from: at(day, 9), to: at(day, 9, 1) },
+    rows: [{ activityId: 'work', startedAt: at(day, 9) }],
+  })
+})
+
+// The day's rows as 元に戻す keeps them (before an edit) and as the edit left them: an activity from 9:00, minutes apart.
+const snap = (activityId: string, hour: number, minute = 0) => ({
+  activityId,
+  startedAt: at('2026-09-08', hour, minute),
+})
+const left = (activityId: string, hour: number, minute = 0) => ({
+  ...snap(activityId, hour, minute),
+  id: `${activityId}-${hour}-${minute}`,
+})
+const dayWindow = dayBounds('2026-09-08', TZ)
+
+test('a pick on a middle row rewrites that row alone: from its start up to the next row’s', () => {
+  // Arrange
+  const before = [snap('work', 9), snap('rest', 10), snap('work', 11)]
+  const after = [left('work', 9), left('fun', 10), left('work', 11)]
+
+  // Act
+  const region = undoRegion(before, after, null, dayWindow)
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: at('2026-09-08', 10), to: at('2026-09-08', 11) },
+    rows: [snap('rest', 10)],
+  })
+})
+
+test('a merge that removed a row writes that row back, in a range the edit left empty of it', () => {
+  // Arrange: the 10:00 row merged into the one before
+  const before = [snap('work', 9), snap('rest', 10), snap('fun', 11)]
+  const after = [left('work', 9), left('fun', 11)]
+
+  // Act
+  const region = undoRegion(before, after, null, dayWindow)
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: at('2026-09-08', 10), to: at('2026-09-08', 11) },
+    rows: [snap('rest', 10)],
+  })
+})
+
+test('a cut writes the row it was made on back as well, so 元に戻す can select it by its start', () => {
+  // Arrange: the 9:00 row cut at 10:00
+  const before = [snap('work', 9), snap('fun', 11)]
+  const after = [left('work', 9), left('work', 10), left('fun', 11)]
+
+  // Act
+  const region = undoRegion(
+    before,
+    after,
+    at('2026-09-08', 9).getTime(),
+    dayWindow,
+  )
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: at('2026-09-08', 9), to: at('2026-09-08', 11) },
+    rows: [snap('work', 9)],
+  })
+})
+
+test('an edit on the day’s last row rewrites up to the end of the day', () => {
+  // Arrange
+  const before = [snap('work', 9), snap('rest', 10)]
+  const after = [left('work', 9), left('fun', 10)]
+
+  // Act
+  const region = undoRegion(before, after, null, dayWindow)
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: at('2026-09-08', 10), to: new Date(dayWindow.end) },
+    rows: [snap('rest', 10)],
+  })
+})
+
+test('an edit that left the rows as they were still rewrites one row, so the range is never empty', () => {
+  // Arrange
+  const before = [snap('work', 9), snap('rest', 10)]
+  const after = [left('work', 9), left('rest', 10)]
+
+  // Act
+  const region = undoRegion(before, after, null, dayWindow)
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: at('2026-09-08', 10), to: new Date(dayWindow.end) },
+    rows: [snap('rest', 10)],
+  })
+})
+
+test('a day with no rows before or after the edit rewrites nothing across the whole day', () => {
+  // Arrange + Act
+  const region = undoRegion([], [], null, dayWindow)
+
+  // Assert
+  expect(region).toEqual({
+    range: { from: new Date(dayWindow.start), to: new Date(dayWindow.end) },
+    rows: [],
+  })
 })
 
 test('an edit sent before the day’s list arrived arms no 元に戻す, since the sheet never saw the rows it would write back', () => {

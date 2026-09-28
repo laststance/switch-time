@@ -164,3 +164,23 @@ test('元に戻す writes back up to 600 rows on a busy day named by its digest,
   // Assert
   expect(accepted).toEqual([true, false, true, false])
 })
+
+test('元に戻す takes a range only when it starts before it ends', () => {
+  // Act
+  const accepted = [
+    { from: '2026-09-28T01:00:00Z', to: '2026-09-28T02:00:00Z' },
+    { from: '2026-09-28T02:00:00Z', to: '2026-09-28T02:00:00Z' },
+    { from: '2026-09-28T03:00:00Z', to: '2026-09-28T02:00:00Z' },
+  ].map(
+    (range) =>
+      replaceDayInputSchema.safeParse({
+        ...undoCall,
+        expectedDigest: '0:1',
+        range,
+        rows: [],
+      }).success,
+  )
+
+  // Assert
+  expect(accepted).toEqual([true, false, false])
+})
