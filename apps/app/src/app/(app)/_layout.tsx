@@ -30,6 +30,7 @@ export default function AppLayout() {
       <Stack.Screen name="correction" options={sheet} />
       <Stack.Screen name="activity-editor" options={sheet} />
       <Stack.Screen name="excluded-days" options={sheet} />
+      <Stack.Screen name="time-zone" options={sheet} />
     </Stack>
   )
 }

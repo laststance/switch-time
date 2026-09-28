@@ -7,6 +7,7 @@ import {
 } from '@switch-time/shared'
 
 import type { ActivityRow } from './orpc'
+import { canonicalZone, zoneLabel } from './time-zones'
 
 /** One `settings.get` answer: the user's row. */
 export type Settings = Awaited<ReturnType<AppRouterClient['settings']['get']>>
@@ -45,7 +46,8 @@ export type ZoneSyncAction = 'write' | 'record' | 'none'
 /**
  * The zone write a settings mutation last sent, when it failed: its variables, undefined otherwise. The failure holds only for
  * that account and that zone, so a rollback does not start the same write again, while the next account, or a device that
- * moved on, writes as usual. Read by {@link zoneSyncAction} and {@link zoneRow}.
+ * moved on, writes as usual. Read by {@link zoneSyncAction} (the sync's own write) and {@link zoneRow} (the last write made by
+ * hand, from {@link useFailedZoneWrite}).
  */
 export type FailedZoneWrite =
   Pick<SettingsUpdate, 'forUserId' | 'timeZone'> | undefined
@@ -101,21 +103,23 @@ export function zoneSyncAction(zones: {
 export type ZoneRow = { summary: string; alert: boolean; canTakeBack: boolean }
 
 /**
- * The タイムゾーン row on 設定, rendered by {@link TimeZoneRow} through {@link useAccountZone}. A matching zone wins over a failed
- * take-back, since a later read that already matches makes the failure line stale.
- * @param zones.stored - The account's zone (the optimistic one while a take-back is in flight, so the row reads "same" at once).
+ * The タイムゾーン row on 設定, rendered by {@link TimeZoneRow} through {@link useAccountZone}. Zones are named by city
+ * ({@link zoneLabel}), and a device that reports an older name for the account's zone (Asia/Calcutta) counts as the same zone.
+ * A zone write made by hand (the take-back, or a pick on the タイムゾーン sheet) that failed shows as the alert until the account
+ * holds the zone it tried to write, since a later read that already matches makes the failure line stale.
+ * @param zones.stored - The account's zone (the optimistic one while a write is in flight, so the row follows at once).
  * @param zones.device - This device's IANA zone.
  * @param zones.ready - The settings row has been read.
- * @param zones.failedWrite - The last take-back, when it failed and nothing has been tapped since ({@link FailedZoneWrite}).
+ * @param zones.failedWrite - The last hand-made zone write, when it failed ({@link FailedZoneWrite}).
  * @param zones.account - The session's user id, undefined while signed out.
  * @param zones.rowAccount - The `userId` of the cached settings row: after a switch to another account it can still be the
  *   previous account's, whose zone must not read as the new account's.
  * @returns
  * - not ready, or not the session account's row: a dash, no button
- * - same zone: `Asia/Tokyo · この端末と同じ`, no button
- * - failed for this account and this zone: the alert line, button kept for another try
- * - otherwise: `America/New_York · この端末は Asia/Tokyo`, button
- * @example zoneRow({ stored: 'UTC', device: 'Asia/Tokyo', ready: true, failedWrite: undefined, account: 'u1', rowAccount: 'u1' }) // { summary: 'UTC · この端末は Asia/Tokyo', alert: false, canTakeBack: true }
+ * - failed for this account, and the account does not hold that zone: the alert line, the button while the zones differ
+ * - same zone: `東京 · この端末と同じ`, no button
+ * - otherwise: `ニューヨーク · この端末は 東京`, button
+ * @example zoneRow({ stored: 'UTC', device: 'Asia/Tokyo', ready: true, failedWrite: undefined, account: 'u1', rowAccount: 'u1' }) // { summary: '協定世界時 · この端末は 東京', alert: false, canTakeBack: true }
  */
 export function zoneRow(zones: {
   stored: string
@@ -129,20 +133,27 @@ export function zoneRow(zones: {
   const ownRow = account !== undefined && account === zones.rowAccount
   if (!ready || !ownRow)
     return { summary: '—', alert: false, canTakeBack: false }
-  if (stored === device)
-    return {
-      summary: `${stored} · この端末と同じ`,
-      alert: false,
-      canTakeBack: false,
-    }
-  if (failedHere(failedWrite, account, device))
+  const same = canonicalZone(stored) === canonicalZone(device)
+  // The failed write's zone is not what the account holds: the write did not land, and nothing since has made it moot.
+  const failed =
+    failedWrite !== undefined &&
+    failedWrite.forUserId === account &&
+    failedWrite.timeZone !== undefined &&
+    canonicalZone(failedWrite.timeZone) !== canonicalZone(stored)
+  if (failed)
     return {
       summary: '保存できませんでした。もう一度お試しください',
       alert: true,
-      canTakeBack: true,
+      canTakeBack: !same,
+    }
+  if (same)
+    return {
+      summary: `${zoneLabel(stored)} · この端末と同じ`,
+      alert: false,
+      canTakeBack: false,
     }
   return {
-    summary: `${stored} · この端末は ${device}`,
+    summary: `${zoneLabel(stored)} · この端末は ${zoneLabel(device)}`,
     alert: false,
     canTakeBack: true,
   }

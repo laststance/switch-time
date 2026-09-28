@@ -5,6 +5,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 import { useInitialFocus } from '@/hooks/use-initial-focus'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { useWide } from '@/hooks/use-wide'
+import { trappedFocus } from '@/lib/focus-trap'
 import { cn } from '@/lib/utils'
 
 /**
@@ -14,6 +15,26 @@ import { cn } from '@/lib/utils'
 export function dismissSheet(): void {
   if (router.canGoBack()) router.back()
   else router.replace('/')
+}
+
+// What a keyboard can reach inside the dialog; RN-web renders a Pressable as a div with tabindex 0.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+// Tab and Shift+Tab stay inside the open sheet (the topmost dialog), so focus never wanders onto the screen underneath.
+function keepTabInside(event: KeyboardEvent): void {
+  const dialog = [
+    ...document.querySelectorAll('[role="dialog"][aria-modal="true"]'),
+  ].at(-1)
+  if (!dialog) return
+  const controls = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)]
+  const activeIndex = controls.findIndex(
+    (control) => control === document.activeElement,
+  )
+  const target = trappedFocus(controls.length, activeIndex, event.shiftKey)
+  if (target === 'browser') return
+  event.preventDefault()
+  controls[target]?.focus()
 }
 
 type SheetProps = PropsWithChildren<{ title: string; hint: string }>
@@ -35,7 +56,9 @@ export function Sheet({ title, hint, children }: SheetProps) {
       }
     : { root: 'bg-sheet-bg', card: 'flex-1 px-5 pb-10 pt-3.5' }
   useWebKeydown((event) => {
-    if (event.key === 'Escape') dismissSheet()
+    // Escape while an IME is composing (a search in Japanese) cancels the composition, not the sheet.
+    if (event.key === 'Escape' && !event.isComposing) dismissSheet()
+    if (event.key === 'Tab') keepTabInside(event)
   })
   return (
     <View className={cn('flex-1', look.root)}>

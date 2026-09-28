@@ -61,4 +61,11 @@ export {
   type ExcludedReason,
   type TapLike,
 } from './stats'
-export { addDays, dayBounds, daysInMonth, localDay } from './time'
+export {
+  addDays,
+  dayBounds,
+  daysInMonth,
+  isTimeZone,
+  localDay,
+  tzOffsetMs,
+} from './time'

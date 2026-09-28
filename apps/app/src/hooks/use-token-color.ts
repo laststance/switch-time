@@ -1,8 +1,8 @@
 import { Platform } from 'react-native'
 import { useCSSVariable } from 'uniwind'
 
-/** The colour tokens JS can ask for: `bg` is the detox row's inverted glyph, `line` / `face` the dial's drawing. */
-type Token = 'ink' | 'sub' | 'line' | 'face' | 'bg'
+/** The colour tokens JS can ask for: `bg` is the detox row's inverted glyph, `line` / `face` the dial's drawing, `accent` the タイムゾーン sheet's check. */
+type Token = 'ink' | 'sub' | 'line' | 'face' | 'bg' | 'accent'
 
 /**
  * A colour token as a JS value for native props that cannot take a className (SVG strokes, later activity rings); re-renders on theme flips.
