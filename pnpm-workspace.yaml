@@ -18,3 +18,13 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+
+# react-native 0.86.3's community-cli-plugin wants this exact version; the latest one (0.87.x) is outside its peer range.
+overrides:
+  '@react-native/metro-config': 0.86.3
+  # SDK 57's pair (expo/bundledNativeModules.json): expo-modules-core accepts worklets up to 0.10, and the auto-installed peers of
+  # expo-router and @expo/ui would otherwise resolve to 0.13 and 4.7.
+  react-native-reanimated: 4.5.1
+  react-native-worklets: 0.10.1
+  # apps/api's auto-installed peer of @better-auth/expo must be the app's copy (expo-router 57.0.23 wants ^57.0.11).
+  expo-linking: 57.0.11
