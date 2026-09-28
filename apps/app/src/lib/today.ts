@@ -2,7 +2,13 @@ import { segmentsInRange } from '@switch-time/shared'
 
 import { DETOX } from './detox'
 
-type Row = { id: string; activityId: string | null; startedAt: Date }
+type Row = {
+  id: string
+  activityId: string | null
+  startedAt: Date
+  /** A detox re-tap that renews the run: a tap, though the row before it is detox too. */
+  startsRun?: boolean
+}
 type DayList = { carriedIn: Row | null; rows: Row[] }
 
 /**
@@ -33,12 +39,28 @@ export function daySegments(
 }
 
 /**
- * 「今日 n 回切替」: every row is one switch, except the very first row of a first day, which is the starting state.
- * @example countSwitches({ carriedIn: null, rows: [first, second] }) // 1
+ * 「今日 n 回切替」 on Home: today's rows that change the activity from the row before them (the carried-in record before the
+ * first). A cut, or a merge that leaves two rows of one activity side by side (仕事, 読書, 仕事 → merge 読書), is no switch;
+ * a detox re-tap that renews the run is one. The very first row of a first day is the starting state.
+ * @param list - Today's `switches.listByDay` answer; undefined while it loads.
+ * @returns The number of switches; 0 while the day loads.
+ * @example countSwitches({ carriedIn: null, rows: [work, rest] }) // 1
+ * @example countSwitches({ carriedIn: work, rows: [rest, work2] }) // 2
+ * @example countSwitches({ carriedIn: work, rows: [workCut] }) // 0
  */
 export function countSwitches(list: DayList | undefined): number {
   if (!list) return 0
-  return Math.max(0, list.rows.length - (list.carriedIn ? 0 : 1))
+  const [first, ...rest] = list.carriedIn
+    ? [list.carriedIn, ...list.rows]
+    : list.rows
+  let previous = first
+  let switches = 0
+  for (const row of rest) {
+    // A row of the same activity as the one before it only splits that record, unless it is a re-tap.
+    if (row.activityId !== previous?.activityId || row.startsRun) switches += 1
+    previous = row
+  }
+  return switches
 }
 
 /** One 「今日の流れ」 legend entry; `color` null is detox, drawn as the solid `sub` outlined square its spans use on the bar. */

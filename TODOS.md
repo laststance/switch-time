@@ -16,18 +16,6 @@
 
 ## Correction
 
-### Decide what a merge that makes a segment idle should do
-
-**What:** Warn in the sheet, or mark the row, when a merge makes a segment longer than the idle threshold. Decide as well whether a merge that leaves two rows of the same activity side by side should join them.
-
-**Why:** A segment longer than `idleThresholdMinutes` (16 h by default) counts as idle and leaves the totals. Merging a 9 h row into an 8 h one therefore removes 17 h from the day's totals with no explanation. A merge can also leave the same activity twice in a row (仕事, 読書, 仕事 → merge 読書), which Home counts as one switch too many.
-
-**Context:** `segmentsInRange` in `packages/shared/src/stats.ts` judges idle on the unclipped length. Both merge directions and the ±15 min steps can cross the threshold; the sheet reads the threshold since the carried-in row's panel (2026-09-24) (`totalsFacts` in `use-correction.ts`, used by `cutTotalsEffects` for 「ここで分割」's notes), so a merge or move could warn the same way. `switchTo` never records the same activity twice in a row, but the merges can. Raised by the review during the 0.2.0.0 ship; the adversarial pass added the repeated activity.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Offer 「元に戻す」 on a day of more than 600 switches
 
 **What:** Arm the day's 「元に戻す」 after an edit on a day that lists more than `UNDO_ROWS_MAX` (600) rows, for example by writing back only the rows the edit changed instead of the whole day.

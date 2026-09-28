@@ -8,7 +8,8 @@ import { useAppSelector } from '@/store'
 
 /**
  * Today as the API sees it (the stored `settings.timeZone`, not the device's): the calendar day, its bounds, the 24-h bar's segments
- * from `switches.listByDay` sliced against the ticking clock, and how many times the user switched today. `ready` says the stored
+ * from `switches.listByDay` sliced against the ticking clock, how many times the user switched today, and how many rows of its own
+ * the day has (`rowsToday`, which a cut or a same-activity merge adds without a switch). `ready` says the stored
  * zone is known, for other queries keyed by today; `autoExcludeUnusedDays` is the stored unused-day rule.
  * @example const { today, timeZone, segments, switchCount } = useToday()
  */
@@ -44,5 +45,6 @@ export function useToday() {
       idleThresholdMinutes * 60_000,
     ),
     switchCount: countSwitches(day.data),
+    rowsToday: day.data?.rows.length ?? 0,
   }
 }

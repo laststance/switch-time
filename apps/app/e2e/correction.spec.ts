@@ -536,7 +536,7 @@ test('on a phone-width screen the two merge buttons still share a line at equal 
   expect(cutBox).toMatchObject({ x: previousBox.x, width: 320, height: 44 })
 })
 
-test('cutting the current state shows on Home without a reload', async ({
+test('cutting the current state and picking another activity for its later part shows on Home without a reload', async ({
   page,
 }) => {
   // 区切る時刻 keeps a quarter hour back from now and a minute from each end, so a state under 17 minutes old has no cut.
@@ -575,9 +575,12 @@ test('cutting the current state shows on Home without a reload', async ({
   const parts = dialog.getByRole('button', { name: /^仕事 / })
   await expect(parts.first()).toBeVisible()
   await expect(parts).toHaveCount(2)
+  // The cut selects its later part; 休息 for it makes the cut a switch.
+  await dialog.getByRole('radio', { name: '休息' }).click()
+  await expect(dialog.getByRole('button', { name: /^休息 / })).toBeVisible()
   await page.getByRole('button', { name: '完了' }).click()
 
-  // Assert: Home counts the new row as a switch straight away.
+  // Assert: Home counts the new switch straight away.
   await expect(page).toHaveURL('/')
   await expect(page.getByText(/今日 1 回切替$/)).toBeVisible()
 })
@@ -3047,4 +3050,111 @@ test('a cut whose answer lands after midnight selects nothing on the new day, ev
   // Assert: the carried-in part is listed but not opened by an answer about yesterday.
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('the panel says when a merge or a 15-minute step turns a record idle, and the lines follow the list after a move', async ({
+  page,
+}) => {
+  // Arrange: on D−2, 仕事 7:55, 家事 19:45, 睡眠 21:00; 休息 2:00 on D−1 ends 睡眠 at 5 h. The cases are built for a 12 h
+  // line, so this account is pinned there (the product default is 16 h).
+  await signUp(page)
+  const api = await apiAs(page)
+  await api.settings.update({ idleThresholdMinutes: 720 })
+  const list = await api.activities.list()
+  const day = shift(today(), -2)
+  const nextDay = shift(today(), -1)
+  const minutesPast = (hour: number, minute: number) =>
+    new Date(at(day, hour).getTime() + minute * 60_000)
+  await api.switches.replaceDay({
+    day,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: minutesPast(7, 55) },
+      { activityId: idOf(list, '家事'), startedAt: minutesPast(19, 45) },
+      { activityId: idOf(list, '睡眠'), startedAt: at(day, 21) },
+    ],
+  })
+  await api.switches.replaceDay({
+    day: nextDay,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [{ activityId: idOf(list, '休息'), startedAt: at(nextDay, 2) }],
+  })
+  await page.goto(`/correction?day=${day}`)
+  const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
+  const mergeNote = dialog.getByText(
+    '前の記録に統合すると、無操作扱い（12時間超）になり集計から外れます',
+  )
+  const laterNote = dialog.getByText(
+    '15分遅らせると、前の記録が無操作扱い（12時間超）になり集計から外れます',
+  )
+  const earlierNote = dialog.getByText(
+    '15分早めると、前の記録の無操作扱い（12時間超）だった時間が集計に入ります',
+  )
+
+  // Act
+  await dialog.getByRole('button', { name: /^家事 19:45 – 21:00/ }).click()
+
+  // Assert: 前 would make 仕事 13 h 05 min, and +15 would make it 12 h 05 min; −15 leaves every record counted.
+  await expect(mergeNote).toBeVisible()
+  await expect(laterNote).toBeVisible()
+  await expect(earlierNote).toHaveCount(0)
+
+  // Act: +15 lands, so 仕事 now runs 12 h 05 min and is idle.
+  await dialog
+    .getByRole('button', { name: '15分遅らせる', exact: true })
+    .click()
+  await expect(
+    dialog.getByRole('button', { name: /^家事 20:00 – 21:00/ }),
+  ).toBeVisible()
+
+  // Assert: −15 would bring 仕事 back under the line.
+  await expect(earlierNote).toBeVisible()
+  await expect(laterNote).toHaveCount(0)
+})
+
+test('Home counts no switch for two rows of one activity that a merge left side by side', async ({
+  page,
+}) => {
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 5 * 60_000,
+    'the Tokyo day is under 5 minutes old, so today has no room for the three rows',
+  )
+  // Arrange: today 仕事 0:00, 休息 0:01, 仕事 0:02 (the reload makes Home read the seeded day).
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const minute = (count: number) =>
+    new Date(at(today(), 0).getTime() + count * 60_000)
+  // replaceDay rewrites today only while it still holds the rows it names: the first-launch tap.
+  const { rows: firstLaunch } = await api.switches.listByDay({ day: today() })
+  await api.switches.replaceDay({
+    day: today(),
+    timeZone: 'Asia/Tokyo',
+    expected: firstLaunch.map(({ id, activityId, startedAt }) => ({
+      id,
+      activityId,
+      startedAt,
+    })),
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: minute(0) },
+      { activityId: idOf(list, '休息'), startedAt: minute(1) },
+      { activityId: idOf(list, '仕事'), startedAt: minute(2) },
+    ],
+  })
+  await page.reload()
+  await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+  await page.getByRole('link', { name: '訂正' }).click()
+  const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
+
+  // Act: merge 休息 into the 仕事 before it.
+  await dialog.getByRole('button', { name: /^休息 0:01 – 0:02/ }).click()
+  await dialog.getByRole('button', { name: '前の記録に統合' }).click()
+  await expect(dialog.getByRole('button', { name: /^休息 / })).toHaveCount(0)
+  await page.getByRole('button', { name: '完了' }).click()
+
+  // Assert: 仕事 then 仕事 again is no switch.
+  await expect(page).toHaveURL('/')
+  await expect(page.getByText(/今日 0 回切替$/)).toBeVisible()
 })

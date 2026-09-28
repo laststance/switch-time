@@ -24,6 +24,7 @@ import {
   cutToHold,
   cutNotes,
   cutViewShown,
+  idleNotes,
   openedCut,
   revealOffset,
   statusSlots,
@@ -209,8 +210,10 @@ type ActionsProps = {
   pending: boolean
   /** Which untapped days switching the row between detox and an activity may count differently; null: none. */
   pickNote: string | null
-  /** Which untapped days a merge the row allows may count differently; null: none. */
-  mergeNote: string | null
+  /** Under the merge buttons: which untapped days a merge may count differently, then a merge that turns a record idle. */
+  mergeNotes: string[]
+  /** Under 開始時刻: each record a ±15 min step carries across the idle threshold. */
+  moveNotes: string[]
   onMove: (deltaMinutes: 15 | -15) => void
   /** The activity picker, built by the caller. */
   picker: ReactNode
@@ -226,7 +229,8 @@ function Actions({
   row,
   pending,
   pickNote,
-  mergeNote,
+  mergeNotes,
+  moveNotes,
   onMove,
   picker,
   onMergePrevious,
@@ -237,23 +241,30 @@ function Actions({
   const can = (flag: boolean) => !pending && flag
   return (
     <View className="gap-5 px-3.5 pt-0.5 pb-3.5">
-      <View className="flex-row items-center gap-2.5">
-        <Text className="text-sub flex-1 text-xs font-medium">開始時刻</Text>
-        <StepButton
-          glyph="−"
-          label="15分早める"
-          disabled={!can(row.canMoveEarlier)}
-          onPress={() => onMove(-15)}
-        />
-        <Text className="text-ink px-3 text-md font-semibold tabular">
-          {row.startLabel}
-        </Text>
-        <StepButton
-          glyph="＋"
-          label="15分遅らせる"
-          disabled={!can(row.canMoveLater)}
-          onPress={() => onMove(15)}
-        />
+      <View className="gap-1">
+        <View className="flex-row items-center gap-2.5">
+          <Text className="text-sub flex-1 text-xs font-medium">開始時刻</Text>
+          <StepButton
+            glyph="−"
+            label="15分早める"
+            disabled={!can(row.canMoveEarlier)}
+            onPress={() => onMove(-15)}
+          />
+          <Text className="text-ink px-3 text-md font-semibold tabular">
+            {row.startLabel}
+          </Text>
+          <StepButton
+            glyph="＋"
+            label="15分遅らせる"
+            disabled={!can(row.canMoveLater)}
+            onPress={() => onMove(15)}
+          />
+        </View>
+        {moveNotes.map((note) => (
+          <Text key={note} className={NOTE}>
+            {note}
+          </Text>
+        ))}
       </View>
       <View className="gap-1.75">
         <View className="gap-1">
@@ -277,7 +288,11 @@ function Actions({
             className="flex-1"
           />
         </View>
-        {mergeNote && <Text className={NOTE}>{mergeNote}</Text>}
+        {mergeNotes.map((note) => (
+          <Text key={note} className={NOTE}>
+            {note}
+          </Text>
+        ))}
       </View>
       {cutControls}
     </View>
@@ -481,6 +496,7 @@ type RowPanelProps = {
 // through the same 区切る時刻 group.
 function RowPanel({ row, correction }: RowPanelProps) {
   const notes = correction.untappedNotes(row)
+  const idle = idleNotes(row, correction.totalsFacts.idleThresholdMs)
   const picker = (
     <ActivityPicker
       row={row}
@@ -514,7 +530,8 @@ function RowPanel({ row, correction }: RowPanelProps) {
       row={row}
       pending={correction.pending}
       pickNote={notes.pick}
-      mergeNote={notes.merge}
+      mergeNotes={[notes.merge, idle.merge].filter((note) => note !== null)}
+      moveNotes={idle.move}
       onMove={(deltaMinutes) => correction.move(row, deltaMinutes)}
       picker={picker}
       onMergePrevious={() => correction.mergePrevious(row)}

@@ -24,6 +24,7 @@ import {
   failureKind,
   failureMessage,
   hushedAnswered,
+  idleNotes,
   isDayChangedRefusal,
   isFreshList,
   isSettledWrite,
@@ -4226,4 +4227,186 @@ test('a correction row of an archived activity is read apart from a live one wit
     ['仕事 12:00 – 24:00 12時間', '仕事'],
     ['仕事（アーカイブ済み） 9:00 – 12:00 3時間', '仕事'],
   ])
+})
+
+// The 12-hour threshold the pen board's examples use.
+const TWELVE_HOURS = 12 * 60 * MIN
+// The row panel's idle lines for the row `id` on 9/4, with the clock the next morning.
+const idleNotesOf = (list: ListedDay, id: string) => {
+  const bounds = {
+    ...dayBounds('2026-09-04', TZ),
+    now: at('2026-09-05', 10).getTime(),
+    timeZone: TZ,
+  }
+  const selected = correctionRows(list, activities, bounds).find(
+    (r) => r.id === id,
+  )
+  if (!selected) throw new Error(`no row ${id}`)
+  return idleNotes(selected, TWELVE_HOURS)
+}
+
+test('merging a row into a 7-hour record that then runs 13 hours warns that the merged record leaves the totals as idle', () => {
+  // Arrange: 仕事 8:00–15:00, 家事 15:00–21:00 selected, 睡眠 21:00 until 2:00 the next day.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at('2026-09-04', 8)),
+      row('h', 'home', at('2026-09-04', 15)),
+      row('s', 'sleep', at('2026-09-04', 21)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: 前 makes 仕事 13 hours; 次 makes 睡眠 11 hours, still counted.
+  expect(notes).toEqual({
+    merge: '前の記録に統合すると、無操作扱い（12時間超）になり集計から外れます',
+    move: [],
+  })
+})
+
+test('when either merge would make a record idle, the line says 統合すると without naming a button', () => {
+  // Arrange: 仕事 8:00–15:00, 家事 15:00–21:00 selected, 睡眠 21:00 until 7:00 the next day.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at('2026-09-04', 8)),
+      row('h', 'home', at('2026-09-04', 15)),
+      row('s', 'sleep', at('2026-09-04', 21)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 7)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: 仕事 would run 13 hours, 睡眠 16.
+  expect(notes.merge).toBe(
+    '統合すると、無操作扱い（12時間超）になり集計から外れます',
+  )
+})
+
+test('merging into a detox record says nothing about idle time, since detox is never idle', () => {
+  // Arrange: detox 3:00–15:00, 家事 15:00–21:00 selected, 睡眠 21:00 until 2:00.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('d', null, at('2026-09-04', 3)),
+      row('h', 'home', at('2026-09-04', 15)),
+      row('s', 'sleep', at('2026-09-04', 21)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: the merged detox runs 18 hours and counts nowhere either way.
+  expect(notes.merge).toBeNull()
+})
+
+test('merging two records that are both idle already says nothing, since no counted time leaves the totals', () => {
+  // Arrange: 睡眠 from 23:00 the day before to 13:00 (14 h), 家事 13:00 to 3:00 the next day (14 h) selected.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: row('s', 'sleep', at('2026-09-03', 23)),
+    rows: [row('h', 'home', at('2026-09-04', 13))],
+    carriedOut: row('r', 'rest', at('2026-09-05', 3)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert
+  expect(notes).toEqual({ merge: null, move: [] })
+})
+
+test('a 15-minute later start that stretches the previous record past the threshold warns under 開始時刻', () => {
+  // Arrange: 仕事 7:55–19:45 (11 h 50 min), 家事 19:45–21:00 selected, 睡眠 21:00 until 2:00.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at('2026-09-04', 7, 55)),
+      row('h', 'home', at('2026-09-04', 19, 45)),
+      row('s', 'sleep', at('2026-09-04', 21)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: +15 makes 仕事 12 h 05 min; −15 leaves 家事 at 1 h 30 min. 前 to 仕事 runs 13 h 05 min.
+  expect(notes).toEqual({
+    merge: '前の記録に統合すると、無操作扱い（12時間超）になり集計から外れます',
+    move: [
+      '15分遅らせると、前の記録が無操作扱い（12時間超）になり集計から外れます',
+    ],
+  })
+})
+
+test('a 15-minute earlier start that brings an idle previous record under the threshold says its time comes back into the totals', () => {
+  // Arrange: 仕事 7:50–20:00 (12 h 10 min, idle), 家事 20:00–21:00 selected, 睡眠 21:00 until 2:00.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at('2026-09-04', 7, 50)),
+      row('h', 'home', at('2026-09-04', 20)),
+      row('s', 'sleep', at('2026-09-04', 21)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: −15 leaves 仕事 at 11 h 55 min.
+  expect(notes.move).toEqual([
+    '15分早めると、前の記録の無操作扱い（12時間超）だった時間が集計に入ります',
+  ])
+})
+
+test('a 15-minute earlier start that stretches the row itself past the threshold names this record', () => {
+  // Arrange: 仕事 8:00–9:00, 家事 9:00–20:55 selected (11 h 55 min), 睡眠 from 20:55 until 2:00.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', at('2026-09-04', 8)),
+      row('h', 'home', at('2026-09-04', 9)),
+      row('s', 'sleep', at('2026-09-04', 20, 55)),
+    ],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 'h')
+
+  // Assert: −15 makes 家事 12 h 10 min.
+  expect(notes.move).toEqual([
+    '15分早めると、この記録が無操作扱い（12時間超）になり集計から外れます',
+  ])
+})
+
+test('the carried-in record never moves or merges, so its panel has no idle lines', () => {
+  // Arrange: 睡眠 from 20:00 the day before, 家事 from 15:00.
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: row('s', 'sleep', at('2026-09-03', 20)),
+    rows: [row('h', 'home', at('2026-09-04', 15))],
+    carriedOut: row('r', 'rest', at('2026-09-05', 2)),
+  }
+
+  // Act
+  const notes = idleNotesOf(list, 's')
+
+  // Assert
+  expect(notes).toEqual({ merge: null, move: [] })
 })

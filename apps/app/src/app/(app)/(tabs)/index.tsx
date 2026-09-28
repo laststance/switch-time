@@ -54,11 +54,12 @@ function HomeBody({ current, activity }: HomeBodyProps) {
     end,
     segments,
     switchCount,
+    rowsToday,
   } = useToday()
   const homeToday = {
     current,
     today,
-    switchCountToday: switchCount,
+    rowsToday,
     autoExcludeUnusedDays,
   }
   // The server's class for today says whether a detox past its week still measures it; only a detox run older than the week

@@ -207,7 +207,7 @@ describe('detoxPastWeek', () => {
     // Arrange: a detox run from 9/16
     const base = {
       current: { activityId: null, runStartDay: '2026-09-16' },
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
     }
 
@@ -228,7 +228,7 @@ describe('detoxPastWeek', () => {
     const eighthDay = detoxPastWeek({
       current: cutRun,
       today: '2026-09-24',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
     })
 
@@ -241,7 +241,7 @@ describe('detoxPastWeek', () => {
     const carried = detoxPastWeek({
       current: { activityId: null, runStartDay: '2026-09-16' },
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: false,
     })
 
@@ -257,17 +257,17 @@ describe('detoxPastWeek', () => {
     const tappedToday = detoxPastWeek({
       ...base,
       current: { activityId: null, runStartDay: '2026-09-16' },
-      switchCountToday: 1,
+      rowsToday: 1,
     })
     const activity = detoxPastWeek({
       ...base,
       current: { activityId: 'work', runStartDay: null },
-      switchCountToday: 0,
+      rowsToday: 0,
     })
     const optimistic = detoxPastWeek({
       ...base,
       current: { activityId: null, runStartDay: null },
-      switchCountToday: 0,
+      rowsToday: 0,
     })
 
     // Assert
@@ -409,7 +409,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -423,7 +423,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-23',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
         ...settled,
@@ -440,7 +440,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
         ...settled,
@@ -457,7 +457,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: {
         ...settled,
@@ -476,7 +476,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: { activityId: 'work', runStartDay: null },
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -490,7 +490,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: { activityId: null, runStartDay: '2026-09-25' },
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -504,7 +504,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 1,
+      rowsToday: 1,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -518,7 +518,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: { activityId: null, runStartDay: '2026-09-24' },
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -532,7 +532,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { isError: true, isPaused: false, data: unmeasuredToday },
     })
@@ -546,7 +546,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { isError: false, isPaused: true, data: unmeasuredToday },
     })
@@ -560,14 +560,14 @@ describe('detoxStopped', () => {
     const loading = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: undefined },
     })
     const yesterdays = detoxStopped({
       current: carriedDetox,
       today: '2026-09-26',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: unmeasuredToday },
     })
@@ -582,7 +582,7 @@ describe('detoxStopped', () => {
     const stopped = detoxStopped({
       current: carriedDetox,
       today: '2026-09-25',
-      switchCountToday: 0,
+      rowsToday: 0,
       autoExcludeUnusedDays: true,
       stats: { ...settled, data: { days: [] } },
     })
@@ -596,7 +596,7 @@ describe('detoxNotice', () => {
   // A detox run from 9/16, no tap today, auto-exclusion on
   const base = {
     current: { activityId: null, runStartDay: '2026-09-16' },
-    switchCountToday: 0,
+    rowsToday: 0,
     autoExcludeUnusedDays: true,
   }
   const settled = { isError: false, isPaused: false }

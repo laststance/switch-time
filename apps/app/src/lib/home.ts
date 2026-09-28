@@ -118,12 +118,16 @@ export function nowLook(
  */
 type RunningSwitch = { activityId: string | null; runStartDay: string | null }
 
-/** Today as Home knows it: the current switch, the stored zone's day and today's own switch count. */
+/** Today as Home knows it: the current switch, the stored zone's day and how many rows of its own it has. */
 type HomeToday = {
   current: RunningSwitch
   today: string
-  /** Today's switches from the day's own list, which lands before a stats refetch does. */
-  switchCountToday: number
+  /**
+   * Today's own rows from the day's list, which lands before a stats refetch does. Any one makes the server measure the day,
+   * even a row of the same activity as the one before it (a cut, or a merge that left two side by side), which
+   * 「今日 n 回切替」 does not count.
+   */
+  rowsToday: number
   /** The stored unused-day rule: while it is off the server measures every day, so no detox stops counting. */
   autoExcludeUnusedDays: boolean
 }
@@ -139,10 +143,10 @@ type HomeToday = {
  * - true for a detox run started on `today - 8` or earlier with no tap today
  * - false for an activity, a detox inside its week (started today included), any day with a switch, the optimistic row (no
  *   run start yet), and while auto-exclusion is off (the server then measures every day)
- * @example detoxPastWeek({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-25', switchCountToday: 0, autoExcludeUnusedDays: true }) // true
+ * @example detoxPastWeek({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-25', rowsToday: 0, autoExcludeUnusedDays: true }) // true
  */
 export function detoxPastWeek(input: HomeToday): boolean {
-  return input.switchCountToday === 0 && detoxRenewable(input)
+  return input.rowsToday === 0 && detoxRenewable(input)
 }
 
 /**
@@ -191,7 +195,7 @@ export function detoxRenewable(
  *   off always measures)
  * - false for an activity, a detox started today, a day with a switch, a manual exclusion, a measured day, and while no answer
  *   can be trusted (none yet, a failed or paused fetch, an answer for another day): unknown is not "stopped"
- * @example detoxStopped({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-25', switchCountToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
+ * @example detoxStopped({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-25', rowsToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: { days: [{ day: '2026-09-25', measured: false, excluded: null }] } } }) // true
  */
 export function detoxStopped(
   input: HomeToday & {
@@ -221,7 +225,7 @@ export function detoxStopped(
  * - 'stopped' when {@link detoxStopped} holds
  * - 'last-day' on the run's last measured day
  * - null otherwise (an activity, a detox inside its week, an unknown answer past it)
- * @example detoxNotice({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-23', switchCountToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: undefined } }) // 'last-day'
+ * @example detoxNotice({ current: { activityId: null, runStartDay: '2026-09-16' }, today: '2026-09-23', rowsToday: 0, autoExcludeUnusedDays: true, stats: { isError: false, isPaused: false, data: undefined } }) // 'last-day'
  */
 export function detoxNotice(
   input: Parameters<typeof detoxStopped>[0],
