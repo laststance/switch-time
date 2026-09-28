@@ -33,7 +33,9 @@ export function useTimeZoneSync(): void {
   const lastSynced = useAppSelector((state) =>
     selectSyncedZone(state, accountId),
   )
-  const { mutate, reset, isError, variables } = useUpdateSettings()
+  const { mutate, reset, isError, variables } = useUpdateSettings({
+    automatic: true,
+  })
   const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
   // Read on the focus event that {@link useDeviceZone} re-reads on, so both land in one render: a zone another tab synced
   // while this one was hidden is judged together with this device's fresh zone, and never starts a sync on its own.
@@ -64,15 +66,8 @@ export function useTimeZoneSync(): void {
       rowAccount: owner,
     })
     if (action === 'record') dispatch(zoneSynced({ accountId, zone: device }))
-    if (action === 'write')
-      mutate(
-        { timeZone: device, forUserId: accountId },
-        // The row the API wrote says whose it was: the session may have turned to another account while the write was out.
-        {
-          onSuccess: (row) =>
-            dispatch(zoneSynced({ accountId: row.userId, zone: device })),
-        },
-      )
+    // {@link useUpdateSettings} remembers the zone once the write lands, for the account the API says it landed on.
+    if (action === 'write') mutate({ timeZone: device, forUserId: accountId })
   }, [
     settled,
     settings.timeZone,

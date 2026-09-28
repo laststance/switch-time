@@ -14558,35 +14558,58 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "DbPK1",
-                          "name": "span",
-                          "context": "span",
+                          "id": "p4SP4",
+                          "name": "Link /time-zone",
+                          "context": "a",
                           "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 2,
+                          "gap": 12,
+                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "yDRxF",
-                              "name": "タイムゾーン",
-                              "fill": "$ink",
-                              "content": "タイムゾーン",
-                              "lineHeight": 1.2,
-                              "fontFamily": "Roboto",
-                              "fontSize": 15,
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "DbPK1",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "yDRxF",
+                                  "name": "タイムゾーン",
+                                  "fill": "$ink",
+                                  "content": "タイムゾーン",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "PBw1B",
+                                  "name": "Sub line",
+                                  "fill": "$sub",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "ニューヨーク · この端末は 東京",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
                               "type": "text",
-                              "id": "PBw1B",
-                              "name": "Sub line",
+                              "id": "lwzDC",
+                              "name": "›",
                               "fill": "$sub",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "America/New_York · この端末は Asia/Tokyo",
-                              "lineHeight": 1.3,
+                              "content": "›",
+                              "lineHeight": 1.13,
+                              "textAlign": "center",
                               "fontFamily": "Roboto",
-                              "fontSize": 10,
+                              "fontSize": 13.33,
                               "fontWeight": "normal"
                             }
                           ]
@@ -47407,35 +47430,58 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "kBxPz",
-                      "name": "span",
-                      "context": "span",
+                      "id": "R7GG3S",
+                      "name": "Link /time-zone",
+                      "context": "a",
                       "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 2,
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "qKJ8k",
-                          "name": "タイムゾーン",
-                          "fill": "$ink",
-                          "content": "タイムゾーン",
-                          "lineHeight": 1.2,
-                          "fontFamily": "Roboto",
-                          "fontSize": 15,
-                          "fontWeight": "600"
+                          "type": "frame",
+                          "id": "kBxPz",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qKJ8k",
+                              "name": "タイムゾーン",
+                              "fill": "$ink",
+                              "content": "タイムゾーン",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "e0Id4",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "東京 · この端末と同じ",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
-                          "id": "e0Id4",
-                          "name": "Sub line",
+                          "id": "CWpfU",
+                          "name": "›",
                           "fill": "$sub",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "Asia/Tokyo · この端末と同じ",
-                          "lineHeight": 1.3,
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
                           "fontFamily": "Roboto",
-                          "fontSize": 10,
+                          "fontSize": 13.33,
                           "fontWeight": "normal"
                         }
                       ]
@@ -47461,7 +47507,7 @@
               "fill": "$sub",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "違う（sub）。アカウントのゾーン · この端末のゾーン。長い ID は切らずに折り返す。ボタンは外枠だけ（line, 角丸 10, 高さ 44）。他の設定の書き込み中は 40 %",
+              "content": "違う（sub）。アカウントのゾーン · この端末のゾーン、どちらも都市名。表にない都市は英語名で、長い名前は切らずに折り返す。ボタンは外枠だけ（line, 角丸 10, 高さ 44）。他の設定の書き込み中は 40 %",
               "lineHeight": 1.4,
               "fontFamily": "Roboto",
               "fontSize": 10,
@@ -47492,35 +47538,58 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "k5rTF",
-                      "name": "span",
-                      "context": "span",
+                      "id": "pErKY",
+                      "name": "Link /time-zone",
+                      "context": "a",
                       "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 2,
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "Jt9sy",
-                          "name": "タイムゾーン",
-                          "fill": "$ink",
-                          "content": "タイムゾーン",
-                          "lineHeight": 1.2,
-                          "fontFamily": "Roboto",
-                          "fontSize": 15,
-                          "fontWeight": "600"
+                          "type": "frame",
+                          "id": "k5rTF",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Jt9sy",
+                              "name": "タイムゾーン",
+                              "fill": "$ink",
+                              "content": "タイムゾーン",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "y3eQP8",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Rio Gallegos · この端末は ロサンゼルス",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
-                          "id": "y3eQP8",
-                          "name": "Sub line",
+                          "id": "e0vPQ",
+                          "name": "›",
                           "fill": "$sub",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "America/Argentina/ComodRivadavia · この端末は Asia/Tokyo",
-                          "lineHeight": 1.3,
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
                           "fontFamily": "Roboto",
-                          "fontSize": 10,
+                          "fontSize": 13.33,
                           "fontWeight": "normal"
                         }
                       ]
@@ -47576,7 +47645,7 @@
               "fill": "$sub",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "失敗（role=alert, ink 500）。サブ行と入れ替わり、ボタンは残る。次の押下・アカウントの切り替え・同じになる読み直しで消える",
+              "content": "失敗（role=alert, ink 500）。サブ行と入れ替わり、ボタンは残る。タイムゾーンシートで選んだゾーンの保存が閉じたあとに失敗したときも同じ行。次の押下・アカウントの切り替え・同じになる読み直しで消える",
               "lineHeight": 1.4,
               "fontFamily": "Roboto",
               "fontSize": 10,
@@ -47607,36 +47676,59 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "nlXJA",
-                      "name": "span",
-                      "context": "span",
+                      "id": "O4YHX",
+                      "name": "Link /time-zone",
+                      "context": "a",
                       "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 2,
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "G6L7A",
-                          "name": "タイムゾーン",
-                          "fill": "$ink",
-                          "content": "タイムゾーン",
-                          "lineHeight": 1.2,
-                          "fontFamily": "Roboto",
-                          "fontSize": 15,
-                          "fontWeight": "600"
+                          "type": "frame",
+                          "id": "nlXJA",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "G6L7A",
+                              "name": "タイムゾーン",
+                              "fill": "$ink",
+                              "content": "タイムゾーン",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "bWtzb",
+                              "name": "Alert line",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "保存できませんでした。もう一度お試しください",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
-                          "id": "bWtzb",
-                          "name": "Alert line",
-                          "fill": "$ink",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "保存できませんでした。もう一度お試しください",
-                          "lineHeight": 1.3,
+                          "id": "p3jHlh",
+                          "name": "›",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
                           "fontFamily": "Roboto",
-                          "fontSize": 10,
-                          "fontWeight": "500"
+                          "fontSize": 13.33,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -47722,35 +47814,58 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "W0gCzD",
-                      "name": "span",
-                      "context": "span",
+                      "id": "TBzDa",
+                      "name": "Link /time-zone",
+                      "context": "a",
                       "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 2,
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "b5Zqn9",
-                          "name": "タイムゾーン",
-                          "fill": "$ink",
-                          "content": "タイムゾーン",
-                          "lineHeight": 1.2,
-                          "fontFamily": "Roboto",
-                          "fontSize": 15,
-                          "fontWeight": "600"
+                          "type": "frame",
+                          "id": "W0gCzD",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "b5Zqn9",
+                              "name": "タイムゾーン",
+                              "fill": "$ink",
+                              "content": "タイムゾーン",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "P5cxq",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "—",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
-                          "id": "P5cxq",
-                          "name": "Sub line",
+                          "id": "T8szp",
+                          "name": "›",
                           "fill": "$sub",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "—",
-                          "lineHeight": 1.3,
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
                           "fontFamily": "Roboto",
-                          "fontSize": 10,
+                          "fontSize": 13.33,
                           "fontWeight": "normal"
                         }
                       ]
@@ -58902,6 +59017,3422 @@
                       "fontFamily": "Roboto",
                       "fontSize": 12,
                       "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "w7hOL",
+      "x": 5428,
+      "y": 0,
+      "name": "ST Phone / タイムゾーンシート",
+      "context": "div",
+      "clip": true,
+      "width": 402,
+      "height": 1478,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "RyrD7",
+          "name": "div",
+          "context": "div",
+          "clip": true,
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            58,
+            22,
+            12,
+            22
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "x4jHa3",
+              "name": "div",
+              "context": "div",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "BOLkJ",
+                  "name": "設定",
+                  "context": "div",
+                  "fill": "$ink",
+                  "content": "設定",
+                  "lineHeight": 1.18,
+                  "fontFamily": "Roboto",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.56
+                },
+                {
+                  "type": "frame",
+                  "id": "ThXcV",
+                  "name": "div",
+                  "context": "div",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jKwLc",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 64,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16,
+                        1,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tfuKv",
+                          "name": "span",
+                          "context": "span",
+                          "width": 60,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "o2zVzW",
+                              "x": -4,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-1",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "p3K4y2",
+                              "x": 6,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-2",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "R9Vo7Y",
+                              "x": 16,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-3",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "H1sfG",
+                              "x": 26,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-4",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "fx6q2",
+                              "x": 36,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-5",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "v4J8jv",
+                              "x": 46,
+                              "y": 0,
+                              "name": "span",
+                              "context": "span",
+                              "fill": "$activity-6",
+                              "width": 14,
+                              "height": 14,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#1b1c22",
+                                "blur": 2
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "YguY0",
+                          "name": "活動項目",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "活動項目",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pYs8K",
+                          "name": "span",
+                          "context": "span",
+                          "height": 18,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "O1hGnJ",
+                              "name": "6項目",
+                              "context": "span",
+                              "fill": "$sub",
+                              "content": "6項目",
+                              "lineHeight": 1.25,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Yl4hm",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
+                          "fontFamily": "Arial",
+                          "fontSize": 13.33,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VerbX",
+                      "name": "button",
+                      "context": "button",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "JdpxG",
+                          "name": "span",
+                          "context": "span",
+                          "width": 30,
+                          "height": 30,
+                          "fill": "$chip",
+                          "cornerRadius": 10,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "b4daVN",
+                              "name": "svg",
+                              "context": "svg",
+                              "clip": true,
+                              "width": 17,
+                              "height": 17,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "path",
+                                  "id": "oDn4c",
+                                  "x": 2.125,
+                                  "y": 4.25,
+                                  "geometry": "M0 0l12.75 0m-12.75 4.25l12.75 0m-12.75 4.25l7.08333 0",
+                                  "width": 12.75,
+                                  "height": 8.5,
+                                  "stroke": "$ink",
+                                  "strokeWidth": 1.4166666666666667,
+                                  "strokeLinejoin": "round",
+                                  "strokeLinecap": "round"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "L7QKHo",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 40,
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vYXtJ",
+                              "name": "未使用日の自動除外",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "未使用日の自動除外",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ERNGO",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "height": 15,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ndTvm",
+                                  "name": "オン · 無操作 10時間以上",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "オン · 無操作 10時間以上",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Z6i5LK",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "textAlign": "center",
+                          "fontFamily": "Arial",
+                          "fontSize": 13.33,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "c4rDq",
+                  "name": "div",
+                  "context": "div",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YqTh9",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 81,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        16,
+                        11,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bE3rk",
+                          "name": "外観",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "外観",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K6m2B",
+                          "name": "div",
+                          "context": "div",
+                          "fill": "$chip",
+                          "cornerRadius": 10,
+                          "gap": 3,
+                          "padding": 3,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yWAjG",
+                              "name": "button",
+                              "context": "button",
+                              "fill": "$chip",
+                              "cornerRadius": 10,
+                              "layout": "vertical",
+                              "padding": [
+                                9,
+                                14,
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "H7tp0",
+                                  "name": "自動",
+                                  "context": "span",
+                                  "fill": "$ink",
+                                  "content": "自動",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Y9Tzl",
+                              "name": "button",
+                              "context": "button",
+                              "cornerRadius": 10,
+                              "layout": "vertical",
+                              "padding": [
+                                9,
+                                20,
+                                8,
+                                20
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "HGJda",
+                                  "name": "明",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "明",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MiDJV",
+                              "name": "button",
+                              "context": "button",
+                              "cornerRadius": 10,
+                              "layout": "vertical",
+                              "padding": [
+                                9,
+                                20,
+                                8,
+                                20
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "y9Yoiu",
+                                  "name": "暗",
+                                  "context": "span",
+                                  "fill": "$sub",
+                                  "content": "暗",
+                                  "lineHeight": 1.25,
+                                  "textAlign": "center",
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VaJZ6",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 81,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        16,
+                        11,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sE2nq",
+                          "name": "秒針を表示",
+                          "context": "span",
+                          "fill": "$ink",
+                          "content": "秒針を表示",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cqsjn",
+                          "name": "button",
+                          "context": "button",
+                          "width": 52,
+                          "fill": "$activity-6",
+                          "cornerRadius": 16,
+                          "padding": 3,
+                          "justifyContent": "end",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "VRhIG",
+                              "name": "span",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "width": 26,
+                              "height": 26,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#0000004d",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 1
+                                },
+                                "blur": 3
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "cx0cH",
+                      "name": "タイムゾーン",
+                      "context": "div",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "q3DBMA",
+                          "name": "Link /time-zone",
+                          "context": "a",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "eow4J",
+                              "name": "span",
+                              "context": "span",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pqk8O",
+                                  "name": "タイムゾーン",
+                                  "fill": "$ink",
+                                  "content": "タイムゾーン",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "e1Eub",
+                                  "name": "Sub line",
+                                  "fill": "$sub",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "ニューヨーク · この端末は 東京",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "mnXEU",
+                              "name": "›",
+                              "fill": "$sub",
+                              "content": "›",
+                              "lineHeight": 1.13,
+                              "textAlign": "center",
+                              "fontFamily": "Roboto",
+                              "fontSize": 13.33,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BQMfE",
+                          "name": "この端末に合わせる",
+                          "context": "button",
+                          "height": 44,
+                          "cornerRadius": 10,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "AkRjC",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "content": "この端末に合わせる",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JVtib",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 80,
+                      "gap": 12,
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DYnNT",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 40,
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "JMyPa",
+                              "name": "切り替えリマインド",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "切り替えリマインド",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "C0kTv",
+                              "name": "同じ状態が 4 時間続いたら通知",
+                              "context": "span",
+                              "fill": "$sub",
+                              "content": "同じ状態が 4 時間続いたら通知",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "p5gLLI",
+                          "name": "button",
+                          "context": "button",
+                          "width": 52,
+                          "fill": "$activity-6",
+                          "cornerRadius": 16,
+                          "padding": 3,
+                          "justifyContent": "end",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "OVzRF",
+                              "name": "span",
+                              "context": "span",
+                              "fill": "#ffffff",
+                              "width": 26,
+                              "height": 26,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#0000004d",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 1
+                                },
+                                "blur": 3
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Z3pWqr",
+                  "name": "div",
+                  "context": "div",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "cL5Q4",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 57,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16,
+                        1,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AsLnI",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mBvlF",
+                              "name": "データを書き出す",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "データを書き出す",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "zRZKK",
+                          "name": "CSV",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "CSV",
+                          "lineHeight": 1.25,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vHjaw",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "fontFamily": "Roboto",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CgRvU",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 57,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16,
+                        1,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B8NRFk",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Aloay",
+                              "name": "iCloudバックアップ",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "iCloudバックアップ",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f7TAsv",
+                          "name": "span",
+                          "context": "span",
+                          "height": 18,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xlOpK",
+                              "name": "オン",
+                              "context": "span",
+                              "fill": "$sub",
+                              "content": "オン",
+                              "lineHeight": 1.25,
+                              "fontFamily": "Roboto",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "k8mN5K",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "fontFamily": "Roboto",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aYYoS",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 57,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 24,
+                      "padding": [
+                        0,
+                        16,
+                        1,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NFvF6",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "b30rPN",
+                              "name": "ウィジェットの使い方",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "ウィジェットの使い方",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "k7naB",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "fontFamily": "Roboto",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p70sn",
+                      "name": "div",
+                      "context": "div",
+                      "width": "fill_container",
+                      "height": 57,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16,
+                        1,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gXsK9",
+                          "name": "span",
+                          "context": "span",
+                          "width": "fill_container",
+                          "height": 23,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "IUM6N",
+                              "name": "このアプリについて",
+                              "context": "span",
+                              "fill": "$ink",
+                              "content": "このアプリについて",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "LghOh",
+                          "name": "1.0",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "1.0",
+                          "lineHeight": 1.25,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Mx6q6",
+                          "name": "›",
+                          "context": "span",
+                          "fill": "$sub",
+                          "content": "›",
+                          "lineHeight": 1.13,
+                          "fontFamily": "Roboto",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "eVntH",
+                  "name": "Switch Time 1.0 · 記録はこの端末に保存されます",
+                  "context": "div",
+                  "width": "fill_container",
+                  "height": 28,
+                  "layout": "vertical",
+                  "padding": [
+                    4,
+                    0,
+                    8,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CzxvL",
+                      "fill": "$sub",
+                      "content": "Switch Time 1.0 · 記録はこの端末に保存されます",
+                      "lineHeight": 1.6,
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Jks3w",
+          "name": "div",
+          "context": "div",
+          "width": "fill_container",
+          "fill": "$tab-bg",
+          "stroke": "$line",
+          "strokeWidth": {
+            "top": 1
+          },
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "background_blur",
+            "radius": 12
+          },
+          "padding": [
+            9,
+            12,
+            30,
+            12
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "z3tew0",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "dAidb",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "rn1Re",
+                      "x": 2.875,
+                      "y": 2.875,
+                      "geometry": "M8.625 0c-4.76346 0-8.625 3.86154-8.625 8.625 0 4.76345 3.86154 8.625 8.625 8.625 4.76345 0 8.625-3.86155 8.625-8.625 0-4.76346-3.86155-8.625-8.625-8.625m0 4.3125l0 4.3125 2.875 1.91667",
+                      "width": 17.25,
+                      "height": 17.25,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "jX3Tv",
+                  "name": "今",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "今",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DKQOi",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "auUHM",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "Oq7gD",
+                      "x": 1.9166666269302368,
+                      "y": 3.8333332538604736,
+                      "geometry": "M1.91667 15.33333l0-9.58333m5.75 9.58333l0-15.33333m5.75 15.33333l0-6.70833m5.75 6.70833l-19.16667 0",
+                      "width": 19.16666543483734,
+                      "height": 15.333332777023315,
+                      "stroke": "$sub",
+                      "strokeWidth": 1.725,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "rNBeR",
+                  "name": "記録",
+                  "context": "span",
+                  "fill": "$sub",
+                  "content": "記録",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fw234",
+              "name": "button",
+              "context": "button",
+              "width": "fill_container",
+              "height": 48,
+              "layout": "vertical",
+              "gap": 3,
+              "padding": [
+                1,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S5ezAB",
+                  "name": "svg",
+                  "context": "svg",
+                  "clip": true,
+                  "width": 23,
+                  "height": 23,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "I2oy6",
+                      "x": 2.5874998569488525,
+                      "y": 3.8333332538604736,
+                      "geometry": "M8.9125 10.54167c1.58782 0 2.875-1.28718 2.875-2.875 0-1.58782-1.28718-2.875-2.875-2.875-1.58782 0-2.875 1.28718-2.875 2.875 0 1.58782 1.28718 2.875 2.875 2.875m7.66667-2.875l1.4375-0.95834-1.15-2.68333-1.725 0.38333-1.53334-1.15 0.09584-1.82083-2.5875-1.4375-1.15 1.34167-1.91667 0-1.15-1.34167-2.5875 1.4375 0.09583 1.82083-1.53333 1.15-1.725-0.38333-1.15 2.68333 1.4375 0.95834-1.4375 0.95833 1.15 2.68333 1.725-0.38333 1.53333 1.15-0.09583 1.82083 2.5875 1.4375 1.15-1.34166 1.91667 0 1.15 1.34166 2.5875-1.4375-0.09584-1.82083 1.53334-1.15 1.725 0.38333 1.15-2.68333-1.4375-0.95833z",
+                      "width": 18.016666173934937,
+                      "height": 15.333332777023315,
+                      "stroke": "$ink",
+                      "strokeWidth": 2.3,
+                      "strokeLinejoin": "round",
+                      "strokeLinecap": "round"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "v0pHGJ",
+                  "name": "設定",
+                  "context": "span",
+                  "fill": "$ink",
+                  "content": "設定",
+                  "lineHeight": 1.2,
+                  "textAlign": "center",
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uSqMz",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "div",
+          "context": "div",
+          "width": 402,
+          "height": 1478,
+          "layout": "vertical",
+          "justifyContent": "end",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "g3VpM6",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 0,
+              "name": "div",
+              "context": "div",
+              "fill": "#0a0a0c80",
+              "width": 402,
+              "height": 1478,
+              "effect": {
+                "type": "background_blur",
+                "radius": 6
+              }
+            },
+            {
+              "type": "frame",
+              "id": "m3TCGb",
+              "name": "div",
+              "context": "div",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$sheet-bg",
+              "cornerRadius": [
+                28,
+                28,
+                0,
+                0
+              ],
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000040",
+                "offset": {
+                  "x": 0,
+                  "y": -12
+                },
+                "blur": 40
+              },
+              "layout": "vertical",
+              "padding": [
+                14,
+                20,
+                40.01,
+                20
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JNwP0",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "t8u97e",
+                      "name": "div",
+                      "context": "div",
+                      "fill": "$line",
+                      "width": 40,
+                      "height": 5
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "np4WW",
+                  "name": "spacer",
+                  "width": "fill_container",
+                  "height": 14,
+                  "layout": "none"
+                },
+                {
+                  "type": "frame",
+                  "id": "M94GpH",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "justifyContent": "space_between",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yHu1T",
+                      "name": "div",
+                      "context": "div",
+                      "width": 270,
+                      "layout": "vertical",
+                      "gap": 3,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mP2TC",
+                          "name": "タイムゾーン",
+                          "context": "div",
+                          "fill": "$ink",
+                          "content": "タイムゾーン",
+                          "lineHeight": 1.18,
+                          "fontFamily": "Roboto",
+                          "fontSize": 22,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hH3aM",
+                          "name": "Hint",
+                          "context": "div",
+                          "fill": "$sub",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "記録の日付の区切りに使います。過去の記録も含め、同じアカウントの端末すべてに効きます。端末のタイムゾーンが変わると、その端末に合わせて更新されます。",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "a1ycK7",
+                      "name": "✕",
+                      "context": "button",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$chip",
+                      "cornerRadius": 22,
+                      "layout": "vertical",
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "j37BhC",
+                          "fill": "$ink",
+                          "content": "✕",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Arial",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x66QVF",
+                  "name": "spacer",
+                  "width": "fill_container",
+                  "height": 15.99,
+                  "layout": "none"
+                },
+                {
+                  "type": "frame",
+                  "id": "bA7Mv",
+                  "name": "Search 都市・国名で検索",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$surface",
+                  "cornerRadius": 10,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "arYPq",
+                      "name": "Placeholder",
+                      "fill": "$sub",
+                      "content": "都市・国名で検索",
+                      "lineHeight": 1.2,
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Fh9iD",
+                  "name": "spacer",
+                  "width": "fill_container",
+                  "height": 12
+                },
+                {
+                  "type": "frame",
+                  "id": "ZiDEg",
+                  "name": "Zone list",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OSPfK",
+                      "name": "Row 東京",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "odlFA",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "PP0XO",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NGdtW",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "東京",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "QeUyH",
+                                  "name": "この端末 tag",
+                                  "fill": "$chip",
+                                  "cornerRadius": 999,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "DwL0t",
+                                      "name": "Tag",
+                                      "fill": "$sub",
+                                      "content": "この端末",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "Roboto",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "OPoMa",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "日本 · UTC+9",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LMjSU",
+                          "name": "Check",
+                          "width": 16,
+                          "height": 16,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "iEWwy",
+                              "x": 0,
+                              "y": 0,
+                              "name": "check",
+                              "geometry": "M20 6l-11 11-5-5",
+                              "width": 16,
+                              "height": 16,
+                              "stroke": "$accent",
+                              "strokeWidth": 2,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qGtSp",
+                      "name": "Row ホノルル",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WzMXs",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "fvF2B",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "o26kY",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "ホノルル",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "LSMeU",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-10",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D4BoB",
+                      "name": "Row アンカレッジ",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "fBdBQ",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e96fo",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hVqo6",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "アンカレッジ",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "zNLDn",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-8",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "anqEx",
+                      "name": "Row バンクーバー",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Tcs9e",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "MNWAm",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "M6SO7F",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "バンクーバー",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "w5pxLj",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "カナダ · UTC-7",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aeIPJ",
+                      "name": "Row フェニックス",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "A3cT9D",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "cxGTD",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pvw73",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "フェニックス",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "vYwzP",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-7",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zVi4y",
+                      "name": "Row ロサンゼルス",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "XA81j",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "DMy3h",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "B43HK9",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "ロサンゼルス",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "EpGAP",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-7",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h5trt",
+                      "name": "Row デンバー",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N9vgX",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "J8HUTf",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "AI3Em",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "デンバー",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "lguZD",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-6",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f0Qfp",
+                      "name": "Row シカゴ",
+                      "context": "button",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yAUyK",
+                          "name": "Labels",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ILxS6",
+                              "name": "City line",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SlSgG",
+                                  "name": "City",
+                                  "fill": "$ink",
+                                  "content": "シカゴ",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 15,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "J8rOKV",
+                              "name": "Sub line",
+                              "fill": "$sub",
+                              "content": "アメリカ · UTC-5",
+                              "lineHeight": 1.3,
+                              "fontFamily": "Roboto",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "jNY6r",
+      "x": 5428,
+      "y": 2866,
+      "name": "ST Phone / タイムゾーンシート・状態",
+      "fill": "$sheet-bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "PfkgH",
+          "name": "変更中（sub, polite）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "K81Nr",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "変更中（sub, polite）。押した行にすぐチェックが移り、検索の下に「〇〇に変更しています…」。書き込みが終わるまで他の行は押せない（薄くしない。行の説明はこの一行が担う）。キーボードは閉じる",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "l8TCZ",
+              "name": "Search 都市・国名で検索",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jKVEh",
+                  "name": "Placeholder",
+                  "fill": "$sub",
+                  "content": "都市・国名で検索",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "oi5jo",
+              "name": "Status",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "ニューヨークに変更しています…",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "GqZFc",
+              "name": "Zone list",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S3ZJjv",
+                  "name": "Row 東京",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "robiK",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rIgkx",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "h7Zd6Z",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "東京",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lvN24",
+                              "name": "この端末 tag",
+                              "fill": "$chip",
+                              "cornerRadius": 999,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "m1uHS",
+                                  "name": "Tag",
+                                  "fill": "$sub",
+                                  "content": "この端末",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "t4gqAz",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "日本 · UTC+9",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bX2PQ",
+                  "name": "Row ニューヨーク",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nvcV1",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hsCAq",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "nd78Q",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ニューヨーク",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "WwUmx",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-4",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PgsAb",
+                      "name": "Check",
+                      "width": 16,
+                      "height": 16,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "UTVvt",
+                          "x": 0,
+                          "y": 0,
+                          "name": "check",
+                          "geometry": "M20 6l-11 11-5-5",
+                          "width": 16,
+                          "height": 16,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "strokeLinejoin": "round",
+                          "strokeLinecap": "round"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uAXnu",
+                  "name": "Row ホノルル",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MMfDJ",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "i1xAN0",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xdYQu",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ホノルル",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "rIye4",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-10",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OnLXE",
+          "name": "変更しました（sub, polite）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "B1InB",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "変更しました（sub, polite）。成功。行はそのまま動かない（並びはシートを開いた時点で決まる）。次の押下で消える",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "iCTnV",
+              "name": "Search 都市・国名で検索",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dMNfT",
+                  "name": "Placeholder",
+                  "fill": "$sub",
+                  "content": "都市・国名で検索",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "nL49A",
+              "name": "Status",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "ニューヨークに変更しました",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "TG5EI",
+              "name": "Zone list",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "w48wXq",
+                  "name": "Row 東京",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jqLHQ",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "SkUA7",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eTsI9",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "東京",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HTdxL",
+                              "name": "この端末 tag",
+                              "fill": "$chip",
+                              "cornerRadius": 999,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "l7gYW",
+                                  "name": "Tag",
+                                  "fill": "$sub",
+                                  "content": "この端末",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Ep2OV",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "日本 · UTC+9",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I5WtK6",
+                  "name": "Row ニューヨーク",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s7mVjy",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "krK7h",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MF3YJ",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ニューヨーク",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "tflD3",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-4",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x73nh",
+                      "name": "Check",
+                      "width": 16,
+                      "height": 16,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "bCrUn",
+                          "x": 0,
+                          "y": 0,
+                          "name": "check",
+                          "geometry": "M20 6l-11 11-5-5",
+                          "width": 16,
+                          "height": 16,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "strokeLinejoin": "round",
+                          "strokeLinecap": "round"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yshHM",
+                  "name": "Row ホノルル",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Y1UGaE",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N5VB8A",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OWfzf",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ホノルル",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Q2Te2z",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-10",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "xN6Dy",
+          "name": "変更できませんでした（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "xNkEC",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "変更できませんでした（role=alert, ink 500）。失敗。チェックは元の行に戻り、検索語とスクロール位置はそのまま。シートを閉じたあとに失敗したときは 設定 の行が同じ失敗の行を出す",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "xhOFj",
+              "name": "Search 都市・国名で検索",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CdXmH",
+                  "name": "Placeholder",
+                  "fill": "$sub",
+                  "content": "都市・国名で検索",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "k7C6x",
+              "name": "Status",
+              "fill": "$ink",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "ニューヨークに変更できませんでした。もう一度お試しください",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "omN3o",
+              "name": "Zone list",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G9Y6Y",
+                  "name": "Row 東京",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rWIGj",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "i9Umb",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Se0TL",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "東京",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "z6QZ6T",
+                              "name": "この端末 tag",
+                              "fill": "$chip",
+                              "cornerRadius": 999,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "K8Udg5",
+                                  "name": "Tag",
+                                  "fill": "$sub",
+                                  "content": "この端末",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "a7iZoN",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "日本 · UTC+9",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LlLfG",
+                      "name": "Check",
+                      "width": 16,
+                      "height": 16,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "T9N3I5",
+                          "x": 0,
+                          "y": 0,
+                          "name": "check",
+                          "geometry": "M20 6l-11 11-5-5",
+                          "width": 16,
+                          "height": 16,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "strokeLinejoin": "round",
+                          "strokeLinecap": "round"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zriU4",
+                  "name": "Row ニューヨーク",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SNmBE",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "E2DVPC",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "z6fKw",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ニューヨーク",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "pNfwq",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-4",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Bd7Ka",
+                  "name": "Row ホノルル",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Mcz4H",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IG6G3",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "v8ot0",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ホノルル",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "cN4jz",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-10",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Rs3qA",
+          "name": "一致なし（sub, xs, 中央）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "YDCTq",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "一致なし（sub, xs, 中央）。検索語は残す。「検索をクリア」（accent, xs 600, 高さ 44）で全体に戻る",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "XwAaP",
+              "name": "Search 都市・国名で検索",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wrDPn",
+                  "name": "Value",
+                  "fill": "$ink",
+                  "content": "ぬぬぬ",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "D4vg8j",
+              "name": "Zone list",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "HqTo7",
+                  "name": "Empty",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Zhtx3",
+                      "name": "一致する都市がありません",
+                      "fill": "$sub",
+                      "content": "一致する都市がありません",
+                      "lineHeight": 1.3,
+                      "fontFamily": "Roboto",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h5OCbJ",
+                      "name": "検索をクリア",
+                      "context": "button",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rGUMH",
+                          "name": "Label",
+                          "fill": "$accent",
+                          "content": "検索をクリア",
+                          "lineHeight": 1.2,
+                          "fontFamily": "Roboto",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "iW6Io",
+          "name": "扱えないゾーン・読み込み中",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "x9QoI",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "扱えないゾーン・読み込み中。保存済みのゾーンをこの端末が扱えないとき、チェック付きで先頭の次に置き、サブ行は「この端末では扱えません」、押せない（40 %）。ほかの行は選べる。設定の読み込み中はチェックを出さず、全行を 40 % で押せなくする",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "jrtAK",
+              "name": "Search 都市・国名で検索",
+              "width": "fill_container",
+              "height": 48,
+              "fill": "$surface",
+              "cornerRadius": 10,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J12mQA",
+                  "name": "Placeholder",
+                  "fill": "$sub",
+                  "content": "都市・国名で検索",
+                  "lineHeight": 1.2,
+                  "fontFamily": "Roboto",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "v0srVl",
+              "name": "Zone list",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$surface",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EFTu2",
+                  "name": "Row 東京",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EwDDk",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "le1ar",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mVAUB",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "東京",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uBqJa",
+                              "name": "この端末 tag",
+                              "fill": "$chip",
+                              "cornerRadius": 999,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "d7jTO",
+                                  "name": "Tag",
+                                  "fill": "$sub",
+                                  "content": "この端末",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "j5rOL",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "日本 · UTC+9",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "F1kVPt",
+                  "name": "Row Mars/Olympus",
+                  "context": "button",
+                  "opacity": 0.4,
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Yf8Ie",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "p89m1C",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xrXiY",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "Ciudad Juarez",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "WtU4s",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "この端末では扱えません",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aaEmh",
+                      "name": "Check",
+                      "width": 16,
+                      "height": 16,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "path",
+                          "id": "i1pBxT",
+                          "x": 0,
+                          "y": 0,
+                          "name": "check",
+                          "geometry": "M20 6l-11 11-5-5",
+                          "width": 16,
+                          "height": 16,
+                          "stroke": "$accent",
+                          "strokeWidth": 2,
+                          "strokeLinejoin": "round",
+                          "strokeLinecap": "round"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ANdUG",
+                  "name": "Row ホノルル",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YrCNb",
+                      "name": "Labels",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "sSFQm",
+                          "name": "City line",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KFxHl",
+                              "name": "City",
+                              "fill": "$ink",
+                              "content": "ホノルル",
+                              "lineHeight": 1.2,
+                              "fontFamily": "Roboto",
+                              "fontSize": 15,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "YK55f",
+                          "name": "Sub line",
+                          "fill": "$sub",
+                          "content": "アメリカ · UTC-10",
+                          "lineHeight": 1.3,
+                          "fontFamily": "Roboto",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 }

@@ -349,6 +349,29 @@ test('🗑 on another row after a refused 戻す clears the refusal line', async
   await expect(sheet.getByRole('alert')).toHaveCount(0)
 })
 
+test('Escape pressed while renaming 家事 on the 活動項目 sheet closes it and keeps the new name', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  const api = await apiAs(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await sheet.getByRole('textbox', { name: '家事の名前' }).fill('掃除')
+
+  // Act
+  await page.keyboard.press('Escape')
+
+  // Assert
+  await expect(sheet).toHaveCount(0)
+  await expect
+    .poll(async () =>
+      (await api.activities.list()).map((activity) => activity.name),
+    )
+    .toContain('掃除')
+})
+
 test('switching appearance to dark applies immediately', async ({ page }) => {
   // Arrange: 明 first, so the assertion does not depend on the hour the run happens in.
   await signUp(page)
@@ -461,13 +484,13 @@ test('この端末に合わせる on 設定 takes the account’s zone back afte
   await api.settings.update({ timeZone: 'UTC' })
   await page.reload()
   await page.getByRole('tab', { name: '設定' }).click()
-  await expect(page.getByText('UTC · この端末は Asia/Tokyo')).toBeVisible()
+  await expect(page.getByText('協定世界時 · この端末は 東京')).toBeVisible()
 
   // Act
   await page.getByRole('button', { name: 'この端末に合わせる' }).click()
 
   // Assert
-  await expect(page.getByText('Asia/Tokyo · この端末と同じ')).toBeVisible()
+  await expect(page.getByText('東京 · この端末と同じ')).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'この端末に合わせる' }),
   ).toHaveCount(0)
@@ -486,7 +509,7 @@ test('a failed take-back on 設定 says so and keeps the button, and the account
   await api.settings.update({ timeZone: 'UTC' })
   await page.reload()
   await page.getByRole('tab', { name: '設定' }).click()
-  await expect(page.getByText('UTC · この端末は Asia/Tokyo')).toBeVisible()
+  await expect(page.getByText('協定世界時 · この端末は 東京')).toBeVisible()
   await page.route('**/api/rpc/settings/update', async (route) =>
     route.fulfill(rpcError('INTERNAL_SERVER_ERROR', 500)),
   )
@@ -527,7 +550,7 @@ test('pressing この端末に合わせる again after a failed take-back clears
   await page.getByRole('button', { name: 'この端末に合わせる' }).click()
 
   // Assert
-  await expect(page.getByText('Asia/Tokyo · この端末と同じ')).toBeVisible()
+  await expect(page.getByText('東京 · この端末と同じ')).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect
     .poll(async () => (await api.settings.get()).timeZone)
@@ -544,7 +567,7 @@ test('この端末に合わせる waits while another settings change is still b
   await api.settings.update({ timeZone: 'UTC' })
   await page.reload()
   await page.getByRole('tab', { name: '設定' }).click()
-  await expect(page.getByText('UTC · この端末は Asia/Tokyo')).toBeVisible()
+  await expect(page.getByText('協定世界時 · この端末は 東京')).toBeVisible()
   let releaseWrite = (): void => undefined
   const writeHeld = new Promise<void>((resolve) => {
     releaseWrite = resolve
@@ -621,7 +644,7 @@ test('a failed take-back’s line does not follow the device into the next accou
   await foregroundUntilSessionIs(page, emailB)
 
   // Assert: B's row names both zones, with no failure line from A's tap.
-  await expect(page.getByText('UTC · この端末は Asia/Tokyo')).toBeVisible()
+  await expect(page.getByText('協定世界時 · この端末は 東京')).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
@@ -643,7 +666,7 @@ test('a device zone change while the app stays open reaches the account and 設�
   await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
   const api = await apiAs(page)
   await page.getByRole('tab', { name: '設定' }).click()
-  await expect(page.getByText('Asia/Tokyo · この端末と同じ')).toBeVisible()
+  await expect(page.getByText('東京 · この端末と同じ')).toBeVisible()
 
   // Act: the device moves to UTC, then the app comes back to the foreground.
   await page.evaluate(() => localStorage.setItem('e2e.device-zone', 'UTC'))
@@ -651,7 +674,7 @@ test('a device zone change while the app stays open reaches the account and 設�
 
   // Assert: this device moved, so its new zone is written; the row follows.
   await expect.poll(async () => (await api.settings.get()).timeZone).toBe('UTC')
-  await expect(page.getByText('UTC · この端末と同じ')).toBeVisible()
+  await expect(page.getByText('協定世界時 · この端末と同じ')).toBeVisible()
 })
 
 test('after a switch to another account, this device writes its zone to that account instead of remembering the previous account’s', async ({
@@ -776,4 +799,296 @@ test.describe('device time zone', () => {
       })
       .toBe('America/Los_Angeles')
   })
+})
+
+/** Opens the タイムゾーン sheet from 設定's row and waits for the account's zone to be checked. */
+async function openZoneSheet(page: Page) {
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: 'タイムゾーン' }).click()
+  const sheet = page.getByRole('dialog', { name: 'タイムゾーン' })
+  await expect(sheet.getByRole('button', { name: /^東京、/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  return sheet
+}
+
+test('picking ニューヨーク on the タイムゾーン sheet moves the account there, and 設定 names both zones after a reload', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const api = await apiAs(page)
+  const sheet = await openZoneSheet(page)
+
+  // Act
+  await sheet.getByRole('button', { name: /^ニューヨーク、/ }).click()
+
+  // Assert
+  await expect(sheet.getByText('ニューヨークに変更しました')).toBeVisible()
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(sheet.getByRole('button', { name: /^東京、/ })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  await expect
+    .poll(async () => (await api.settings.get()).timeZone)
+    .toBe('America/New_York')
+  await sheet.getByRole('button', { name: '閉じる' }).click()
+  await expect(page.getByText('ニューヨーク · この端末は 東京')).toBeVisible()
+  await page.reload()
+  await page.getByRole('tab', { name: '設定' }).click()
+  await expect(page.getByText('ニューヨーク · この端末は 東京')).toBeVisible()
+  expect((await api.settings.get()).timeZone).toBe('America/New_York')
+})
+
+test('a search on the タイムゾーン sheet narrows the list, and one that matches nothing offers 検索をクリア', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  const sheet = await openZoneSheet(page)
+  const search = sheet.getByRole('textbox', { name: '都市・国名で検索' })
+  const list = sheet.getByRole('group', { name: 'タイムゾーン' })
+
+  // Act
+  await search.fill('上海')
+
+  // Assert
+  await expect(list.getByRole('button', { name: /^上海、/ })).toBeVisible()
+  await expect(list.getByRole('button')).toHaveCount(1)
+  await search.fill('ぬぬぬ')
+  await expect(sheet.getByText('一致する都市がありません')).toBeVisible()
+  await sheet.getByRole('button', { name: '検索をクリア' }).click()
+  await expect(search).toHaveValue('')
+  await expect(list.getByRole('button', { name: /^東京、/ })).toBeVisible()
+})
+
+test('a pick that fails says so under the search and leaves the check on the account’s zone', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const api = await apiAs(page)
+  const sheet = await openZoneSheet(page)
+  await page.route('**/api/rpc/settings/update', async (route) =>
+    route.fulfill(rpcError('INTERNAL_SERVER_ERROR', 500)),
+  )
+
+  // Act
+  await sheet.getByRole('button', { name: /^ニューヨーク、/ }).click()
+
+  // Assert
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: 'ニューヨークに変更できませんでした。もう一度お試しください',
+    }),
+  ).toBeVisible()
+  await expect(sheet.getByRole('button', { name: /^東京、/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toHaveAttribute('aria-pressed', 'false')
+  expect((await api.settings.get()).timeZone).toBe('Asia/Tokyo')
+})
+
+test('while a pick is being saved the sheet says so and the other rows wait for it', async ({
+  page,
+}) => {
+  // Arrange: the pick's write is held until the test lets it through.
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const sheet = await openZoneSheet(page)
+  let releaseWrite = (): void => undefined
+  const writeHeld = new Promise<void>((resolve) => {
+    releaseWrite = resolve
+  })
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    await writeHeld
+    await route.continue().catch(() => undefined)
+  })
+
+  // Act
+  await sheet.getByRole('button', { name: /^ニューヨーク、/ }).click()
+
+  // Assert
+  await expect(sheet.getByText('ニューヨークに変更しています…')).toBeVisible()
+  await expect(sheet.getByRole('button', { name: /^東京、/ })).toBeDisabled()
+  releaseWrite()
+  await expect(sheet.getByText('ニューヨークに変更しました')).toBeVisible()
+  await expect(sheet.getByRole('button', { name: /^東京、/ })).toBeEnabled()
+})
+
+test('the タイムゾーン sheet’s rows wait while a 外観 change is still being saved', async ({
+  page,
+}) => {
+  // Arrange: a 外観 change is held in flight when the sheet opens.
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  await page.getByRole('tab', { name: '設定' }).click()
+  let releaseWrite = (): void => undefined
+  const writeHeld = new Promise<void>((resolve) => {
+    releaseWrite = resolve
+  })
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    await writeHeld
+    await route.continue().catch(() => undefined)
+  })
+  await page.getByRole('button', { name: '暗' }).click()
+
+  // Act
+  const sheet = await openZoneSheet(page)
+
+  // Assert: a pick cannot queue behind the 外観 write, and the rows come back once it lands.
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toBeDisabled()
+  releaseWrite()
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toBeEnabled()
+})
+
+test('a pick that lands after the sheet closed stays the account’s zone, and a device that had not synced its own zone does not write it over the pick', async ({
+  page,
+}) => {
+  // Arrange: the device moves to UTC and its automatic write of UTC fails, so this device has not synced UTC.
+  await page.addInitScript(() => {
+    const original = Intl.DateTimeFormat.prototype.resolvedOptions
+    Intl.DateTimeFormat.prototype.resolvedOptions = function resolvedOptions(
+      this: Intl.DateTimeFormat,
+    ) {
+      const options = original.call(this)
+      const override = localStorage.getItem('e2e.device-zone')
+      return override ? { ...options, timeZone: override } : options
+    }
+  })
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const api = await apiAs(page)
+  let releasePick = (): void => undefined
+  const pickHeld = new Promise<void>((resolve) => {
+    releasePick = resolve
+  })
+  const automaticWriteFailed = page.waitForResponse(
+    async (response) =>
+      response.url().includes('/api/rpc/settings/update') &&
+      response.status() === 500,
+  )
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    // The automatic sync sends UTC; the pick sends New York and is held until the sheet has closed.
+    if (route.request().postData()?.includes('"UTC"')) {
+      await route.fulfill(rpcError('INTERNAL_SERVER_ERROR', 500))
+      return
+    }
+    await pickHeld
+    await route.continue().catch(() => undefined)
+  })
+  await page.evaluate(() => localStorage.setItem('e2e.device-zone', 'UTC'))
+  await foreground(page)
+  await automaticWriteFailed
+  const sheet = await openZoneSheet(page)
+  await sheet.getByRole('button', { name: /^ニューヨーク、/ }).click()
+  await expect(sheet.getByText('ニューヨークに変更しています…')).toBeVisible()
+
+  // Act: the sheet closes, then the pick lands, then the app starts again with the network back.
+  await sheet.getByRole('button', { name: '閉じる' }).click()
+  releasePick()
+  await expect
+    .poll(async () => (await api.settings.get()).timeZone)
+    .toBe('America/New_York')
+  // The landed pick counts as this device's sync of UTC; the store saves it a moment later.
+  await expect.poll(async () => syncedZones(page)).toEqual(['UTC'])
+  await page.unroute('**/api/rpc/settings/update')
+  await page.reload()
+
+  // Assert: the pick stands, since this device has nothing of its own left to write on start.
+  await page.getByRole('tab', { name: '設定' }).click()
+  await expect(
+    page.getByText('ニューヨーク · この端末は 協定世界時'),
+  ).toBeVisible()
+  expect((await api.settings.get()).timeZone).toBe('America/New_York')
+})
+
+test('a pick that fails after the sheet closed shows the failure on 設定’s タイムゾーン row', async ({
+  page,
+}) => {
+  // Arrange: the pick's write is held, then answered with a failure once the sheet has closed.
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const api = await apiAs(page)
+  let releaseWrite = (): void => undefined
+  const writeHeld = new Promise<void>((resolve) => {
+    releaseWrite = resolve
+  })
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    await writeHeld
+    await route
+      .fulfill(rpcError('INTERNAL_SERVER_ERROR', 500))
+      .catch(() => undefined)
+  })
+  const sheet = await openZoneSheet(page)
+  await sheet.getByRole('button', { name: /^ニューヨーク、/ }).click()
+  await sheet.getByRole('button', { name: '閉じる' }).click()
+
+  // Act
+  releaseWrite()
+
+  // Assert
+  await expect(
+    page
+      .getByRole('alert')
+      .filter({ hasText: '保存できませんでした。もう一度お試しください' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'この端末に合わせる' }),
+  ).toHaveCount(0)
+  expect((await api.settings.get()).timeZone).toBe('Asia/Tokyo')
+})
+
+test('the タイムゾーン sheet keeps Tab inside, ignores Escape while a Japanese IME composes, and gives focus back to 設定’s row when it closes', async ({
+  page,
+}) => {
+  // Arrange: the sheet is opened from the keyboard.
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  const row = page.getByRole('link', { name: 'タイムゾーン' })
+  await row.focus()
+  await page.keyboard.press('Enter')
+  const sheet = page.getByRole('dialog', { name: 'タイムゾーン' })
+  await expect(sheet).toBeFocused()
+  const close = sheet.getByRole('button', { name: '閉じる' })
+  const search = sheet.getByRole('textbox', { name: '都市・国名で検索' })
+
+  // One row, so the list's last control stays put (the full list keeps rendering rows in batches).
+  await search.fill('上海')
+  const shanghai = sheet.getByRole('button', { name: /^上海、/ })
+  await expect(shanghai).toBeEnabled()
+
+  // Act & Assert: Shift+Tab on the first control wraps to the list's last row, and Tab from there wraps back.
+  await close.focus()
+  await page.keyboard.press('Shift+Tab')
+  await expect(shanghai).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(close).toBeFocused()
+
+  // Act & Assert: an Escape that ends an IME composition leaves the sheet open.
+  await search.focus()
+  await search.dispatchEvent('keydown', {
+    key: 'Escape',
+    isComposing: true,
+    bubbles: true,
+  })
+  await expect(sheet).toBeVisible()
+
+  // Act & Assert: a plain Escape closes it, and focus is back on the row that opened it.
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+  await expect(row).toBeFocused()
 })

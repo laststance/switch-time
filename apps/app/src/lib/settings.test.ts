@@ -219,7 +219,7 @@ test('設定’s タイムゾーン row says the account already uses this devic
 
   // Assert
   expect(row).toEqual({
-    summary: 'Asia/Tokyo · この端末と同じ',
+    summary: '東京 · この端末と同じ',
     alert: false,
     canTakeBack: false,
   })
@@ -238,7 +238,7 @@ test('設定’s タイムゾーン row names both zones and offers この端末
 
   // Assert
   expect(row).toEqual({
-    summary: 'America/New_York · この端末は Asia/Tokyo',
+    summary: 'ニューヨーク · この端末は 東京',
     alert: false,
     canTakeBack: true,
   })
@@ -276,7 +276,45 @@ test('a failure line goes away once a later read shows the account already on th
 
   // Assert
   expect(row).toEqual({
-    summary: 'Asia/Tokyo · この端末と同じ',
+    summary: '東京 · この端末と同じ',
+    alert: false,
+    canTakeBack: false,
+  })
+})
+
+test('a pick on the タイムゾーン sheet that failed after the sheet closed shows the failure line on 設定, with no button while the account is on this device’s zone', () => {
+  // Act: the account is still on Tokyo (this device's zone); the pick of New York did not land.
+  const row = zoneRow({
+    stored: 'Asia/Tokyo',
+    device: 'Asia/Tokyo',
+    ready: true,
+    failedWrite: { forUserId: 'user-1', timeZone: 'America/New_York' },
+    account: 'user-1',
+    rowAccount: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: '保存できませんでした。もう一度お試しください',
+    alert: true,
+    canTakeBack: false,
+  })
+})
+
+test('a device that reports an older name for the account’s zone reads as the same zone and offers no button', () => {
+  // Act: ICU on this device answers Asia/Calcutta for the account's Asia/Kolkata.
+  const row = zoneRow({
+    stored: 'Asia/Kolkata',
+    device: 'Asia/Calcutta',
+    ready: true,
+    failedWrite: undefined,
+    account: 'user-1',
+    rowAccount: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({
+    summary: 'コルカタ · この端末と同じ',
     alert: false,
     canTakeBack: false,
   })
@@ -352,7 +390,7 @@ test('a take-back that failed for the previous account shows no failure line on 
 
   // Assert
   expect(row).toEqual({
-    summary: 'UTC · この端末は Asia/Tokyo',
+    summary: '協定世界時 · この端末は 東京',
     alert: false,
     canTakeBack: true,
   })

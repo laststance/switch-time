@@ -2,23 +2,11 @@
 
 ## Settings
 
-### Pick a zone other than the device's in 設定
-
-**What:** Let the タイムゾーン row on 設定 set any IANA zone, with a searchable list and readable city names, not only take back this device's zone.
-
-**Why:** The row can only write the zone this device reports (「この端末に合わせる」). A user who wants another zone (a second home, a browser that reports UTC to resist fingerprinting) has no control, and the row shows raw IANA ids (`America/New_York`) that a screen reader spells out.
-
-**Context:** `useAccountZone` (`apps/app/src/hooks/use-account-zone.ts`) and `zoneRow` (`apps/app/src/lib/settings.ts`) drive the row; `settings.update` already takes any zone `timeZoneSchema` accepts. A picked zone must also be remembered as this device's sync (`zoneSynced` in `apps/app/src/store/synced-zone.ts`), or `useTimeZoneSync` would write the device's zone over it when the device moves. Needs a pen design first (the 設定 board and `ST Phone / 設定・タイムゾーン行の状態`). Split off when the take-back shipped (2026-09-25).
-
-**Effort:** M
-**Priority:** P4
-**Depends on:** None
-
 ### Check on a phone that a zone change made in the background reaches 設定
 
-**What:** On an iPhone and an Android phone, put the app in the background, change the phone's time zone in the system settings, bring the app back, and check that the タイムゾーン row and the account's stored zone follow.
+**What:** On an iPhone and an Android phone, put the app in the background, change the phone's time zone in the system settings, bring the app back, and check that the タイムゾーン row and the account's stored zone follow. On the same phones, open the タイムゾーン sheet, search with the keyboard up, and check that the list's last rows can be scrolled above the keyboard and picked with one tap, and that VoiceOver and TalkBack read the line under the search after a pick.
 
-**Why:** The app reads the zone with `Intl.DateTimeFormat().resolvedOptions().timeZone` each time it returns to the foreground (`useDeviceZone`). The e2e covers only the web. Hermes may take the zone from a cached system value (Foundation keeps `systemTimeZone` until `resetSystemTimeZone`), so on iOS a zone change while the app stays open may not show until a relaunch.
+**Why:** The app reads the zone with `Intl.DateTimeFormat().resolvedOptions().timeZone` each time it returns to the foreground (`useDeviceZone`). The e2e covers only the web. Hermes may take the zone from a cached system value (Foundation keeps `systemTimeZone` until `resetSystemTimeZone`), so on iOS a zone change while the app stays open may not show until a relaunch. The sheet's list leans on `automaticallyAdjustKeyboardInsets` and `keyboardShouldPersistTaps` (`apps/app/src/app/(app)/time-zone.tsx`), which the web build never exercises.
 
 **Context:** `apps/app/src/hooks/use-device-zone.ts` re-reads on TanStack's `focusManager`, which `src/lib/query.ts` wires to `AppState` on native. If Hermes keeps the old zone, read it from `expo-localization` (`getCalendars()[0].timeZone`) on native instead. Found by the adversarial review of the take-back PR (2026-09-25).
 
@@ -130,7 +118,7 @@
 
 **Why:** React Native has no live region on iOS: `aria-live` and `role="alert"` are read on the web and Android only, so a VoiceOver user never hears why an edit failed or that it is waiting. The cut's 区切る時刻 readout already announces itself this way on iOS.
 
-**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx` (its slots come from `statusSlots` in `apps/app/src/lib/correction.ts`); the pattern is in `CarriedInActions` in the same file. The web keeps the mounted polite region and the keyed alert. Found by the pre-landing review of the PR that settled the correction status line by later reads (2026-09-25). Only matters once the native build ships.
+**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx` (its slots come from `statusSlots` in `apps/app/src/lib/correction.ts`); the pattern is in `CarriedInActions` in the same file. `useIosAnnouncement` (`apps/app/src/hooks/use-ios-announcement.ts`, 0.24.5.0) already does this for the タイムゾーン sheet's line. The web keeps the mounted polite region and the keyed alert. Found by the pre-landing review of the PR that settled the correction status line by later reads (2026-09-25). Only matters once the native build ships.
 
 **Effort:** S
 **Priority:** P4

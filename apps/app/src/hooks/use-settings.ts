@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 
 import { authClient } from '@/lib/auth-client'
+import { deviceZone } from '@/lib/device-zone'
 import { orpc } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 import {
@@ -10,6 +11,8 @@ import {
   SETTINGS_DEFAULTS,
   SETTINGS_REFETCH_ROUTERS,
 } from '@/lib/settings'
+import { useAppDispatch } from '@/store'
+import { zoneSynced } from '@/store/synced-zone'
 
 /**
  * The user's `settings.get` row (theme, second hand, idle threshold, unused-day rule, time zone): one query definition for the whole app,
@@ -37,24 +40,37 @@ export function useSettings() {
  * each field it changed put back on error ({@link rolledBackSettings}); `settings.*`, `stats.*` and `switches.*` refetch once the
  * server has answered, since the idle threshold and the unused-day rule change every total and a stored-zone change moves every
  * day's window. Every write names the account signed in when it was made (`forUserId`), so the API refuses it once a sign-in in
- * another tab has changed the cookie, instead of writing it into that other account's settings.
+ * another tab has changed the cookie, instead of writing it into that other account's settings. A zone write that lands is
+ * remembered as this device's sync for the account it landed on ({@link zoneSynced}), with the device's zone as it was when the
+ * write was made, so {@link useTimeZoneSync} does not write the device's zone over a zone picked by hand; this runs on the
+ * mutation itself, so it also holds when the screen that made the write has closed.
+ * @param options.automatic - The write is {@link useTimeZoneSync}'s, not a tap: 設定's failure line ({@link useFailedZoneWrite}) leaves it out.
  * @example const update = useUpdateSettings(); update.mutate({ theme: 'dark' })
  */
-export function useUpdateSettings() {
+export function useUpdateSettings({ automatic = false } = {}) {
   const queryClient = useQueryClient()
   const { data: session } = authClient.useSession()
   const accountId = session?.user.id
+  const dispatch = useAppDispatch()
   const mutation = useMutation({
     // One scope for every settings write: two taps in flight at once could otherwise land out of order and leave the server on the
     // older one, which the invalidation below then reads back over the newer optimistic value.
     scope: { id: 'settings.update' },
+    meta: { automatic },
     ...orpc.settings.update.mutationOptions({
       onMutate: async (input) => {
         const queryKey = orpc.settings.get.queryKey()
         await queryClient.cancelQueries({ queryKey })
         const previous = queryClient.getQueryData(queryKey)
         queryClient.setQueryData(queryKey, optimisticSettings(previous, input))
-        return { previous }
+        // Read now, not when the answer comes: the device's zone at the moment of the write is the one it synced.
+        const device = input.timeZone === undefined ? undefined : deviceZone()
+        return { previous, device }
+      },
+      // The row the API wrote says whose it was: the session may have turned to another account while the write was out.
+      onSuccess: (row, _input, context) => {
+        if (context.device !== undefined)
+          dispatch(zoneSynced({ accountId: row.userId, zone: context.device }))
       },
       onError: (_error, input, context) => {
         if (context)

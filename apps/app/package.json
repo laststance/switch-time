@@ -10,6 +10,7 @@
     "build:web": "expo export -p web --clear",
     "typecheck": "tsc -p tsconfig.json",
     "audit:web": "node scripts/audit-web-export.mts",
+    "zones:generate": "node scripts/generate-time-zones.mts && prettier --write src/lib/time-zone-catalog.ts",
     "test": "vitest run",
     "test:e2e": "expo export -p web --clear && playwright test"
   },

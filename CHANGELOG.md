@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.5.0] - 2026-09-29
+
+### Added
+
+- 設定's タイムゾーン row opens a タイムゾーン sheet: search any zone by
+  city, country or id (kanji, katakana, hiragana or English), and pick one
+  for the account. Before a search the sheet lists this device's zone, the
+  account's zone, then 71 cities with Japanese names, west to east. A pick is
+  saved at once, and a line under the search says 変更しています…,
+  変更しました or 変更できませんでした (read by VoiceOver on iOS too).
+- A zone picked there stays the account's zone when the device's own zone
+  differs: the device counts the pick as its sync, so it does not write its
+  zone back over it on the next start.
+- The sheet keeps Tab inside it on the web, gives focus back to the row that
+  opened it, and no longer closes on the Escape that ends a Japanese IME
+  composition. Every sheet gets the same keyboard behavior.
+
+### Changed
+
+- 設定's タイムゾーン row names zones as cities (「ニューヨーク · この端末は
+  東京」) instead of IANA ids, and treats an older name a device reports
+  (Asia/Calcutta) as the same zone as the current one (Asia/Kolkata).
+- A zone pick that fails after the sheet has closed shows its failure line on
+  設定's タイムゾーン row.
+
+### Fixed
+
+- Escape pressed in a sheet's text field (a search, an activity's name) now
+  closes the sheet on the web; before, the field swallowed the key. A name
+  being typed is saved first, as a click on ✕ saves it.
+
 ## [0.24.4.0] - 2026-09-29
 
 ### Changed
