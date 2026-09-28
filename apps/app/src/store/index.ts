@@ -14,7 +14,7 @@ import { clockSlice } from './clock'
 import { correctionSlice } from './correction'
 import { deviceStorage } from './device-storage'
 import { registrationSlice } from './registration'
-import { syncedZoneSlice } from './synced-zone'
+import { restoreSyncedZone, syncedZoneSlice } from './synced-zone'
 
 const appReducer = combineReducers({
   clock: clockSlice.reducer,
@@ -57,6 +57,10 @@ export function createAppStore(storage: StateStorage) {
     key: 'switch-time.device',
     slices: ['syncedZone'],
     storage,
+    merge: (persisted, current) => ({
+      ...current,
+      syncedZone: restoreSyncedZone(persisted.syncedZone, current.syncedZone),
+    }),
   })
   return configureStore({
     reducer: persistence.reducer,

@@ -48,3 +48,14 @@ test('while signed out no zone is read or kept, so the next account to sign in s
   expect(state.byAccount).toEqual({})
   expect(selectSyncedZone({ syncedZone: state }, undefined)).toBeNull()
 })
+
+test('an account id that names a built-in object property reads as never synced, not as the inherited value', () => {
+  // Arrange
+  const state = syncedZoneSlice.reducer(undefined, { type: 'init' })
+
+  // Act
+  const zone = selectSyncedZone({ syncedZone: state }, 'constructor')
+
+  // Assert
+  expect(zone).toBeNull()
+})

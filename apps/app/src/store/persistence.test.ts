@@ -98,6 +98,23 @@ test('the clock ticking every second does not rewrite device storage when no syn
   expect(setItem).toHaveBeenCalledTimes(1)
 })
 
+test('a broken value left under the store’s key does not crash the app at launch: every account syncs its zone once more', async () => {
+  // Arrange: a hand-edited or foreign value where the synced zones belong
+  const storage = createMemoryStorage()
+  storage.setItem(
+    'switch-time.device',
+    '{"version":0,"state":{"syncedZone":null}}',
+  )
+
+  // Act
+  const store = createAppStore(storage)
+  await settle()
+
+  // Assert
+  expect(store.getState().syncedZone).toEqual({ byAccount: {} })
+  expect(selectSyncedZone(store.getState(), 'account-1')).toBeNull()
+})
+
 test('a device whose storage refuses access still remembers the zone it synced for the rest of the session, instead of crashing the app', async () => {
   // Arrange: a locked keychain, where every storage call throws
   vi.spyOn(console, 'error').mockImplementation(() => {})
