@@ -48,15 +48,16 @@ export const { zoneSynced } = syncedZoneSlice.actions
 export const { selectSyncedZone } = syncedZoneSlice.selectors
 
 /**
- * The synced zones the store takes back from the device at launch, checked first: the storage middleware would otherwise put
- * whatever the key holds into state, and one broken value would throw on every render, launch after launch. Passed as the
- * storage middleware's `merge` by {@link createAppStore}.
+ * The synced zones the store takes back from the device, at launch and whenever another web tab saved them, checked first:
+ * the storage middleware would otherwise put whatever the key holds into state, and one broken value would throw on every
+ * render, launch after launch. Passed as the storage middleware's `merge` by {@link createAppStore}.
  * @param persisted - The `syncedZone` read from the device, of any shape.
  * @param current - The slice as it stands before the read.
  * @returns
- * - a well-formed value: the zones the device kept
- * - anything else: `current`, so each account syncs its zone once more
- * @example restoreSyncedZone({ byAccount: { u1: 'Asia/Tokyo' } }, { byAccount: {} }) // { byAccount: { u1: 'Asia/Tokyo' } }
+ * - a well-formed value: the zones the device kept, over `current` (the device holds another tab's newer sync), plus the
+ *   accounts only `current` knows (a sync not saved yet)
+ * - anything else: `current`, so each account missing from it syncs its zone once more
+ * @example restoreSyncedZone({ byAccount: { u1: 'Asia/Tokyo' } }, { byAccount: { u2: 'UTC' } }) // { byAccount: { u2: 'UTC', u1: 'Asia/Tokyo' } }
  * @example restoreSyncedZone(null, { byAccount: {} }) // { byAccount: {} }
  */
 export function restoreSyncedZone(
@@ -64,5 +65,7 @@ export function restoreSyncedZone(
   current: SyncedZoneState,
 ): SyncedZoneState {
   const parsed = syncedZoneStateSchema.safeParse(persisted)
-  return parsed.success ? parsed.data : current
+  return parsed.success
+    ? { byAccount: { ...current.byAccount, ...parsed.data.byAccount } }
+    : current
 }

@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { clockSlice } from './clock'
 import { correctionSlice } from './correction'
 import { deviceStorage } from './device-storage'
+import { followOtherTabs } from './follow-other-tabs'
 import { registrationSlice } from './registration'
 import { restoreSyncedZone, syncedZoneSlice } from './synced-zone'
 
@@ -24,6 +25,9 @@ const appReducer = combineReducers({
 })
 
 type AppState = ReturnType<typeof appReducer>
+
+// Where the store keeps its device slices: one `localStorage` entry on the web, one SecureStore item on native.
+const DEVICE_STORAGE_KEY = 'switch-time.device'
 
 /**
  * Wipes every slice back to its initial state, except what this device remembers per account ({@link syncedZoneSlice});
@@ -45,23 +49,38 @@ const rootReducer = (
 /**
  * Builds the app's store over a device storage that keeps {@link syncedZoneSlice} across launches. The store reads it back
  * a few microtasks after it is built, so a synchronous storage has it in place before the first render and long before the
- * settings fetch that {@link useTimeZoneSync} waits for. Built once for the app ({@link store}) and once per test.
+ * settings fetch that {@link useTimeZoneSync} waits for. It reads them again when another web tab saves them
+ * ({@link followOtherTabs}), and drops a stored value it cannot read back. Built once for the app ({@link store}) and once per test.
  * @param storage - Where the device slices live: {@link deviceStorage} in the app, an in-memory one in tests.
+ * @param tabs - Where other tabs' saves are reported: the browser window by default, a stand-in in tests.
  * @returns The store.
  * @example const store = createAppStore(deviceStorage)
  */
-export function createAppStore(storage: StateStorage) {
+export function createAppStore(storage: StateStorage, tabs?: EventTarget) {
+  let hasStartedOver = false
   const persistence = createStorageMiddleware<AppState>({
     rootReducer,
-    // Letters, digits, `.`, `-` and `_` only: SecureStore refuses any other key.
-    key: 'switch-time.device',
+    // Letters, digits, `.`, `-` and `_` only: SecureStore refuses any other key. The per-account keys before it
+    // (`switch-time.synced-zone.<id>`) are left unread on purpose: each account syncs its zone once more, then reads this one.
+    key: DEVICE_STORAGE_KEY,
     slices: ['syncedZone'],
     storage,
     merge: (persisted, current) => ({
       ...current,
       syncedZone: restoreSyncedZone(persisted.syncedZone, current.syncedZone),
     }),
+    onError: (_error, operation) => {
+      // A value the middleware cannot read back stops every later save, so it would stay for good: drop it and read again,
+      // once, so a read that keeps throwing (a locked keychain) does not loop.
+      if (operation !== 'load' || hasStartedOver) return
+      hasStartedOver = true
+      queueMicrotask(() => {
+        persistence.api.clearStorage()
+        void persistence.api.rehydrate()
+      })
+    },
   })
+  followOtherTabs(DEVICE_STORAGE_KEY, persistence.api.rehydrate, tabs)
   return configureStore({
     reducer: persistence.reducer,
     // An undo slot holds the `Date`s `switches.replaceDay` takes; it never leaves memory, so the dev-only check skips it.
