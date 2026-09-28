@@ -6,7 +6,9 @@ import {
   formatDay,
   formatDuration,
   formatMonthDay,
+  formatSpokenDuration,
   formatWeekday,
+  spokenActivityNames,
 } from './format'
 import type { ActivityRow } from './orpc'
 import { cn } from './utils'
@@ -74,6 +76,8 @@ export type BreakdownRow = {
   average: string
   /** 1日あたり ÷ 「1日の目安」, capped at 1; 0 without a target (detox has none). */
   ratio: number
+  /** What a screen reader says for the row, in place of its visible texts: `仕事、合計 19時間、1日あたり 6時間20分`. */
+  label: string
 }
 
 export type HistoryView = {
@@ -248,52 +252,60 @@ function cellKind(stat: DayStat, isToday: boolean): Cell['kind'] {
 /**
  * A day cell's aria-label: the date, then the times its bars stand for, so a screen reader hears what the cell draws.
  * Called by {@link dayCell}. The times are the day's real ones, not the pixels: a 25-h day's cut slice and a detox part too
- * short to draw are read in full.
+ * short to draw are read in full. Parts are joined by `、`, punctuation a voice pauses at rather than names (`・` may be read out
+ * as 中黒); nobody has listened yet (TODOS.md).
  * @param stat - The day's stats.
  * @param kind - The cell's kind from {@link cellKind}.
  * @param activities - The list in `position` order (the slices' bottom-up order); an activity missing from it is left out, as
  * its slice is.
+ * @param isToday - Today's cell shows 今日 instead of its weekday or day number, so its name starts with the 今日 it shows.
+ * @param spokenNames - Each activity's spoken name ({@link spokenActivityNames}), so no name reads as detox, 平均から除外 or
+ * another activity.
  * @returns
  * - `empty`: the date alone (the cell is not a link)
- * - `excluded`: the date and `・平均から除外` (the footnote's words for a dashed day), then the times, since the dashed cell
+ * - `excluded`: the date and `、平均から除外` (the footnote's words for a dashed day), then the times, since the dashed cell
  *   still draws its slices
- * - `detox`: the date and `・detox の日`, then its time, so the outlined day is told apart from a stack day that holds only a
+ * - `detox`: the date and `、detox の日`, then its time, so the outlined day is told apart from a stack day that holds only a
  *   detox part (the wind glyph is hidden from screen readers)
- * - `stack`: the date, each activity's time, then `・detox <time>`
- * - Times that read `0m` are left out
- * @example cellLabel(day('2026-09-09', { measured: true, totals: { work: 9 * H }, detoxMs: 6 * H }), 'stack', [work])
- * // => '9月9日（水）・仕事 9h 00m・detox 6h 00m'
+ * - `stack`: the date, each activity's time, then `、detox <time>`
+ * - Times spoken as {@link formatSpokenDuration}; times under half a minute are left out
+ * - `今日 ` before the date on today's cell
+ * @example cellLabel(day('2026-09-09', { measured: true, totals: { work: 9 * H }, detoxMs: 6 * H }), 'stack', [work], false, names)
+ * // => '9月9日（水）、仕事 9時間、detox 6時間'
  */
 function cellLabel(
   stat: DayStat,
   kind: Cell['kind'],
   activities: HistoryActivity[],
+  isToday: boolean,
+  spokenNames: Map<string, string>,
 ): string {
-  const date = formatDay(stat.day)
+  const date = `${isToday ? '今日 ' : ''}${formatDay(stat.day)}`
   if (kind === 'empty') return date
-  // Nothing under half a minute is read: formatDuration would print it as 0m.
+  // Nothing under half a minute is read: it would be spoken as 0分.
   const readable = (ms: number) => {
     // A negative or NaN total (never sent by the server) is not read, as its slice is not drawn.
     if (!(ms > 0)) return null
-    const time = formatDuration(ms)
-    return time === '0m' ? null : time
+    const time = formatSpokenDuration(ms)
+    return time === '0分' ? null : time
   }
   // A detox day has no activity time by definition; it still names itself when its detox is too short to read (just after midnight).
   if (kind === 'detox') {
     const time = readable(stat.detoxMs)
-    return `${date}・${DETOX.name} の日${time ? ` ${time}` : ''}`
+    return `${date}、${DETOX.name} の日${time ? ` ${time}` : ''}`
   }
   const times = [
     ...activities.map((activity) => ({
-      name: activity.name,
+      name: spokenNames.get(activity.id) ?? activity.name,
       ms: stat.totals[activity.id] ?? 0,
     })),
+    // The built-in detox part keeps its own name: the escape exists so that no activity can read like it.
     { name: DETOX.name, ms: stat.detoxMs },
   ].flatMap(({ name, ms }) => {
     const time = readable(ms)
-    return time ? [`・${name} ${time}`] : []
+    return time ? [`、${name} ${time}`] : []
   })
-  return `${date}${kind === 'excluded' ? '・平均から除外' : ''}${times.join('')}`
+  return `${date}${kind === 'excluded' ? '、平均から除外' : ''}${times.join('')}`
 }
 
 function dayCell(
@@ -301,6 +313,7 @@ function dayCell(
   today: string,
   range: Range,
   activities: HistoryActivity[],
+  spokenNames: Map<string, string>,
 ): Cell {
   const isToday = stat.day === today
   const weekLabel =
@@ -322,7 +335,7 @@ function dayCell(
     label: isToday ? '今日' : weekLabel,
     today: isToday,
     kind,
-    ariaLabel: cellLabel(stat, kind, activities),
+    ariaLabel: cellLabel(stat, kind, activities, isToday, spokenNames),
     slices,
   }
 }
@@ -337,9 +350,23 @@ function calendarRows(cells: Cell[], first: string): (Cell | null)[][] {
   )
 }
 
+/**
+ * What a screen reader says for one 状態別 row instead of its visible texts: the name, then 合計 and 1日あたり as spoken times,
+ * the header's words for the two columns. Called by {@link breakdownRows} and {@link detoxBreakdownRow}.
+ * @param name - The row's spoken name ({@link spokenActivityNames} for an activity, `detox` for the detox row).
+ * @param total - The range total in ms.
+ * @param average - 1日あたり in ms.
+ * @returns The label, parts joined by `、` as the day cells join theirs.
+ * @example breakdownLabel('仕事', 19 * H, 380 * 60_000) // => '仕事、合計 19時間、1日あたり 6時間20分'
+ */
+function breakdownLabel(name: string, total: number, average: number): string {
+  return `${name}、合計 ${formatSpokenDuration(total)}、1日あたり ${formatSpokenDuration(average)}`
+}
+
 function breakdownRows(
   stats: HistoryStats,
   activities: HistoryActivity[],
+  spokenNames: Map<string, string>,
 ): BreakdownRow[] {
   return activities.flatMap((activity) => {
     const total = stats.totals[activity.id] ?? 0
@@ -358,6 +385,11 @@ function breakdownRows(
         total: formatDuration(total),
         average: formatDuration(average),
         ratio,
+        label: breakdownLabel(
+          spokenNames.get(activity.id) ?? activity.name,
+          total,
+          average,
+        ),
       },
     ]
   })
@@ -370,7 +402,7 @@ function breakdownRows(
  * @returns
  * - One row (outlined chip, total, 1日あたり, no bar fill) when the measured days hold detox time
  * - An empty list otherwise, so a range without detox shows no row
- * @example detoxBreakdownRow(week) // => [{ id: 'detox', name: 'detox', color: null, iconKey: 'wind', total: '6h 00m', average: '2h 00m', ratio: 0 }]
+ * @example detoxBreakdownRow(week) // => [{ id: 'detox', name: 'detox', color: null, iconKey: 'wind', total: '6h 00m', average: '2h 00m', ratio: 0, label: 'detox、合計 6時間、1日あたり 2時間' }]
  */
 function detoxBreakdownRow(stats: HistoryStats): BreakdownRow[] {
   const total = stats.days.reduce(
@@ -378,6 +410,8 @@ function detoxBreakdownRow(stats: HistoryStats): BreakdownRow[] {
     0,
   )
   if (total === 0) return []
+  // Guarded as breakdownRows is, in case the server's measured-day count and the days' `measured` ever disagree.
+  const average = stats.measuredDays > 0 ? total / stats.measuredDays : 0
   return [
     {
       id: 'detox',
@@ -385,11 +419,9 @@ function detoxBreakdownRow(stats: HistoryStats): BreakdownRow[] {
       color: DETOX.color,
       iconKey: DETOX.iconKey,
       total: formatDuration(total),
-      // Guarded as breakdownRows is, in case the server's measured-day count and the days' `measured` ever disagree.
-      average: formatDuration(
-        stats.measuredDays > 0 ? total / stats.measuredDays : 0,
-      ),
+      average: formatDuration(average),
       ratio: 0,
+      label: breakdownLabel(DETOX.name, total, average),
     },
   ]
 }
@@ -409,8 +441,10 @@ export function historyView(input: {
   const { range, offset, today, stats, activities } = input
   const first = stats.days[0]?.day ?? today
   const last = stats.days.at(-1)?.day ?? today
+  // Built once over the whole list, so an activity reads the same in every cell and in 状態別.
+  const spokenNames = spokenActivityNames(activities)
   const cells = stats.days.map((stat) =>
-    dayCell(stat, today, range, activities),
+    dayCell(stat, today, range, activities, spokenNames),
   )
   return {
     title: chartTitle(range, offset, first, last),
@@ -424,7 +458,7 @@ export function historyView(input: {
       (entry) => entry.reason === 'auto_unused',
     ).length,
     breakdown: [
-      ...breakdownRows(stats, activities),
+      ...breakdownRows(stats, activities, spokenNames),
       ...detoxBreakdownRow(stats),
     ],
   }

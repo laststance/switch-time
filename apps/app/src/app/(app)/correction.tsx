@@ -127,6 +127,7 @@ function RowHeader({ row, selected, focused, onPress }: RowHeaderProps) {
     <Pressable
       ref={header}
       role="button"
+      aria-label={row.label}
       aria-expanded={selected}
       onPress={onPress}
       className="h-14.5 flex-row items-center gap-3 px-3.5"

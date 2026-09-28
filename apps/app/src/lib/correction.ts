@@ -19,7 +19,14 @@ import type { QueryState } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { DETOX } from './detox'
-import { formatDay, formatDuration, formatMonthDay, formatTime } from './format'
+import {
+  formatDay,
+  formatDuration,
+  formatMonthDay,
+  formatSpokenDuration,
+  formatTime,
+  spokenActivityNames,
+} from './format'
 import type { ActivityRow, SwitchRow } from './orpc'
 import { idleLabel } from './settings'
 
@@ -67,6 +74,11 @@ export type CorrectionRow = {
   /** `7:15 – 7:45`; the current state reads `– いま`, a past day's last state `– 24:00`. */
   range: string
   duration: string
+  /**
+   * What a screen reader says for the row's header instead of its visible texts: `仕事 9:00 – 18:00 9時間`, the name told apart
+   * from detox and from the other activities ({@link spokenActivityNames}) and the length spoken ({@link formatSpokenDuration}).
+   */
+  label: string
   /** The record started before the day (listed last): its panel cuts it or changes its activity, and never moves or merges it. */
   carriedIn: boolean
   /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes); empty on the day's own rows. */
@@ -153,6 +165,12 @@ export function correctionRows(
   const byId = new Map(activities.map((activity) => [activity.id, activity]))
   const activityOf = (row: SwitchRow) =>
     row.activityId === null ? DETOX_ROW : byId.get(row.activityId)
+  const spokenNames = spokenActivityNames(activities)
+  // The detox row keeps its own name: the escape is there so that no activity reads like it.
+  const spokenNameOf = (row: SwitchRow) =>
+    row.activityId === null
+      ? DETOX_ROW.name
+      : (spokenNames.get(row.activityId) ?? UNKNOWN.name)
   return (
     timeline
       .map((row, index) => {
@@ -162,6 +180,7 @@ export function correctionRows(
           prev,
           timeline[index + 1] ?? null,
           activityOf(row),
+          spokenNameOf(row),
           bounds,
           Boolean(prev && activityOf(prev)?.archivedAt),
         )
@@ -250,13 +269,14 @@ function trueStartLabels(
   }
 }
 
-// One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included), and
-// `prevArchived` says whether the previous row's activity is archived.
+// One row's texts and flags; `prev`/`next` are its neighbours in the whole timeline (the carried states included),
+// `spokenName` is what its label reads for the activity, and `prevArchived` says whether the previous row's activity is archived.
 function describeRow(
   row: SwitchRow,
   prev: SwitchRow | null,
   next: SwitchRow | null,
   activity: CorrectionActivity = UNKNOWN,
+  spokenName: string,
   bounds: DayBounds,
   prevArchived: boolean,
 ): CorrectionRow {
@@ -267,6 +287,7 @@ function describeRow(
   const trueEnd = next?.startedAt.getTime() ?? bounds.now
   const end = Math.min(trueEnd, bounds.end)
   const startLabel = formatTime(new Date(start), bounds.timeZone)
+  const range = `${startLabel} – ${endLabel(end, next, bounds)}`
   return {
     id: row.id,
     activityId: row.activityId,
@@ -277,8 +298,9 @@ function describeRow(
     start,
     end,
     startLabel,
-    range: `${startLabel} – ${endLabel(end, next, bounds)}`,
+    range,
     duration: formatDuration(end - start),
+    label: `${spokenName} ${range} ${formatSpokenDuration(end - start)}`,
     carriedIn,
     ...(carriedIn ? trueStartLabels(row.startedAt, bounds) : NO_TRUE_START),
     archived: Boolean(activity.archivedAt),

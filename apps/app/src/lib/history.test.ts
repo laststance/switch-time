@@ -104,10 +104,10 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
     ['木', 'empty', '9月3日（木）'],
     ['金', 'empty', '9月4日（金）'],
     ['土', 'empty', '9月5日（土）'],
-    ['日', 'stack', '9月6日（日）・仕事 8h 00m'],
-    ['月', 'excluded', '9月7日（月）・平均から除外'],
-    ['火', 'stack', '9月8日（火）・仕事 10h 00m・旧 3h 00m'],
-    ['今日', 'stack', '9月9日（水）'],
+    ['日', 'stack', '9月6日（日）、仕事 8時間'],
+    ['月', 'excluded', '9月7日（月）、平均から除外'],
+    ['火', 'stack', '9月8日（火）、仕事 10時間、旧 3時間'],
+    ['今日', 'stack', '今日 9月9日（水）'],
   ])
   expect(view.rows[0]?.[5]?.slices).toEqual([
     {
@@ -138,6 +138,7 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
       total: '18h 00m',
       average: '6h 00m',
       ratio: 0.75,
+      label: '仕事、合計 18時間、1日あたり 6時間',
     },
     {
       id: 'home',
@@ -147,6 +148,7 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
       total: '0m',
       average: '0m',
       ratio: 0,
+      label: '家事、合計 0分、1日あたり 0分',
     },
     {
       id: 'old',
@@ -156,6 +158,7 @@ test('the week chart stacks measured days, dashes the unused day and keeps the a
       total: '3h 00m',
       average: '1h 00m',
       ratio: 0,
+      label: '旧、合計 3時間、1日あたり 1時間',
     },
   ])
 })
@@ -196,10 +199,10 @@ test('a day whose time all went to detox is outlined and named, instead of looki
     ['empty', '9月3日（木）'],
     ['empty', '9月4日（金）'],
     ['empty', '9月5日（土）'],
-    ['stack', '9月6日（日）・仕事 8h 00m'],
-    ['detox', '9月7日（月）・detox の日 24h 00m'],
-    ['stack', '9月8日（火）・仕事 10h 00m・detox 3h 00m'],
-    ['detox', '9月9日（水）・detox の日 9h 00m'],
+    ['stack', '9月6日（日）、仕事 8時間'],
+    ['detox', '9月7日（月）、detox の日 24時間'],
+    ['stack', '9月8日（火）、仕事 10時間、detox 3時間'],
+    ['detox', '今日 9月9日（水）、detox の日 9時間'],
   ])
   expect(view.rows[0]?.[4]?.slices).toEqual([])
 })
@@ -233,7 +236,7 @@ test('a day of mostly idle-flagged time and some detox is a plain day with its d
 
   // Assert: the day is not claimed as a whole day of detox; its 11 h of detox is one outlined slice on the floor
   expect(view.rows[0]?.[6]?.kind).toBe('stack')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox 11h 00m')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('今日 9月9日（水）、detox 11時間')
   expect(view.rows[0]?.[6]?.slices).toEqual([
     { activityId: null, color: null, height: 60.5, top: true, bottom: true },
   ])
@@ -268,7 +271,9 @@ test('a day with no activity time and as much detox as idle time is outlined as 
 
   // Assert: the outline is the detox mark, so the cell draws no detox slice inside it
   expect(view.rows[0]?.[6]?.kind).toBe('detox')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox の日 12h 00m')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe(
+    '今日 9月9日（水）、detox の日 12時間',
+  )
   expect(view.rows[0]?.[6]?.slices).toEqual([])
 })
 
@@ -655,7 +660,7 @@ test('a 25-hour fall-back day cuts its top activity at the end of the 24-hour ba
     },
   ])
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・仕事 12h 00m・家事 12h 30m・旧 30m',
+    '今日 9月9日（水）、仕事 12時間、家事 12時間30分、旧 30分',
   )
 })
 
@@ -693,7 +698,7 @@ test('an excluded day that still holds time reads 平均から除外, then each 
   // Assert
   expect(view.rows[0]?.[6]?.kind).toBe('excluded')
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・平均から除外・仕事 6h 00m・detox 2h 00m',
+    '今日 9月9日（水）、平均から除外、仕事 6時間、detox 2時間',
   )
 })
 
@@ -766,7 +771,7 @@ test('an outlined detox day with under half a minute of detox is still named a d
 
   // Assert: the cell draws the detox outline, so its label says detox even without a time to read
   expect(view.rows[0]?.[6]?.kind).toBe('detox')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox の日')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('今日 9月9日（水）、detox の日')
 })
 
 test('a day cell does not read out times under half a minute as 0m', () => {
@@ -796,7 +801,7 @@ test('a day cell does not read out times under half a minute as 0m', () => {
 
   // Assert: the month cell reads in the same format as the week's, and the tap too short to see leaves 仕事 its rounded top
   const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
-  expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 3h 00m')
+  expect(cell?.ariaLabel).toBe('今日 9月9日（水）、仕事 3時間')
   expect(cell?.slices.map((slice) => [slice.activityId, slice.top])).toEqual([
     ['work', true],
     ['home', false],
@@ -911,7 +916,7 @@ test('a negative or NaN activity total is neither drawn nor read, and does not b
       bottom: true,
     },
   ])
-  expect(cell?.ariaLabel).toBe('9月9日（水）・旧 3h 00m')
+  expect(cell?.ariaLabel).toBe('今日 9月9日（水）、旧 3時間')
 })
 
 test('half an hour of detox too short to outline in a month cell is still read out', () => {
@@ -942,7 +947,7 @@ test('half an hour of detox too short to outline in a month cell is still read o
   // Assert: only 仕事 is drawn, but the label carries the detox time the outline could not show
   const cell = view.rows.flat().find((c) => c?.today)
   expect(cell?.slices.map((slice) => slice.activityId)).toEqual(['work'])
-  expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 8h 00m・detox 30m')
+  expect(cell?.ariaLabel).toBe('今日 9月9日（水）、仕事 8時間、detox 30分')
 })
 
 test('an hour of detox in a month cell is just tall enough to draw its outline', () => {
@@ -1113,6 +1118,7 @@ test('状態別 ends with a detox row summed over the measured days only', () =>
     total: '6h 00m',
     average: '3h 00m',
     ratio: 0,
+    label: 'detox、合計 6時間、1日あたり 3時間',
   })
 })
 
@@ -1166,7 +1172,7 @@ test('a day worked on an activity the list does not know yet stays a stack, not 
   // Assert: the unknown activity draws no slice and is not read out, and the day is not claimed as detox, so only its 2 h detox
   // part sits on the floor and in the label
   expect(view.rows[0]?.[6]?.kind).toBe('stack')
-  expect(view.rows[0]?.[6]?.ariaLabel).toBe('9月9日（水）・detox 2h 00m')
+  expect(view.rows[0]?.[6]?.ariaLabel).toBe('今日 9月9日（水）、detox 2時間')
   expect(view.rows[0]?.[6]?.slices).toEqual([
     { activityId: null, color: null, height: 11, top: true, bottom: true },
   ])
@@ -1199,7 +1205,9 @@ test('a day cell reads half a minute of time as 1m, the first time that formats 
 
   // Assert
   const cell = view.rows.flat().find((c) => c?.day === '2026-09-09')
-  expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 3h 00m・家事 1m・detox 1m')
+  expect(cell?.ariaLabel).toBe(
+    '今日 9月9日（水）、仕事 3時間、家事 1分、detox 1分',
+  )
 })
 
 test('a day cell reads its activities bottom-up in list order, whatever order the server sent the totals in', () => {
@@ -1234,7 +1242,7 @@ test('a day cell reads its activities bottom-up in list order, whatever order th
 
   // Assert: the label and the slices share the list order
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・仕事 3h 00m・家事 2h 00m・旧 1h 00m',
+    '今日 9月9日（水）、仕事 3時間、家事 2時間、旧 1時間',
   )
   expect(view.rows[0]?.[6]?.slices.map((slice) => slice.activityId)).toEqual([
     'work',
@@ -1292,7 +1300,7 @@ test('a 25-hour fall-back day whose cut activities fill the bar draws no detox p
     },
   ])
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・仕事 12h 00m・家事 13h 00m・detox 1h 00m',
+    '今日 9月9日（水）、仕事 12時間、家事 13時間、detox 1時間',
   )
 })
 
@@ -1377,7 +1385,7 @@ test('an excluded 25-hour fall-back day is cut at the inside of its dashed borde
     },
   ])
   expect(view.rows[0]?.[6]?.ariaLabel).toBe(
-    '9月9日（水）・平均から除外・仕事 25h 00m',
+    '今日 9月9日（水）、平均から除外、仕事 25時間',
   )
 })
 
@@ -1408,7 +1416,7 @@ test('a 25-hour fall-back day in the month calendar is cut at the 48 px cell top
   // Assert: 仕事 takes 40 px, 家事 gets the 8 px left instead of 10 px
   const cell = view.rows.flat().find((c) => c?.today)
   expect(cell?.slices.map((slice) => slice.height)).toEqual([40, 8])
-  expect(cell?.ariaLabel).toBe('9月9日（水）・仕事 20h 00m・家事 5h 00m')
+  expect(cell?.ariaLabel).toBe('今日 9月9日（水）、仕事 20時間、家事 5時間')
 })
 
 test('the month calendar pads Sunday-first rows and counts only the days up to today', () => {
@@ -1552,4 +1560,112 @@ test('stepping back titles the week by its dates and the month across the year e
   expect(view.title).toBe('8月27日 – 9月2日')
   expect(shiftMonth('2026-01', -1)).toBe('2025-12')
   expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+})
+
+test("today's day cell is named with the 今日 it shows, so a voice-control user can say it", () => {
+  // Arrange: 9/8 and today (9/9) both hold 仕事 time
+  const stats: HistoryStats = {
+    ...week,
+    days: [
+      ...week.days.slice(0, 5),
+      day('2026-09-08', { measured: true, totals: { work: 2 * H } }),
+      day('2026-09-09', { measured: true, totals: { work: 3 * H } }),
+    ],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-09',
+    stats,
+    activities,
+  })
+
+  // Assert: only today's name starts with 今日
+  expect(view.rows[0]?.slice(5).map((cell) => cell?.ariaLabel)).toEqual([
+    '9月8日（火）、仕事 2時間',
+    '今日 9月9日（水）、仕事 3時間',
+  ])
+})
+
+test('an activity named like detox or 平均から除外 is read with 活動 in front, in the day cell and in 状態別', () => {
+  // Arrange: activities named detox の日 and 平均から除外 hold time on an excluded day that also has real detox
+  const named = [
+    activity({ id: 'fake-detox', name: 'detox の日' }),
+    activity({ id: 'fake-excluded', name: '平均から除外' }),
+  ]
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        excluded: 'manual',
+        totals: { 'fake-detox': 1 * H, 'fake-excluded': 2 * H },
+        detoxMs: 3 * H,
+      }),
+    ],
+    totals: { 'fake-detox': 1 * H, 'fake-excluded': 2 * H },
+    measuredDays: 1,
+    streak: 0,
+    excludedDays: [{ day: '2026-09-09', reason: 'manual' }],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-10',
+    stats,
+    activities: named,
+  })
+
+  // Assert: the built-in detox part and the excluded mark keep their own words
+  expect(view.rows[0]?.[0]?.ariaLabel).toBe(
+    '9月9日（水）、平均から除外、活動 detox の日 1時間、活動 平均から除外 2時間、detox 3時間',
+  )
+  expect(view.breakdown.map((row) => row.label)).toEqual([
+    '活動 detox の日、合計 1時間、1日あたり 1時間',
+    '活動 平均から除外、合計 2時間、1日あたり 2時間',
+  ])
+})
+
+test('an archived activity and a live one with the same name are told apart in the day cell and in 状態別', () => {
+  // Arrange: the archived 仕事 held time before the new 仕事 was made
+  const twins = [
+    activity({ id: 'work-new', name: '仕事' }),
+    activity({
+      id: 'work-old',
+      name: '仕事',
+      archivedAt: new Date('2026-09-05T00:00:00Z'),
+    }),
+  ]
+  const stats: HistoryStats = {
+    days: [
+      day('2026-09-09', {
+        measured: true,
+        totals: { 'work-new': 3 * H, 'work-old': 2 * H },
+      }),
+    ],
+    totals: { 'work-new': 3 * H, 'work-old': 2 * H },
+    measuredDays: 1,
+    streak: 1,
+    excludedDays: [],
+  }
+
+  // Act
+  const view = historyView({
+    range: 'week',
+    offset: 0,
+    today: '2026-09-10',
+    stats,
+    activities: twins,
+  })
+
+  // Assert
+  expect(view.rows[0]?.[0]?.ariaLabel).toBe(
+    '9月9日（水）、仕事 3時間、仕事（アーカイブ済み） 2時間',
+  )
+  expect(view.breakdown.map((row) => row.label)).toEqual([
+    '仕事、合計 3時間、1日あたり 3時間',
+    '仕事（アーカイブ済み）、合計 2時間、1日あたり 2時間',
+  ])
 })
