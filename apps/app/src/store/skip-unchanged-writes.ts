@@ -4,7 +4,8 @@ import type { SyncStorage } from '@laststance/redux-storage-middleware'
  * Wraps the store's device storage so a write that would store the same text again is skipped. The storage middleware saves
  * after every action, and {@link startClock} dispatches one each second: without this, the web would rewrite `localStorage`
  * and native the keychain every second for nothing. Applied by {@link deviceStorage} on both platforms.
- * @param storage - The platform's storage; a write that throws is not remembered, so the next save tries again.
+ * @param storage - The platform's storage; a write that throws (SecureStore) is not remembered, so the next save tries again.
+ *   The web's safe `localStorage` logs a failed write instead of throwing, so that write counts as done for the session.
  * @returns The same storage, minus the writes that change nothing.
  * @example skipUnchangedWrites(createSafeLocalStorage())
  */

@@ -1,7 +1,4 @@
-import {
-  defaultJsonSerializer,
-  type Serializer,
-} from '@laststance/redux-storage-middleware'
+import type { Serializer } from '@laststance/redux-storage-middleware'
 import { z } from 'zod'
 
 // What the storage middleware saves under the store's key: its version and the slices it keeps.
@@ -22,15 +19,13 @@ const NOTHING_SAVED = { version: 0, state: {} }
  * @example savedStateSerializer.deserialize('{"version":0,"state":{"syncedZone":{"byAccount":{}}}}') // the same save, parsed
  */
 export const savedStateSerializer: Serializer = {
-  serialize: (saved) => defaultJsonSerializer.serialize(saved),
+  serialize: (saved) => JSON.stringify(saved),
   deserialize: (text) => {
     try {
-      const parsed = savedStateSchema.safeParse(
-        defaultJsonSerializer.deserialize(text),
-      )
+      const parsed = savedStateSchema.safeParse(JSON.parse(text))
       return parsed.success ? parsed.data : NOTHING_SAVED
     } catch {
-      // Text that is not JSON at all.
+      // Text that is not JSON at all: expected here, so nothing is logged.
       return NOTHING_SAVED
     }
   },

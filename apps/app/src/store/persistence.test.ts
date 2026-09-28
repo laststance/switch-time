@@ -272,3 +272,20 @@ test('a device whose storage refuses the read at launch keeps what it holds, ins
     '{"version":0,"state":{"syncedZone":{"byAccount":{"account-1":"Asia/Tokyo"}}}}',
   )
 })
+
+test('a zone synced before the launch’s read lands is kept over the older zone the device held for that account', async () => {
+  // Arrange
+  const storage = createMemoryStorage()
+  storage.setItem(
+    'switch-time.device',
+    '{"version":0,"state":{"syncedZone":{"byAccount":{"account-1":"UTC"}}}}',
+  )
+  const store = createAppStore(storage)
+
+  // Act: the sync lands before the store reads the device back
+  store.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
+  await settle()
+
+  // Assert
+  expect(selectSyncedZone(store.getState(), 'account-1')).toBe('Asia/Tokyo')
+})

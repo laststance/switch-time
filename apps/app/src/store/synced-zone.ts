@@ -54,9 +54,9 @@ export const { selectSyncedZone } = syncedZoneSlice.selectors
  * @param persisted - The `syncedZone` read from the device, of any shape.
  * @param current - The slice as it stands before the read.
  * @returns
- * - a well-formed value: the zones the device kept, plus any account synced before the read landed
+ * - a well-formed value: the zones the device kept, under any zone synced before the read landed (the newer one)
  * - anything else: `current`, so each account missing from it syncs its zone once more
- * @example restoreSyncedZone({ byAccount: { u1: 'Asia/Tokyo' } }, { byAccount: { u2: 'UTC' } }) // { byAccount: { u2: 'UTC', u1: 'Asia/Tokyo' } }
+ * @example restoreSyncedZone({ byAccount: { u1: 'Asia/Tokyo' } }, { byAccount: { u2: 'UTC' } }) // { byAccount: { u1: 'Asia/Tokyo', u2: 'UTC' } }
  * @example restoreSyncedZone(null, { byAccount: {} }) // { byAccount: {} }
  */
 export function restoreSyncedZone(
@@ -65,6 +65,6 @@ export function restoreSyncedZone(
 ): SyncedZoneState {
   const parsed = syncedZoneStateSchema.safeParse(persisted)
   return parsed.success
-    ? { byAccount: { ...current.byAccount, ...parsed.data.byAccount } }
+    ? { byAccount: { ...parsed.data.byAccount, ...current.byAccount } }
     : current
 }
