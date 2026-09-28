@@ -802,3 +802,152 @@ test('the unique-start migration pushes on a switch 1 ms after a tie instead of 
     ])
   })
 })
+
+test('a tap made on another account’s screen is refused, and nothing is written on the account the cookie now belongs to', async () => {
+  // Arrange: this tab's screen belonged to another account; a sign-in elsewhere moved the cookie to this one
+  const api = await signedIn('tap-for-other-account@example.com')
+
+  // Act
+  const tap = api.switches.switchTo({
+    activityId: null,
+    forUserId: 'someone-else',
+  })
+
+  // Assert
+  await expect(tap).rejects.toMatchObject({ code: 'CONFLICT' })
+  expect(await api.switches.current()).toBeNull()
+})
+
+test('a tap made on the signed-in account’s own screen is recorded', async () => {
+  // Arrange
+  const api = await signedIn('tap-for-own-account@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+
+  // Act
+  const tap = await api.switches.switchTo({
+    activityId: idOf(list, '仕事'),
+    forUserId: userId,
+  })
+
+  // Assert
+  expect(await api.switches.current()).toMatchObject({ id: tap.id })
+})
+
+test('a tap that waited on the device behind the last tap is recorded at its press, not at its arrival', async () => {
+  // Arrange: 仕事 runs from 2:00; the tap arrives at 3:00 after waiting 40 s on the device
+  const api = await signedIn('tap-waited-on-device@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+  await db.insert(switches).values({
+    userId,
+    activityId: idOf(list, '仕事'),
+    startedAt: new Date('2026-09-25T02:00:00.000Z'),
+  })
+
+  // Act
+  const tap = await api.switches.switchTo({
+    activityId: idOf(list, '休息'),
+    waitedMs: 40_000,
+  })
+
+  // Assert
+  expect(tap.startedAt).toEqual(new Date('2026-09-25T02:59:20.000Z'))
+})
+
+test('a tap from a tab still on the previous bundle, which sends no wait, is recorded at its arrival', async () => {
+  // Arrange
+  const api = await signedIn('tap-without-wait@example.com')
+  const list = await api.activities.list()
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+
+  // Act
+  const tap = await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+
+  // Assert
+  expect(tap.startedAt).toEqual(new Date('2026-09-25T03:00:00.000Z'))
+})
+
+test('a tap that waited hours in a hidden tab is recorded at most an hour before it arrived', async () => {
+  // Arrange: 仕事 runs from yesterday; the tap waited three hours
+  const api = await signedIn('tap-waited-hours@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+  await db.insert(switches).values({
+    userId,
+    activityId: idOf(list, '仕事'),
+    startedAt: new Date('2026-09-24T03:00:00.000Z'),
+  })
+
+  // Act
+  const tap = await api.switches.switchTo({
+    activityId: idOf(list, '休息'),
+    waitedMs: 3 * H,
+  })
+
+  // Assert
+  expect(tap.startedAt).toEqual(new Date('2026-09-25T02:00:00.000Z'))
+})
+
+test('a tap pressed before the running record started still starts 1 ms after it and becomes the running state', async () => {
+  // Arrange: another device's 仕事 started at 2:59:50; this tap was pressed at 2:59:30 and arrives at 3:00
+  const api = await signedIn('tap-pressed-before-running@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+  await db.insert(switches).values({
+    userId,
+    activityId: idOf(list, '仕事'),
+    startedAt: new Date('2026-09-25T02:59:50.000Z'),
+  })
+
+  // Act
+  const tap = await api.switches.switchTo({
+    activityId: idOf(list, '休息'),
+    waitedMs: 30_000,
+  })
+
+  // Assert
+  expect(tap.startedAt).toEqual(new Date('2026-09-25T02:59:50.001Z'))
+  expect(await api.switches.current()).toMatchObject({ id: tap.id })
+})
+
+test('detox pressed again on its run’s last measured day and sent after midnight keeps the running record', async () => {
+  // Arrange: detox from 9/10 20:00, so 9/17 is its last measured day; pressed at 9/17 23:50, it arrives at 9/18 0:10
+  const api = await signedIn('detox-renew-press-day@example.com')
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date(dayBounds('2026-09-18', TZ).start + 10 * MINUTE),
+  })
+  await api.switches.replaceDay({
+    day: '2026-09-10',
+    timeZone: TZ,
+    expected: [],
+    rows: [{ activityId: null, startedAt: at('2026-09-10', 20) }],
+  })
+  const before = await api.switches.current()
+
+  // Act
+  const again = await api.switches.switchTo({
+    activityId: null,
+    waitedMs: 20 * MINUTE,
+  })
+
+  // Assert
+  expect(again.id).toBe(before?.id)
+  expect(again.startsRun).toBe(false)
+})

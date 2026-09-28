@@ -15,6 +15,7 @@ import {
   replaceDayInputSchema,
   rowEditInputSchema,
   splitAtInputSchema,
+  switchToInputSchema,
   type DayBaseline,
   type DayRow,
 } from '@switch-time/shared'
@@ -551,20 +552,40 @@ async function rowDayEnd(tx: LockedTx, userId: string, startedAt: Date) {
 }
 
 /**
- * Where a tap's new switch starts: now, or 1 ms after the running record when two devices' taps land in the same millisecond
- * (or a clock step put the running record ahead of now). The unique `(user_id, started_at)` index refuses a tie, and every
- * read of the timeline relies on that order. Called by switchTo under the user's lock, after reading the running record.
+ * The longest a tap may have waited on the device and still be recorded at its press: a burst's refetch holds the next tap for
+ * up to about a minute, a hidden web tab holds it until the tab is shown again. A tap that waited longer is recorded this long
+ * before it arrived, so a tap resumed after hours offline cannot rewrite the day it left.
+ */
+const TAP_WAIT_MAX_MS = 60 * 60_000
+
+/**
+ * When a tap was pressed, on the server's clock: its arrival less the wait the device measured on its own clock, so neither
+ * clock's time of day has to agree with the other's. Called by switchTo before it takes the user's lock.
+ * @param arrivedAt - When the request reached the server (`context.arrivedAt`), epoch ms.
+ * @param waitedMs - The device's wait between the press and the send; absent from a tab on the previous bundle.
+ * @returns The press time in epoch ms: the arrival less the wait, the wait capped at {@link TAP_WAIT_MAX_MS}.
+ * @example pressTime(10_000, 4_000) // 6_000
+ */
+function pressTime(arrivedAt: number, waitedMs = 0): number {
+  return arrivedAt - Math.min(waitedMs, TAP_WAIT_MAX_MS)
+}
+
+/**
+ * Where a tap's new switch starts: its press, or 1 ms after the running record when two devices' taps land in the same
+ * millisecond (or a clock step put the running record ahead of the press). The unique `(user_id, started_at)` index refuses a
+ * tie, and every read of the timeline relies on that order. Called by switchTo under the user's lock, after reading the running
+ * record.
  * @param current - The running record, null before the very first tap.
- * @param now - The server's clock in epoch ms.
+ * @param pressedAt - The tap's press on the server's clock ({@link pressTime}), epoch ms.
  * @returns The new switch's start.
  * @example nextSwitchStart({ startedAt: new Date(1000), … }, 1000) // new Date(1001)
  */
 function nextSwitchStart(
   current: Pick<SwitchRow, 'startedAt'> | null,
-  now: number,
+  pressedAt: number,
 ): Date {
-  if (!current) return new Date(now)
-  return new Date(Math.max(now, current.startedAt.getTime() + 1))
+  if (!current) return new Date(pressedAt)
+  return new Date(Math.max(pressedAt, current.startedAt.getTime() + 1))
 }
 
 /**
@@ -621,13 +642,19 @@ export const switchesRouter = {
 
   switchTo: authed
     // null = detox: from now on the time is recorded to no activity, until the next real one.
-    .input(z.object({ activityId: z.uuid().nullable() }))
+    .input(switchToInputSchema)
     .handler(async ({ context, input }) => {
       const userId = context.user.id
+      // A tap decided on another account's screen (a sign-in in another tab changed the cookie under it) must not land here.
+      if (input.forUserId !== undefined && input.forUserId !== userId)
+        throw new ORPCError('CONFLICT', {
+          message: 'switch is for another account',
+        })
+      const pressedAt = pressTime(context.arrivedAt, input.waitedMs)
       return withUserLock(userId, context.deadline, async (tx) => {
         await assertLiveActivities(tx, userId, [input.activityId])
         const current = await latestSwitch(userId, tx)
-        const now = Date.now()
+        const startedAt = nextSwitchStart(current, pressedAt)
         // Tapping the active state again keeps it (no zero-length segment, and the clock never drops its state), except
         // detox pressed again after its run's measured week while the unused-day rule is on: a new run starts here, and the
         // days after it count again.
@@ -642,8 +669,9 @@ export const switchesRouter = {
           // that still shows the rule on after another device turned it off must not start a run the week would later count from).
           if (!autoExcludeUnusedDays) return current
           const runStartDay = await runStartOf(tx, userId, current, timeZone)
-          // Inside the week the press stays a no-op, so a double tap never cuts a run.
-          if (!detoxRunPastWeek(runStartDay, localDay(new Date(now), timeZone)))
+          // Inside the week the press stays a no-op, so a double tap never cuts a run. The week is read on the day the new run
+          // would start, the press's.
+          if (!detoxRunPastWeek(runStartDay, localDay(startedAt, timeZone)))
             return current
           startsRun = true
         }
@@ -655,7 +683,7 @@ export const switchesRouter = {
             .values({
               userId,
               activityId: input.activityId,
-              startedAt: nextSwitchStart(current, now),
+              startedAt,
               startsRun,
             })
             .returning(),

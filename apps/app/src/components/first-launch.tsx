@@ -38,7 +38,7 @@ export function FirstLaunch() {
       orpc.switches.current.queryKey(),
     )
     if (!placed || sendsPick({ activityId, current: placed, renewable: false }))
-      switchTo.mutate({ activityId })
+      switchTo(activityId)
   }
   useSwitchHotkeys(activities, pick)
   return (

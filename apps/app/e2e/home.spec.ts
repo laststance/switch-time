@@ -1000,3 +1000,43 @@ test('digit 0 past a detox’s week starts a new run, like pressing the detox ro
   ).toBeVisible()
   await expect(page.getByText('今日は計測に入りません')).toHaveCount(0)
 })
+
+test('a tap that queued behind the last tap’s refetch is recorded at its press, not when it went out', async ({
+  page,
+}) => {
+  // Arrange: 家事 runs; the day list reads are held from here on, so 仕事's refetch keeps the next tap queued
+  await signUp(page)
+  await expect(page.getByRole('button', { name: '家事' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const dayListAnswer = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/switches/listByDay**', async (route) => {
+    await dayListAnswer.promise
+    await route.continue()
+  })
+  let tapRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/rpc/switches/switchTo')) tapRequests += 1
+  })
+  const workRefetch = page.waitForRequest((request) =>
+    request.url().includes('/api/rpc/switches/listByDay'),
+  )
+  await page.getByRole('button', { name: '仕事' }).click()
+  await workRefetch
+
+  // Act: 休息 is pressed and waits 4 s behind the held refetch
+  const restPressedAt = Date.now()
+  await page.getByRole('button', { name: '休息' }).click()
+  await page.waitForTimeout(4000)
+  const tapsSentWhileHeld = tapRequests
+  dayListAnswer.resolve()
+  await expect(page.getByText(/今日 2 回切替$/)).toBeVisible()
+
+  // Assert: 休息 went out only after the refetch, yet starts at its press
+  expect(tapsSentWhileHeld).toBe(1)
+  const current = await (await apiAs(page)).switches.current()
+  expect(
+    Math.abs((current?.startedAt.getTime() ?? 0) - restPressedAt),
+  ).toBeLessThan(1500)
+})

@@ -8,6 +8,7 @@ import {
   OPTIMISTIC_ID,
   placeTap,
   rollBackTap,
+  sendTap,
   SWITCH_TO_SCOPE,
 } from './optimistic-switch'
 import type { CurrentSwitch } from './orpc'
@@ -28,18 +29,24 @@ const serverRow = (id: string, activityId: string | null): CurrentSwitch => ({
 })
 
 // One tap, run through TanStack's own mutation cache with the callbacks useSwitchTo gives it; the returned `answer` settles it.
-function tap(client: QueryClient, activityId: string | null) {
+function tap(
+  client: QueryClient,
+  activityId: string | null,
+  pressedAt = Date.now(),
+) {
   const answer = Promise.withResolvers<CurrentSwitch>()
   const lastTapWhenSettled: boolean[] = []
-  const request = { sent: false }
+  const request: { sent: boolean; waitedMs?: number } = { sent: false }
   const settled = client
     .getMutationCache()
     .build(client, {
       scope: { id: SWITCH_TO_SCOPE },
-      mutationFn: async () => {
-        request.sent = true
-        return answer.promise
-      },
+      mutationFn: async () =>
+        sendTap(client, pressedAt, async (waitedMs) => {
+          request.sent = true
+          request.waitedMs = waitedMs
+          return answer.promise
+        }),
       onMutate: () => placeTap(client, CURRENT, activityId),
       onSuccess: (row: CurrentSwitch, _input, context) => {
         if (context) confirmTap(context, row)
@@ -437,4 +444,194 @@ test('a tap made while the last tap still waits for the day list falls back to t
 
   // Assert: the refetched detox with its run start, so its notices stay
   expect(client.getQueryData(CURRENT)).toEqual(refetchedDetox)
+})
+
+test('a read that left before an accepted tap was stored and lands after it never becomes what a refused tap falls back to', async () => {
+  // Arrange: 休息 is tapped over 仕事 and accepted; a read of the current switch sent before that lands afterwards with 仕事
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const restRow = {
+    ...serverRow('row-rest', 'rest'),
+    startedAt: new Date('2026-09-25T03:10:00.000Z'),
+  }
+  const rest = tap(client, 'rest')
+  await flush()
+  rest.answer.resolve(restRow)
+  await rest.settled
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+
+  // Act: 家事 is refused
+  const chores = tap(client, 'chores')
+  await flush()
+  chores.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await chores.settled
+
+  // Assert: the accepted 休息, not the stale 仕事
+  expect(client.getQueryData(CURRENT)).toEqual(restRow)
+})
+
+test('a read with no switch that lands after a new account’s first tap was accepted never brings back the first-launch state', async () => {
+  // Arrange: a new account's first tap 仕事 is accepted; a read sent before it lands afterwards with no switch
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, null)
+  const work = tap(client, 'work')
+  await flush()
+  work.answer.resolve(serverRow('row-work', 'work'))
+  await work.settled
+  client.setQueryData(CURRENT, null)
+
+  // Act: 休息 is refused
+  const rest = tap(client, 'rest')
+  await flush()
+  rest.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await rest.settled
+
+  // Assert: 仕事 runs, as the server has it
+  expect(client.getQueryData(CURRENT)).toEqual(serverRow('row-work', 'work'))
+})
+
+test('a switch another device tapped after this device’s accepted tap becomes what a refused tap falls back to', async () => {
+  // Arrange: 休息 is accepted at 3:10; a read then brings 睡眠, tapped on another device at 3:20
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const rest = tap(client, 'rest')
+  await flush()
+  rest.answer.resolve({
+    ...serverRow('row-rest', 'rest'),
+    startedAt: new Date('2026-09-25T03:10:00.000Z'),
+  })
+  await rest.settled
+  const sleepRow = {
+    ...serverRow('row-sleep', 'sleep'),
+    startedAt: new Date('2026-09-25T03:20:00.000Z'),
+  }
+  client.setQueryData(CURRENT, sleepRow)
+
+  // Act: 家事 is refused
+  const chores = tap(client, 'chores')
+  await flush()
+  chores.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await chores.settled
+
+  // Assert: the other device's 睡眠
+  expect(client.getQueryData(CURRENT)).toEqual(sleepRow)
+})
+
+test('an accepted tap’s row corrected on another device becomes what a refused tap falls back to, even with its start moved earlier', async () => {
+  // Arrange: 休息 is accepted at 3:10; a read then brings the same row, moved back to 3:05 by a correction (revision 1)
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const rest = tap(client, 'rest')
+  await flush()
+  rest.answer.resolve({
+    ...serverRow('row-rest', 'rest'),
+    startedAt: new Date('2026-09-25T03:10:00.000Z'),
+  })
+  await rest.settled
+  const correctedRest = {
+    ...serverRow('row-rest', 'rest'),
+    startedAt: new Date('2026-09-25T03:05:00.000Z'),
+    revision: 1,
+  }
+  client.setQueryData(CURRENT, correctedRest)
+
+  // Act: 家事 is refused
+  const chores = tap(client, 'chores')
+  await flush()
+  chores.answer.reject(new Error('INTERNAL_SERVER_ERROR'))
+  await chores.settled
+
+  // Assert: the corrected 休息 from 3:05
+  expect(client.getQueryData(CURRENT)).toEqual(correctedRest)
+})
+
+test('after signing out and back in, the first tap is not sent until the tap from before the sign-out is answered', async () => {
+  // Arrange: 休息 is tapped and the account signs out before the answer; signed back in, 家事 is tapped
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const beforeSignOut = tap(client, 'rest')
+  await flush()
+  client.clear()
+  startTapSession(client)
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const afterSignIn = tap(client, 'chores')
+  await flush()
+  const sentWhileEarlierOut = afterSignIn.request.sent
+
+  // Act
+  beforeSignOut.answer.resolve(serverRow('row-rest', 'rest'))
+  await beforeSignOut.settled
+  await flush()
+
+  // Assert: 家事 goes out only once 休息 is stored, so the server keeps them in the order they were pressed
+  expect(sentWhileEarlierOut).toBe(false)
+  expect(afterSignIn.request.sent).toBe(true)
+})
+
+test('after signing out and back in with no tap still out, the first tap is sent at once', async () => {
+  // Arrange: the last tap was answered before the sign-out
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const answered = tap(client, 'rest')
+  await flush()
+  answered.answer.resolve(serverRow('row-rest', 'rest'))
+  await answered.settled
+  client.clear()
+  startTapSession(client)
+  client.setQueryData(CURRENT, serverRow('row-rest', 'rest'))
+
+  // Act
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Assert
+  expect(chores.request.sent).toBe(true)
+})
+
+test('a tap that queued behind the last tap tells the server how long it waited since it was pressed', async () => {
+  // Arrange: 休息 is out; 家事 is pressed at 3:00:00 and queues behind it
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const rest = tap(client, 'rest')
+  await flush()
+  const chores = tap(client, 'chores')
+  await flush()
+
+  // Act: 休息 is answered 4 s later
+  vi.setSystemTime(new Date('2026-09-25T03:00:04.000Z'))
+  rest.answer.resolve(serverRow('row-rest', 'rest'))
+  await rest.settled
+  await flush()
+
+  // Assert
+  expect(chores.request.waitedMs).toBe(4000)
+})
+
+test('a tap sent after the device clock stepped back reports no wait rather than a negative one', async () => {
+  // Arrange: 休息 is pressed at 3:00:00, and the clock steps back a minute before it goes out
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2026-09-25T03:00:00.000Z'),
+  })
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
+  const client = new QueryClient()
+  client.setQueryData(CURRENT, serverRow('row-work', 'work'))
+  const pressedAt = Date.now()
+  vi.setSystemTime(new Date('2026-09-25T02:59:00.000Z'))
+
+  // Act
+  const rest = tap(client, 'rest', pressedAt)
+  await flush()
+
+  // Assert
+  expect(rest.request.waitedMs).toBe(0)
 })

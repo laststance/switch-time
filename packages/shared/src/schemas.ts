@@ -133,6 +133,20 @@ export const reorderInputSchema = z.object({
 })
 
 /**
+ * A tap on ホーム or the first-launch screen (`switches.switchTo`). `activityId` null is detox. `forUserId` names the account the
+ * tap was made for, and the API refuses it (CONFLICT) once the session is someone else's, as it does a settings write. `waitedMs`
+ * is how long the tap waited on the device between the press and the send, measured on the device's own clock, so the API can
+ * record the switch at the press without trusting that clock's time of day. Both are optional: a tab still on the previous
+ * bundle sends neither and is recorded at arrival, as before.
+ */
+export const switchToInputSchema = z.object({
+  activityId: z.uuid().nullable(),
+  forUserId: z.string().min(1).optional(),
+  waitedMs: z.int().min(0).optional(),
+})
+export type SwitchToInput = z.infer<typeof switchToInputSchema>
+
+/**
  * One of a day's own rows as the correction sheet listed it: what a baseline or 「元に戻す」's expectation compares (id,
  * activity and start). `startsRun` rides along so 「元に戻す」 can write a detox re-tap back as one; nothing compares it.
  */

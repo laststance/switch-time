@@ -26,6 +26,7 @@ export {
   signInSchema,
   signUpSchema,
   splitAtInputSchema,
+  switchToInputSchema,
   targetHoursSchema,
   THEME_MODES,
   themeModeSchema,
@@ -39,6 +40,7 @@ export {
   type SignInInput,
   type SignUpInput,
   type SplitAtInput,
+  type SwitchToInput,
   type ThemeMode,
 } from './schemas'
 export {

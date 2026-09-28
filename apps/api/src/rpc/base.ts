@@ -15,10 +15,14 @@ import { switches } from '../db/schema/app'
 // Per-request context handed to every procedure; the session is read from these headers.
 export const base = os.$context<{ headers: Headers }>()
 
-// Stamps the request's deadline on arrival, before the session lookup, so every wait after it counts against one budget.
-const withDeadline = base.use(async ({ next }) =>
-  next({ context: { deadline: Date.now() + REQUEST_DEADLINE_MS } }),
-)
+// Stamps the request's arrival and deadline before the session lookup, so every wait after it counts against one budget, and
+// a tap is recorded from the moment it reached the server rather than after the session read and the write queue.
+const withDeadline = base.use(async ({ next }) => {
+  const arrivedAt = Date.now()
+  return next({
+    context: { arrivedAt, deadline: arrivedAt + REQUEST_DEADLINE_MS },
+  })
+})
 
 // Resolves the Better Auth session (cookie, or the bearer token the Expo client sends) once per call.
 const withSession = withDeadline.use(async ({ context, next }) =>

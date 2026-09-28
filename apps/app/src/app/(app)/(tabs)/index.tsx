@@ -86,7 +86,7 @@ function HomeBody({ current, activity }: HomeBodyProps) {
         renewable: renewable && shown.id === current.id,
       })
     )
-      switchTo.mutate({ activityId })
+      switchTo(activityId)
   }
   useSwitchHotkeys(activities, pick)
   return (
