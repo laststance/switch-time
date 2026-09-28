@@ -3,9 +3,10 @@ import { useIsMutating } from '@tanstack/react-query'
 import { useDeviceZone } from '@/hooks/use-device-zone'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
 import { authClient } from '@/lib/auth-client'
-import { rememberSyncedZone } from '@/lib/device-zone'
 import { orpc } from '@/lib/orpc'
 import { zoneRow, type ZoneRow } from '@/lib/settings'
+import { useAppDispatch } from '@/store'
+import { zoneSynced } from '@/store/synced-zone'
 
 /**
  * 設定's タイムゾーン row: the account's zone next to this device's ({@link zoneRow}), and the take-back that writes this device's
@@ -22,6 +23,7 @@ export function useAccountZone(): ZoneRow & {
   const device = useDeviceZone()
   const { data: session } = authClient.useSession()
   const accountId = session?.user.id
+  const dispatch = useAppDispatch()
   const { mutate, isError, variables } = useUpdateSettings()
   // Any settings write in flight (a theme tap, the automatic sync) holds the button: the scope would queue the take-back behind it.
   const busy = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
@@ -38,7 +40,10 @@ export function useAccountZone(): ZoneRow & {
     takeBack: (): void =>
       mutate(
         { timeZone: device, forUserId: accountId },
-        { onSuccess: (row) => rememberSyncedZone(row.userId, device) },
+        {
+          onSuccess: (row) =>
+            dispatch(zoneSynced({ accountId: row.userId, zone: device })),
+        },
       ),
   }
 }

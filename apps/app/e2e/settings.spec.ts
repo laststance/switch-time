@@ -10,13 +10,16 @@ const rpcError = (code: string, status: number) => ({
   }),
 })
 
-/** The zones this device remembers syncing, one per account (`src/lib/device-zone.ts` keeps them in `localStorage` on the web). */
+/** The zones this device remembers syncing, one per account (the store persists its `syncedZone` slice to `localStorage` on the web). */
 const syncedZones = async (page: Page) =>
-  page.evaluate(() =>
-    Object.keys(localStorage)
-      .filter((key) => key.startsWith('switch-time.synced-zone.'))
-      .map((key) => localStorage.getItem(key)),
-  )
+  page.evaluate(() => {
+    const persisted = localStorage.getItem('switch-time.device')
+    if (!persisted) return []
+    const { state } = JSON.parse(persisted) as {
+      state: { syncedZone: { byAccount: Record<string, string> } }
+    }
+    return Object.values(state.syncedZone.byAccount)
+  })
 
 /** The tab comes back to the foreground: the session, the queries and the device zone are read again. */
 const foreground = async (page: Page) =>
