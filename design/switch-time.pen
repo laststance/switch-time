@@ -54735,6 +54735,326 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "dU0VY",
+          "name": "並びが変わった（role=alert, ink 500）",
+          "width": 362,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Sdpdv",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "並びが変わった（role=alert, ink 500）。別の端末やタブで項目を追加・アーカイブした後、この画面の古い並びで ▲▼ を押したとき。一覧を読み直すので、もう一度押せば動く",
+              "lineHeight": 1.4,
+              "fontFamily": "Roboto",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "o1WTP7",
+              "name": "Sheet (tail)",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$sheet-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [
+                14,
+                20,
+                20,
+                20
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Z8SecO",
+                  "name": "div",
+                  "context": "div",
+                  "width": "fill_container",
+                  "fill": "#ffffff0f",
+                  "cornerRadius": 16,
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    8,
+                    8,
+                    4
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EwliQ",
+                      "name": "div",
+                      "context": "div",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "py62x",
+                          "name": "▲",
+                          "context": "button",
+                          "width": 28,
+                          "height": 20,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wPydu",
+                              "fill": "$sub",
+                              "content": "▲",
+                              "lineHeight": 1.1,
+                              "textAlign": "center",
+                              "fontFamily": "Arial",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yo0zL",
+                          "name": "▼",
+                          "context": "button",
+                          "width": 28,
+                          "height": 20,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QDaJl",
+                              "fill": "$sub",
+                              "content": "▼",
+                              "lineHeight": 1.1,
+                              "textAlign": "center",
+                              "fontFamily": "Arial",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "X8mke",
+                      "name": "button",
+                      "context": "button",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$activity-6",
+                      "cornerRadius": 14,
+                      "padding": [
+                        1,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "V8KTgT",
+                          "name": "svg",
+                          "context": "svg",
+                          "clip": true,
+                          "width": 22,
+                          "height": 22,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "path",
+                              "id": "uaJYF",
+                              "x": 1.8333333730697632,
+                              "y": 7.333333492279053,
+                              "geometry": "M3.66667 0l11 0c2.02504 0 3.66667 1.64162 3.66666 3.66667l0 2.75c-0.06039 1.18686-0.87635 2.20066-2.02287 2.51335-1.14653 0.31269-2.3642-0.14648-3.01879-1.13835l-1.375-1.375-5.5 0-1.375 1.375c-0.65459 0.99187-1.87227 1.45104-3.0188 1.13835-1.14653-0.31269-1.96248-1.32649-2.02287-2.51335l0-2.75c0-2.02504 1.64162-3.66667 3.66667-3.66667m0.91666 2.75l0 2.75m-1.375-1.375l2.75 0m6.875-0.45833l0.00917 0m1.82417 1.375l0.00916 0",
+                              "width": 18.33333456516266,
+                              "height": 9.027111530303955,
+                              "stroke": "#FFF",
+                              "strokeWidth": 1.8333333333333333,
+                              "strokeLinejoin": "round",
+                              "strokeLinecap": "round"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZVmkH",
+                      "name": "button",
+                      "context": "button",
+                      "width": 28,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "wA6H3",
+                          "name": "span",
+                          "context": "span",
+                          "fill": "$activity-6",
+                          "width": 18,
+                          "height": 18,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#1c1d22",
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#d8579c",
+                              "blur": 4
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "cbnlm",
+                      "name": "娯楽",
+                      "context": "input",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": 44,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vLxOA",
+                          "fill": "$ink",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "娯楽",
+                          "fontFamily": "Roboto",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "a5LgQG",
+                      "name": "button",
+                      "context": "button",
+                      "layout": "vertical",
+                      "padding": [
+                        9.5,
+                        7
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WpBed",
+                          "name": "☆",
+                          "context": "span",
+                          "fill": "#f2efe859",
+                          "content": "☆",
+                          "lineHeight": 1.14,
+                          "textAlign": "center",
+                          "fontFamily": "Arial",
+                          "fontSize": 22,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qhTVo",
+                      "name": "🗑",
+                      "context": "button",
+                      "width": 36,
+                      "height": 44,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "N2Q3bL",
+                          "fill": "$sub",
+                          "content": "🗑",
+                          "lineHeight": 1.11,
+                          "textAlign": "center",
+                          "fontFamily": "Arial",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "IEZFz",
+                  "name": "Status line (role=alert)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "項目が変わっていたため、最新の一覧を表示しました",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Roboto",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "m27wh",
+                  "name": "＋ 項目を追加",
+                  "context": "button",
+                  "width": "fill_container",
+                  "height": 52,
+                  "cornerRadius": 10,
+                  "stroke": "#ffffff2e",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "padding": [
+                    1,
+                    6
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Gbz4R",
+                      "fill": "$ink",
+                      "content": "＋ 項目を追加",
+                      "lineHeight": 1.2,
+                      "textAlign": "center",
+                      "fontFamily": "Roboto",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
