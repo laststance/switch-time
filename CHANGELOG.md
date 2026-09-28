@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.16.0] - 2026-09-29
+
+### Changed
+
+- Trying sign-in or sign-up again after an error no longer makes the card jump.
+  The error stays in its box, at the same height, while the retry is out, and
+  the answer replaces it. The retry state is drawn on the pen board
+  「ST Phone / サインイン・入力中と失敗」.
+
 ## [0.24.15.0] - 2026-09-29
 
 ### Changed

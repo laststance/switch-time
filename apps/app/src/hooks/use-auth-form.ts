@@ -10,7 +10,7 @@ type AuthResult = { error: AuthError | null }
 
 /**
  * Shared mechanics of the auth forms: Zod-validate on submit, first issue per field, the request as a mutation (the button waits on
- * `isPending`, and its error is the Japanese line {@link authErrorMessage} gives for Better Auth's error code). Success runs
+ * `isPending`, and its error is the Japanese line {@link authErrorMessage} gives for Better Auth's error code, kept in place while a retry runs). Success runs
  * `onDone` from the mutation's own options, so it also runs when the form has gone by the time the answer lands: sign-in's
  * session lands anyway, and its reset must not be skipped. Sign-up passes `register`, which moves on only while sign-up is still
  * in front.
@@ -26,6 +26,8 @@ export function useAuthForm<T extends Record<string, string>>(
 ) {
   const [values, setValues] = useState(initial)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  // The last error shown, kept while a retry runs: TanStack Query clears `request.error` the moment the next request starts.
+  const [lastError, setLastError] = useState<string | null>(null)
   const request = useMutation({
     mutationFn: async (input: T) => {
       // A transport failure (offline, server down) reads like a server error instead of an unhandled rejection.
@@ -35,6 +37,7 @@ export function useAuthForm<T extends Record<string, string>>(
       if (error) throw new Error(authErrorMessage(error))
     },
     onSuccess: (_result, sent) => onDone?.(sent),
+    onError: (error) => setLastError(error.message),
   })
 
   const set =
@@ -53,7 +56,10 @@ export function useAuthForm<T extends Record<string, string>>(
     values,
     set,
     fieldErrors,
-    serverError: request.error?.message ?? null,
+    // Through a retry the error's box stays as it was, so the card does not move; the answer replaces it.
+    serverError: request.isPending
+      ? lastError
+      : (request.error?.message ?? null),
     pending: request.isPending,
     // The request went through; sign-in keeps its button off from here until the session lands ({@link signInBusy}).
     succeeded: request.isSuccess,
