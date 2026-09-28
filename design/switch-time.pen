@@ -70606,6 +70606,258 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "gJzcR",
+              "name": "確認リンクが古い・使用済みのとき",
+              "width": 362,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Of9fm",
+                  "name": "Caption",
+                  "fill": "$sub",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "確認のリンクが古い・使用済みのとき（?error=、role=alert）。サインインすると確認メールを送り直す。パスワードが違うときは今まで通り 違います",
+                  "lineHeight": 1.4,
+                  "fontFamily": "Roboto",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "p4on8",
+                  "name": "AuthCard",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-card",
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VzZhs",
+                      "name": "Title",
+                      "fill": "$ink",
+                      "content": "サインイン",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-xl",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sjwn8",
+                      "name": "エラー（role=alert）",
+                      "width": "fill_container",
+                      "fill": "$chip",
+                      "cornerRadius": "$radius-chip",
+                      "layout": "vertical",
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Kjj36",
+                          "name": "Notice",
+                          "fill": "$ink",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "リンクの期限が切れています。サインインすると、確認メールをもう一度お送りします",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dMhKZ",
+                      "name": "メールアドレス",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "H2XLZ",
+                          "name": "Label",
+                          "fill": "$sub",
+                          "content": "メールアドレス",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VZAZl",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$surface",
+                          "cornerRadius": "$radius-chip",
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lQNoe",
+                              "name": "Value",
+                              "fill": "$ink",
+                              "content": "you@example.com",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-sm",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wbWk6",
+                      "name": "パスワード",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wevQA",
+                          "name": "Label",
+                          "fill": "$sub",
+                          "content": "パスワード",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EatCi",
+                          "name": "Input",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$surface",
+                          "cornerRadius": "$radius-chip",
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l6n7mm",
+                              "name": "Value",
+                              "fill": "$ink",
+                              "content": "••••••••",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-sm",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ScXa0",
+                      "name": "サインイン",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$accent",
+                      "cornerRadius": "$radius-chip",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wTMGs",
+                          "name": "Label",
+                          "fill": "#FFFFFF",
+                          "content": "サインイン",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rcmng",
+                      "name": "パスワードを忘れた方",
+                      "width": "fill_container",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AzbpI",
+                          "name": "Label",
+                          "fill": "$accent",
+                          "content": "パスワードを忘れた方",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YaNnM",
+                      "name": "新規登録はこちら",
+                      "width": "fill_container",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uXTOm",
+                          "name": "Label",
+                          "fill": "$accent",
+                          "content": "新規登録はこちら",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
