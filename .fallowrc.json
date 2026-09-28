@@ -20,5 +20,13 @@
     "tailwindcss",
     "expo-web-browser",
     "expo-network"
+  ],
+  "ignoreDependencyOverrides": [
+    {
+      "package": "@react-native/metro-config",
+      "source": "pnpm-workspace.yaml"
+    },
+    { "package": "react-native-reanimated", "source": "pnpm-workspace.yaml" },
+    { "package": "react-native-worklets", "source": "pnpm-workspace.yaml" }
   ]
 }

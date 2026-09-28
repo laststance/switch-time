@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.17.0] - 2026-09-29
+
+### Changed
+
+- The native build's peer dependencies now line up: `react-native-worklets` 0.10.1
+  and `react-native-reanimated` 4.5.1 (SDK 57's pair, which `expo-modules-core`
+  accepts; the auto-installed peers were 0.13.0 and 4.7.0), `@react-native/metro-config`
+  0.86.3 (`react-native`'s own version), `expo-linking` 57.0.11, and the three
+  Expo packages `expo install --check` flagged (`expo` 57.0.25, `expo-router`
+  57.0.23, `expo-linking`). They are pinned as `overrides` in `pnpm-workspace.yaml`;
+  the app imports none of them. The web build is unchanged.
+
 ## [0.24.16.0] - 2026-09-29
 
 ### Changed
