@@ -6,6 +6,7 @@ import { useInitialFocus } from '@/hooks/use-initial-focus'
 import { useWebKeydown } from '@/hooks/use-web-keydown'
 import { useWide } from '@/hooks/use-wide'
 import { trappedFocus } from '@/lib/focus-trap'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 /**
@@ -94,7 +95,11 @@ export function Sheet({ title, hint, children }: SheetProps) {
           <Pressable
             role="button"
             aria-label="閉じる"
-            className="bg-chip h-11 w-11 items-center justify-center rounded-pill"
+            className={cn(
+              FOCUS_RING,
+              pressLook(false),
+              'bg-chip h-11 w-11 items-center justify-center rounded-pill',
+            )}
             onPress={dismissSheet}
           >
             <Text className="text-ink text-md">✕</Text>

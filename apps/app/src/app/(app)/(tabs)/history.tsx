@@ -21,6 +21,7 @@ import {
   type Range,
 } from '@/lib/history'
 import { activityIcon, INFO, PENCIL } from '@/lib/icons'
+import { FOCUS_RING, FOCUS_RING_INSET, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 const UNIT: Record<Range, string> = { week: '週', month: '月' }
@@ -53,14 +54,15 @@ function StepButton({
 }
 
 // Every cell is a 24-h track in `chip` (like TodayFlow's bar); excluded days add the dashed `sub` border on both platforms
-// (ponytail: the native hatch is skipped, as in TodayFlow), in `sub` so the dash clears 3:1; `EXCLUDED_BORDER_PX` in lib/history
-// mirrors its width. Dashed is kept for 「点線の日」 alone: a measured day that was mostly detox is outlined solid in `sub`, the
-// detox tone, and carries the wind glyph, so it never reads as an excluded day. Any other day, an excluded one included (a day
-// past a detox's measured week, or excluded by hand), draws its detox part as a solid `sub` outline on top of its fills.
+// (ponytail: the native hatch is skipped, as in TodayFlow), in `sub` so the dash clears 3:1, with a 1 px `chip` gap inside it
+// (`p-px`) that keeps a detox outline off the dashes; `EXCLUDED_INSET_PX` in lib/history mirrors both widths. Dashed is kept
+// for 「点線の日」 alone: a measured day that was mostly detox is outlined solid in `sub`, the detox tone, and carries the wind
+// glyph, so it never reads as an excluded day. Any other day, an excluded one included (a day past a detox's measured week,
+// or excluded by hand), draws its detox part as a solid `sub` outline on top of its fills.
 const CELL = {
   stack: 'bg-chip',
   detox: 'border border-sub bg-chip',
-  excluded: 'border border-dashed border-sub bg-chip',
+  excluded: 'border border-dashed border-sub bg-chip p-px',
   empty: 'bg-chip',
 }
 
@@ -104,7 +106,7 @@ function DayCell({
         style={{ height }}
       >
         {cell.slices.map((slice) => {
-          const look = sliceLook(slice)
+          const look = sliceLook(slice, cell.kind === 'excluded')
           return (
             <View
               key={slice.activityId ?? 'detox'}
@@ -135,7 +137,11 @@ function DayCell({
     <Link href={{ pathname: '/correction', params: { day: cell.day } }} asChild>
       <Pressable
         aria-label={cell.ariaLabel}
-        className="flex-1 items-center gap-1.5"
+        className={cn(
+          FOCUS_RING_INSET,
+          pressLook(false),
+          'flex-1 items-center gap-1.5',
+        )}
       >
         {column}
       </Pressable>
@@ -237,7 +243,13 @@ function Footnote({ count }: { count: number }) {
   if (count === 0) return null
   return (
     <Link href="/excluded-days" asChild>
-      <Pressable className="bg-chip text-sub flex-row items-center gap-2.5 rounded-card px-4 py-3.25">
+      <Pressable
+        className={cn(
+          FOCUS_RING,
+          pressLook(false),
+          'bg-chip text-sub flex-row items-center gap-2.5 rounded-card px-4 py-3.25',
+        )}
+      >
         <StrokeIcon d={INFO} size={18} strokeWidth={1.8} color={sub} />
         <Text className="text-sub flex-1 text-xs">
           アプリを使わなかった {count}日 は平均から除外しています（点線の日）
@@ -299,7 +311,13 @@ function CorrectionButton() {
   const ink = useTokenColor('ink')
   return (
     <Link href="/correction" asChild>
-      <Pressable className="border-line text-ink h-13 flex-row items-center justify-center gap-2 rounded-chip border">
+      <Pressable
+        className={cn(
+          FOCUS_RING,
+          pressLook(false),
+          'border-line text-ink h-13 flex-row items-center justify-center gap-2 rounded-chip border',
+        )}
+      >
         <StrokeIcon d={PENCIL} size={16} strokeWidth={2} color={ink} />
         <Text className="text-ink text-sm font-semibold">記録を訂正する</Text>
       </Pressable>

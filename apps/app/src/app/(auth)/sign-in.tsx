@@ -15,6 +15,7 @@ import {
 import { useScreenFocusField } from '@/hooks/use-screen-focus-field'
 import { authClient } from '@/lib/auth-client'
 import { startTapSession } from '@/lib/optimistic-switch'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { queryClient } from '@/lib/query'
 import {
   keptFormKey,
@@ -22,6 +23,7 @@ import {
   signInBusy,
   signInStart,
 } from '@/lib/sign-in'
+import { cn } from '@/lib/utils'
 import { resetApp, useAppDispatch } from '@/store'
 
 export default function SignInScreen() {
@@ -98,7 +100,10 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
         href={{ pathname: '/sign-up', params: next ? { next } : {} }}
         asChild
       >
-        <Pressable role="link" className="items-center py-2">
+        <Pressable
+          role="link"
+          className={cn(FOCUS_RING, pressLook(false), 'items-center py-2')}
+        >
           <Text className="text-accent text-xs">新規登録はこちら</Text>
         </Pressable>
       </Link>

@@ -68,44 +68,6 @@
 **Priority:** P4
 **Depends on:** None
 
-## Design
-
-### Raise the 24-h bar's idle dash above 3:1
-
-**What:** Draw the idle spans of Home's 24-h bar (and the correction sheet's bar, if it dashes idle too) in dashed `sub` instead of dashed `line`, as History's excluded day now is; check it at 1x in both themes. The pen file first.
-
-**Why:** Dashed is the "no data" mark on both surfaces, but since History's excluded day moved to `sub` (so it clears 3:1 against the card), the bar's idle dash is the one no-data mark still in `line`, 12 % ink in light and 14 % white in dark, below the 3:1 WCAG asks of a mark that carries meaning.
-
-**Context:** `LOOK.idle` (`border border-dashed border-line`) in `apps/app/src/components/today-flow.tsx`; `design/tokens.md` §5 and `design-system/readme.md` name the idle dash. Found while fixing the excluded day's dash (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
-### Keep an excluded day's detox outline off its dashed border
-
-**What:** Decide in the pen how an excluded day's detox part meets the cell's dashed `sub` border (for example a 1 px `chip` gap inside the dash, with end radii of 6 − inset, or no side lines on that slice), then implement it and check a manually excluded day of all detox at 1x in the month view.
-
-**Why:** History draws an excluded day's detox part as a solid `sub` outline at full width, so its side lines lie against the dash in the same tone and fill its gaps. On a day excluded by hand after a whole day of detox, the cell reads as a solid outline without the wind glyph, close to a detox day, and the dash that marks 「点線の日」 is lost.
-
-**Context:** `CELL.excluded` in `apps/app/src/app/(app)/(tabs)/history.tsx`; `sliceLook`, `EXCLUDED_BORDER_PX` and `dayCell` in `apps/app/src/lib/history.ts` (a gap would also come off the slices' track height). The pen's excluded day is an `auto_unused` day, which holds no detox, so the pen needs a manual one. A 1 px `p-px` gap was tried in the ship review and taken back, because it changes the cell's spacing without the pen. Raised by the Claude adversarial pass of the ship review of the PR that drew a day's detox part on History (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
-### Give the plain Pressables the focus ring and pressed look `Control` has
-
-**What:** Draw the pen's 「Control の押下とフォーカス」 look (2 px `ink` ring at a 2 px offset on keyboard focus, 70 % while pressed) on the Pressables that are not `Control`s: the correction sheet's row headers, `ActivityPill`, the sheet's 完了 and ✕, and any others a sweep finds. The pen first, for the ones whose shape the ring would change.
-
-**Why:** Since 0.23.0.0 the sheet's buttons show where keyboard focus is and answer a press, but a keyboard user tabbing from a merge button to the row header next to it loses the ring, and a tap on a pill gives no feedback.
-
-**Context:** `apps/app/src/components/control.tsx` holds the classes; `RowHeader` and the footer's 完了 in `apps/app/src/app/(app)/correction.tsx`, `apps/app/src/components/activity-pill.tsx`, and the ✕ in `apps/app/src/components/sheet.tsx`. Raised by the design pass of the ship review of 0.23.0.0 (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ## Auth
 
 ### Prove that an e-mail address belongs to the person signing up

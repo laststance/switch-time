@@ -3,6 +3,7 @@ import { Pressable, Text } from 'react-native'
 import { StrokeIcon } from '@/components/stroke-icon'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { activityIcon } from '@/lib/icons'
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -56,7 +57,9 @@ export function SwitchButton({
       aria-keyshortcuts={hotkey}
       onPress={onPress}
       className={cn(
+        FOCUS_RING,
         'h-15 shrink grow basis-37.5 flex-row items-center justify-center gap-2 rounded-chip border',
+        pressLook(false),
         look.root,
       )}
       style={look.style}

@@ -803,6 +803,13 @@ test.describe('device time zone', () => {
 
 /** Opens the タイムゾーン sheet from 設定's row and waits for the account's zone to be checked. */
 async function openZoneSheet(page: Page) {
+  // Headless Chromium draws no frame after a press on a link with a pressed look (headed Chrome does) until something asks for
+  // one, and the list fills past its first 10 rows from idle callbacks, which wait for frames. A page that keeps drawing lets it
+  // fill, so a row further down (ニューヨーク) is in the DOM to click.
+  await page.evaluate(() => {
+    const keepDrawing = () => requestAnimationFrame(keepDrawing)
+    keepDrawing()
+  })
   await page.getByRole('tab', { name: '設定' }).click()
   await page.getByRole('link', { name: 'タイムゾーン' }).click()
   const sheet = page.getByRole('dialog', { name: 'タイムゾーン' })

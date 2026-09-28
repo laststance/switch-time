@@ -14,6 +14,7 @@ import { useActivities } from '@/hooks/use-activities'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { INFO } from '@/lib/icons'
+import { FOCUS_RING_INSET, pressLook } from '@/lib/press'
 import { exclusionSummary } from '@/lib/settings'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +25,8 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ]
 
 const ROW = 'min-h-16 flex-row items-center gap-3 px-[18px] py-2.5'
+// The two rows that open a sheet: the ring sits inside, so the card's corners do not crowd it.
+const ROW_PRESS = cn(FOCUS_RING_INSET, pressLook(false))
 
 // 設定 from `ST Phone / 設定＋除外シート`: the two sheet entries, 外観, 秒針 and タイムゾーン, sign-out and the footer. Every value is the server's settings row.
 export default function SettingsScreen() {
@@ -36,7 +39,7 @@ export default function SettingsScreen() {
       <ScreenHeader title="設定" />
       <View className="border-line bg-surface rounded-card border">
         <Link href="/activity-editor" asChild>
-          <Pressable aria-label="活動項目" className={ROW}>
+          <Pressable aria-label="活動項目" className={cn(ROW, ROW_PRESS)}>
             <Text className="text-ink flex-1 text-sm font-semibold">
               活動項目
             </Text>
@@ -56,7 +59,7 @@ export default function SettingsScreen() {
         <Link href="/excluded-days" asChild>
           <Pressable
             aria-label="未使用日の自動除外"
-            className={cn(ROW, 'border-line border-t')}
+            className={cn(ROW, ROW_PRESS, 'border-line border-t')}
           >
             {/* text-sub: on web the icon inherits the colour, and no ancestor here sets one. */}
             <View className="bg-chip text-sub h-7.5 w-7.5 items-center justify-center rounded-chip">

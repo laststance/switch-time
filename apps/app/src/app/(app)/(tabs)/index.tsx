@@ -32,6 +32,8 @@ import {
 import { DETOX_HOTKEY, hotkeyFor } from '@/lib/hotkeys'
 import { PENCIL } from '@/lib/icons'
 import { type CurrentSwitch, orpc } from '@/lib/orpc'
+import { FOCUS_RING, pressLook } from '@/lib/press'
+import { cn } from '@/lib/utils'
 
 type Current = ReturnType<typeof useCurrentActivity>
 type HomeBodyProps = {
@@ -96,7 +98,13 @@ function HomeBody({ current, activity }: HomeBodyProps) {
     <Screen>
       <ScreenHeader title="いま" aside={formatDay(today)}>
         <Link href="/correction" asChild>
-          <Pressable className="border-line bg-surface text-ink h-11 flex-row items-center gap-1.5 rounded-pill border px-4">
+          <Pressable
+            className={cn(
+              FOCUS_RING,
+              pressLook(false),
+              'border-line bg-surface text-ink h-11 flex-row items-center gap-1.5 rounded-pill border px-4',
+            )}
+          >
             <StrokeIcon d={PENCIL} size={15} strokeWidth={2} color={ink} />
             <Text className="text-ink text-xs font-semibold">訂正</Text>
           </Pressable>

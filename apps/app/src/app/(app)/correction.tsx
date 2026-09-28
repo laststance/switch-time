@@ -36,6 +36,7 @@ import {
   type TotalsFacts,
 } from '@/lib/correction'
 import { DETOX } from '@/lib/detox'
+import { FOCUS_RING, FOCUS_RING_INSET, pressLook } from '@/lib/press'
 import { spanBox } from '@/lib/today'
 import { cn } from '@/lib/utils'
 
@@ -138,7 +139,11 @@ function RowHeader({ row, selected, focused, onPress }: RowHeaderProps) {
       aria-label={row.label}
       aria-expanded={selected}
       onPress={onPress}
-      className="h-14.5 flex-row items-center gap-3 px-3.5"
+      className={cn(
+        FOCUS_RING_INSET,
+        pressLook(false),
+        'h-14.5 flex-row items-center gap-3 px-3.5',
+      )}
     >
       <ActivityChip
         color={row.color}
@@ -588,7 +593,11 @@ function Footer({ canUndo, onUndo }: FooterProps) {
       <Pressable
         role="button"
         onPress={dismissSheet}
-        className="bg-ink h-13 flex-2 items-center justify-center rounded-chip"
+        className={cn(
+          FOCUS_RING,
+          pressLook(false),
+          'bg-ink h-13 flex-2 items-center justify-center rounded-chip',
+        )}
       >
         <Text className="text-sheet-bg text-sm font-semibold">完了</Text>
       </Pressable>

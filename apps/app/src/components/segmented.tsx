@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native'
 
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 // `sm` is 外観 and 無操作とみなす時間; `md` is the pen's 週／月 picker on 記録 (38 px segments, 15 px text).
@@ -65,7 +66,10 @@ export function Segmented<T extends string | number>({
               if (!selected) onChange(option.value)
             }}
             className={cn(
+              FOCUS_RING,
               'items-center justify-center rounded-chip',
+              // The group already dims to 40 % when disabled, so a disabled option adds no dimming of its own.
+              pressLook(Boolean(disabled), true),
               look.segment,
               grow && 'flex-1',
               selected && 'bg-surface',

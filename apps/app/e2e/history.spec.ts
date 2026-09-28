@@ -188,6 +188,57 @@ test('a day spent in detox is outlined solid in sub with the wind glyph, named d
   ).toBeVisible()
 })
 
+test('a day excluded by hand after a whole day of detox keeps its detox outline 2 px inside the dashed border, off the dashes', async ({
+  page,
+}) => {
+  // Arrange: 仕事 at 9:00 four days ago, detox from 20:00 that evening; today's 家事 tap (signUp) ends it, so the three days between
+  // read as detox. The middle one is excluded by hand.
+  await signUp(page)
+  const api = await apiAs(page)
+  const list = await api.activities.list()
+  const fourDaysAgo = shift(today(), -4)
+  const excludedDay = shift(today(), -2)
+  await api.switches.replaceDay({
+    day: fourDaysAgo,
+    timeZone: 'Asia/Tokyo',
+    expected: [],
+    rows: [
+      { activityId: idOf(list, '仕事'), startedAt: at(fourDaysAgo, 9) },
+      { activityId: null, startedAt: at(fourDaysAgo, 20) },
+    ],
+  })
+  await api.excludedDays.exclude({ day: excludedDay })
+
+  // Act
+  await page.getByRole('tab', { name: '記録' }).click()
+
+  // Assert: the day is a dashed excluded cell that still names its detox time
+  await expect(page.getByRole('heading', { name: '記録' })).toBeVisible()
+  const cell = page.getByRole('link', {
+    name: /^\d+月\d+日（.）、平均から除外、detox 24時間$/,
+  })
+  await expect(cell).toHaveCount(1)
+  const track = cell.locator('div').first()
+  await expect(track).toHaveCSS('border-top-style', 'dashed')
+  await expect(track).toHaveCSS('padding-top', '1px')
+  // The detox part is one solid `sub` outline, drawn inside the dash and a 1 px gap: 2 px from each edge of the track
+  const outline = track.locator(':scope > div')
+  await expect(outline).toHaveCount(1)
+  await expect(outline).toHaveCSS('border-top-style', 'solid')
+  // `sub` is read off the `text-sub` day label, the track's next sibling: the outline only sets a border colour
+  const sub = await track
+    .locator('xpath=following-sibling::div[1]')
+    .evaluate((el) => getComputedStyle(el).color)
+  await expect(outline).toHaveCSS('border-top-color', sub)
+  const trackBox = await track.boundingBox()
+  const outlineBox = await outline.boundingBox()
+  if (!trackBox || !outlineBox)
+    throw new Error('the excluded cell is not laid out')
+  expect(outlineBox.x - trackBox.x).toBeCloseTo(2, 0)
+  expect(outlineBox.y - trackBox.y).toBeCloseTo(2, 0)
+  expect(trackBox.height - outlineBox.height).toBeCloseTo(4, 0)
+})
+
 test('a day worked then spent in detox draws its detox part as a sub outline on top of the work, and 状態別 lists detox', async ({
   page,
 }) => {

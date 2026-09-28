@@ -1,5 +1,6 @@
 import { Pressable, type PressableProps, Text } from 'react-native'
 
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type ButtonProps = Omit<PressableProps, 'children'> & {
@@ -24,9 +25,10 @@ export function Button({
       role="button"
       disabled={disabled}
       className={cn(
+        FOCUS_RING,
         'h-12 items-center justify-center rounded-chip px-4',
         variant === 'primary' ? 'bg-accent' : 'border-line bg-chip border',
-        disabled && 'opacity-40',
+        pressLook(Boolean(disabled)),
         className,
       )}
     >

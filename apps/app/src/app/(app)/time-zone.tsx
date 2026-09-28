@@ -13,6 +13,7 @@ import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { CHECK } from '@/lib/icons'
 import { orpc } from '@/lib/orpc'
+import { FOCUS_RING_INSET, pressLook } from '@/lib/press'
 import {
   type PickStatus,
   pickStatus,
@@ -57,9 +58,10 @@ function ZoneOption({
       disabled={dimmed || busy}
       onPress={() => onPick(entry.id)}
       className={cn(
-        'focus-visible:outline-ink h-14 flex-row items-center gap-3 px-4 focus-visible:outline-2 focus-visible:-outline-offset-2',
+        FOCUS_RING_INSET,
+        'h-14 flex-row items-center gap-3 px-4',
         !first && 'border-line border-t',
-        dimmed ? 'opacity-40' : 'active:opacity-70',
+        pressLook(dimmed),
       )}
     >
       <View className="flex-1 gap-0.5">

@@ -1,5 +1,8 @@
 import { Pressable, Text, View } from 'react-native'
 
+import { FOCUS_RING, pressLook } from '@/lib/press'
+import { cn } from '@/lib/utils'
+
 /**
  * What a screen shows when its queries failed: one line and a 再読み込み button, instead of an empty frame that never resolves.
  * @example <RetryNotice onRetry={retry} />
@@ -11,7 +14,11 @@ export function RetryNotice({ onRetry }: { onRetry: () => void }) {
       <Pressable
         role="button"
         onPress={onRetry}
-        className="border-line bg-surface h-11 items-center justify-center rounded-pill border px-5"
+        className={cn(
+          FOCUS_RING,
+          pressLook(false),
+          'border-line bg-surface h-11 items-center justify-center rounded-pill border px-5',
+        )}
       >
         <Text className="text-ink text-xs font-semibold">再読み込み</Text>
       </Pressable>

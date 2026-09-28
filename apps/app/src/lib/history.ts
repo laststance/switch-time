@@ -30,9 +30,10 @@ const BAR_PX = { week: 132, month: 48 }
 const DETOX_GLYPH_PX = { week: 14, month: 12 }
 // A detox part shorter than its own two 1 px border lines is not drawn: the outline would paint more time than it holds.
 const DETOX_SLICE_MIN_PX = 2
-// An excluded cell's slices stack inside its 1 px dashed border (`border` in history.tsx's CELL.excluded; the track is
-// border-box), so a whole day's top slice is not clipped. Change it together with that class.
-const EXCLUDED_BORDER_PX = 1
+// An excluded cell's slices stack inside its 1 px dashed border and a 1 px `chip` gap (`border` and `p-px` in history.tsx's
+// CELL.excluded; the track is border-box), so a whole day's top slice is not clipped and a detox outline, in the dash's own
+// tone, never touches the dashes. Change it together with those classes.
+const EXCLUDED_INSET_PX = 2
 // Room left on a track after subtracting slices can be a float residue (1e-14 px) rather than 0; below this it counts as full.
 const SLICE_EPSILON_PX = 1e-6
 // The rounded end of a stack goes to the slice holding its outer half pixel: slivers thinner than that together show nothing.
@@ -207,21 +208,29 @@ function stackSlices(
  * How History's day cell draws one {@link Slice}: rounded where it meets an end of the track, detox as a solid `sub` outline
  * with no fill. Called by the 記録 screen's `DayCell`; kept here so its branches are unit tested.
  * @param slice - One slice from {@link stackSlices}.
+ * @param insideDash - Whether the slice sits inside an excluded cell's dashed border and its 1 px gap: its corners are
+ *   {@link EXCLUDED_INSET_PX} tighter than the cell's 6 px, so they stay concentric with the dashes.
  * @returns
- * - `className`: `rounded-t-md` on the top slice, `rounded-b-md` on the bottom one, `border-sub border` on the detox slice
+ * - `className`: `rounded-t-md` on the top slice, `rounded-b-md` on the bottom one (`-sm` inside the dash), `border-sub border` on the detox slice
  * - `backgroundColor`: the activity's colour, or `transparent` for detox
  * @example
- * sliceLook({ activityId: null, color: null, height: 33, top: true, bottom: false })
+ * sliceLook({ activityId: null, color: null, height: 33, top: true, bottom: false }, false)
  * // => { className: 'rounded-t-md border-sub border', backgroundColor: 'transparent' }
+ * @example
+ * sliceLook({ activityId: 'work', color: '#3B7BD9', height: 33, top: true, bottom: false }, true)
+ * // => { className: 'rounded-t-sm', backgroundColor: '#3B7BD9' }
  */
-export function sliceLook(slice: Slice): {
+export function sliceLook(
+  slice: Slice,
+  insideDash = false,
+): {
   className: string
   backgroundColor: string
 } {
   return {
     className: cn(
-      slice.top && 'rounded-t-md',
-      slice.bottom && 'rounded-b-md',
+      slice.top && (insideDash ? 'rounded-t-sm' : 'rounded-t-md'),
+      slice.bottom && (insideDash ? 'rounded-b-sm' : 'rounded-b-md'),
       slice.color === null && 'border-sub border',
     ),
     backgroundColor: slice.color ?? 'transparent',
@@ -321,9 +330,9 @@ function dayCell(
       ? formatWeekday(stat.day)
       : String(Number(stat.day.slice(8)))
   const kind = cellKind(stat, isToday)
-  // Only an excluded cell draws slices inside a border, so only it loses the border's width at both ends of its track.
+  // Only an excluded cell draws slices inside a border, so only it loses the border and the gap at both ends of its track.
   const trackHeight =
-    kind === 'excluded' ? BAR_PX[range] - 2 * EXCLUDED_BORDER_PX : BAR_PX[range]
+    kind === 'excluded' ? BAR_PX[range] - 2 * EXCLUDED_INSET_PX : BAR_PX[range]
   const slices = stackSlices(
     stat.totals,
     activities,

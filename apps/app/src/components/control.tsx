@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import { Pressable } from 'react-native'
 
+import { FOCUS_RING, pressLook } from '@/lib/press'
 import { cn } from '@/lib/utils'
 
 type ControlProps = PropsWithChildren<{
@@ -31,9 +32,9 @@ export function Control({
       disabled={disabled}
       onPress={onPress}
       className={cn(
-        'focus-visible:outline-ink items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2',
-        // On web `:active` matches a disabled element too, so the pressed look is added only while it can be pressed.
-        disabled ? 'opacity-40' : 'active:opacity-70',
+        FOCUS_RING,
+        'items-center justify-center',
+        pressLook(disabled),
         className,
       )}
     >
