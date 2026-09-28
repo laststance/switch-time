@@ -86,6 +86,19 @@ const assertRoomForAnother = async (
 }
 
 /**
+ * The user's own activity, live or archived, read in the locked transaction that will write on it: `archive` and `unarchive`
+ * answer a row already in the state they ask for with the row itself.
+ * @param tx - The locked transaction.
+ * @param userId - Whose activity.
+ * @param id - The activity.
+ * @returns The row.
+ * @throws NOT_FOUND when the id is not one of the user's activities.
+ * @example const row = await ownedActivity(tx, userId, id) // row.archivedAt === null while it is live
+ */
+const ownedActivity = async (tx: LockedTx, userId: string, id: string) =>
+  one(await tx.select().from(activities).where(owned(userId, id)))
+
+/**
  * Refuses to archive the activity the clock is running, or the account's last live one: the clock always holds exactly one
  * state. Checked by `archive` under the user's lock, so a tap on this activity waits until the archive has written.
  * @param tx - The archive's locked transaction.
@@ -128,9 +141,7 @@ const slotsByIndex = (
 
 // Same ids, each exactly once: a reorder must not drop, add or duplicate an activity.
 const isPermutation = (ids: readonly string[], expected: readonly string[]) =>
-  ids.length === expected.length &&
-  new Set(ids).size === ids.length &&
-  expected.every((id) => ids.includes(id))
+  ids.length === expected.length && expected.every((id) => ids.includes(id))
 
 export const activitiesRouter = {
   // Archived rows included so History can still name them; clients hide `archivedAt != null` from the grid.
@@ -189,8 +200,10 @@ export const activitiesRouter = {
             current.map((row) => row.id),
           )
         )
-          throw new ORPCError('BAD_REQUEST', {
+          // The input schema already refused repeated ids, so a mismatch here is a list that moved on since the editor read it.
+          throw new ORPCError('CONFLICT', {
             message: 'ids must be exactly the active activities',
+            data: REFUSAL.listChanged,
           })
         // Two statements whatever the grid's size. Parking every row on a negative slot first keeps the unique (user, position) index
         // happy mid-shuffle. Only the listed rows: a live row the unlocked seeding repair ({@link seedUser}) committed since the check
@@ -214,12 +227,15 @@ export const activitiesRouter = {
     // Under the user's lock: a tap on this activity, or a second archive, waits until this one has checked and written.
     .handler(async ({ context: { user, deadline }, input }) =>
       withUserLock(user.id, deadline, async (tx) => {
-        await assertArchivable(tx, user.id, input.id)
+        const row = await ownedActivity(tx, user.id, input.id)
+        // Already archived, e.g. by another device before this tap: nothing to do, as unarchive does for a live row.
+        if (row.archivedAt !== null) return row
+        await assertArchivable(tx, user.id, row.id)
         return one(
           await tx
             .update(activities)
             .set({ archivedAt: new Date() })
-            .where(and(eq(activities.id, input.id), active(user.id)))
+            .where(owned(user.id, row.id))
             .returning(),
         )
       }),
@@ -231,9 +247,7 @@ export const activitiesRouter = {
       const userId = context.user.id
       // Under the user's lock, as archive: a create or a second unarchive waits, so the slot read here is still free when written.
       return withUserLock(userId, context.deadline, async (tx) => {
-        const row = one(
-          await tx.select().from(activities).where(owned(userId, input.id)),
-        )
+        const row = await ownedActivity(tx, userId, input.id)
         // Already live, e.g. a retry of an unarchive whose answer was lost: nothing to do, and its place in the grid stays.
         if (row.archivedAt === null) return row
         await assertRoomForAnother(tx, userId)

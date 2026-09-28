@@ -114,3 +114,56 @@ test('archiving the running activity is refused with a reason the 活動項目 s
     data: { reason: 'in-use' },
   })
 })
+
+test('archiving the last live activity is refused with the same reason, so the sheet names why', async () => {
+  // Arrange: no switch yet; every activity but 娯楽 is archived
+  const api = await signedIn('archive-last-in-use@example.com')
+  const list = await api.activities.list()
+  for (const row of list.filter((each) => each.name !== '娯楽'))
+    await api.activities.archive({ id: row.id })
+  const fun = list.find((row) => row.name === '娯楽')
+  if (!fun) throw new Error('no 娯楽')
+
+  // Act
+  const archiving = api.activities.archive({ id: fun.id })
+
+  // Assert
+  await expect(archiving).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'in-use' },
+  })
+})
+
+test('a 🗑 on an activity another device already archived answers the archived row instead of an error', async () => {
+  // Arrange: 休息 archived from another device, while this tab still lists it as live
+  const api = await signedIn('archive-twice@example.com')
+  const rest = (await api.activities.list()).find((row) => row.name === '休息')
+  if (!rest) throw new Error('no 休息')
+  const first = await api.activities.archive({ id: rest.id })
+
+  // Act
+  const again = await api.activities.archive({ id: rest.id })
+
+  // Assert: the same row, archived at the first tap's time
+  expect(again).toMatchObject({ id: rest.id, archivedAt: first.archivedAt })
+})
+
+test("archiving another account's activity is still refused as not found", async () => {
+  // Arrange
+  const owner = await signedIn('archive-owner@example.com')
+  const stranger = await signedIn('archive-stranger@example.com')
+  const rest = (await owner.activities.list()).find(
+    (row) => row.name === '休息',
+  )
+  if (!rest) throw new Error('no 休息')
+
+  // Act
+  const archiving = stranger.activities.archive({ id: rest.id })
+
+  // Assert
+  await expect(archiving).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  const after = (await owner.activities.list()).find(
+    (row) => row.id === rest.id,
+  )
+  expect(after?.archivedAt).toBeNull()
+})

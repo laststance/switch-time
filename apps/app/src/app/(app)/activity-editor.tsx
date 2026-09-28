@@ -38,7 +38,7 @@ function DraftInput({ value, onCommit, ...props }: DraftInputProps) {
 type RowProps = { row: EditorRow; editor: ReturnType<typeof useActivityEditor> }
 
 // One activity: ▲▼ reorder, the icon and the colour dot cycle on tap, the name and the target commit on blur, 🗑 archives.
-function ActivityRow({ row, editor }: RowProps) {
+function LiveActivityRow({ row, editor }: RowProps) {
   const pending = editor.pending
   return (
     <View className="bg-chip flex-row items-center gap-2 rounded-card py-2 pr-2 pl-1">
@@ -167,13 +167,13 @@ export default function ActivityEditorSheet() {
       ) : (
         <ScrollView className="shrink" contentContainerClassName="gap-2">
           {editor.rows.map((row) => (
-            <ActivityRow key={row.id} row={row} editor={editor} />
+            <LiveActivityRow key={row.id} row={row} editor={editor} />
           ))}
           {/* Left out with nothing archived, heading included. */}
           {editor.archived.length === 0 ? null : (
             <Text
               role="heading"
-              aria-level={3}
+              aria-level={2}
               className="text-sub px-1 pt-2 text-xs font-semibold"
             >
               アーカイブ済み

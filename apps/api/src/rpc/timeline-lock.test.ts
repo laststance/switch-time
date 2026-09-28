@@ -13,7 +13,7 @@ import type { PoolClient } from 'pg'
 import { expect, onTestFinished, test, vi } from 'vitest'
 
 import { REQUEST_DEADLINE_MS, db, pool, type LockedTx } from '../db/client'
-import { switches, userSettings } from '../db/schema/app'
+import { activities, switches, userSettings } from '../db/schema/app'
 import { signedIn } from '../test/client'
 
 import {
@@ -222,7 +222,10 @@ test('a reorder queued behind the addition of an activity is refused, since the 
 
   // Assert: 読書 lands at the end, the reorder is refused, and the grid keeps its order
   await expect(create).resolves.toMatchObject({ name: '読書', position: 6 })
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   expect(
     (await api.activities.list()).map((row) => [row.name, row.position]),
   ).toEqual([
@@ -253,7 +256,10 @@ test('a reorder queued behind the archive of an activity it names is refused, an
 
   // Assert
   await expect(archive).resolves.toMatchObject({ archivedAt: expect.any(Date) })
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   const live = (await api.activities.list()).filter(
     (row) => row.archivedAt === null,
   )
@@ -295,6 +301,48 @@ test('an unarchive queued behind the addition of an activity comes back after it
     archivedAt: null,
     position: 7,
   })
+})
+
+test('an addition and an unarchive queued at 99 live activities cannot both land, so the grid never passes 100', async () => {
+  // Arrange: 休息 archived, the live set topped up to 99 past the API, then another device holds the lock
+  const api = await signedIn('lock-cap-create-unarchive@example.com')
+  const { id: userId } = await api.me()
+  const list = await api.activities.list()
+  const rest = idOf(list, '休息')
+  await api.switches.switchTo({ activityId: idOf(list, '仕事') })
+  await api.activities.archive({ id: rest })
+  await db.insert(activities).values(
+    Array.from({ length: 94 }, (_, index) => ({
+      userId,
+      name: `項目${index}`,
+      color: '#E0A431',
+      iconKey: 'home',
+      position: 6 + index,
+    })),
+  )
+  const release = await holdTimelineLock(userId)
+
+  // Act: the addition queues first, the unarchive second
+  const create = api.activities.create({
+    name: '読書',
+    color: '#2BA3B5',
+    iconKey: 'book',
+    targetHours: null,
+  })
+  await waitForLockQueue(userId, 1)
+  const unarchive = api.activities.unarchive({ id: rest })
+  await waitForLockQueue(userId, 2)
+  await release()
+
+  // Assert: the addition takes the 100th slot, the unarchive is refused and 休息 stays archived
+  await expect(create).resolves.toMatchObject({ name: '読書' })
+  await expect(unarchive).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'too-many-activities' },
+  })
+  const after = await api.activities.list()
+  expect(after.filter((row) => row.archivedAt === null)).toHaveLength(100)
+  expect(after.find((row) => row.id === rest)?.archivedAt).not.toBeNull()
 })
 
 test('an activity added while four of the account’s writes are in flight is refused at once as busy, and nothing is added', async () => {

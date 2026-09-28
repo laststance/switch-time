@@ -1068,9 +1068,10 @@ const REFUSAL_MESSAGES = {
   'next-on-later-day': '次の記録は翌日なので統合できません',
   'cannot-split': 'ここでは分割できません',
   busy: '処理が混み合っています。少し待ってからもう一度お試しください',
-  // The 活動項目 sheet's 🗑, ＋ 項目を追加 and 戻す; the correction sheet never gets these.
+  // The 活動項目 sheet's 🗑, ＋ 項目を追加, 戻す and ▲▼; the correction sheet never gets these.
   'in-use': '計測中の項目と最後の 1 つはアーカイブできません',
   'too-many-activities': `項目は ${LIVE_ACTIVITIES_MAX} 個までです。使わない項目をアーカイブしてください`,
+  'list-changed': '項目が変わっていたため、最新の一覧を表示しました',
 } as const satisfies Record<RefusalReason, string>
 
 /**
@@ -1087,7 +1088,8 @@ const KIND_MESSAGES = {
 
 /**
  * The status line's text for a failed edit or 「元に戻す」. Every mutation of the sheet stores it from its `onError`
- * ({@link dayLine}), so no failure is silent: before, the buttons re-enabled and nothing said why.
+ * ({@link dayLine}), so no failure is silent: before, the buttons re-enabled and nothing said why. The 活動項目 sheet's refusal
+ * line uses it too ({@link useActivityEditor}), for a failed add, ▲▼, 🗑 or 戻す.
  * @param error - The error the mutation failed with.
  * @returns
  * - the reason's message ({@link REFUSAL_MESSAGES}) when the API sent one

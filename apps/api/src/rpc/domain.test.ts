@@ -1432,7 +1432,7 @@ test('moving a start time cannot cross the neighbouring rows', async () => {
   ).rejects.toMatchObject({ code: 'CONFLICT', data: { reason: 'no-room' } })
 })
 
-test('reorder rejects a position set that is not a permutation', async () => {
+test('reorder refuses a set that is not the live grid as a changed list, and repeated ids as a bad request', async () => {
   // Arrange
   const api = await signedIn('reorder@example.com')
   const ids = (await api.activities.list()).map((row) => row.id)
@@ -1440,7 +1440,10 @@ test('reorder rejects a position set that is not a permutation', async () => {
   // Act + Assert
   await expect(
     api.activities.reorder({ ids: ids.slice(1) }),
-  ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   await expect(
     api.activities.reorder({ ids: [...ids.slice(0, 5), ...ids.slice(0, 1)] }),
   ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
@@ -1466,7 +1469,10 @@ test('a reorder that still names an activity archived before it is refused, and 
   const reorder = api.activities.reorder({ ids: [...ids].reverse() })
 
   // Assert
-  await expect(reorder).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(reorder).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { reason: 'list-changed' },
+  })
   const live = (await api.activities.list()).filter(
     (row) => row.archivedAt === null,
   )

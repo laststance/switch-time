@@ -120,9 +120,16 @@ export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>
  */
 export const LIVE_ACTIVITIES_MAX = 100
 
-/** Active activity ids in their new order; the router checks it is a permutation of the user's active set. */
+/**
+ * Active activity ids in their new order, each once; the router checks they are the user's live set (`REFUSAL.listChanged`
+ * when another device or tab has added or archived one since the editor listed them).
+ */
 export const reorderInputSchema = z.object({
-  ids: z.array(z.uuid()).min(1).max(LIVE_ACTIVITIES_MAX),
+  ids: z
+    .array(z.uuid())
+    .min(1)
+    .max(LIVE_ACTIVITIES_MAX)
+    .refine((ids) => new Set(ids).size === ids.length, 'ids repeat'),
 })
 
 /**
@@ -226,6 +233,7 @@ const refusalReasonSchema = z.enum([
   'busy',
   'in-use',
   'too-many-activities',
+  'list-changed',
 ])
 export type RefusalReason = z.infer<typeof refusalReasonSchema>
 
@@ -250,6 +258,7 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  *   request's deadline while queued behind the account's earlier writes. Nothing was saved either way.
  * - `inUse`: CONFLICT, `archive` names the activity the clock is running, or the account's last live one.
  * - `tooManyActivities`: CONFLICT, `create` or `unarchive` would take the live set past {@link LIVE_ACTIVITIES_MAX}.
+ * - `listChanged`: CONFLICT, `reorder` names a live set another device or tab has added to or archived from since.
  * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
 export const REFUSAL = Object.freeze({
@@ -263,6 +272,7 @@ export const REFUSAL = Object.freeze({
   busy: Object.freeze({ reason: 'busy' }),
   inUse: Object.freeze({ reason: 'in-use' }),
   tooManyActivities: Object.freeze({ reason: 'too-many-activities' }),
+  listChanged: Object.freeze({ reason: 'list-changed' }),
 } as const satisfies Record<string, z.infer<typeof refusalDataSchema>>)
 
 /**

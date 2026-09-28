@@ -10,6 +10,15 @@ const rpcError = (code: string, status: number) => ({
   }),
 })
 
+/** An API refusal as oRPC encodes it: the error with its `data` (`{ reason }`), which the app reads to say why in Japanese. */
+const rpcRefusal = (code: string, status: number, reason: string) => ({
+  status,
+  contentType: 'application/json',
+  body: JSON.stringify({
+    json: { defined: false, code, status, message: code, data: { reason } },
+  }),
+})
+
 /** The zones this device remembers syncing, one per account (the store persists its `syncedZone` slice to `localStorage` on the web). */
 const syncedZones = async (page: Page) =>
   page.evaluate(() => {
@@ -218,6 +227,126 @@ test('an add whose answer timed out asks to check the list, and the next press c
 
   // Assert
   await expect(line).toHaveCount(0)
+})
+
+test('戻す while 100 activities are live says the cap and keeps the row under アーカイブ済み', async ({
+  page,
+}) => {
+  // Arrange: 休息 is archived, then the five other seeded activities plus 95 more reach the cap.
+  await signUp(page)
+  const api = await apiAs(page)
+  const rest = (await api.activities.list()).find((row) => row.name === '休息')
+  if (!rest) throw new Error('the seeded 休息 is missing')
+  await api.activities.archive({ id: rest.id })
+  for (let index = 0; index < 95; index += 1)
+    await api.activities.create({
+      name: `項目${index}`,
+      color: '#E0A431',
+      iconKey: 'home',
+      targetHours: null,
+    })
+  // The list read at sign-up is still fresh for the app, so it is read again with the writes above in it.
+  await page.reload()
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await expect(sheet.getByRole('button', { name: '休息を戻す' })).toBeEnabled()
+
+  // Act
+  await sheet.getByRole('button', { name: '休息を戻す' }).click()
+
+  // Assert
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: '項目は 100 個までです。使わない項目をアーカイブしてください',
+    }),
+  ).toBeVisible()
+  await expect(
+    sheet.getByRole('heading', { name: 'アーカイブ済み' }),
+  ).toBeVisible()
+  await expect(sheet.getByRole('button', { name: '休息を戻す' })).toBeVisible()
+  expect(
+    (await api.activities.list())
+      .filter((row) => row.archivedAt !== null)
+      .map((row) => row.name),
+  ).toEqual(['休息'])
+})
+
+test('🗑 on an activity another device has just started says it cannot be archived and keeps the row in the list', async ({
+  page,
+}) => {
+  // Arrange: the API answers the archive as it does once 仕事 is running elsewhere.
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await page.route('**/api/rpc/activities/archive', async (route) =>
+    route.fulfill(rpcRefusal('CONFLICT', 409, 'in-use')),
+  )
+
+  // Act
+  await sheet.getByRole('button', { name: '仕事をアーカイブ' }).click()
+
+  // Assert
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: '計測中の項目と最後の 1 つはアーカイブできません',
+    }),
+  ).toBeVisible()
+  await expect(
+    sheet.getByRole('button', { name: '仕事をアーカイブ' }),
+  ).toBeVisible()
+  await expect(
+    sheet.getByRole('heading', { name: 'アーカイブ済み' }),
+  ).toHaveCount(0)
+})
+
+test('▲▼ answered busy asks to wait and try again', async ({ page }) => {
+  // Arrange: the account already has its cap of writes in flight.
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await page.route('**/api/rpc/activities/reorder', async (route) =>
+    route.fulfill(rpcRefusal('TOO_MANY_REQUESTS', 429, 'busy')),
+  )
+
+  // Act
+  await sheet.getByRole('button', { name: '仕事を下へ' }).click()
+
+  // Assert
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: '処理が混み合っています。少し待ってからもう一度お試しください',
+    }),
+  ).toBeVisible()
+})
+
+test('🗑 on another row after a refused 戻す clears the refusal line', async ({
+  page,
+}) => {
+  // Arrange: 休息 is archived, and its 戻す is refused for the cap.
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await sheet.getByRole('button', { name: '休息をアーカイブ' }).click()
+  await page.route('**/api/rpc/activities/unarchive', async (route) =>
+    route.fulfill(rpcRefusal('CONFLICT', 409, 'too-many-activities')),
+  )
+  await sheet.getByRole('button', { name: '休息を戻す' }).click()
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: '項目は 100 個までです。使わない項目をアーカイブしてください',
+    }),
+  ).toBeVisible()
+
+  // Act
+  await sheet.getByRole('button', { name: '仕事をアーカイブ' }).click()
+
+  // Assert: 仕事 joins 休息 under アーカイブ済み, and no line is left.
+  await expect(sheet.getByRole('button', { name: '仕事を戻す' })).toBeVisible()
+  await expect(sheet.getByRole('alert')).toHaveCount(0)
 })
 
 test('switching appearance to dark applies immediately', async ({ page }) => {

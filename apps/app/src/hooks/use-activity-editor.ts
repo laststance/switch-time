@@ -45,6 +45,7 @@ export function useActivityEditor() {
   // The refusal line under the list: why the last add, ▲▼, 🗑 or 戻す failed, in the correction sheet's words. The next press clears it.
   const [failure, setFailure] = useState<string | null>(null)
   const write = {
+    onMutate: (): void => setFailure(null),
     onError: (error: unknown): void => setFailure(failureMessage(error)),
     onSettled: async (): Promise<void> =>
       invalidateKeys(queryClient, [orpc.activities.key()]),
@@ -138,31 +139,21 @@ export function useActivityEditor() {
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),
     failure,
-    move: (row: EditorRow, delta: 1 | -1): void => {
-      setFailure(null)
+    move: (row: EditorRow, delta: 1 | -1): void =>
       reorder.mutate({
         ids: reorderIds(
           rows.map((each) => each.id),
           row.id,
           delta,
         ),
-      })
-    },
-    remove: (row: EditorRow): void => {
-      setFailure(null)
-      archive.mutate({ id: row.id })
-    },
+      }),
+    remove: (row: EditorRow): void => archive.mutate({ id: row.id }),
     archived: archivedRows(activities.data),
-    restore: (row: ActivityRow): void => {
-      setFailure(null)
-      unarchive.mutate({ id: row.id })
-    },
-    add: (): void => {
-      setFailure(null)
+    restore: (row: ActivityRow): void => unarchive.mutate({ id: row.id }),
+    add: (): void =>
       create.mutate({
         ...NEW_ACTIVITY,
         color: spareColor(rows.map((each) => each.color)),
-      })
-    },
+      }),
   }
 }
