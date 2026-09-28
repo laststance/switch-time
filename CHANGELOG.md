@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.0.0] - 2026-09-29
+
+### Added
+
+- The 活動項目 sheet lists archived activities under アーカイブ済み, most
+  recently archived first, and 戻す brings one back to the end of the list.
+  A record merged away on an archived activity can then be rebuilt with the
+  usual edits.
+- When the 活動項目 sheet refuses an add, ▲▼, 🗑 or 戻す, a line above
+  「＋ 項目を追加」 says why: the activity is running or is the last one, the
+  100-activity limit is reached, the order changed on another device, the
+  server is busy, or the add may have landed. The next press clears it.
+
+### Changed
+
+- An account can have at most 100 activities in use. Adding one more, or
+  bringing an archived one back, is refused with a message until another is
+  archived. This keeps every list of activities reorderable.
+- A 🗑 on an activity another device already archived now moves it under
+  アーカイブ済み instead of failing.
+
+### Removed
+
+- The API no longer has `switches.splitInHalf`. The app has cut records
+  with `switches.splitAt` since 0.23.0.0.
+
 ## [0.23.2.0] - 2026-09-28
 
 ### Changed
