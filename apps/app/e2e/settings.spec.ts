@@ -133,6 +133,89 @@ test('cycling a color on 家事 persists after reload and shows on the Home butt
   await expect(chore).toHaveCSS('background-color', 'rgb(59, 123, 217)')
 })
 
+test('＋ 項目を追加 on a full list of 100 says the cap under the list instead of doing nothing', async ({
+  page,
+}) => {
+  // Arrange: the six seeded activities plus 94 more reach the cap.
+  await signUp(page)
+  const api = await apiAs(page)
+  for (let index = 0; index < 94; index += 1)
+    await api.activities.create({
+      name: `項目${index}`,
+      color: '#E0A431',
+      iconKey: 'home',
+      targetHours: null,
+    })
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await expect(
+    sheet.getByRole('button', { name: '＋ 項目を追加' }),
+  ).toBeEnabled()
+
+  // Act
+  await sheet.getByRole('button', { name: '＋ 項目を追加' }).click()
+
+  // Assert
+  await expect(
+    sheet.getByRole('alert').filter({
+      hasText: '項目は 100 個までです。使わない項目をアーカイブしてください',
+    }),
+  ).toBeVisible()
+  expect(
+    (await api.activities.list()).filter((row) => row.archivedAt === null),
+  ).toHaveLength(100)
+})
+
+test('an archived activity is listed under アーカイブ済み, and 戻す puts it back at the end of the list and on Home', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await sheet.getByRole('button', { name: '休息をアーカイブ' }).click()
+  await expect(sheet.getByText('アーカイブ済み')).toBeVisible()
+  await expect(sheet.getByRole('button', { name: '休息を戻す' })).toBeEnabled()
+
+  // Act
+  await sheet.getByRole('button', { name: '休息を戻す' }).click()
+
+  // Assert: back as the last live row, and the section goes with nothing left in it.
+  await expect(
+    sheet.getByRole('button', { name: '休息をアーカイブ' }),
+  ).toBeVisible()
+  await expect(sheet.getByText('アーカイブ済み')).toHaveCount(0)
+  await expect(sheet.getByRole('button', { name: '休息を下へ' })).toBeDisabled()
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: '休息' })).toBeVisible()
+})
+
+test('an add whose answer timed out asks to check the list, and the next press clears the line', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await page.route('**/api/rpc/activities/create', async (route) =>
+    route.fulfill(rpcError('GATEWAY_TIMEOUT', 504)),
+  )
+  await sheet.getByRole('button', { name: '＋ 項目を追加' }).click()
+  const line = sheet.getByRole('alert').filter({
+    hasText: '反映されたか分かりませんでした。一覧で確かめてください',
+  })
+  await expect(line).toBeVisible()
+
+  // Act
+  await sheet.getByRole('button', { name: '仕事を下へ' }).click()
+
+  // Assert
+  await expect(line).toHaveCount(0)
+})
+
 test('switching appearance to dark applies immediately', async ({ page }) => {
   // Arrange: 明 first, so the assertion does not depend on the hour the run happens in.
   await signUp(page)

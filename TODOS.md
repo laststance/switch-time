@@ -100,18 +100,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Say why the 活動項目 editor refused an add, a reorder or an archive
-
-**What:** Give the create, reorder and archive mutations in `useActivityEditor` an error line (designed in the pen file first): the `busy` refusal in the same Japanese the correction sheet uses (`failureMessage`), archive's CONFLICT, and for `GATEWAY_TIMEOUT` a line saying the add may have been saved.
-
-**Why:** None of the three has an `onError`; `write.onSettled` only refetches the list, so a refused 「＋ 項目を追加」, ▲▼ or 🗑 just does nothing. Since `activities.create` and `reorder` run under `withUserLock` they can also answer `TOO_MANY_REQUESTS` (`busy`) and the deadline errors, as `archive` already could. A `GATEWAY_TIMEOUT` on an add may have saved the row; the refetch shows it, but a user who taps again before it lands adds a second one.
-
-**Context:** `apps/app/src/hooks/use-activity-editor.ts`, `failureMessage` in `apps/app/src/lib/correction.ts`, `REFUSAL` in `packages/shared`. Raised by the API-contract pass during the `activities.unarchive` ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Pick a zone other than the device's in 設定
 
 **What:** Let the タイムゾーン row on 設定 set any IANA zone, with a searchable list and readable city names, not only take back this device's zone.
@@ -186,18 +174,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Rebuild a merged-away record of an archived activity
-
-**What:** Add a control in 設定 that lists the archived activities and brings one back with 戻す through `activities.unarchive`, so the usual edits can rebuild a record of it once 「元に戻す」 is gone. The pen file first.
-
-**Why:** 「元に戻す」 restores a day that holds a record of an archived activity, and it survives closing the sheet, but not a reload or sign-out. After that, a record merged into its neighbour cannot be rebuilt: `changeActivity` refuses archived ids and the 活動を変える picker lists live activities only (`useActivities`). The route exists since the PR that added it (2026-09-25), but no screen calls it. A pick on a carried-in record of an archived activity arms no undo at all (the panel warns before the pick and shows 「前の活動はアーカイブ済みのため、元に戻せません」 after it), so that record is another one only this control could rebuild.
-
-**Context:** `activities.unarchive` in `apps/api/src/rpc/activities.ts` puts the activity back at the end of the live order and answers an already-live one unchanged. `activities.list` already returns archived rows (`archivedAt` set), so the control needs no new read; the 活動項目 editor (`useActivityEditor`, `editorRows` in `apps/app/src/lib/settings.ts`) lists live ones only. The other remedy, `changeActivity` accepting archived ids on a past row, is no longer needed. Left out of scope by the 0.2.1.0 fix, in which the owner chose to have `replaceDay` check ownership only; raised by the review during that ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Keep 区切る時刻 still while 「ここで分割」 is pending
 
 **What:** While a cut is pending, keep the readout and the notes on the time the user chose, until the panel moves to the new row.
@@ -221,18 +197,6 @@
 **Effort:** S
 **Priority:** P3
 **Depends on:** None
-
-### Remove `switches.splitInHalf` once 0.23 has been live for a release
-
-**What:** Delete the `splitInHalf` procedure and its API tests.
-
-**Why:** No screen calls it since 0.23.0.0, which gave every row 区切る時刻 and 「ここで分割」 (`splitAt`). It stays one release so a tab or app still running 0.22 can finish a split it shows.
-
-**Context:** `apps/api/src/rpc/switches.ts` (the procedure's comment says the same), the mention on `rowEditInputSchema` in `packages/shared/src/schemas.ts` (the merges keep using the schema), the `splitInHalf` cases in `apps/api/src/rpc/*.test.ts`.
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** 0.23.0.0 live in production for one release
 
 ### Show which repeated wall-clock time is meant on a fall-back day
 
@@ -367,18 +331,6 @@
 **Context:** `inTransaction` in `apps/api/src/db/client.ts` owns its client and releases it with an error at the deadline; pg's `query_timeout` is not a way out (in non-pipeline mode it leaves the active query on the client, and the pool lends that client again). Better Auth takes the `db` instance in `apps/api/src/auth.ts`, so the session lookup needs either a per-request adapter or a `Promise.race` that evicts the client some other way. Left out of that PR. Reads also have no per-account cap like `TIMELINE_WRITES_PER_USER`: one account sending many `stats.month` calls at once can hold every pool connection (pg's default of 10) for up to the deadline, so a small in-flight cap on reads belongs with this work. A timeline write that waits out `lock_timeout` (55P03, another instance holds the lock past 10 s) or `statement_timeout` (57014) still answers a plain 500 although nothing was saved; answer it as TIMEOUT, like a write cut off at its deadline. Since the correction status PR (2026-09-25) the app reads a plain 500 as a write that may have landed: it asks the user to check the list and drops the day's older 元に戻す, which a TIMEOUT would keep.
 
 **Effort:** M
-**Priority:** P4
-**Depends on:** None
-
-### Cap how many live activities an account can have
-
-**What:** Refuse `activities.create` and `activities.unarchive` once the account has as many live activities as `reorderInputSchema` accepts (100), with a `$count` under `withUserLock` and a `REFUSAL` reason the editor can say, and share the number between the two.
-
-**Why:** `reorder` must name the whole live set and accepts 1 to 100 ids, but nothing stops the live set growing past that: an account with 101 live activities can never reorder again, and with the editor's silent refusals (the 活動項目 item under Settings) the ▲▼ buttons just stop working. A client adding in a loop is throttled only by the per-process in-flight cap.
-
-**Context:** `apps/api/src/rpc/activities.ts`, `reorderInputSchema` in `packages/shared/src/schemas.ts`. Raised by the red-team pass during the `activities.unarchive` ship; the gap predates it.
-
-**Effort:** S
 **Priority:** P4
 **Depends on:** None
 

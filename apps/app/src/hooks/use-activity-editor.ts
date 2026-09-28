@@ -4,13 +4,17 @@ import {
   type ActivityInput,
 } from '@switch-time/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 
 import { useAllActivities } from '@/hooks/use-activities'
 import { useCurrentActivity } from '@/hooks/use-current-activity'
+import { failureMessage } from '@/lib/correction'
 import { cycleIcon } from '@/lib/icons'
 import { orpc } from '@/lib/orpc'
+import type { ActivityRow } from '@/lib/orpc'
 import { invalidateKeys } from '@/lib/query'
 import {
+  archivedRows,
   editorRows,
   reorderIds,
   spareColor,
@@ -23,8 +27,10 @@ const NEW_ACTIVITY = { name: '新しい項目', iconKey: 'home', targetHours: nu
 
 /**
  * Everything the 活動項目 sheet does with `activities.*`: the row model ({@link editorRows}), rename / colour / icon / target through
- * `update` (which takes the whole input, so each edit resends the row's other fields), ▲▼ through `reorder`, 「＋ 項目を追加」 and 🗑.
- * Every write invalidates `activities.*`, so Home, History and the rail badge follow at once.
+ * `update` (which takes the whole input, so each edit resends the row's other fields), ▲▼ through `reorder`, 「＋ 項目を追加」, 🗑,
+ * and 戻す on the アーカイブ済み rows ({@link archivedRows}) through `unarchive`.
+ * Every write invalidates `activities.*`, so Home, History and the rail badge follow at once. A refused add, ▲▼, 🗑 or 戻す leaves
+ * `failure` set to what the sheet says about it ({@link failureMessage}), until the next press.
  * @example const editor = useActivityEditor(); editor.recolor(row)
  */
 export function useActivityEditor() {
@@ -36,7 +42,10 @@ export function useActivityEditor() {
     isError: currentError,
     retry: retryCurrent,
   } = useCurrentActivity()
+  // The refusal line under the list: why the last add, ▲▼, 🗑 or 戻す failed, in the correction sheet's words. The next press clears it.
+  const [failure, setFailure] = useState<string | null>(null)
   const write = {
+    onError: (error: unknown): void => setFailure(failureMessage(error)),
     onSettled: async (): Promise<void> =>
       invalidateKeys(queryClient, [orpc.activities.key()]),
   }
@@ -70,6 +79,10 @@ export function useActivityEditor() {
     ...orpc.activities.archive.mutationOptions(),
     ...write,
   })
+  const unarchive = useMutation({
+    ...orpc.activities.unarchive.mutationOptions(),
+    ...write,
+  })
   const rows = editorRows(activities.data, current?.activityId ?? null)
   // A value the schema refuses (a 25-hour target, a blank name) is dropped rather than sent; false tells the field to put itself back.
   const patch = (row: EditorRow, change: Partial<ActivityInput>) => {
@@ -79,6 +92,7 @@ export function useActivityEditor() {
     const latest = before?.find((each) => each.id === row.id) ?? row
     const input = activityInputSchema.safeParse({ ...latest, ...change })
     if (!input.success) return false
+    setFailure(null)
     // Staged here and not in onMutate: that one awaits cancelQueries first, and an edit committed in the gap would read the row
     // without this change and resend the old value. Rolled back to the list as it stood before this edit if the write fails.
     queryClient.setQueryData(queryKey, (rows) =>
@@ -101,7 +115,7 @@ export function useActivityEditor() {
     pending: [
       activities.isFetching,
       currentPending,
-      ...[update, create, reorder, archive].map(
+      ...[update, create, reorder, archive, unarchive].map(
         (mutation) => mutation.isPending,
       ),
     ].some(Boolean),
@@ -123,19 +137,32 @@ export function useActivityEditor() {
     },
     recolor: (row: EditorRow) => patch(row, { color: cycleColor(row.color) }),
     reicon: (row: EditorRow) => patch(row, { iconKey: cycleIcon(row.iconKey) }),
-    move: (row: EditorRow, delta: 1 | -1): void =>
+    failure,
+    move: (row: EditorRow, delta: 1 | -1): void => {
+      setFailure(null)
       reorder.mutate({
         ids: reorderIds(
           rows.map((each) => each.id),
           row.id,
           delta,
         ),
-      }),
-    remove: (row: EditorRow): void => archive.mutate({ id: row.id }),
-    add: (): void =>
+      })
+    },
+    remove: (row: EditorRow): void => {
+      setFailure(null)
+      archive.mutate({ id: row.id })
+    },
+    archived: archivedRows(activities.data),
+    restore: (row: ActivityRow): void => {
+      setFailure(null)
+      unarchive.mutate({ id: row.id })
+    },
+    add: (): void => {
+      setFailure(null)
       create.mutate({
         ...NEW_ACTIVITY,
         color: spareColor(rows.map((each) => each.color)),
-      }),
+      })
+    },
   }
 }

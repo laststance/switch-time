@@ -7,6 +7,7 @@ import { RetryNotice } from '@/components/retry-notice'
 import { Sheet } from '@/components/sheet'
 import { Input } from '@/components/ui/input'
 import { useActivityEditor } from '@/hooks/use-activity-editor'
+import type { ActivityRow } from '@/lib/orpc'
 import type { EditorRow } from '@/lib/settings'
 
 type DraftInputProps = Omit<
@@ -117,7 +118,41 @@ function ActivityRow({ row, editor }: RowProps) {
   )
 }
 
-/** The 活動項目 sheet from `ST Phone / 活動項目シート`: rows in `position` order in a scrolling list, 「＋ 項目を追加」 pinned below. */
+type ArchivedProps = {
+  row: ActivityRow
+  editor: ReturnType<typeof useActivityEditor>
+}
+
+// `ST Phone / 活動項目シート・アーカイブ済み`: a dimmed icon, the name and 戻す, which puts the activity back at the end of the list.
+function ArchivedRow({ row, editor }: ArchivedProps) {
+  return (
+    <View className="bg-chip flex-row items-center gap-3 rounded-card py-2 pr-2 pl-3">
+      <View className="opacity-40">
+        <ActivityChip
+          color={row.color}
+          iconKey={row.iconKey}
+          size={44}
+          iconSize={22}
+        />
+      </View>
+      <Text className="text-ink flex-1 text-md font-semibold">{row.name}</Text>
+      <Control
+        label={`${row.name}を戻す`}
+        disabled={editor.pending}
+        onPress={() => editor.restore(row)}
+        className="border-line h-11 rounded-chip border px-4"
+      >
+        <Text className="text-ink text-sm font-semibold">戻す</Text>
+      </Control>
+    </View>
+  )
+}
+
+/**
+ * The 活動項目 sheet from `ST Phone / 活動項目シート`: rows in `position` order in a scrolling list, 「＋ 項目を追加」 pinned below,
+ * with the refusal line between them after a refused add, ▲▼, 🗑 or 戻す. The archived activities follow the live ones in
+ * the same list, under アーカイブ済み.
+ */
 export default function ActivityEditorSheet() {
   const editor = useActivityEditor()
   // Adding onto a list that never loaded would write a row the user cannot see, so the button waits with the list.
@@ -134,7 +169,26 @@ export default function ActivityEditorSheet() {
           {editor.rows.map((row) => (
             <ActivityRow key={row.id} row={row} editor={editor} />
           ))}
+          {/* Left out with nothing archived, heading included. */}
+          {editor.archived.length === 0 ? null : (
+            <Text className="text-sub px-1 pt-2 text-xs font-semibold">
+              アーカイブ済み
+            </Text>
+          )}
+          {editor.archived.map((row) => (
+            <ArchivedRow key={row.id} row={row} editor={editor} />
+          ))}
         </ScrollView>
+      )}
+      {/* `ST Phone / 活動項目シート・拒否の行`: keyed by its text, so a second refusal with other words is announced again. */}
+      {editor.failure === null ? null : (
+        <Text
+          key={editor.failure}
+          role="alert"
+          className="text-ink text-xs leading-4.5 font-medium"
+        >
+          {editor.failure}
+        </Text>
       )}
       <Control
         disabled={blocked}

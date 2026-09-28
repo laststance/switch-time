@@ -114,9 +114,15 @@ export const settingsUpdateSchema = z
   })
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>
 
+/**
+ * The most live activities an account can have. `reorder` names the whole live set, so a larger set could never be reordered
+ * again: `create` and `unarchive` refuse to grow it past this (`REFUSAL.tooManyActivities`).
+ */
+export const LIVE_ACTIVITIES_MAX = 100
+
 /** Active activity ids in their new order; the router checks it is a permutation of the user's active set. */
 export const reorderInputSchema = z.object({
-  ids: z.array(z.uuid()).min(1).max(100),
+  ids: z.array(z.uuid()).min(1).max(LIVE_ACTIVITIES_MAX),
 })
 
 /**
@@ -175,7 +181,7 @@ export type DayBaseline = z.infer<typeof dayBaselineSchema>
 // instead, and the API's own tests edit without either.
 const withBaseline = { baseline: dayBaselineSchema.optional() }
 
-/** 前の記録に統合 / 次の記録に統合 (and `switches.splitInHalf`, kept for clients before 0.23): a row and, from the sheet, its day's baseline. */
+/** 前の記録に統合 / 次の記録に統合: a row and, from the sheet, its day's baseline. */
 export const rowEditInputSchema = z.object({ id: z.uuid(), ...withBaseline })
 
 /** Correction sheet ±15 min step; the router clamps to the neighbouring switches. */
@@ -206,8 +212,8 @@ export const splitAtInputSchema = z.object({
 export type SplitAtInput = z.infer<typeof splitAtInputSchema>
 
 /**
- * Why the API refused a write under the user's lock (a timeline write, or `busy` on an activity write or a zone change), sent as the error's `data` (`{ reason }`) so the correction sheet can say it in
- * Japanese: the English `message` is for logs, and one error code (CONFLICT) covers most of these.
+ * Why the API refused a write under the user's lock (a timeline write, an activity write, or `busy` on a zone change), sent as the error's `data` (`{ reason }`) so the correction sheet and
+ * the 活動項目 sheet can say it in Japanese: the English `message` is for logs, and one error code (CONFLICT) covers most of these.
  */
 const refusalReasonSchema = z.enum([
   'day-changed',
@@ -218,6 +224,8 @@ const refusalReasonSchema = z.enum([
   'next-on-later-day',
   'cannot-split',
   'busy',
+  'in-use',
+  'too-many-activities',
 ])
 export type RefusalReason = z.infer<typeof refusalReasonSchema>
 
@@ -240,6 +248,8 @@ export const refusalDataSchema = z.object({ reason: refusalReasonSchema })
  * - `busy`: TOO_MANY_REQUESTS, the account already has its cap of writes under the user's lock in flight (timeline writes,
  *   the activity writes that pick or check the live set, a zone change share it), or the write reached the
  *   request's deadline while queued behind the account's earlier writes. Nothing was saved either way.
+ * - `inUse`: CONFLICT, `archive` names the activity the clock is running, or the account's last live one.
+ * - `tooManyActivities`: CONFLICT, `create` or `unarchive` would take the live set past {@link LIVE_ACTIVITIES_MAX}.
  * @example new ORPCError('CONFLICT', { message: 'day changed elsewhere', data: REFUSAL.dayChanged })
  */
 export const REFUSAL = Object.freeze({
@@ -251,6 +261,8 @@ export const REFUSAL = Object.freeze({
   nextOnLaterDay: Object.freeze({ reason: 'next-on-later-day' }),
   cannotSplit: Object.freeze({ reason: 'cannot-split' }),
   busy: Object.freeze({ reason: 'busy' }),
+  inUse: Object.freeze({ reason: 'in-use' }),
+  tooManyActivities: Object.freeze({ reason: 'too-many-activities' }),
 } as const satisfies Record<string, z.infer<typeof refusalDataSchema>>)
 
 /**

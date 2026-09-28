@@ -2418,6 +2418,23 @@ test('each refusal the API names reads as its own Japanese message in the status
   ])
 })
 
+test('the 活動項目 sheet says why an archive or an add was refused, naming the 100-activity cap', () => {
+  // Arrange
+  const inUse = new ORPCError('CONFLICT', { data: { reason: 'in-use' } })
+  const full = new ORPCError('CONFLICT', {
+    data: { reason: 'too-many-activities' },
+  })
+
+  // Act
+  const messages = [inUse, full].map(failureMessage)
+
+  // Assert
+  expect(messages).toEqual([
+    '計測中の項目と最後の 1 つはアーカイブできません',
+    '項目は 100 個までです。使わない項目をアーカイブしてください',
+  ])
+})
+
 test('a failure that may have landed reads as uncertain: no answer, a dropped connection, a proxy page, any 5xx but TIMEOUT', () => {
   // Arrange
   const answers = [

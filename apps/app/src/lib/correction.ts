@@ -4,6 +4,7 @@ import {
   DAY_ROWS_MAX,
   clampStart,
   daySchema,
+  LIVE_ACTIVITIES_MAX,
   localDay,
   MIN_SEGMENT_MS,
   REFUSAL,
@@ -1053,7 +1054,10 @@ function refusalReason(error: unknown): RefusalReason | null {
   return refusalDataSchema.safeParse(error.data).data?.reason ?? null
 }
 
-/** What the correction sheet's status line says for each refusal reason the API sends; the pen file's 状態行 board lists them. */
+/**
+ * What the correction sheet's status line and the 活動項目 sheet's refusal line say for each refusal reason the API sends; the
+ * pen file's 状態行 and 活動項目シート・拒否の行 boards list them.
+ */
 const REFUSAL_MESSAGES = {
   // Neutral on purpose: another device, another tab, a double tap and this device's own late write all read the same here.
   'day-changed': '記録が変わっていたため、最新の状態を表示しました',
@@ -1064,6 +1068,9 @@ const REFUSAL_MESSAGES = {
   'next-on-later-day': '次の記録は翌日なので統合できません',
   'cannot-split': 'ここでは分割できません',
   busy: '処理が混み合っています。少し待ってからもう一度お試しください',
+  // The 活動項目 sheet's 🗑, ＋ 項目を追加 and 戻す; the correction sheet never gets these.
+  'in-use': '計測中の項目と最後の 1 つはアーカイブできません',
+  'too-many-activities': `項目は ${LIVE_ACTIVITIES_MAX} 個までです。使わない項目をアーカイブしてください`,
 } as const satisfies Record<RefusalReason, string>
 
 /**

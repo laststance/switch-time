@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 
 import {
+  archivedRows,
   editorRows,
   excludedRange,
   exclusionSummary,
@@ -431,6 +432,25 @@ test('the editor lists live activities only and keeps the current state and the 
       ?.canArchive,
   ).toBe(false)
   expect(editorRows(undefined, null)).toEqual([])
+})
+
+test('the アーカイブ済み section lists only archived activities, the most recently archived first', () => {
+  // Arrange: 読書 archived on 9/8, 休息 on 9/20; 家事 is live.
+  const list = [
+    activity('home', '家事', '#E0A431', 0, 1.5),
+    activity('book', '読書', '#2BA3B5', 3, 1, new Date(2026, 8, 8)),
+    activity('rest', '休息', '#4FA877', 2, null, new Date(2026, 8, 20)),
+  ]
+
+  // Act
+  const rows = archivedRows(list)
+
+  // Assert
+  expect(rows.map((row) => row.name)).toEqual(['休息', '読書'])
+  expect(archivedRows(undefined)).toEqual([])
+  expect(archivedRows([activity('home', '家事', '#E0A431', 0, 1.5)])).toEqual(
+    [],
+  )
 })
 
 test('a new activity takes the first unused palette colour and wraps when all eight are used', () => {

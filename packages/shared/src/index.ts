@@ -13,6 +13,7 @@ export {
   DAY_ROWS_MAX,
   daySchema,
   firstIssuePerField,
+  LIVE_ACTIVITIES_MAX,
   monthSchema,
   moveStartInputSchema,
   passwordSchema,
