@@ -90,6 +90,47 @@ test('the first row of a first day is the starting state, not a switch', () => {
   expect(countSwitches(undefined)).toBe(0)
 })
 
+test('今日 n 回切替 counts no switch for a row of the same activity as the one before it, as a merge or a cut leaves', () => {
+  // Arrange: 仕事, 読書, 仕事 → 読書 merged into 仕事 leaves 仕事 twice; a cut of the carried-in 睡眠 leaves 睡眠 twice.
+  const merged = {
+    carriedIn: row('s', 'sleep', '2026-09-08T14:00:00Z'),
+    rows: [
+      row('w1', 'work', '2026-09-09T00:00:00Z'),
+      row('w2', 'work', '2026-09-09T03:00:00Z'),
+    ],
+  }
+  const cut = {
+    carriedIn: row('s', 'sleep', '2026-09-08T14:00:00Z'),
+    rows: [row('s2', 'sleep', '2026-09-08T18:00:00Z')],
+  }
+
+  // Act
+  const afterMerge = countSwitches(merged)
+  const afterCut = countSwitches(cut)
+
+  // Assert: 睡眠 → 仕事 is the one switch; the cut is none.
+  expect(afterMerge).toBe(1)
+  expect(afterCut).toBe(0)
+})
+
+test('今日 n 回切替 counts a detox re-tap that renews the run as a switch', () => {
+  // Arrange: detox carried in, pressed again past its week (the row renews the run).
+  const detox = (id: string, startedAt: string) => ({
+    ...row(id, 'unused', startedAt),
+    activityId: null,
+  })
+  const list = {
+    carriedIn: detox('d1', '2026-09-01T00:00:00Z'),
+    rows: [{ ...detox('d2', '2026-09-09T00:00:00Z'), startsRun: true }],
+  }
+
+  // Act
+  const switches = countSwitches(list)
+
+  // Assert
+  expect(switches).toBe(1)
+})
+
 test('the legend names each activity with a span today and adds detox when time was recorded to nothing', () => {
   // Arrange: 仕事 and 睡眠 drew spans, 家事 did not; one span is detox
   const activities = [

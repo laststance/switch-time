@@ -103,6 +103,30 @@ export type CorrectionRow = {
   canMoveLater: boolean
   canMergePrevious: boolean
   canMergeNext: boolean
+  /** The records each merge and ±15 min step would reshape, which the panel's idle notes weigh ({@link idleNotes}). */
+  reshapes: Reshapes
+}
+
+/** A record as the idle rule measures it: its whole length, and its activity (null is detox, which is never idle). */
+export type MeasuredRecord = { activityId: string | null; length: number }
+
+/** A record a ±15 min step resizes: its activity, and its whole length before and after the step. */
+export type ResizedRecord = {
+  activityId: string | null
+  before: number
+  after: number
+}
+
+/**
+ * What each edit on one of the day's own rows would reshape, null where the edit is off (and on the carried-in record, which
+ * never moves or merges). A merge keeps `kept`'s activity over both records' spans. A step resizes the previous record (null
+ * for the first record ever) and the row itself, since the one's end is the other's start.
+ */
+export type Reshapes = {
+  mergePrevious: { kept: MeasuredRecord; gone: MeasuredRecord } | null
+  mergeNext: { kept: MeasuredRecord; gone: MeasuredRecord } | null
+  moveEarlier: { prev: ResizedRecord | null; row: ResizedRecord } | null
+  moveLater: { prev: ResizedRecord | null; row: ResizedRecord } | null
 }
 
 /** The day's bounds and the clock in epoch ms, plus the stored zone the times are written in. */
@@ -180,17 +204,26 @@ export function correctionRows(
       : (spokenNames.get(row.activityId) ?? UNKNOWN.name)
   return (
     timeline
-      .map((row, index) => {
+      .map((row, index): CorrectionRow => {
         const prev = timeline[index - 1] ?? null
-        return describeRow(
+        const next = timeline[index + 1] ?? null
+        const described = describeRow(
           row,
           prev,
-          timeline[index + 1] ?? null,
+          next,
           activityOf(row),
           spokenNameOf(row),
           bounds,
           Boolean(prev && activityOf(prev)?.archivedAt),
         )
+        return {
+          ...described,
+          reshapes: rowReshapes(
+            { row, prev, next, afterNext: timeline[index + 2] ?? null },
+            bounds,
+            described,
+          ),
+        }
       })
       // The carried-out state only closes the last segment (it is the next day's row), and a day whose
       // first row starts at 0:00 leaves the carried-in state no span to show.
@@ -307,7 +340,7 @@ function describeRow(
   spokenName: string,
   bounds: DayBounds,
   prevArchived: boolean,
-): CorrectionRow {
+): Omit<CorrectionRow, 'reshapes'> {
   const startedAt = row.startedAt.getTime()
   const carriedIn = startedAt < bounds.start
   const start = Math.max(startedAt, bounds.start)
@@ -372,6 +405,80 @@ function ownRowFlags(
     // Merging moves the next row back to this row's start, so that row must be the day's own: 「元に戻す」 rewrites this day
     // only, and would drop the next day's first switch for good.
     canMergeNext: next !== null && trueEnd < bounds.end,
+  }
+}
+
+/** A row with its neighbours in the whole timeline, the carried states included; `afterNext` ends the next record. */
+type TimelineAround = {
+  row: SwitchRow
+  prev: SwitchRow | null
+  next: SwitchRow | null
+  afterNext: SwitchRow | null
+}
+
+/**
+ * The records each edit on a row would reshape ({@link Reshapes}), measured whole as the idle rule does: the previous record
+ * from its real start (before the day for the carried-in one), the next up to the switch after it, or now while it runs.
+ * Called by {@link correctionRows} for every row, with the flags {@link ownRowFlags} decided.
+ * @param around - The row and its neighbours in the timeline.
+ * @param bounds - The viewed day and the clock (a step's clamp, and now for the running record's end).
+ * @param flags - Which edits the row allows; an edit that is off reshapes nothing.
+ * @returns The reshaped records per edit, null where the edit is off.
+ * @example rowReshapes({ row: home15, prev: work8, next: sleep21, afterNext: work2 }, bounds, flags).mergePrevious // { kept: { activityId: 'work', length: 7h }, gone: { activityId: 'home', length: 6h } }
+ */
+function rowReshapes(
+  around: TimelineAround,
+  bounds: DayBounds,
+  flags: RowFlags,
+): Reshapes {
+  const { row, prev, next, afterNext } = around
+  const record = measured(row, next, bounds.now)
+  return {
+    mergePrevious:
+      flags.canMergePrevious && prev
+        ? { kept: measured(prev, row, bounds.now), gone: record }
+        : null,
+    mergeNext:
+      flags.canMergeNext && next
+        ? { kept: measured(next, afterNext, bounds.now), gone: record }
+        : null,
+    moveEarlier: flags.canMoveEarlier ? stepReshape(around, bounds, -15) : null,
+    moveLater: flags.canMoveLater ? stepReshape(around, bounds, 15) : null,
+  }
+}
+
+// A whole record, from its start to the next switch, or now while it runs.
+const measured = (
+  record: SwitchRow,
+  next: SwitchRow | null,
+  now: number,
+): MeasuredRecord => ({
+  activityId: record.activityId,
+  length: (next?.startedAt.getTime() ?? now) - record.startedAt.getTime(),
+})
+
+// What a ±15 min step resizes: the previous record's end and the row's start both move to the step's target, with the clamp
+// the API applies ({@link moveTarget}).
+function stepReshape(
+  { row, prev, next }: TimelineAround,
+  bounds: DayBounds,
+  deltaMinutes: 15 | -15,
+): Reshapes['moveEarlier'] {
+  const target = moveTarget(row, prev, next, bounds, deltaMinutes)
+  if (target === null) return null
+  const start = row.startedAt.getTime()
+  const end = next?.startedAt.getTime() ?? bounds.now
+  return {
+    prev: prev && {
+      activityId: prev.activityId,
+      before: start - prev.startedAt.getTime(),
+      after: target - prev.startedAt.getTime(),
+    },
+    row: {
+      activityId: row.activityId,
+      before: end - start,
+      after: end - target,
+    },
   }
 }
 
@@ -778,6 +885,117 @@ export function cutNotes(
       : '区切ると、この日は計測できた日になります',
   )
   return row.cut.middleMinute ? [middleNote(row.cut), ...effects] : effects
+}
+
+/** The idle lines of one row's panel: under the merge buttons, and under 開始時刻 (one per record a step moves across the line). */
+export type IdleNotes = { merge: string | null; move: string[] }
+
+// Detox is recorded to nothing, so it is neither counted nor idle; any activity record over the threshold is idle.
+const isCounted = (
+  activityId: string | null,
+  length: number,
+  thresholdMs: number,
+) => activityId !== null && length <= thresholdMs
+const isIdle = (
+  activityId: string | null,
+  length: number,
+  thresholdMs: number,
+) => activityId !== null && length > thresholdMs
+
+// Whether a merge leaves a record over the threshold that takes counted time with it: the merged record keeps `kept`'s
+// activity over both spans, and at least one of the two was in the totals before.
+function mergeTurnsIdle(
+  merge: Reshapes['mergePrevious'],
+  thresholdMs: number,
+): boolean {
+  if (!merge) return false
+  const { kept, gone } = merge
+  return (
+    isIdle(kept.activityId, kept.length + gone.length, thresholdMs) &&
+    (isCounted(kept.activityId, kept.length, thresholdMs) ||
+      isCounted(gone.activityId, gone.length, thresholdMs))
+  )
+}
+
+// The lines one ±15 min step earns: per resized record, whether it leaves the totals or comes back into them.
+function stepLines(
+  lead: string,
+  step: Reshapes['moveEarlier'],
+  thresholdMs: number,
+  limit: string,
+): string[] {
+  if (!step) return []
+  const records = [
+    { who: '前の記録', record: step.prev },
+    { who: 'この記録', record: step.row },
+  ]
+  return records.flatMap(({ who, record }) => {
+    if (!record) return []
+    const { activityId, before, after } = record
+    if (
+      isCounted(activityId, before, thresholdMs) &&
+      isIdle(activityId, after, thresholdMs)
+    )
+      return [`${lead}、${who}が無操作扱い（${limit}超）になり集計から外れます`]
+    if (
+      isIdle(activityId, before, thresholdMs) &&
+      isCounted(activityId, after, thresholdMs)
+    )
+      return [
+        `${lead}、${who}の無操作扱い（${limit}超）だった時間が集計に入ります`,
+      ]
+    return []
+  })
+}
+
+/**
+ * The panel's idle lines: a record over the idle threshold counts nowhere (`segmentsInRange`), so a merge or a ±15 min step
+ * that carries one across the line changes the totals by the whole record, which the panel says before the press. Merges only
+ * ever add length, so they only take time out; a step can do either, to the previous record or to the row. Detox is never idle.
+ * Called by the row panel with the threshold from {@link TotalsFacts}.
+ * @param row - The selected row's {@link Reshapes}.
+ * @param idleThresholdMs - The user's idle threshold.
+ * @returns
+ * - `merge`: the line naming the merge that takes time out (「統合すると、」 when both do), or null
+ * - `move`: one line per record a step moves across the threshold, earlier step first, the previous record before the row
+ * @example idleNotes(home15To21, 43_200_000).merge // '前の記録に統合すると、無操作扱い（12時間超）になり集計から外れます'
+ * @example idleNotes(home1945To21, 43_200_000).move // ['15分遅らせると、前の記録が無操作扱い（12時間超）になり集計から外れます']
+ */
+export function idleNotes(
+  row: Pick<CorrectionRow, 'reshapes'>,
+  idleThresholdMs: number,
+): IdleNotes {
+  const limit = idleLabel(idleThresholdMs / 60_000)
+  const { reshapes } = row
+  const previous = mergeTurnsIdle(reshapes.mergePrevious, idleThresholdMs)
+  const next = mergeTurnsIdle(reshapes.mergeNext, idleThresholdMs)
+  const mergeLead = MERGE_LEAD[`${previous}:${next}`]
+  return {
+    merge: mergeLead
+      ? `${mergeLead}、無操作扱い（${limit}超）になり集計から外れます`
+      : null,
+    move: [
+      ...stepLines(
+        '15分早めると',
+        reshapes.moveEarlier,
+        idleThresholdMs,
+        limit,
+      ),
+      ...stepLines(
+        '15分遅らせると',
+        reshapes.moveLater,
+        idleThresholdMs,
+        limit,
+      ),
+    ],
+  }
+}
+
+// The merge line names the button whose press takes time out, both at once when they both do.
+const MERGE_LEAD: Record<string, string | undefined> = {
+  'true:true': '統合すると',
+  'true:false': '前の記録に統合すると',
+  'false:true': '次の記録に統合すると',
 }
 
 // Why the row is cut at a middle minute: the record is short, or the quarter short of now leaves only its first minutes.
