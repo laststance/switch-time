@@ -353,6 +353,24 @@ test('a sign-in retried after an error keeps the error in its box, and the card 
   expect(await addressTop(page)).toBeCloseTo(addressTopBefore, 0)
 })
 
+test('a screen too short for the sign-in card still lets the button and the first field be reached on the web, where the scrolling card must not clip them', async ({
+  page,
+}) => {
+  // Arrange: 300px is what a 375×667 phone has left above a 336pt keyboard (the native keyboard itself is checked on a simulator)
+  await page.setViewportSize({ width: 375, height: 300 })
+  await page.goto('/sign-in')
+  const button = page.getByRole('button', { name: 'サインイン' })
+  const address = page.getByLabel('メールアドレス')
+
+  // Act
+  await button.scrollIntoViewIfNeeded()
+
+  // Assert
+  await expect(button).toBeInViewport({ ratio: 0.9 })
+  await address.scrollIntoViewIfNeeded()
+  await expect(address).toBeInViewport({ ratio: 0.9 })
+})
+
 test('a sign-in the rate limit refuses asks to wait, in Japanese', async ({
   page,
 }) => {

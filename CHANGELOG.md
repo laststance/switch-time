@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.18.0] - 2026-09-29
+
+### Changed
+
+- On a phone, the sign-in and sign-up card now rises above the on-screen keyboard
+  (a `KeyboardAvoidingView`) and scrolls when it does not fit, so the サインイン
+  button is no longer half under the keyboard when the password field takes the
+  focus after 登録. Checked on an iPhone 17 simulator, before and after. The web
+  build is unchanged. The keyboard-open state is drawn on the pen board
+  「ST Phone / サインイン・キーボード表示中」. Android is not checked yet (TODOS.md).
+
 ## [0.24.17.0] - 2026-09-29
 
 ### Changed
