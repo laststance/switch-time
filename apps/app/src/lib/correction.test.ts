@@ -12,6 +12,7 @@ import {
   correctionRows,
   cutStepper,
   cutToHold,
+  cutViewShown,
   cutNotes,
   cutTotalsEffects,
   dayBaseline,
@@ -22,6 +23,7 @@ import {
   dayTitle,
   failureKind,
   failureMessage,
+  hushedAnswered,
   isDayChangedRefusal,
   isFreshList,
   isSettledWrite,
@@ -143,6 +145,7 @@ test('a past day lists the carried-in record last, selectable but without move o
       max: at(day, 23, 45).getTime(),
       initial: at(day, 21).getTime(),
       middleMinute: false,
+      nowBound: false,
       earliest: at(day, 18, 1).getTime(),
       latest: at(day, 23, 59).getTime(),
     },
@@ -151,6 +154,7 @@ test('a past day lists the carried-in record last, selectable but without move o
       max: at(day, 17, 45).getTime(),
       initial: at(day, 15).getTime(),
       middleMinute: false,
+      nowBound: false,
       earliest: at(day, 12, 1).getTime(),
       latest: at(day, 17, 59).getTime(),
     },
@@ -159,6 +163,7 @@ test('a past day lists the carried-in record last, selectable but without move o
       max: at(day, 11, 45).getTime(),
       initial: at(day, 10, 30).getTime(),
       middleMinute: false,
+      nowBound: false,
       earliest: at(day, 9, 1).getTime(),
       latest: at(day, 11, 59).getTime(),
     },
@@ -167,6 +172,7 @@ test('a past day lists the carried-in record last, selectable but without move o
       max: at(day, 8, 45).getTime(),
       initial: at(day, 4, 15).getTime(),
       middleMinute: false,
+      nowBound: false,
       earliest: bounds.start,
       latest: at(day, 8, 59).getTime(),
     },
@@ -598,6 +604,7 @@ test('区切る時刻 reaches 0:00 on a record that began the night before and s
     max: at(day, 6, 45).getTime(),
     initial: at(day, 3, 15).getTime(),
     middleMinute: false,
+    nowBound: false,
     earliest: at(day, 0).getTime(),
     latest: at(day, 6, 59).getTime(),
   })
@@ -653,6 +660,7 @@ test('区切る時刻 on a record that covers the whole past day ends at 23:45, 
     max: at(day, 23, 45).getTime(),
     initial: at(day, 11, 45).getTime(),
     middleMinute: false,
+    nowBound: false,
     earliest: at(day, 0).getTime(),
     latest: at(day, 23, 59).getTime(),
   })
@@ -683,6 +691,7 @@ test('区切る時刻 on today’s current record stays a quarter hour and a min
     max: at(day, 9, 45).getTime(),
     initial: at(day, 4, 45).getTime(),
     middleMinute: false,
+    nowBound: true,
     earliest: at(day, 0).getTime(),
     latest: at(day, 9, 51).getTime(),
   })
@@ -713,6 +722,7 @@ test('区切る時刻 on a record too short for any quarter hour cuts it at its 
     max: at(day, 0, 7).getTime(),
     initial: at(day, 0, 7).getTime(),
     middleMinute: true,
+    nowBound: false,
     earliest: at(day, 0, 1).getTime(),
     latest: at(day, 0, 13).getTime(),
   })
@@ -766,6 +776,7 @@ test('区切る時刻 on a 13-minute row of the day’s own cuts it at 9:07, the
     max: at(day, 9, 7).getTime(),
     initial: at(day, 9, 7).getTime(),
     middleMinute: true,
+    nowBound: false,
     earliest: at(day, 9, 2).getTime(),
     latest: at(day, 9, 13).getTime(),
   })
@@ -797,6 +808,7 @@ test('区切る時刻 on today’s current row waits until it is 17 minutes old,
     max: at(day, 10, 1).getTime(),
     initial: at(day, 10, 1).getTime(),
     middleMinute: true,
+    nowBound: true,
     earliest: at(day, 10, 1).getTime(),
     latest: at(day, 10, 1).getTime(),
   })
@@ -827,6 +839,7 @@ test('区切る時刻 on a short row that still holds one quarter hour cuts at t
     max: at(day, 9, 15).getTime(),
     initial: at(day, 9, 15).getTime(),
     middleMinute: false,
+    nowBound: false,
     earliest: at(day, 9, 14).getTime(),
     latest: at(day, 9, 16).getTime(),
   })
@@ -949,7 +962,7 @@ test('a panel opened before its row could be cut holds the first cut time it sho
   if (!later) throw new Error('no row')
 
   // Act
-  const held = cutToHold(later, null, cutStepper(later, null, TZ))
+  const held = cutToHold(later, null, cutStepper(later, null, TZ), false)
 
   // Assert
   expect(held).toEqual({ id: 'w', at: at(day, 10, 2).getTime() })
@@ -966,16 +979,84 @@ test('a panel already holding the time on its readout, or showing no cut, holds 
     carriedIn,
     opened,
     cutStepper(carriedIn, opened, TZ),
+    false,
   )
   const heldWithoutCut = cutToHold(
     uncuttable,
     null,
     cutStepper(uncuttable, null, TZ),
+    false,
   )
 
   // Assert
   expect(heldWhenShown).toBeNull()
   expect(heldWithoutCut).toBeNull()
+})
+
+test('a panel whose cut is still landing keeps the time the user chose, so a refused cut leaves it', () => {
+  // Arrange: the user stepped to 1:15, then the refusal's rows moved the range so the stepper would open at 3:15 again.
+  const { carriedIn } = carriedWork()
+  const chosen = { id: 'other-row', at: at('2026-09-08', 1, 15).getTime() }
+
+  // Act
+  const held = cutToHold(
+    carriedIn,
+    chosen,
+    cutStepper(carriedIn, chosen, TZ),
+    true,
+  )
+
+  // Assert
+  expect(held).toBeNull()
+})
+
+test('区切る時刻 keeps showing its last readout and notes while ここで分割 lands, and takes the new ones once it settles', () => {
+  // Arrange
+  const before = {
+    label: '3:15',
+    notes: ['短い記録のため、真ん中で区切ります'],
+  }
+  const landed = { label: '9:07', notes: [] }
+
+  // Act
+  const whilePending = cutViewShown(before, landed, true)
+  const firstRenderPending = cutViewShown(null, landed, true)
+  const settled = cutViewShown(before, landed, false)
+  const settledAgain = cutViewShown(
+    { label: '9:07', notes: [] },
+    { label: '9:07', notes: [] },
+    false,
+  )
+
+  // Assert
+  expect(whilePending).toEqual({
+    shown: { label: '3:15', notes: ['短い記録のため、真ん中で区切ります'] },
+    hold: null,
+  })
+  expect(firstRenderPending).toEqual({
+    shown: { label: '9:07', notes: [] },
+    hold: null,
+  })
+  expect(settled).toEqual({
+    shown: { label: '9:07', notes: [] },
+    hold: { label: '9:07', notes: [] },
+  })
+  expect(settledAgain).toEqual({
+    shown: { label: '9:07', notes: [] },
+    hold: null,
+  })
+})
+
+test('区切る時刻 stores a new view when only a note under it changed', () => {
+  // Arrange
+  const held = { label: '3:15', notes: ['a'] }
+  const live = { label: '3:15', notes: ['b'] }
+
+  // Act
+  const view = cutViewShown(held, live, false)
+
+  // Assert
+  expect(view.hold).toEqual({ label: '3:15', notes: ['b'] })
 })
 
 test('the lines under ここで分割 on a short row of the day’s own say only that it is cut at its middle, never promising 計測', () => {
@@ -1008,6 +1089,35 @@ test('the lines under ここで分割 on a short row of the day’s own say only
   expect(notes).toEqual(['短い記録のため、真ん中で区切ります'])
 })
 
+test('the line under ここで分割 on today’s running row says the last 15 minutes cannot be cut, not that the row is short', () => {
+  // Arrange: 仕事 tapped at 10:00 today and read at 10:20, so a cut must stay before 10:05 and lands on 10:02.
+  const day = '2026-09-09'
+  const work = correctionRows(
+    {
+      carriedInRunStart: null,
+      carriedIn: null,
+      rows: [row('w', 'work', at(day, 10))],
+      carriedOut: null,
+    },
+    activities,
+    { ...dayBounds(day, TZ), now: at(day, 10, 20).getTime(), timeZone: TZ },
+  )[0]
+  if (!work) throw new Error('no row')
+
+  // Act
+  const notes = cutNotes(
+    work,
+    { idleThresholdMs: 12 * 3_600_000, dayExcluded: null },
+    at(day, 10, 2).getTime(),
+  )
+
+  // Assert
+  expect(work.cut?.nowBound).toBe(true)
+  expect(notes).toEqual([
+    '直近15分は区切れないため、それより前の真ん中で区切ります',
+  ])
+})
+
 test('the origin note names a record started two days earlier by that day’s date', () => {
   // Arrange: 睡眠 from 9/6 22:00 runs through 9/7 into 9/8.
   const day = '2026-09-08'
@@ -1028,7 +1138,91 @@ test('the origin note names a record started two days earlier by that day’s da
 
   // Assert
   expect(carriedIn?.trueStartLabel).toBe('9月6日 22:00')
-  expect(carriedIn?.trueStartDate).toBe('9月6日')
+  expect(carriedIn?.trueReach).toBe('9月6日〜9月8日')
+})
+
+test('the scope note of a carried-in record still running today reaches through today', () => {
+  // Arrange: 仕事 from 9/7 22:00 is still running at 9/9 10:00.
+  const day = '2026-09-09'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: row('w', 'work', at('2026-09-07', 22)),
+    rows: [],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at(day, 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const carriedIn = correctionRows(list, activities, bounds).at(-1)
+
+  // Assert
+  expect(carriedIn?.trueReach).toBe('9月7日〜9月9日')
+})
+
+test('a record carried over New Year writes last year’s date on its origin and scope notes', () => {
+  // Arrange: 睡眠 from 2025-12-28 23:00 ends at 2026-01-01 6:30.
+  const day = '2026-01-01'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: row('s', 'sleep', at('2025-12-28', 23)),
+    rows: [row('w', 'work', at(day, 6, 30))],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, TZ),
+    now: at('2026-01-02', 10).getTime(),
+    timeZone: TZ,
+  }
+
+  // Act
+  const carriedIn = correctionRows(list, activities, bounds).at(-1)
+
+  // Assert
+  expect(carriedIn?.trueStartLabel).toBe('2025年12月28日 23:00')
+  expect(carriedIn?.trueReach).toBe('2025年12月28日〜1月1日')
+})
+
+test('on the night New York’s clocks go back, the two rows that start at 1:30 read as its first and second occurrence', () => {
+  // Arrange: 仕事 at 1:30 EDT, 休息 at 1:30 EST, 睡眠 at 3:00 EST, on 2026-11-01 in New York, read the next day.
+  const day = '2026-11-01'
+  const newYork = 'America/New_York'
+  const list: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [
+      row('w', 'work', new Date('2026-11-01T05:30:00Z')),
+      row('r', 'rest', new Date('2026-11-01T06:30:00Z')),
+      row('s', 'sleep', new Date('2026-11-01T08:00:00Z')),
+    ],
+    carriedOut: null,
+  }
+  const bounds = {
+    ...dayBounds(day, newYork),
+    now: Date.parse('2026-11-02T15:00:00Z'),
+    timeZone: newYork,
+  }
+
+  // Act
+  const rows = correctionRows(list, activities, bounds)
+  const work = rows.at(-1)
+  if (!work) throw new Error('no row')
+  const stepper = cutStepper(
+    work,
+    { id: 'w', at: Date.parse('2026-11-01T06:15:00Z') },
+    newYork,
+  )
+
+  // Assert
+  expect(rows.map((r) => r.range)).toEqual([
+    '3:00 – 24:00',
+    '1:30（2回目） – 3:00',
+    '1:30（1回目） – 1:30（2回目）',
+  ])
+  expect(stepper.label).toBe('1:15（2回目）')
 })
 
 // The carried-in 仕事 of 9/7 22:00 → 9/8 7:00 (cut range 0:00 – 6:45, from 3:15), as the e2e fixture has it.
@@ -2210,6 +2404,7 @@ test('区切る時刻 lands on the wall clock’s quarter hours in a zone offset
     max: new Date('2026-09-08T06:45:00+05:45').getTime(),
     initial: new Date('2026-09-08T03:15:00+05:45').getTime(),
     middleMinute: false,
+    nowBound: false,
     earliest: new Date('2026-09-08T00:00:00+05:45').getTime(),
     latest: new Date('2026-09-08T06:59:00+05:45').getTime(),
   })
@@ -2243,6 +2438,7 @@ test('区切る時刻 stays on quarter hours across the spring-forward gap of a 
     max: new Date('2026-03-08T06:45:00-04:00').getTime(),
     initial: new Date('2026-03-08T03:45:00-04:00').getTime(),
     middleMinute: false,
+    nowBound: false,
     earliest: new Date('2026-03-08T00:00:00-05:00').getTime(),
     latest: new Date('2026-03-08T06:59:00-04:00').getTime(),
   })
@@ -3277,12 +3473,13 @@ test('a carried-in pick’s 元に戻す stays on at the revision the pick left 
   expect(writtenAgain).toBeUndefined()
 })
 
-test('a sheet that moves to another day starts over, and a notice kept for the day selects its row when nothing else is', () => {
-  // Arrange: the sheet selected 'r' on 9/8; the store kept a notice for 9/9's carried-in record.
+test('a sheet that moves to another day drops the row a cut selected, and a notice kept for the day selects its row instead', () => {
+  // Arrange: a cut on 9/8 selected and focused 'r'; the store kept a notice for 9/9's carried-in record.
   const sheet: CorrectionSheet = {
     day: '2026-09-08',
     selectedId: 'r',
     focusId: 'r',
+    answered: true,
   }
 
   // Act
@@ -3294,8 +3491,18 @@ test('a sheet that moves to another day starts over, and a notice kept for the d
     seen: null,
     stale: false,
   }
-  const sameDay = sheetView(sheet, '2026-09-08', { line })
-  const nextDay = sheetView(sheet, '2026-09-09', { notice: 'carried-in' })
+  const sameDay = sheetView(sheet, '2026-09-08', { line }, undefined)
+  const nextDay = sheetView(
+    sheet,
+    '2026-09-09',
+    { notice: 'carried-in' },
+    {
+      carriedInRunStart: null,
+      carriedIn: row('r', 'work', at('2026-09-08', 22)),
+      rows: [],
+      carriedOut: null,
+    },
+  )
 
   // Assert
   expect(sameDay).toEqual({
@@ -3313,11 +3520,121 @@ test('a sheet that moves to another day starts over, and a notice kept for the d
   })
   expect(sameDay.sheet).toBe(sheet)
   expect(nextDay).toEqual({
-    sheet: { day: '2026-09-09', selectedId: null, focusId: null },
+    sheet: {
+      day: '2026-09-09',
+      selectedId: null,
+      focusId: null,
+      answered: false,
+    },
     selectedId: 'carried-in',
     noticeId: 'carried-in',
     line: null,
   })
+})
+
+test('at midnight the running record the user selected stays selected as the new day’s carried-in row, and its header takes focus', () => {
+  // Arrange: the user selected 仕事 (running since 22:00) on 9/8; 9/9 lists it as its carried-in record.
+  const sheet: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'w',
+    focusId: null,
+    answered: false,
+  }
+  const nextDay: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: row('w', 'work', at('2026-09-08', 22)),
+    rows: [],
+    carriedOut: null,
+  }
+
+  // Act
+  const view = sheetView(sheet, '2026-09-09', {}, nextDay)
+
+  // Assert
+  expect(view).toEqual({
+    sheet: {
+      day: '2026-09-09',
+      selectedId: 'w',
+      focusId: 'w',
+      answered: false,
+    },
+    selectedId: 'w',
+    noticeId: null,
+    line: null,
+  })
+})
+
+test('at midnight the user’s selection stays while the new day’s list loads', () => {
+  // Arrange
+  const sheet: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'w',
+    focusId: null,
+    answered: false,
+  }
+
+  // Act
+  const view = sheetView(sheet, '2026-09-09', {}, undefined)
+
+  // Assert
+  expect(view.selectedId).toBe('w')
+  expect(view.sheet.focusId).toBe('w')
+})
+
+test('a day jump whose new day does not list the user’s selection opens the kept notice’s row, else nothing', () => {
+  // Arrange: the user selected 'w' on 9/8, then jumped to 9/1, which lists other rows.
+  const sheet: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'w',
+    focusId: null,
+    answered: false,
+  }
+  const otherDay: ListedDay = {
+    carriedInRunStart: null,
+    carriedIn: null,
+    rows: [row('n', 'home', at('2026-09-01', 9))],
+    carriedOut: null,
+  }
+
+  // Act
+  const withNotice = sheetView(sheet, '2026-09-01', { notice: 'n' }, otherDay)
+  const withoutNotice = sheetView(sheet, '2026-09-01', {}, otherDay)
+
+  // Assert
+  expect(withNotice.selectedId).toBe('n')
+  expect(withoutNotice.selectedId).toBeNull()
+})
+
+test('a press that clears the notice makes the notice’s row an answer’s selection, and keeps the user’s own as theirs', () => {
+  // Arrange
+  const noticeShown: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: null,
+    focusId: null,
+    answered: false,
+  }
+  const userSelected: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'r',
+    focusId: null,
+    answered: false,
+  }
+  const cutSelected: CorrectionSheet = {
+    day: '2026-09-08',
+    selectedId: 'r',
+    focusId: 'r',
+    answered: true,
+  }
+
+  // Act
+  const fromNotice = hushedAnswered('carried-in', noticeShown)
+  const fromUser = hushedAnswered('r', userSelected)
+  const fromCut = hushedAnswered('r', cutSelected)
+
+  // Assert
+  expect(fromNotice).toBe(true)
+  expect(fromUser).toBe(false)
+  expect(fromCut).toBe(true)
 })
 
 test('an answer to a press selects its row while the sheet shows the day it was pressed on, and nothing once it shows another day', () => {
@@ -3326,21 +3643,25 @@ test('an answer to a press selects its row while the sheet shows the day it was 
     day: '2026-09-08',
     selectedId: null,
     focusId: null,
+    answered: false,
   }
   const nextDay: CorrectionSheet = {
     day: '2026-09-09',
     selectedId: 'kept',
     focusId: null,
+    answered: false,
   }
 
   // Act
   const onItsDay = onPressedDay(sameDay, '2026-09-08', {
     selectedId: 'inserted',
     focusId: 'inserted',
+    answered: true,
   })
   const onAnotherDay = onPressedDay(nextDay, '2026-09-08', {
     selectedId: 'inserted',
     focusId: 'inserted',
+    answered: true,
   })
 
   // Assert
@@ -3348,11 +3669,13 @@ test('an answer to a press selects its row while the sheet shows the day it was 
     day: '2026-09-08',
     selectedId: 'inserted',
     focusId: 'inserted',
+    answered: true,
   })
   expect(onAnotherDay).toEqual({
     day: '2026-09-09',
     selectedId: 'kept',
     focusId: null,
+    answered: false,
   })
 })
 
@@ -3621,14 +3944,30 @@ test('on the same day the user’s own selection outranks the row a kept notice 
     day: '2026-09-08',
     selectedId: 'r',
     focusId: null,
+    answered: false,
   }
 
   // Act
-  const view = sheetView(sheet, '2026-09-08', { notice: 'carried-in' })
+  const view = sheetView(
+    sheet,
+    '2026-09-08',
+    { notice: 'carried-in' },
+    {
+      carriedInRunStart: null,
+      carriedIn: row('carried-in', 'sleep', at('2026-09-07', 23)),
+      rows: [row('r', 'work', at('2026-09-08', 9))],
+      carriedOut: null,
+    },
+  )
 
   // Assert
   expect(view).toEqual({
-    sheet: { day: '2026-09-08', selectedId: 'r', focusId: null },
+    sheet: {
+      day: '2026-09-08',
+      selectedId: 'r',
+      focusId: null,
+      answered: false,
+    },
     selectedId: 'r',
     noticeId: 'carried-in',
     line: null,
@@ -3641,16 +3980,21 @@ test('an undo’s reselect on the day it was pressed on selects the row and keep
     day: '2026-09-08',
     selectedId: null,
     focusId: 'inserted',
+    answered: false,
   }
 
   // Act
-  const revealed = onPressedDay(sheet, '2026-09-08', { selectedId: 'r' })
+  const revealed = onPressedDay(sheet, '2026-09-08', {
+    selectedId: 'r',
+    answered: true,
+  })
 
   // Assert
   expect(revealed).toEqual({
     day: '2026-09-08',
     selectedId: 'r',
     focusId: 'inserted',
+    answered: true,
   })
 })
 

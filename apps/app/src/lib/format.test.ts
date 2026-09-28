@@ -1,14 +1,17 @@
 import { afterEach, expect, test, vi } from 'vitest'
 
 import {
+  fallBackWindows,
   formatDay,
   formatDuration,
   formatElapsed,
+  formatMonthDay,
   formatSince,
   formatSpokenDuration,
   formatTime,
   spokenActivityName,
   spokenActivityNames,
+  repeatedWallTime,
 } from './format'
 
 afterEach(() => {
@@ -26,8 +29,9 @@ test('the elapsed hero reads H:MM:SS and keeps counting past 24 hours', () => {
   expect(readouts).toEqual(['0:00:59', '1:00:00', '27:15:03', '0:00:00'])
 })
 
-test('the since line builds one formatter per time zone, however often it renders', () => {
-  // Arrange: zones no other test here formats, so the cache starts empty for them
+test('the since line builds its formatters once per time zone, however often it renders', () => {
+  // Arrange: zones no other test here formats, so the cache starts empty for them. Each zone builds two: the H:MM readout,
+  // and the offset reader that finds where its clocks go back.
   const construct = vi.spyOn(Intl, 'DateTimeFormat')
   const instant = new Date('2026-09-09T00:05:00Z')
 
@@ -41,7 +45,7 @@ test('the since line builds one formatter per time zone, however often it render
 
   // Assert
   expect(readouts).toEqual(['1:05', '5:35', '1:05', '5:35'])
-  expect(construct).toHaveBeenCalledTimes(2)
+  expect(construct).toHaveBeenCalledTimes(4)
 })
 
 test('the header date and the since line follow the stored time zone', () => {
@@ -243,4 +247,109 @@ test('the since line does not date a start the device reads as tomorrow, when it
 
   // Assert
   expect(label).toBe('0:00')
+})
+
+test('a date read against a day of the same year leaves the year out, and one from another year writes it', () => {
+  // Arrange
+  const sameYear = formatMonthDay('2026-09-06', '2026-09-08')
+  const lastYear = formatMonthDay('2025-12-28', '2026-01-01')
+  const nextYear = formatMonthDay('2027-01-01', '2026-12-31')
+  const unread = formatMonthDay('2025-12-28')
+
+  // Assert
+  expect(sameYear).toBe('9月6日')
+  expect(lastYear).toBe('2025年12月28日')
+  expect(nextYear).toBe('2027年1月1日')
+  expect(unread).toBe('12月28日')
+})
+
+test('the since line writes the year of a record started last year', () => {
+  // Arrange: started 2025-12-28 23:00 in Tokyo, read on 2026-01-02.
+  const started = new Date('2025-12-28T14:00:00Z')
+
+  // Act
+  const label = formatSince(started, '2026-01-02', 'Asia/Tokyo')
+
+  // Assert
+  expect(label).toBe('2025年12月28日 23:00')
+})
+
+test('on the night New York’s clocks go back, the repeated 1:30 says which of its two occurrences it is', () => {
+  // Arrange: 1:30 EDT, 1:30 EST, and 0:30 / 2:30, which occur once.
+  const first = new Date('2026-11-01T05:30:00Z')
+  const second = new Date('2026-11-01T06:30:00Z')
+  const before = new Date('2026-11-01T04:30:00Z')
+  const after = new Date('2026-11-01T07:30:00Z')
+
+  // Act
+  const labels = [first, second, before, after].map((date) =>
+    formatTime(date, 'America/New_York'),
+  )
+
+  // Assert
+  expect(labels).toEqual(['1:30（1回目）', '1:30（2回目）', '0:30', '2:30'])
+})
+
+test('the repeated hour starts at the wall time the clocks go back to and ends where they went back', () => {
+  // Arrange: 1:00 EDT is the first repeated minute; 1:00 EST (the change itself) is the second occurrence; 2:00 EST is past.
+  const firstStart = new Date('2026-11-01T05:00:00Z')
+  const lastFirst = new Date('2026-11-01T05:59:00Z')
+  const change = new Date('2026-11-01T06:00:00Z')
+  const past = new Date('2026-11-01T07:00:00Z')
+
+  // Act
+  const occurrences = [firstStart, lastFirst, change, past].map((date) =>
+    repeatedWallTime(date, 'America/New_York'),
+  )
+
+  // Assert
+  expect(occurrences).toEqual([1, 1, 2, null])
+})
+
+test('Lord Howe’s half-hour fall back marks only the half hour it repeats', () => {
+  // Arrange: 2:00 +11:00 goes back to 1:30 +10:30 on 2026-04-05 local, so 1:30 – 2:00 occurs twice.
+  const first = new Date('2026-04-04T14:45:00Z')
+  const second = new Date('2026-04-04T15:15:00Z')
+  const onceBefore = new Date('2026-04-04T14:15:00Z')
+
+  // Act
+  const labels = [first, second, onceBefore].map((date) =>
+    formatTime(date, 'Australia/Lord_Howe'),
+  )
+
+  // Assert
+  expect(labels).toEqual(['1:45（1回目）', '1:45（2回目）', '1:15'])
+})
+
+test('Casablanca’s Ramadan fall back, found by the daily scan, marks its repeated 2 o’clock hour', () => {
+  // Arrange: 3:00 +01:00 goes back to 2:00 +00:00 on 2026-02-15.
+  const first = new Date('2026-02-15T01:30:00Z')
+  const second = new Date('2026-02-15T02:30:00Z')
+
+  // Act
+  const labels = [first, second].map((date) =>
+    formatTime(date, 'Africa/Casablanca'),
+  )
+  const windows = fallBackWindows('Africa/Casablanca', 2026)
+
+  // Assert
+  expect(labels).toEqual(['2:30（1回目）', '2:30（2回目）'])
+  expect(windows[0]).toEqual({
+    start: Date.parse('2026-02-15T01:00:00Z'),
+    turnBack: Date.parse('2026-02-15T02:00:00Z'),
+    end: Date.parse('2026-02-15T03:00:00Z'),
+  })
+})
+
+test('a zone that never moves its clocks writes every time bare', () => {
+  // Arrange
+  const instant = new Date('2026-11-01T06:30:00Z')
+
+  // Act
+  const label = formatTime(instant, 'Asia/Tokyo')
+  const windows = fallBackWindows('Asia/Tokyo', 2026)
+
+  // Assert
+  expect(label).toBe('15:30')
+  expect(windows).toEqual([])
 })

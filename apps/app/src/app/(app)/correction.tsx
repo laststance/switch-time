@@ -16,17 +16,20 @@ import { Control } from '@/components/control'
 import { dismissSheet, Sheet } from '@/components/sheet'
 import { useActivities } from '@/hooks/use-activities'
 import { useCorrection } from '@/hooks/use-correction'
+import { useIosAnnouncement } from '@/hooks/use-ios-announcement'
 import {
   archivedBox,
   CUT_STEPS,
   cutStepper,
   cutToHold,
   cutNotes,
+  cutViewShown,
   openedCut,
   revealOffset,
   statusSlots,
   type CorrectionRow,
   type CutStepMinutes,
+  type CutView,
   type DayBounds,
   type SheetStatus,
   type TotalsFacts,
@@ -334,7 +337,8 @@ type CutControlsProps = {
 }
 
 // 区切る時刻 and 「ここで分割」, in both panels: the readout, four steps, the cut, and the notes under it. It keeps the stepped
-// time; the caller keys it by the row's start, so a start moved by ±15 reopens it at the new range's middle.
+// time; the caller keys it by the row's start, so a start moved by ±15 reopens it at the new range's middle. While a write or
+// the day's read is pending it keeps what it showed last, so rows and totals landing one after the other never move it.
 function CutControls({
   row,
   pending,
@@ -343,10 +347,17 @@ function CutControls({
   onCut,
 }: CutControlsProps) {
   const [chosen, setChosen] = useState(() => openedCut(row))
+  const [heldView, setHeldView] = useState<CutView | null>(null)
   const stepper = cutStepper(row, chosen, timeZone)
   // Hold what the readout shows, so today's clock never moves it.
-  const held = cutToHold(row, chosen, stepper)
+  const held = cutToHold(row, chosen, stepper, pending)
   if (held) setChosen(held)
+  const { shown, hold } = cutViewShown(
+    heldView,
+    { label: stepper.label, notes: cutNotes(row, totalsFacts, stepper.at) },
+    pending,
+  )
+  if (hold) setHeldView(hold)
   const step = (target: number): void => {
     setChosen({ id: row.id, at: target })
     // Android and web read the readout's live region; iOS needs the announcement.
@@ -365,7 +376,7 @@ function CutControls({
           aria-live="polite"
           className="text-ink text-lg font-semibold tabular"
         >
-          {stepper.label}
+          {shown.label}
         </Text>
       </View>
       <View className="flex-row gap-2">
@@ -394,7 +405,7 @@ function CutControls({
       >
         <Text className="text-sheet-bg text-xs font-semibold">ここで分割</Text>
       </Control>
-      {cutNotes(row, totalsFacts, stepper.at).map((note) => (
+      {shown.notes.map((note) => (
         <Text key={note} className={NOTE}>
           {note}
         </Text>
@@ -432,7 +443,7 @@ function CarriedInActions({
         <View className="gap-1">
           <Text className="text-sub text-xs font-medium">活動を変える</Text>
           <Text className={NOTE}>
-            {`記録全体（${row.trueStartLabel}〜）が変わり、${row.trueStartDate}の集計にも反映されます`}
+            {`記録全体（${row.trueStartLabel}〜）が変わり、${row.trueReach}の集計に反映されます`}
           </Text>
           {pickNote && <Text className={NOTE}>{pickNote}</Text>}
         </View>
@@ -521,6 +532,8 @@ const OUT_OF_FLOW = 'absolute h-px w-px overflow-hidden opacity-0'
 // own slot, so a screen reader that starts watching it before the first quiet line hears that line too.
 function StatusLine({ status }: { status: SheetStatus | null }) {
   const { alert, polite } = statusSlots(status)
+  // VoiceOver reads neither live region by itself; iOS hears the line through an announcement.
+  useIosAnnouncement(status?.text)
   return (
     <>
       {alert === null ? null : (

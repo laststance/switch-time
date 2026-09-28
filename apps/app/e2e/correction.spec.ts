@@ -670,9 +670,11 @@ test('the picker turns a segment into detox', async ({ page }) => {
 })
 
 // `9月22日`, the form the carried-in panel writes a record's start date in.
-const monthDay = (day: string) => {
-  const [, month, date] = day.split('-').map(Number)
-  return `${month}月${date}日`
+// `M月D日` as the sheet writes a date read on `viewedDay`: with the year when the two years differ.
+const monthDay = (day: string, viewedDay: string) => {
+  const [year, month, date] = day.split('-').map(Number)
+  const sameYear = day.slice(0, 4) === viewedDay.slice(0, 4)
+  return `${sameYear ? '' : `${year}年`}${month}月${date}日`
 }
 
 // D−2 仕事 22:00 and D−1 食事 7:00: the D−1 sheet lists 仕事 0:00 – 7:00 as the record carried in from D−2 (9 h, under the
@@ -708,7 +710,7 @@ test('the carried-in record opens a panel that says where it started, and a pick
   page,
 }) => {
   // Arrange
-  const { api, list, dayBefore, dialog, carriedIn } =
+  const { api, list, dayBefore, day, dialog, carriedIn } =
     await openCarriedInWork(page)
   const work = idOf(list, '仕事')
   const sleep = idOf(list, '睡眠')
@@ -716,7 +718,13 @@ test('the carried-in record opens a panel that says where it started, and a pick
   // Act
   await carriedIn.click()
   await expect(
-    dialog.getByText(`${monthDay(dayBefore)} 22:00 から続く記録です`),
+    dialog.getByText(`${monthDay(dayBefore, day)} 22:00 から続く記録です`),
+  ).toBeVisible()
+  // The scope note names every day the record reaches: D−2, where it started, through D−1, where it ends.
+  await expect(
+    dialog.getByText(
+      `記録全体（${monthDay(dayBefore, day)} 22:00〜）が変わり、${monthDay(dayBefore, day)}〜${monthDay(day, day)}の集計に反映されます`,
+    ),
   ).toBeVisible()
   await dialog.getByRole('radio', { name: '睡眠' }).click()
 
@@ -763,7 +771,7 @@ test('switching a weekend detox to an activity says which untapped days it measu
   })
   await page.goto(`/correction?day=${day}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const untapped = `タップのない日（${monthDay(shift(today(), -3))}〜${monthDay(shift(today(), -2))}）`
+  const untapped = `タップのない日（${monthDay(shift(today(), -3), day)}〜${monthDay(shift(today(), -2), day)}）`
   const pickNote = dialog.getByText(
     `detox と活動を切り替えると、${untapped}の計測が変わることがあります`,
   )
@@ -820,7 +828,7 @@ test('an activity that ends a detox says which untapped days switching it to det
   })
   await page.goto(`/correction?day=${day}`)
   const dialog = page.getByRole('dialog', { name: /の記録を訂正$/ })
-  const untapped = `タップのない日（${monthDay(shift(today(), -2))}〜${monthDay(shift(today(), -1))}）`
+  const untapped = `タップのない日（${monthDay(shift(today(), -2), day)}〜${monthDay(shift(today(), -1), day)}）`
 
   // Act
   await dialog.getByRole('button', { name: /^仕事 9:00 – / }).click()
@@ -889,6 +897,41 @@ test('区切る時刻 opens at 3:15, cuts the carried-in record at 3:00 into a s
   await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
   await expect(later).toHaveCount(0)
   await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
+})
+
+test('区切る時刻 keeps the time the user chose while the cut lands, until the new row is selected', async ({
+  page,
+}) => {
+  // Arrange: the carried-in 仕事 stepped to 3:00; the totals' reads after the cut are held back, so the list lands first.
+  const { dialog, carriedIn } = await openCarriedInWork(page)
+  await carriedIn.click()
+  const readout = dialog.getByRole('status', { name: '区切る時刻' })
+  await dialog.getByRole('button', { name: '区切る時刻を15分早める' }).click()
+  await expect(readout).toHaveText('3:00')
+  const totals = Promise.withResolvers<void>()
+  await page.route('**/api/rpc/stats/**', async (route) => {
+    await totals.promise
+    await route.continue()
+  })
+
+  // Act
+  await dialog.getByRole('button', { name: 'ここで分割' }).click()
+
+  // Assert: the shortened record is listed and still open, and its readout still says 3:00, not its new middle.
+  const earlier = dialog.getByRole('button', {
+    name: '仕事 0:00 – 3:00 3時間',
+  })
+  await expect(earlier).toHaveAttribute('aria-expanded', 'true')
+  await expect(readout).toHaveText('3:00')
+
+  // Act: the totals land, and the cut settles.
+  totals.resolve()
+
+  // Assert
+  await expect(
+    dialog.getByRole('button', { name: '仕事 3:00 – 7:00 4時間' }),
+  ).toHaveAttribute('aria-expanded', 'true')
+  await expect(readout).toHaveText('5:00')
 })
 
 test('after a cut, a pick changes only the later part of the record', async ({
@@ -2894,6 +2937,36 @@ test('an archived notice that lands while another row is selected shows once its
   await expect(dialog.getByRole('alert')).toHaveText(
     '前の活動はアーカイブ済みのため、元に戻せません',
   )
+})
+
+test('at midnight the running record the user opened stays open as the new day’s carried-in row, with its header focused', async ({
+  page,
+}) => {
+  test.skip(
+    Date.now() - at(today(), 0).getTime() < 17 * 60_000,
+    'the Tokyo day is under 17 minutes old, so the old day’s running row could read like the new day’s',
+  )
+  // Arrange: today's sheet opens the running 仕事 from 0:00.
+  await openTodayWorkSinceMidnight(page)
+  await page.clock.install()
+  await page.goto('/correction')
+  const dialog = page.getByRole('dialog', { name: '今日の記録を訂正' })
+  await dialog.getByRole('button', { name: /^仕事 0:00 – / }).click()
+  const day = today()
+
+  // Act: the clock passes midnight, so the sheet follows the new day on its next second's tick.
+  const newDay = shift(day, 1)
+  await page.clock.setSystemTime(new Date(`${newDay}T00:00:30+09:00`))
+
+  // Assert: the new day lists 仕事 as carried in, its panel still open where it says where the record started.
+  const carriedIn = dialog.getByRole('button', {
+    name: /^仕事 0:00 – いま [01]分$/,
+  })
+  await expect(carriedIn).toHaveAttribute('aria-expanded', 'true')
+  await expect(carriedIn).toBeFocused()
+  await expect(
+    dialog.getByText(`${monthDay(day, newDay)} 0:00 から続く記録です`),
+  ).toBeVisible()
 })
 
 test('a cut whose answer lands after midnight selects nothing on the new day, even the part that runs into it', async ({

@@ -1,14 +1,27 @@
-import { localDay } from '@switch-time/shared'
+import { localDay, tzOffsetMs } from '@switch-time/shared'
 
 const utcMidnight = (day: string) => new Date(`${day}T00:00:00Z`)
 
 /**
- * `M月D日` of a `YYYY-MM-DD` calendar day (week titles on 記録).
+ * `M月D日` of a `YYYY-MM-DD` calendar day (week titles on 記録), with its year when that differs from the day it is read
+ * against, so a date from another year never passes for this one: the correction sheet's carried-in notes (against the
+ * viewed day), its untapped-day notes, and Home's 「… から」 (against today).
+ * @param day - The day to write.
+ * @param viewedDay - The day the reader is on; omitted, the year is never written.
+ * @returns
+ * - `M月D日` without `viewedDay`, or when both days fall in the same year
+ * - `YYYY年M月D日` when the years differ
  * @example formatMonthDay('2026-09-09') // '9月9日'
+ * @example formatMonthDay('2025-12-28', '2026-01-01') // '2025年12月28日'
  */
-export function formatMonthDay(day: string): string {
+export function formatMonthDay(day: string, viewedDay?: string): string {
   const date = utcMidnight(day)
-  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
+  const monthDay = `${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
+  const year = day.slice(0, 4)
+  // Another year than the reader's: write it, else a date over a year old reads as a recent one.
+  return viewedDay !== undefined && viewedDay.slice(0, 4) !== year
+    ? `${Number(year)}年${monthDay}`
+    : monthDay
 }
 
 /**
@@ -152,9 +165,16 @@ const countOf = (list: readonly { spoken: string }[], spoken: string) =>
 const timeFormats = new Map<string, Intl.DateTimeFormat>()
 
 /**
- * Wall-clock `H:MM` of an instant in the user's stored time zone (the correction sheet's row times; the hero's 「… から」 label goes
- * through {@link formatSince}).
+ * Wall-clock `H:MM` of an instant in the user's stored time zone (the correction sheet's row times, 開始時刻 and 区切る時刻;
+ * the hero's 「… から」 label goes through {@link formatSince}). On a day the clocks go back, a time the hour after repeats
+ * says which of its two occurrences it is, so two instants an hour apart never read alike.
+ * @param date - The instant.
+ * @param timeZone - The stored zone.
+ * @returns
+ * - `H:MM` for a wall time that occurs once
+ * - `H:MM（1回目）` / `H:MM（2回目）` for one that occurs twice ({@link repeatedWallTime})
  * @example formatTime(new Date('2026-09-09T00:05:00Z'), 'Asia/Tokyo') // '9:05'
+ * @example formatTime(new Date('2026-11-01T06:30:00Z'), 'America/New_York') // '1:30（2回目）'
  */
 export function formatTime(date: Date, timeZone: string): string {
   let format = timeFormats.get(timeZone)
@@ -168,7 +188,100 @@ export function formatTime(date: Date, timeZone: string): string {
     })
     timeFormats.set(timeZone, format)
   }
-  return format.format(date)
+  const occurrence = repeatedWallTime(date, timeZone)
+  const time = format.format(date)
+  return occurrence === null ? time : `${time}（${occurrence}回目）`
+}
+
+const DAY_MS = 86_400_000
+const MINUTE_MS = 60_000
+
+/** Where the clocks go back: `[start, turnBack)` is a wall time's 1st occurrence and `[turnBack, end)` its 2nd, in epoch ms. */
+type FallBackWindow = { start: number; turnBack: number; end: number }
+
+// A zone's fall-back windows per UTC year, found once: row labels format on every clock tick.
+const fallBackCache = new Map<string, readonly FallBackWindow[]>()
+
+/**
+ * Every place in a UTC year where `timeZone`'s clocks go back, found by comparing the offset at each UTC midnight (daily, so
+ * even a month-long Ramadan change in Africa/Casablanca is seen) and searching the changed day to the minute. Cached per
+ * zone and year; read by {@link repeatedWallTime}.
+ * @param timeZone - The stored zone.
+ * @param year - The UTC year to scan.
+ * @returns The windows in time order; empty for a zone that never goes back that year (Asia/Tokyo).
+ * @example fallBackWindows('America/New_York', 2026) // [{ start: 2026-11-01T05:00Z, turnBack: 06:00Z, end: 07:00Z }]
+ */
+export function fallBackWindows(
+  timeZone: string,
+  year: number,
+): readonly FallBackWindow[] {
+  const key = `${timeZone} ${year}`
+  const cached = fallBackCache.get(key)
+  if (cached) return cached
+  const offsetAt = (at: number) => tzOffsetMs(new Date(at), timeZone)
+  const windows: FallBackWindow[] = []
+  const last = Date.UTC(year + 1, 0, 1)
+  let before = Date.UTC(year, 0, 1)
+  let offsetBefore = offsetAt(before)
+  for (let after = before + DAY_MS; after <= last; after += DAY_MS) {
+    const offsetAfter = offsetAt(after)
+    // The offset dropped during this day: find the minute it changed, and the repeated span is as long as the drop.
+    if (offsetAfter < offsetBefore) {
+      const turnBack = firstMinuteAt(before, after, offsetAfter, offsetAt)
+      const drop = offsetBefore - offsetAfter
+      windows.push({
+        start: turnBack - drop,
+        turnBack,
+        end: turnBack + drop,
+      })
+    }
+    before = after
+    offsetBefore = offsetAfter
+  }
+  fallBackCache.set(key, windows)
+  return windows
+}
+
+// The first whole minute in (from, to] whose offset is already `offsetAfter`, by halving the day.
+function firstMinuteAt(
+  from: number,
+  to: number,
+  offsetAfter: number,
+  offsetAt: (at: number) => number,
+): number {
+  let low = from
+  let high = to
+  while (high - low > MINUTE_MS) {
+    const middle = low + Math.floor((high - low) / 2 / MINUTE_MS) * MINUTE_MS
+    // Still the old offset at the middle: the change is later.
+    if (offsetAt(middle) === offsetAfter) high = middle
+    else low = middle
+  }
+  return high
+}
+
+/**
+ * Which occurrence of its wall time an instant is, on a day `timeZone`'s clocks go back: the hour after the change repeats
+ * the hour before it. Called by {@link formatTime} for every time it writes.
+ * @param date - The instant.
+ * @param timeZone - The stored zone.
+ * @returns
+ * - 1 for the first occurrence (before the clocks go back), 2 for the second
+ * - null for a wall time that occurs once
+ * @example repeatedWallTime(new Date('2026-11-01T05:30:00Z'), 'America/New_York') // 1
+ * @example repeatedWallTime(new Date('2026-11-01T04:30:00Z'), 'America/New_York') // null
+ */
+export function repeatedWallTime(date: Date, timeZone: string): 1 | 2 | null {
+  const at = date.getTime()
+  const year = date.getUTCFullYear()
+  // A window found in the year before can run past New Year UTC.
+  const windows = [
+    ...fallBackWindows(timeZone, year - 1),
+    ...fallBackWindows(timeZone, year),
+  ]
+  const repeated = windows.find(({ start, end }) => at >= start && at < end)
+  if (!repeated) return null
+  return at < repeated.turnBack ? 1 : 2
 }
 
 /**
@@ -179,7 +292,7 @@ export function formatTime(date: Date, timeZone: string): string {
  * @param timeZone - The stored zone.
  * @returns
  * - `H:MM` for a record started today (or, by a clock behind the server's, a day the device has not reached)
- * - `M月D日 H:MM` for one started on an earlier day
+ * - `M月D日 H:MM` for one started on an earlier day, `YYYY年M月D日 H:MM` for one started in an earlier year
  * @example formatSince(new Date('2026-09-25T00:05:00Z'), '2026-09-25', 'Asia/Tokyo') // '9:05'
  * @example formatSince(new Date('2026-09-16T12:20:00Z'), '2026-09-25', 'Asia/Tokyo') // '9月16日 21:20'
  */
@@ -191,5 +304,5 @@ export function formatSince(
   const day = localDay(date, timeZone)
   const time = formatTime(date, timeZone)
   // Only an earlier day is named: a start the device reads as tomorrow (its clock behind the server's) keeps the bare time.
-  return day < today ? `${formatMonthDay(day)} ${time}` : time
+  return day < today ? `${formatMonthDay(day, today)} ${time}` : time
 }

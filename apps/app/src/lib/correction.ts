@@ -46,12 +46,15 @@ export type DaySnapshot = ReplaceDayInput['rows']
  * `middleMinute`: no quarter hour fits, so the range is the one whole minute in the row's middle (min = max = initial).
  * `earliest` – `latest`: every whole minute `switches.splitAt` takes, so a time already on the readout stays while it
  * is still one of them, even once today's clock moves the range (a middle minute, then quarter hours).
+ * `nowBound`: the range ends a quarter short of now (the clock-skew margin), not at the record's end or 24:00, so a middle
+ * minute sits near the record's start rather than in its middle.
  */
 export type CutRange = {
   min: number
   max: number
   initial: number
   middleMinute: boolean
+  nowBound: boolean
   earliest: number
   latest: number
 }
@@ -81,9 +84,11 @@ export type CorrectionRow = {
   label: string
   /** The record started before the day (listed last): its panel cuts it or changes its activity, and never moves or merges it. */
   carriedIn: boolean
-  /** `9月23日`, the day the record really started (the scope note names whose totals a pick also changes); empty on the day's own rows. */
-  trueStartDate: string
-  /** `9月23日 23:00`, the record's real start with its date (the carried-in panel's origin note); empty on the day's own rows. */
+  /** `9月23日〜9月25日`, every day the record reaches, from the day it started to the day it ends (today while it runs), each
+   * with its year when that is not the viewed day's (the scope note names whose totals a pick changes); empty on the day's own rows. */
+  trueReach: string
+  /** `9月23日 23:00`, the record's real start with its date, and its year when that is not the viewed day's (the carried-in
+   * panel's origin note); empty on the day's own rows. */
   trueStartLabel: string
   /** The row's activity was archived since: the picker cannot offer it back (the carried-in panel's warning). */
   archived: boolean
@@ -212,8 +217,9 @@ const CLOCK_SKEW_MARGIN_MS = 15 * 60_000
  * - the quarter hours in reach, opening at the middle one
  * - `middleMinute`: the one whole minute in the middle, when no quarter hour fits
  * - null when not even a whole minute keeps a minute from both ends (a fresh current state: until 17 min past its start)
- * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15, middleMinute: false, earliest: 0:00, latest: 6:59 }
- * @example cutRange(nineOhOne, nineFourteen, bounds) // { min: 9:07, max: 9:07, initial: 9:07, middleMinute: true, earliest: 9:02, latest: 9:13 }
+ * - `nowBound`: whether the quarter short of now set the range's end
+ * @example cutRange(nineSevenTwentyTwo, nineEightSeven, bounds) // { min: 0:00, max: 6:45, initial: 3:15, middleMinute: false, nowBound: false, earliest: 0:00, latest: 6:59 }
+ * @example cutRange(nineOhOne, nineFourteen, bounds) // { min: 9:07, max: 9:07, initial: 9:07, middleMinute: true, nowBound: false, earliest: 9:02, latest: 9:13 }
  */
 function cutRange(
   startedAt: number,
@@ -221,9 +227,9 @@ function cutRange(
   bounds: DayBounds,
 ): CutRange | null {
   const floor = Math.max(startedAt + MIN_SEGMENT_MS, bounds.start)
-  const ceiling =
-    Math.min(trueEnd, bounds.end, bounds.now - CLOCK_SKEW_MARGIN_MS) -
-    MIN_SEGMENT_MS
+  const recordEnd = Math.min(trueEnd, bounds.end)
+  const nowLimit = bounds.now - CLOCK_SKEW_MARGIN_MS
+  const ceiling = Math.min(recordEnd, nowLimit) - MIN_SEGMENT_MS
   const stepsInside = (step: number) => ({
     first: bounds.start + Math.ceil((floor - bounds.start) / step) * step,
     last: bounds.start + Math.floor((ceiling - bounds.start) / step) * step,
@@ -231,7 +237,11 @@ function cutRange(
   const minutes = stepsInside(MINUTE_MS)
   // Not even a whole minute keeps a minute from both ends: 「ここで分割」 is disabled.
   if (minutes.first > minutes.last) return null
-  const reach = { earliest: minutes.first, latest: minutes.last }
+  const reach = {
+    nowBound: nowLimit < recordEnd,
+    earliest: minutes.first,
+    latest: minutes.last,
+  }
   const quarters = stepsInside(QUARTER_MS)
   if (quarters.first <= quarters.last) {
     const count = (quarters.last - quarters.first) / QUARTER_MS
@@ -255,17 +265,33 @@ function cutRange(
   }
 }
 
-const NO_TRUE_START = { trueStartDate: '', trueStartLabel: '' }
+const NO_TRUE_START = { trueReach: '', trueStartLabel: '' }
 
-// The earlier day a carried-in row really started on; only carried-in rows pay for these two formats per tick.
+/**
+ * A carried-in row's origin and reach: the day it really started with its time, and every day from there to the day its
+ * record ends (the day holding its last minute, today while it runs), each date with its year when that is not the viewed
+ * day's. Only carried-in rows pay for these formats per tick; called by {@link describeRow}.
+ * @param startedAt - The record's real start, before the viewed day.
+ * @param trueEnd - The next switch, or now.
+ * @param bounds - The viewed day and the stored zone.
+ * @returns `trueStartLabel` (`9月21日 23:00`) and `trueReach` (`9月21日〜9月24日`).
+ * @example trueStartLabels(new Date('2025-12-28T14:00:00Z'), jan1SixThirty, jan1Bounds) // { trueStartLabel: '2025年12月28日 23:00', trueReach: '2025年12月28日〜1月1日' }
+ */
 function trueStartLabels(
   startedAt: Date,
+  trueEnd: number,
   bounds: DayBounds,
-): Pick<CorrectionRow, 'trueStartDate' | 'trueStartLabel'> {
-  const trueStartDate = formatMonthDay(localDay(startedAt, bounds.timeZone))
+): Pick<CorrectionRow, 'trueReach' | 'trueStartLabel'> {
+  const { timeZone } = bounds
+  const viewedDay = localDay(new Date(bounds.start), timeZone)
+  const startDay = formatMonthDay(localDay(startedAt, timeZone), viewedDay)
+  const lastDay = formatMonthDay(
+    localDay(new Date(trueEnd - 1), timeZone),
+    viewedDay,
+  )
   return {
-    trueStartDate,
-    trueStartLabel: `${trueStartDate} ${formatTime(startedAt, bounds.timeZone)}`,
+    trueReach: `${startDay}〜${lastDay}`,
+    trueStartLabel: `${startDay} ${formatTime(startedAt, timeZone)}`,
   }
 }
 
@@ -302,7 +328,9 @@ function describeRow(
     duration: formatDuration(end - start),
     label: `${spokenName} ${range} ${formatSpokenDuration(end - start)}`,
     carriedIn,
-    ...(carriedIn ? trueStartLabels(row.startedAt, bounds) : NO_TRUE_START),
+    ...(carriedIn
+      ? trueStartLabels(row.startedAt, trueEnd, bounds)
+      : NO_TRUE_START),
     archived: Boolean(activity.archivedAt),
     trueStart: startedAt,
     trueEnd,
@@ -467,24 +495,61 @@ export function openedCut(row: CorrectionRow): ChosenCut | null {
 
 /**
  * The choice a cut panel should hold so the readout never follows today's clock: what the stepper shows, whenever the kept
- * choice is not already that (a row that had no cut when its panel opened, or a choice a cut or an undo left outside).
+ * choice is not already that (a row that had no cut when its panel opened, or a choice a cut or an undo left outside). Never
+ * while a write or a read is pending, so a refused cut, whose rows land after the refusal, leaves the user's time.
  * Called by the panel's cut group at every render, which stores the answer.
  * @param row - The selected row.
  * @param chosen - The choice the panel holds now.
  * @param shown - The stepper drawn from them ({@link cutStepper}).
+ * @param pending - A write or the day's read is in flight.
  * @returns
- * - The time on the readout as a {@link ChosenCut}, when the panel holds another or none
- * - null when the panel already holds it, or the row has no cut
- * @example cutToHold(carriedIn, null, cutStepper(carriedIn, null, TZ)) // { id: 'w', at: 3:15 }
+ * - The time on the readout as a {@link ChosenCut}, when the panel holds another or none and nothing is pending
+ * - null when the panel already holds it, the row has no cut, or something is pending
+ * @example cutToHold(carriedIn, null, cutStepper(carriedIn, null, TZ), false) // { id: 'w', at: 3:15 }
+ * @example cutToHold(carriedIn, null, cutStepper(carriedIn, null, TZ), true) // null
  */
 export function cutToHold(
   row: CorrectionRow,
   chosen: ChosenCut | null,
   shown: CutStepper,
+  pending: boolean,
 ): ChosenCut | null {
-  if (shown.at === null || shown.at === chosen?.at) return null
+  if (pending || shown.at === null || shown.at === chosen?.at) return null
   return { id: row.id, at: shown.at }
 }
+
+/** What the 区切る時刻 group reads out: the time on the readout and the notes under it. */
+export type CutView = { label: string; notes: readonly string[] }
+
+/**
+ * What the 区切る時刻 group shows while 「ここで分割」 lands: the view it last showed stays until the write and the day's
+ * read settle, so the rows and totals that land one after the other never move the readout or its notes mid-answer.
+ * Called by the panel's cut group at every render, which stores `hold` when it is not null.
+ * @param held - The view the group showed last, or null before its first render.
+ * @param live - The view drawn from the current rows and totals.
+ * @param pending - A write or the day's read is in flight.
+ * @returns
+ * - `shown`: `held` while pending (or `live` before any was held), else `live`
+ * - `hold`: `live` when idle and it differs from `held`, else null, so the stored state changes only when the view does
+ * @example cutViewShown({ label: '3:15', notes: [] }, { label: '9:07', notes: [] }, true) // { shown: { label: '3:15', … }, hold: null }
+ * @example cutViewShown({ label: '3:15', notes: [] }, { label: '9:07', notes: [] }, false) // { shown: { label: '9:07', … }, hold: { label: '9:07', … } }
+ */
+export function cutViewShown(
+  held: CutView | null,
+  live: CutView,
+  pending: boolean,
+): { shown: CutView; hold: CutView | null } {
+  // While pending the held view stays; before anything was held, the live one is all there is.
+  if (pending) return { shown: held ?? live, hold: null }
+  return { shown: live, hold: sameCutView(held, live) ? null : live }
+}
+
+// Whether two views read the same, so an idle render stores nothing and never loops.
+const sameCutView = (held: CutView | null, live: CutView): boolean =>
+  held !== null &&
+  held.label === live.label &&
+  held.notes.length === live.notes.length &&
+  held.notes.every((note, index) => note === live.notes[index])
 
 /** What the 区切る時刻 row draws: the cut time (null = no cut), its readout, and where each step lands (null = disabled). */
 export type CutStepper = {
@@ -645,6 +710,7 @@ export function cutTotalsEffects(
  * @returns The lines in display order; empty when there is nothing to say.
  * @example cutNotes(carriedIn, facts, at) // ['区切ると、無操作扱い（12時間超）だった時間が集計に入ります']
  * @example cutNotes(nineOhOneToFourteen, facts, at) // ['短い記録のため、真ん中で区切ります']
+ * @example cutNotes(runningSinceNineAtNineTwenty, facts, at) // ['直近15分は区切れないため、それより前の真ん中で区切ります']
  * @example cutNotes(freshCurrentState, facts, null) // ['区切れる時刻がありません']
  */
 export function cutNotes(
@@ -658,10 +724,14 @@ export function cutNotes(
       ? `区切ると、無操作扱い（${idleLabel(facts.idleThresholdMs / 60_000)}超）だった時間が集計に入ります`
       : '区切ると、この日は計測できた日になります',
   )
-  return row.cut.middleMinute
-    ? ['短い記録のため、真ん中で区切ります', ...effects]
-    : effects
+  return row.cut.middleMinute ? [middleNote(row.cut), ...effects] : effects
 }
+
+// Why the row is cut at a middle minute: the record is short, or the quarter short of now leaves only its first minutes.
+const middleNote = (cut: CutRange): string =>
+  cut.nowBound
+    ? '直近15分は区切れないため、それより前の真ん中で区切ります'
+    : '短い記録のため、真ん中で区切ります'
 
 /**
  * What 「元に戻す」 holds. `day`: the day's rows before the edit, written back through `switches.replaceDay` only while the
@@ -838,50 +908,89 @@ function dayRowsMatch(
 
 /**
  * The correction sheet's own state, for the day it shows: the selected row, and the row whose header takes focus (the part a
- * cut just created, or the row a merge kept), since the pressed button left the screen with its panel.
+ * cut just created, or the row a merge kept), since the pressed button left the screen with its panel. `answered`: an answer
+ * to a press chose the selection (a cut's new row, an undo's reselect, the archived notice's row), not the user's tap.
  */
 export type CorrectionSheet = {
   day: string
   selectedId: string | null
   focusId: string | null
+  answered: boolean
 }
 
 /** What an answer to a press sets on {@link CorrectionSheet}: never its day, which only a render for a new day changes. */
 export type SheetPatch = Partial<Omit<CorrectionSheet, 'day'>>
 
 /**
- * What the sheet shows for `day`, from its own state and what the store keeps about the day. Its own state belongs to the day
- * it was made on, so a new day (midnight on today's sheet, a `?day=` change) starts it over; the row the archived notice was
- * raised for is selected when nothing else is, so a notice kept after the sheet closed is seen when it reopens. Called by
- * {@link useCorrectionState} (inside {@link useCorrection}) on every render, which stores `sheet` back when it started over.
+ * What the sheet shows for `day`, from its own state, the day's list and what the store keeps about the day. Its own state
+ * belongs to the day it was made on, so a new day (midnight on today's sheet, a `?day=` change) starts it over, except the
+ * row the user selected: it stays selected while the new day lists it (the running record, now carried in), and its header
+ * takes focus again, since its panel left the screen while the new day's list loaded. A selection an answer made is dropped.
+ * The row the archived notice was raised for is selected when nothing listed is, so a notice kept after the sheet closed is
+ * seen when it reopens. Called by {@link useCorrectionState} (inside {@link useCorrection}) on every render, which stores
+ * `sheet` back when it started over.
  * @param sheet - The sheet's own state.
  * @param day - The day the sheet shows.
  * @param said - The day's line and notice from the store, if any.
+ * @param listed - The day's `switches.listByDay` answer, undefined while it loads (a kept selection waits for it).
  * @returns
- * - `sheet`: the same object on the same day, else a fresh state for `day`
- * - `selectedId`: the selected row, else the notice's row, else null
+ * - `sheet`: the same object on the same day, else the state for `day` (the user's selection kept and focused, no answer's)
+ * - `selectedId`: the selected row while listed (or while the list loads), else the notice's row, else null
  * - `noticeId`, `line`: the store's, null when absent
- * @example sheetView({ day: '2026-09-08', selectedId: 'r', focusId: null }, '2026-09-09', {}) // { sheet: { day: '2026-09-09', selectedId: null, focusId: null }, selectedId: null, … }
+ * @example sheetView({ day: '2026-09-08', selectedId: 'r', focusId: null, answered: false }, '2026-09-09', {}, listedWithR) // { sheet: { day: '2026-09-09', selectedId: 'r', focusId: 'r', answered: false }, selectedId: 'r', … }
+ * @example sheetView({ day: '2026-09-08', selectedId: 'r', focusId: 'r', answered: true }, '2026-09-09', {}, listedWithR) // { sheet: { day: '2026-09-09', selectedId: null, focusId: null, answered: false }, selectedId: null, … }
  */
 export function sheetView(
   sheet: CorrectionSheet,
   day: string,
   said: { line?: DayLine; notice?: string },
+  listed: ListedDay | undefined,
 ): {
   sheet: CorrectionSheet
   selectedId: string | null
   noticeId: string | null
   line: DayLine | null
 } {
-  const current =
-    sheet.day === day ? sheet : { day, selectedId: null, focusId: null }
+  const current = sheet.day === day ? sheet : sheetForNewDay(sheet, day)
   const noticeId = said.notice ?? null
   return {
     sheet: current,
-    selectedId: current.selectedId ?? noticeId,
+    selectedId: isListed(current.selectedId, listed)
+      ? current.selectedId
+      : noticeId,
     noticeId,
     line: said.line ?? null,
   }
+}
+
+// A new day's sheet: the user's own selection carries over with a fresh focus request; an answer's selection and focus do not.
+function sheetForNewDay(sheet: CorrectionSheet, day: string): CorrectionSheet {
+  const kept = sheet.answered ? null : sheet.selectedId
+  return { day, selectedId: kept, focusId: kept, answered: false }
+}
+
+// Whether a selection still names a row of the day: always while the list loads, so midnight keeps it until the list lands.
+function isListed(id: string | null, listed: ListedDay | undefined): boolean {
+  if (id === null) return false
+  if (!listed) return true
+  return listed.carriedIn?.id === id || listed.rows.some((row) => row.id === id)
+}
+
+/**
+ * Whether the selection a press's `hush` makes the sheet's own counts as an answer's: it does when the shown selection is
+ * the notice's row (the sheet's own was empty or not listed), and otherwise stays what it was. Called by `hush` in
+ * {@link useCorrectionState}, which stores the shown selection as the sheet's own.
+ * @param viewSelectedId - The selection the sheet shows ({@link sheetView}).
+ * @param current - The sheet's own state.
+ * @returns true when the shown selection came from the notice, else `current.answered`.
+ * @example hushedAnswered('r', { day, selectedId: null, focusId: null, answered: false }) // true
+ * @example hushedAnswered('r', { day, selectedId: 'r', focusId: null, answered: false }) // false
+ */
+export function hushedAnswered(
+  viewSelectedId: string | null,
+  current: CorrectionSheet,
+): boolean {
+  return viewSelectedId !== current.selectedId || current.answered
 }
 
 /**
@@ -895,7 +1004,7 @@ export function sheetView(
  * @returns
  * - `current` with `patch` applied when `current.day` is `pressedDay`
  * - `current` unchanged otherwise
- * @example onPressedDay({ day: '2026-09-09', selectedId: null, focusId: null }, '2026-09-08', { selectedId: 'r' }) // unchanged
+ * @example onPressedDay({ day: '2026-09-09', selectedId: null, focusId: null, answered: false }, '2026-09-08', { selectedId: 'r', answered: true }) // unchanged
  */
 export function onPressedDay(
   current: CorrectionSheet,

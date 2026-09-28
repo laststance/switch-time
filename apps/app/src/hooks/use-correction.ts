@@ -24,6 +24,7 @@ import {
   dayLine,
   dayTitle,
   failureKind,
+  hushedAnswered,
   isDayChangedRefusal,
   landedUndo,
   nextStamp,
@@ -87,7 +88,7 @@ export function useCorrection(dayParam: string | undefined) {
     orpc.switches.listByDay.queryOptions({ input: { day }, enabled: ready }),
   )
   const activities = useAllActivities()
-  const state = useCorrectionState(day)
+  const state = useCorrectionState(day, list.data)
   // Offered only while the listed day still reads as the slot left it: this device's own tap on ホーム, or another device's
   // edit the list has read, turns it off rather than leaving a press that can only be refused.
   const slot = offeredUndo(
@@ -144,11 +145,11 @@ type Pressed = { day: string; epoch: string }
 // The sheet's own state ({@link CorrectionSheet}): the selected row, and the row whose header takes focus once a cut or a
 // merge lands (the part the cut created, the row the merge kept), since the pressed button left with its panel. It belongs
 // to the day shown: a new day (midnight on today's sheet, a `?day=` change) starts it over during render ({@link sheetView}),
-// so an answer from a press on the day before, which applies only while `day` is still its own ({@link onPressedDay}),
-// selects nothing there. What the sheet said about a day
+// keeping only a row the user selected while the new day lists it, so an answer from a press on the day before, which
+// applies only while `day` is still its own ({@link onPressedDay}), selects nothing there. What the sheet said about a day
 // (the last failure's line, the archived notice) lives in the store with the undo slot, so a press whose answer lands after
 // the sheet closed still says it when that day's sheet reopens; the notice's row is selected then, so its panel shows it.
-function useCorrectionState(day: string) {
+function useCorrectionState(day: string, listed: ListedDay | undefined) {
   const dispatch = useAppDispatch()
   const epoch = useAppSelector((s) => s.correction.epoch)
   const line = useAppSelector((s) => s.correction.line[day])
@@ -157,8 +158,9 @@ function useCorrectionState(day: string) {
     day,
     selectedId: null,
     focusId: null,
+    answered: false,
   })
-  const view = sheetView(sheet, day, { line, notice })
+  const view = sheetView(sheet, day, { line, notice }, listed)
   const current = view.sheet
   // A new day started the sheet over ("adjusting state when a prop changes"); `current` already covers this render.
   if (current !== sheet) setSheet(current)
@@ -174,22 +176,27 @@ function useCorrectionState(day: string) {
     // notice selected becomes the sheet's own first, so clearing the notice leaves its panel open under the press.
     // Focus is cleared too, so the answer's focus request is a change even when it names the row focused last time.
     hush: (notice: boolean): void => {
-      setSheet({ ...current, selectedId: view.selectedId, focusId: null })
+      setSheet({
+        ...current,
+        selectedId: view.selectedId,
+        focusId: null,
+        answered: hushedAnswered(view.selectedId, current),
+      })
       dispatch(hushed({ epoch, day, notice }))
     },
     // A tap on a row: what the line or the notice said was about another moment, except the notice of the row tapped, which
     // may have landed while another row was selected and is seen only now.
     select: (id: string | null): void => {
-      setSheet({ ...current, selectedId: id, focusId: null })
+      setSheet({ ...current, selectedId: id, focusId: null, answered: false })
       dispatch(hushed({ epoch, day, notice: id !== view.noticeId }))
     },
     // A row the sheet selects by itself (an undo's reselect): a line a concurrent write raised stays.
     reveal: (pressedDay: string, id: string): void => {
-      answer(pressedDay, { selectedId: id })
+      answer(pressedDay, { selectedId: id, answered: true })
     },
     // 「ここで分割」: the new row is selected (and focused) so the next pick changes only the later part.
     selectInserted: (pressedDay: string, id: string): void => {
-      answer(pressedDay, { selectedId: id, focusId: id })
+      answer(pressedDay, { selectedId: id, focusId: id, answered: true })
     },
     // A merge: the merged row's panel is gone, so focus lands on the row it joined, whose header reads its new span. Nothing is
     // selected: the user picks the next row to edit.
@@ -199,7 +206,7 @@ function useCorrectionState(day: string) {
     // An archived pick, or an undo refused as archived: the notice on the press's day, whose row is then selected.
     showNotice: (pressed: Pressed, id: string): void => {
       dispatch(noticed({ ...pressed, id }))
-      answer(pressed.day, { selectedId: id })
+      answer(pressed.day, { selectedId: id, answered: true })
     },
   }
 }

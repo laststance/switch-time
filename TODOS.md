@@ -28,66 +28,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Keep the user's own selection when today's sheet passes midnight
-
-**What:** When the sheet's day changes, keep the row the user selected if the new day still lists it (the running record becomes the carried-in one under the same id), and drop only the selection and focus an answer set.
-
-**Why:** `sheetView` starts the sheet's own state over whenever the day changes, so a panel open at midnight closes under the user's finger, with its picker and 区切る時刻. Before 0.8.0.0 the selection stayed. `onPressedDay` alone already keeps a late answer off the new day.
-
-**Context:** `sheetView` and `onPressedDay` in `apps/app/src/lib/correction.ts`; the e2e "a split whose answer lands after midnight selects nothing on the new day" must keep passing. Raised by the Claude adversarial pass during the 0.8.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Keep 区切る時刻 still while 「ここで分割」 is pending
-
-**What:** While a cut is pending, keep the readout and the notes on the time the user chose, until the panel moves to the new row.
-
-**Why:** `onSettled` refetches `switches.*` and `stats.*` together, and the list usually lands first. The cut row stays selected with its end now at the cut, so the chosen time falls outside `earliest` – `latest`: `cutStepper` falls back to the shorter row's `initial` and `cutToHold` holds it. The `aria-live` readout shows and announces a time the user never chose, until `selectInserted` moves the panel once the stats land.
-
-**Context:** `CutControls` in `apps/app/src/app/(app)/correction.tsx` (it gets `pending`), `cutStepper` and `cutToHold` in `apps/app/src/lib/correction.ts`, `onSettled` in `apps/app/src/hooks/use-correction.ts`. Either freeze the stepper while pending, or select the inserted row as soon as the list lands. Raised by the Claude adversarial pass during the 0.23.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Say why today's running record cuts near its start
-
-**What:** On today's running record, when the 15-minute margin before now leaves no quarter hour, say that the last 15 minutes cannot be cut, rather than 「短い記録のため、真ん中で区切ります」. The pen file first.
-
-**Why:** The ceiling then comes from `now - CLOCK_SKEW_MARGIN_MS`, so the middle minute sits near the record's start: a record from 9:00 cuts at 9:02 at 9:20, while its middle is 9:10. The note calls that the middle, for up to about half an hour after every tap.
-
-**Context:** `cutRange` (the middle-minute branch and the `now` ceiling) and the note text in `apps/app/src/lib/correction.ts`. `CutRange` could say which bound set the ceiling. Raised by the Claude adversarial pass during the 0.23.0.0 ship.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Show which repeated wall-clock time is meant on a fall-back day
-
-**What:** On a daylight-saving fall-back day, show which occurrence a repeated wall-clock time means (for example the UTC offset) in the correction sheet's row labels, 開始時刻, 区切る時刻 and History.
-
-**Why:** In a zone with daylight saving the hour after the fall-back repeats, so two instants an hour apart read the same `H:MM`. A user can move a start or cut a record at the wrong one without seeing it.
-
-**Context:** `formatTime` (`apps/app/src/lib/format.ts`) prints `H:MM`; `timeZoneSchema` accepts any IANA zone; `dayBounds` already handles 23- and 25-hour days. The 区切る時刻 steps are elapsed time (±15 / ±60 min), so inside the repeated hour +1時間 can leave the readout unchanged. The owner's zone (Asia/Tokyo) never reaches it. Start with a helper that tells whether an instant's wall time occurs twice that day, tested on `America/New_York` 2026-11-01. Raised by Codex in the eng review of the carried-in row's panel (2026-09-24) (R10 kept `H:MM` for consistency with every other label).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Name every day a carried-in record reaches, and its year
-
-**What:** Make the carried-in panel's notes name the whole reach of the record. The scope note under 活動を変える should give the range of days the record covers (`9月21日〜9月24日の集計に反映されます`), not only the day it started. The origin note should add the year when the record started in another year than the viewed day. Change the text in the pen file first, then in `correction.tsx` and `lib/correction.ts` (`trueStartLabels`).
-
-**Why:** A pick changes the record's activity on every day it covers. A record from 9/21 23:00 viewed on 9/23 also changes 9/22, and one that is still running changes today, but the note names only 9/21. A record that began more than a year ago reads as a recent date: on the same calendar day it even reads as the viewed day.
-
-**Context:** `CorrectionRow` already carries `trueStart` and `trueEnd`, and the last day the record touches is `localDay(trueEnd - 1)` in the stored zone. Raised by the Red Team during the carried-in panel's ship (2026-09-24). The untapped-day notes (`spanLabel` in `lib/untapped.ts`, 0.21.0.0) name their days without a year too, so a span across New Year or from a record over a year old needs the same rule.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Notice another device's edit on a day busier than a baseline can list
 
 **What:** Let the sheet detect a change another device made to the day's own rows when the day lists more than `DAY_ROWS_MAX` (300) rows, and offer 「元に戻す」 there, for example by comparing a hash or a revision of the day instead of every row.
@@ -112,18 +52,6 @@
 **Priority:** P3
 **Depends on:** None
 
-### Announce the correction sheet's status line with VoiceOver on iOS
-
-**What:** On iOS, call `AccessibilityInfo.announceForAccessibility` whenever the correction sheet's status line gets new text: the failure lines (alert) and 「反映しています…」, 「一覧を読み直しています…」 and the offline line (polite).
-
-**Why:** React Native has no live region on iOS: `aria-live` and `role="alert"` are read on the web and Android only, so a VoiceOver user never hears why an edit failed or that it is waiting. The cut's 区切る時刻 readout already announces itself this way on iOS.
-
-**Context:** `StatusLine` in `apps/app/src/app/(app)/correction.tsx` (its slots come from `statusSlots` in `apps/app/src/lib/correction.ts`); the pattern is in `CarriedInActions` in the same file. `useIosAnnouncement` (`apps/app/src/hooks/use-ios-announcement.ts`, 0.24.5.0) already does this for the タイムゾーン sheet's line. The web keeps the mounted polite region and the keyed alert. Found by the pre-landing review of the PR that settled the correction status line by later reads (2026-09-25). Only matters once the native build ships.
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
 ### Name only the untapped days an edit really changes
 
 **What:** Make the correction sheet's untapped-day notes exact: (1) let `untappedChange` see the taps after the first switch after the day, up to that switch's day + 7, so a run that a later tap ends is not treated as running through its week; (2) leave manually excluded days out, as `classifyDay` does; (3) name separate runs of changed days separately (「9月9日、9月16日〜9月17日」) instead of one first-to-last range that can include the viewed day's own tapped day and days that do not change. (3) changes the note's text, so pen first.
@@ -140,11 +68,11 @@
 
 ### Listen to History's and the correction sheet's spoken labels
 
-**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a 状態別 row and a correction sheet row. Check that the spoken times (`9時間`, `9時間5分`, `45分`) read as times, that the `、` between a day cell's parts is a pause, that a 状態別 row is one stop that reads its label (`仕事、合計 19時間、1日あたり 6時間20分`) and not its hidden texts on iOS, and whether 31 month cells are too long to swipe through. If they are, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
+**What:** With VoiceOver (iOS, and macOS Safari on the web build) and TalkBack, listen to a History day cell, a 状態別 row and a correction sheet row, and on iOS check that VoiceOver says the correction sheet's status line (a failure, 「反映しています…」) when it changes. Check that the spoken times (`9時間`, `9時間5分`, `45分`) read as times, that the `、` between a day cell's parts is a pause, that a 状態別 row is one stop that reads its label (`仕事、合計 19時間、1日あたり 6時間20分`) and not its hidden texts on iOS, and whether 31 month cells are too long to swipe through. If they are, move the times to a description (`aria-describedby` on the web, `accessibilityHint` on native) and keep the name to the date.
 
 **Why:** The labels now say durations in Japanese, join a day cell's parts with `、`, start today's cell with 今日, and read an activity named like detox or 平均から除外 with 活動 in front, but the tests check them as strings only. Nobody has heard them.
 
-**Context:** `formatSpokenDuration` and `spokenActivityNames` in `apps/app/src/lib/format.ts`; `cellLabel` and `breakdownLabel` in `apps/app/src/lib/history.ts`; `Breakdown` in `apps/app/src/app/(app)/(tabs)/history.tsx` (`accessible` + `role="group"` + hidden children); `RowHeader` in `apps/app/src/app/(app)/correction.tsx`. Left by the PR that gave these labels their spoken form (2026-09-29).
+**Context:** `formatSpokenDuration` and `spokenActivityNames` in `apps/app/src/lib/format.ts`; `cellLabel` and `breakdownLabel` in `apps/app/src/lib/history.ts`; `Breakdown` in `apps/app/src/app/(app)/(tabs)/history.tsx` (`accessible` + `role="group"` + hidden children); `RowHeader` and `StatusLine` (which calls `useIosAnnouncement` since 0.24.6.0) in `apps/app/src/app/(app)/correction.tsx`. Left by the PR that gave these labels their spoken form (2026-09-29).
 
 **Effort:** S
 **Priority:** P3
@@ -234,7 +162,7 @@
 
 **Why:** `useNativeAnnouncement` (`apps/app/src/hooks/use-registration.ts`) calls `announceForAccessibility` as sign-in mounts, during the stack transition, which screen readers often interrupt. On the web the password field's `aria-describedby` carries the notice instead, and the e2e tests check that one.
 
-**Context:** Raised by the adversarial review of 0.17.0.0. `apps/app/src/app/(app)/correction.tsx` announces its status line on iOS only; see "Announce the correction sheet's status line with VoiceOver on iOS".
+**Context:** Raised by the adversarial review of 0.17.0.0. `apps/app/src/app/(app)/correction.tsx` announces its status line on iOS only (0.24.6.0, through `useIosAnnouncement`).
 
 **Effort:** S
 **Priority:** P3

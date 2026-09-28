@@ -59,6 +59,28 @@ test('switching a weekend detox carried into Monday to an activity names the unt
   )
 })
 
+test('a detox carried over New Year names last year’s untapped days with their year', () => {
+  // Arrange: detox from 2025-12-29 22:00, 仕事 on 2026-01-02 9:00, viewed on 2026-01-02.
+  const list: ListedDay = {
+    carriedIn: row('c', null, at('2025-12-29', 22)),
+    carriedInRunStart: '2025-12-29',
+    rows: [row('w', 'work', at('2026-01-02', 9))],
+    carriedOut: null,
+  }
+
+  // Act
+  const note = untappedPickNote(
+    list,
+    { id: 'c', activityId: null },
+    facts('2026-01-02', '2026-01-05'),
+  )
+
+  // Assert
+  expect(note).toBe(
+    'detox と活動を切り替えると、タップのない日（2025年12月30日〜1月1日）の計測が変わることがあります',
+  )
+})
+
 test('switching the day’s last detox to an activity names the untapped days after it through today', () => {
   // Arrange: 仕事 then detox from 20:00 that is still running.
   const list: ListedDay = {
