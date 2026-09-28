@@ -358,38 +358,14 @@ test('ここで分割 on the busiest day a baseline can list lands, and its 元�
   )
 })
 
-test('an edit on a day busier than a baseline can list lands with a baseline that names no rows', async () => {
+test('an edit on a busy day is refused when its baseline names neither rows nor a digest, though nothing changed', async () => {
   // Arrange
   const { api, list, listed, carriedOutId } = await busyDay(
-    'busy-day-rowless-edit@example.com',
+    'busy-day-rowless@example.com',
     DAY_ROWS_MAX + 1,
   )
   const [first] = listed.rows
   if (!first) throw new Error('fixture has no rows')
-
-  // Act
-  const picked = await api.switches.changeActivity({
-    id: first.id,
-    activityId: idOf(list, '睡眠'),
-    baseline: { day: yesterday, timeZone: TZ, carriedIn: null, carriedOutId },
-  })
-
-  // Assert
-  expect(picked).toMatchObject({
-    id: first.id,
-    activityId: idOf(list, '睡眠'),
-  })
-})
-
-test('an edit on a busy day is still refused once the account’s time zone changed, though its baseline names no rows', async () => {
-  // Arrange
-  const { api, list, listed, carriedOutId } = await busyDay(
-    'busy-day-rowless-zone@example.com',
-    DAY_ROWS_MAX + 1,
-  )
-  const [first] = listed.rows
-  if (!first) throw new Error('fixture has no rows')
-  await api.settings.update({ timeZone: 'Europe/London' })
 
   // Act
   const pick = api.switches.changeActivity({
@@ -564,7 +540,7 @@ test('元に戻す of ここで分割 lands with the cut row one revision on and
 })
 
 test('an edit with a baseline that names neither rows nor a digest is refused on a day that is not busy', async () => {
-  // Arrange: a client from before the digest sends no rows only on a busy day; this day holds two
+  // Arrange: the app names the day's rows on a day like this one, so a baseline without them is not from the app
   const { api, list, work } = await twoRowDay('rowless-quiet-day@example.com')
 
   // Act
@@ -752,10 +728,10 @@ test('the database refuses two switches of one account that start at the same in
   expect((await api.switches.listByDay({ day: yesterday })).rows).toEqual([])
 })
 
-test('an edit sent with a rowless baseline on the first switch after the day is refused as bad input, since the day’s 元に戻す cannot reach it', async () => {
+test('an edit sent with a digest baseline on the first switch after the day is refused as bad input, since the day’s 元に戻す cannot reach it', async () => {
   // Arrange: 家事 from today's 0:00 ends the busy day's last row
-  const { api, list, carriedOutId } = await busyDay(
-    'rowless-carried-out@example.com',
+  const { api, list, listed, carriedOutId } = await busyDay(
+    'digest-carried-out@example.com',
     DAY_ROWS_MAX + 1,
   )
 
@@ -763,7 +739,13 @@ test('an edit sent with a rowless baseline on the first switch after the day is 
   const pick = api.switches.changeActivity({
     id: carriedOutId,
     activityId: idOf(list, '睡眠'),
-    baseline: { day: yesterday, timeZone: TZ, carriedIn: null, carriedOutId },
+    baseline: {
+      day: yesterday,
+      timeZone: TZ,
+      digest: dayDigest(listed.rows),
+      carriedIn: null,
+      carriedOutId,
+    },
   })
 
   // Assert

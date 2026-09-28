@@ -28,18 +28,6 @@
 **Priority:** P4
 **Depends on:** None
 
-### Refuse a baseline with neither rows nor a digest once older clients are gone
-
-**What:** Refuse, as a changed day, an edit whose baseline names neither `rows` nor `digest`, on any day.
-
-**Why:** Since 0.24.7.0 the app sends a digest on a busy day, and the API refuses a baseline with neither on a day of 300 rows or fewer. It still accepts one on a busier day, so that a client from before 0.24.7.0 can correct such a day; an edit from that client does not notice another device's change to the day's own rows, and a redo of an edit that did land applies twice.
-
-**Context:** `matchesDay` in `apps/api/src/rpc/switches.ts`. Safe once every installed app sends the digest (the web bundle updates on reload; a native build would pin the oldest version in use).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
-
 ## Stats
 
 ### Listen to History's and the correction sheet's spoken labels

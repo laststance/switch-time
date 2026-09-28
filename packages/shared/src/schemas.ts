@@ -211,7 +211,7 @@ const carriedInSchema = z
  * `REFUSAL.dayChanged`) unless the day still reads exactly so, which makes the sheet's snapshot the day's true state
  * before the edit and lets 「元に戻す」 know the state the edit left. A day busier than {@link DAY_ROWS_MAX} sends `digest`
  * (`dayDigest` of its rows) instead of `rows`: the router compares that, and that the edited row is inside the day. A baseline
- * with neither is accepted only on a day that holds more than {@link DAY_ROWS_MAX} rows (clients from before the digest).
+ * with neither is refused on every day.
  */
 const dayBaselineSchema = z.object({
   day: daySchema,

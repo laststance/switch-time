@@ -4,7 +4,6 @@ import {
   changeActivityInputSchema,
   clampStart,
   MIN_SEGMENT_MS,
-  DAY_ROWS_MAX,
   dayBounds,
   dayDigest,
   daySchema,
@@ -451,10 +450,11 @@ function sameRows(actual: readonly DayRow[], listed: readonly DayRow[]) {
  * Whether the day's rows, read under the user's lock, are the ones the client named: the listed rows, or on a day busier
  * than `DAY_ROWS_MAX`, their {@link dayDigest}. Called by {@link checkBaseline} and replaceDay.
  * @param actual - The day's rows now ({@link dayRows}).
- * @param expected - The client's rows or digest; neither is accepted only on a day busier than `DAY_ROWS_MAX` (clients from
- *   before the digest), since the app lists every row of any other day.
+ * @param expected - The client's rows or digest; neither never matches, on any day: every app names one of them, and an edit
+ *   that names none could not notice another device's change to the day's own rows.
  * @returns true when the day still reads as the client saw it
  * @example matchesDay(await dayRows(tx, userId, window), { digest: '301:1a2b' }) // false once another device picked a row
+ * @example matchesDay(await dayRows(tx, userId, window), {}) // false
  */
 function matchesDay(
   actual: readonly DigestRow[],
@@ -466,7 +466,7 @@ function matchesDay(
   if (expected.rows) return sameRows(actual, expected.rows)
   if (expected.digest !== undefined)
     return dayDigest(actual) === expected.digest
-  return actual.length > DAY_ROWS_MAX
+  return false
 }
 
 /**
