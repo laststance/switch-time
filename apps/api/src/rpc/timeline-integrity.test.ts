@@ -752,22 +752,21 @@ test('元に戻す with a range that leaves the day, or rows outside its range, 
       rows: [{ activityId: work, startedAt }],
     })
 
-  // Act
-  const leavesDay = send(
-    {
-      from: first.startedAt,
-      to: new Date(dayBounds(yesterday, TZ).end + MINUTE),
-    },
-    first.startedAt,
-  )
-  const rowOutside = send(
-    { from: first.startedAt, to: second.startedAt },
-    second.startedAt,
-  )
+  // Act: each call starts when its assertion awaits it, so a refusal is never left unhandled while the other runs
+  const leavesDay = async () =>
+    send(
+      {
+        from: first.startedAt,
+        to: new Date(dayBounds(yesterday, TZ).end + MINUTE),
+      },
+      first.startedAt,
+    )
+  const rowOutside = async () =>
+    send({ from: first.startedAt, to: second.startedAt }, second.startedAt)
 
   // Assert
-  await expect(leavesDay).rejects.toMatchObject({ code: 'BAD_REQUEST' })
-  await expect(rowOutside).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(leavesDay()).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+  await expect(rowOutside()).rejects.toMatchObject({ code: 'BAD_REQUEST' })
 })
 
 test('元に戻す with a range that starts after the day’s first row leaves the carried-in record alone, and one that reaches that row bumps it', async () => {
