@@ -286,7 +286,7 @@ export function archivedRows(
   return (
     (activities ?? [])
       .filter((row) => row.archivedAt !== null)
-      // `sort` on filter's fresh copy rather than `toSorted`, which Safari before 16 lacks.
+      // `sort` on the narrowed copy above rather than `toSorted`, which Safari before 16 lacks.
       .sort(
         (a, b) =>
           (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0),
