@@ -199,14 +199,19 @@ function untappedChange(
   return first && last ? { from: first, to: last } : null
 }
 
-// `9月24日` or `9月24日〜9月26日`.
-const spanLabel = ({ from, to }: UntappedSpan): string =>
+// `9月24日` or `9月24日〜9月26日`, each with its year when that is not the viewed day's.
+const spanLabel = ({ from, to }: UntappedSpan, viewedDay: string): string =>
   from === to
-    ? formatMonthDay(from)
-    : `${formatMonthDay(from)}〜${formatMonthDay(to)}`
+    ? formatMonthDay(from, viewedDay)
+    : `${formatMonthDay(from, viewedDay)}〜${formatMonthDay(to, viewedDay)}`
 
-const untappedLine = (lead: string, span: UntappedSpan, verb: string): string =>
-  `${lead}、タップのない日（${spanLabel(span)}）の計測${verb}変わることがあります`
+const untappedLine = (
+  lead: string,
+  span: UntappedSpan,
+  verb: string,
+  viewedDay: string,
+): string =>
+  `${lead}、タップのない日（${spanLabel(span, viewedDay)}）の計測${verb}変わることがあります`
 
 /**
  * The line under 活動を変える when switching the row between detox and an activity may change which untapped days count:
@@ -229,7 +234,9 @@ export function untappedPickNote(
     { kind: 'pick', id: row.id, activityId: other },
     facts,
   )
-  return span ? untappedLine('detox と活動を切り替えると', span, 'が') : null
+  return span
+    ? untappedLine('detox と活動を切り替えると', span, 'が', facts.day)
+    : null
 }
 
 /**
@@ -258,10 +265,11 @@ export function untappedMergeNote(
       from: previous.from < next.from ? previous.from : next.from,
       to: previous.to > next.to ? previous.to : next.to,
     }
-    return untappedLine('統合すると', span, 'が')
+    return untappedLine('統合すると', span, 'が', facts.day)
   }
-  if (previous) return untappedLine('前の記録に統合すると', previous, 'が')
-  if (next) return untappedLine('次の記録に統合すると', next, 'が')
+  if (previous)
+    return untappedLine('前の記録に統合すると', previous, 'が', facts.day)
+  if (next) return untappedLine('次の記録に統合すると', next, 'が', facts.day)
   return null
 }
 
@@ -309,7 +317,7 @@ export function untappedUndoNote(
       ? { kind: 'restoreDay', rows: slot.rows }
       : { kind: 'pick', id: slot.id, activityId: slot.to }
   const span = untappedChange(list, edit, facts)
-  return span ? untappedLine('元に戻すと', span, 'も') : null
+  return span ? untappedLine('元に戻すと', span, 'も', facts.day) : null
 }
 
 type RowNotes = ReturnType<typeof untappedRowNotes>

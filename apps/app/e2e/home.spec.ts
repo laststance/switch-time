@@ -760,8 +760,9 @@ async function seedCarriedDetox(page: Page, start: string): Promise<void> {
   })
 }
 
+// `M月D日`, with the year when it is not today's, as the since line writes a start.
 const monthDay = (day: string) =>
-  `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`
+  `${day.slice(0, 4) === today().slice(0, 4) ? '' : `${Number(day.slice(0, 4))}年`}${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`
 
 test('a detox on the seventh day after it started warns that tomorrow will not count, without asking the server about today', async ({
   page,

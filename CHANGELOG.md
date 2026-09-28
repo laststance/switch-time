@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.6.0] - 2026-09-29
+
+### Changed
+
+- The correction sheet keeps the row you opened when today's sheet passes
+  midnight: the running record, now carried into the new day, stays open and
+  its header takes focus again. A row a cut or an undo selected is still
+  dropped, and a row the new day does not list is not kept.
+- The carried-in panel's scope note names every day the record reaches
+  (「9月21日〜9月24日の集計に反映されます」), through today while it runs, and
+  a date in another year than the viewed day is written with its year, in the
+  origin note, the untapped-day notes and Home's 「… から」.
+- On today's running record, 区切る時刻 explains a cut near its start as 「直近
+  15分は区切れないため、それより前の真ん中で区切ります」 instead of calling
+  the record short.
+- On a day the clocks go back, a time in the repeated hour says which of its
+  two occurrences it is (「1:30（1回目）」「1:30（2回目）」) in the row labels,
+  開始時刻 and 区切る時刻.
+- VoiceOver on iOS says the correction sheet's status line when it changes.
+
+### Fixed
+
+- 区切る時刻 no longer jumps to a time you never chose while 「ここで分割」 is
+  landing: the readout and its notes keep your time until the new row is
+  selected, and a refused cut leaves it.
+
 ## [0.24.5.0] - 2026-09-29
 
 ### Added
