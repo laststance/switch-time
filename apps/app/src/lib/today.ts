@@ -62,28 +62,57 @@ export function legendEntries(
   return entries
 }
 
-/** A bar's own left and right corner classes, lent to a span that touches that end. */
-export type BarCorners = { first: string; last: string }
+/**
+ * A bar's own left and right corner classes, lent to a span that touches that end, and what else such a span takes (`endSpan`):
+ * a `min-w-*` the size of the corner's radius, so it is never narrower than the corner, and the classes that draw it above the
+ * span next to it, over the track's own colour, so that neighbour does not cover the width it gained.
+ */
+export type BarCorners = { first: string; last: string; endSpan: string }
+
+/** Where a span sits on its bar: its classes and its absolute placement, in percent of the bar. */
+export type SpanBox = {
+  className: string
+  style: { left?: `${number}%`; right?: 0; width: `${number}%` }
+}
 
 /**
- * The corner classes a span takes where it touches either end of its bar, so an outlined span there follows the rounded track
- * instead of being clipped open by it; {@link TodayFlow} and the correction sheet's day bar call it for every span they draw.
+ * How a span is drawn on a bar with rounded ends: {@link TodayFlow} and the correction sheet's day bar call it for every span.
+ * A span touching either end takes that end's curve, so an outlined span follows the rounded track instead of being clipped open
+ * by it, and it is at least as wide as the corner and drawn above its neighbour, so a few minutes of detox right after midnight
+ * (or up to the day's end) still draw a closed outline rather than an arc the corner cut or the next span covered. A span
+ * touching the right end is placed from the right, so that minimum grows it into the bar, not past the end where the track
+ * would clip it.
  * @param span - the span's start and end in ms
  * @param bounds - the bar's start and end in ms; a span reaching past either end counts as touching it
- * @param corners - the bar's own left and right corner classes
+ * @param corners - the bar's own corner classes and what a span at an end adds
  * @returns
- * - `corners.first` and/or `corners.last`, space-separated, for the ends the span touches
- * - `''` for a span inside the bar
- * @example spanCorners({ start: 0, end: 5 }, { start: 0, end: 10 }, corners) // => corners.first
+ * - a span inside the bar: no classes, placed from the left
+ * - a span touching the start: `corners.first` and `corners.endSpan`, placed from the left
+ * - a span touching the end: `corners.last` and `corners.endSpan`, placed from the right
+ * @example spanBox({ start: 0, end: 5 }, { start: 0, end: 10 }, corners) // => { className: 'rounded-l-md min-w-1.5 z-10 bg-chip', style: { left: '0%', width: '50%' } }
  */
-export function spanCorners(
+export function spanBox(
   span: { start: number; end: number },
   bounds: { start: number; end: number },
   corners: BarCorners,
-): string {
-  const touched = [
-    span.start <= bounds.start ? corners.first : '',
-    span.end >= bounds.end ? corners.last : '',
+): SpanBox {
+  const length = bounds.end - bounds.start
+  const percent = (ms: number): `${number}%` => `${(ms / length) * 100}%`
+  const touchesStart = span.start <= bounds.start
+  const touchesEnd = span.end >= bounds.end
+  const className = [
+    touchesStart ? corners.first : '',
+    touchesEnd ? corners.last : '',
+    touchesStart || touchesEnd ? corners.endSpan : '',
   ]
-  return touched.filter((className) => className !== '').join(' ')
+    .filter((name) => name !== '')
+    .join(' ')
+  const width = percent(span.end - span.start)
+  // From the right at the end: a minimum width then grows the span leftwards, inside the bar.
+  if (touchesEnd && !touchesStart)
+    return { className, style: { right: 0, width } }
+  return {
+    className,
+    style: { left: percent(span.start - bounds.start), width },
+  }
 }

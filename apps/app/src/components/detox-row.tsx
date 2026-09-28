@@ -10,6 +10,8 @@ type Props = {
   active: boolean
   /** Detox runs past its run's measured week, so a press starts a new run ({@link detoxRenewable}); the hint says so. */
   renewable?: boolean
+  /** The key that presses it on web ({@link DETOX_HOTKEY}), named to assistive tech. */
+  hotkey?: string
   onPress: () => void
 }
 
@@ -21,7 +23,12 @@ type Props = {
  * reads 「押し直すと新しく始まります」 (the row stays pressed).
  * @example <DetoxRow active={current.activityId === null} renewable={renewable} onPress={() => pick(null)} />
  */
-export function DetoxRow({ active, renewable = false, onPress }: Props) {
+export function DetoxRow({
+  active,
+  renewable = false,
+  hotkey,
+  onPress,
+}: Props) {
   const ink = useTokenColor('ink')
   const bg = useTokenColor('bg')
   const look = active
@@ -41,6 +48,7 @@ export function DetoxRow({ active, renewable = false, onPress }: Props) {
     <Pressable
       role="button"
       aria-pressed={active}
+      aria-keyshortcuts={hotkey}
       onPress={onPress}
       className={cn(
         'h-12 w-full flex-row items-center justify-center gap-2.25 rounded-chip border px-4',

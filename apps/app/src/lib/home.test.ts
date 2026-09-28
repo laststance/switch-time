@@ -1,5 +1,7 @@
+import { ORPCError } from '@orpc/client'
 import { describe, expect, test } from 'vitest'
 
+import { RequestTimeoutError } from './deadline'
 import {
   badgeRing,
   detoxLastDay,
@@ -12,6 +14,7 @@ import {
   homeReady,
   nowLook,
   sendsPick,
+  tapFailureMessage,
 } from './home'
 
 describe('homeFallback', () => {
@@ -763,4 +766,52 @@ describe('badgeRing', () => {
     // Assert
     expect(rings).toEqual(['border-line', 'border-line'])
   })
+})
+
+test('ホーム says a tap on an activity archived elsewhere cannot switch to it, not the correction sheet’s record wording', () => {
+  // Arrange
+  const archived = new ORPCError('BAD_REQUEST', {
+    message: 'activity is archived',
+    data: { reason: 'archived' },
+  })
+
+  // Act
+  const line = tapFailureMessage(archived)
+
+  // Assert
+  expect(line).toBe('アーカイブ済みの活動には切り替えられません')
+})
+
+test('ホーム asks to tap again only if the screen did not change after a tap that may have landed, since it has no list to check', () => {
+  // Arrange
+  const timedOut = new RequestTimeoutError()
+  const cutOffDuringCommit = new ORPCError('GATEWAY_TIMEOUT')
+
+  // Act
+  const lines = [timedOut, cutOffDuringCommit].map(tapFailureMessage)
+
+  // Assert
+  expect(lines).toEqual([
+    '反映されたか分かりませんでした。表示が変わらなければもう一度押してください',
+    '反映されたか分かりませんでした。表示が変わらなければもう一度押してください',
+  ])
+})
+
+test('ホーム says the correction sheet’s words for a busy server, a sign-in that ran out and a tap made for another account', () => {
+  // Arrange
+  const busy = new ORPCError('TOO_MANY_REQUESTS', { data: { reason: 'busy' } })
+  const signedOut = new ORPCError('UNAUTHORIZED')
+  const otherAccount = new ORPCError('CONFLICT', {
+    message: 'switch is for another account',
+  })
+
+  // Act
+  const lines = [busy, signedOut, otherAccount].map(tapFailureMessage)
+
+  // Assert
+  expect(lines).toEqual([
+    '処理が混み合っています。少し待ってからもう一度お試しください',
+    'サインインが切れました。サインインし直してください',
+    '保存できませんでした。もう一度お試しください',
+  ])
 })

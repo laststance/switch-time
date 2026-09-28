@@ -5,6 +5,7 @@ import {
   type DayStats,
 } from '@switch-time/shared'
 
+import { failureKind, failureMessage, refusalReason } from './correction'
 import { DETOX } from './detox'
 
 /** What Home renders when it has no state to show: the retry notice, the first-launch screen, or the bare frame. */
@@ -274,4 +275,23 @@ export function badgeRing(
   current: { activityId: string | null } | null,
 ): 'border-sub' | 'border-line' {
   return current?.activityId === null ? 'border-sub' : 'border-line'
+}
+
+/**
+ * What ホーム's refusal line (`ST Phone / ホーム・拒否の行`) says under the detox row after a tap or digit key was refused: the
+ * correction sheet's words ({@link failureMessage}), except the two that speak of a record or a list ホーム does not have.
+ * {@link useSwitchTo}'s `onError` stores it; the next tap clears it.
+ * @param error - The error `switches.switchTo` failed with.
+ * @returns
+ * - the archived line for an archived activity's button (another device archived it before this list was read again)
+ * - the uncertain line for a tap that may have landed (a timeout, a lost answer, a 5xx)
+ * - {@link failureMessage}'s text for anything else (busy, a sign-in that ran out, a tap for another account)
+ * @example tapFailureMessage(new ORPCError('BAD_REQUEST', { data: REFUSAL.archived })) // 'アーカイブ済みの活動には切り替えられません'
+ */
+export function tapFailureMessage(error: unknown): string {
+  if (refusalReason(error) === 'archived')
+    return 'アーカイブ済みの活動には切り替えられません'
+  if (failureKind(error) === 'uncertain')
+    return '反映されたか分かりませんでした。表示が変わらなければもう一度押してください'
+  return failureMessage(error)
 }

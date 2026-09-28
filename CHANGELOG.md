@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.3.0] - 2026-09-29
+
+### Added
+
+- ホーム says why a tap went back, in a line under the detox row: the server
+  is busy, the activity was archived elsewhere, the sign-in ran out, or the
+  tap could not be saved. A tap that may have landed asks you to look before
+  tapping again. The first-launch screen shows the same line when its first
+  tap is refused, and the next tap clears it.
+- The switch buttons name their digit key (`1` to `9`) and the detox row
+  names `0` to screen readers and other assistive tech.
+
+### Fixed
+
+- A few minutes of detox right after midnight (or up to the day's end) keep a
+  closed outline on the 24-h bar and the correction sheet's day bar, instead
+  of an arc the bar's rounded end cut or the next span covered.
+
 ## [0.24.2.0] - 2026-09-29
 
 ### Fixed

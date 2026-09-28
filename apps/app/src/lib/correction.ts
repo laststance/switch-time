@@ -1070,8 +1070,14 @@ export function isDayChangedRefusal(error: unknown): boolean {
   )
 }
 
-// A refusal's machine-readable reason (its `data`, one of {@link REFUSAL}), or null for any other error.
-function refusalReason(error: unknown): RefusalReason | null {
+/**
+ * A refusal's machine-readable reason (its `data`, one of {@link REFUSAL}), for the messages that tell refusals apart: this sheet's
+ * ({@link failureMessage}) and ホーム's ({@link tapFailureMessage}).
+ * @param error - The error a mutation failed with.
+ * @returns the reason, or null for any other error
+ * @example refusalReason(new ORPCError('TOO_MANY_REQUESTS', { data: REFUSAL.busy })) // 'busy'
+ */
+export function refusalReason(error: unknown): RefusalReason | null {
   if (!(error instanceof ORPCError)) return null
   return refusalDataSchema.safeParse(error.data).data?.reason ?? null
 }

@@ -11,6 +11,9 @@ type KeyLike = {
 const plain = (event: KeyLike): boolean =>
   !(event.metaKey || event.ctrlKey || event.altKey)
 
+/** The key that starts detox on Home and the first-launch screen ({@link isDetoxHotkey}), for {@link DetoxRow}'s `aria-keyshortcuts`. */
+export const DETOX_HOTKEY = '0'
+
 /**
  * Index of the activity a keydown picks on Home or the first-launch screen: digit keys by position (the menubar's ⌘1–6, never
  * stored); -1 for `0` or a modifier combo and NaN for a key that is not a digit, both indexing nothing. {@link hotkeyPick} reads it.
@@ -26,7 +29,7 @@ export function hotkeyIndex(event: KeyLike): number {
  * @example isDetoxHotkey({ key: '0', metaKey: false, ctrlKey: false, altKey: false }) // true
  */
 export const isDetoxHotkey = (event: KeyLike): boolean =>
-  plain(event) && event.key === '0'
+  plain(event) && event.key === DETOX_HOTKEY
 
 /**
  * What a keydown on Home or the first-launch screen picks, for {@link useSwitchHotkeys}. A held key's repeats pick nothing, so
@@ -47,3 +50,15 @@ export function hotkeyPick(
   if (isDetoxHotkey(event)) return null
   return activities[hotkeyIndex(event)]?.id
 }
+
+/**
+ * The digit key that picks the switch button at `index` ({@link hotkeyIndex} read the other way), for its `aria-keyshortcuts`, so
+ * a screen reader names the key on the button it presses.
+ * @param index - The button's position among the switch buttons, from 0.
+ * @returns
+ * - `'1'` … `'9'` for the first nine buttons
+ * - `undefined` from the tenth on, which no key reaches
+ * @example hotkeyFor(0) // '1'
+ */
+export const hotkeyFor = (index: number): string | undefined =>
+  index < 9 ? String(index + 1) : undefined

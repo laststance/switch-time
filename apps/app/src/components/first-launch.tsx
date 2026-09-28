@@ -6,11 +6,13 @@ import Svg, { Circle, Line } from 'react-native-svg'
 
 import { DetoxRow } from '@/components/detox-row'
 import { SwitchButton } from '@/components/switch-button'
+import { TapRefusalLine } from '@/components/tap-refusal-line'
 import { useActivities } from '@/hooks/use-activities'
 import { useSwitchHotkeys } from '@/hooks/use-switch-hotkeys'
 import { useSwitchTo } from '@/hooks/use-switch-to'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { sendsPick } from '@/lib/home'
+import { DETOX_HOTKEY, hotkeyFor } from '@/lib/hotkeys'
 import { type CurrentSwitch, orpc } from '@/lib/orpc'
 
 // The logo's four arcs are the first four default activities, in their palette colours.
@@ -90,7 +92,7 @@ export function FirstLaunch() {
         タップした瞬間から時間が積み上がります。記録を止める操作はありません。
       </Text>
       <View className="w-full flex-row flex-wrap gap-2.5 pt-2.5">
-        {activities.map((activity) => (
+        {activities.map((activity, index) => (
           <SwitchButton
             key={activity.id}
             name={activity.name}
@@ -98,12 +100,19 @@ export function FirstLaunch() {
             iconKey={activity.iconKey}
             tint={activity.color}
             active={false}
+            hotkey={hotkeyFor(index)}
             onPress={() => pick(activity.id)}
           />
         ))}
         {/* Inside the wrapping row, as the pen's 初回起動 board draws it: it keeps the buttons' 10px gap (Home leaves 16px), and
             full width gives it a line of its own under them. A new account can start on detox without recording an activity first. */}
-        <DetoxRow active={false} onPress={() => pick(null)} />
+        <DetoxRow
+          active={false}
+          hotkey={DETOX_HOTKEY}
+          onPress={() => pick(null)}
+        />
+        {/* A refused first tap comes back here: the line says why, full width under the detox row. */}
+        <TapRefusalLine />
       </View>
       <Link href="/settings">
         <Text className="text-sub py-3 text-xs font-medium underline">
