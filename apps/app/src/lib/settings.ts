@@ -149,21 +149,59 @@ export function zoneRow(zones: {
 }
 
 /**
- * What a failed settings write puts back into the `settings.get` cache: its snapshot, unless the cache now holds another
- * account's row (a sign-in landed while the write was out), which the previous account's row must not replace. Called from
- * {@link useUpdateSettings}' rollback.
+ * What a settings write shows in the `settings.get` cache before the server answers (a theme tap flips at once): the cached
+ * row with the write's changes on it, unless the write names another account than the cached row's (a sign-in in another tab
+ * landed after the tap was made), whose row must not show it. `forUserId` names whose row, so it is never copied onto it.
+ * Called from {@link useUpdateSettings}' optimistic update.
+ * @param cached - The cached row, undefined before `settings.get` has answered.
+ * @param input - The write: its changes and the account it was made for.
+ * @returns
+ * - the row with the changes on it, when the write names the row's account (or no account)
+ * - `cached` as it is, for another account's write or an empty cache
+ * @example optimisticSettings({ userId: 'a', theme: 'auto' }, { theme: 'dark', forUserId: 'a' }) // { userId: 'a', theme: 'dark' }
+ */
+export function optimisticSettings<Row extends { userId: string }>(
+  cached: Row | undefined,
+  input: SettingsUpdate,
+): Row | undefined {
+  const { forUserId, ...changes } = input
+  if (!cached) return cached
+  if (forUserId !== undefined && forUserId !== cached.userId) return cached
+  return { ...cached, ...changes }
+}
+
+/**
+ * What a failed settings write puts back into the `settings.get` cache: only the fields it changed, each back to the value
+ * before it, so another write made meanwhile keeps its own optimistic value. A field a later write has set since keeps that
+ * value too. The cache is left alone when it now holds another account's row (a sign-in landed while the write was out), when
+ * the write named another account than the row's (it never showed there, {@link optimisticSettings}), or when it was cleared.
+ * Called from {@link useUpdateSettings}' rollback.
  * @param current - The cached row now, undefined once the cache was cleared.
  * @param previous - The row the write's optimistic update replaced.
+ * @param input - The failed write.
  * @returns
- * - the same account's row (or both undefined): `previous`
- * - another account's row, or a cleared cache: `current`, left as it is
- * @example rolledBackSettings({ userId: 'b', timeZone: 'UTC' }, { userId: 'a', timeZone: 'Asia/Tokyo' }) // { userId: 'b', timeZone: 'UTC' }
+ * - the same account's row: `current`, with each field the write changed (and nothing set since) back to `previous`'s value
+ * - another account's row, a write for another account, or a cleared cache: `current`, left as it is
+ * @example rolledBackSettings({ userId: 'a', theme: 'dark', showSecondHand: false }, { userId: 'a', theme: 'auto', showSecondHand: true }, { theme: 'dark' }) // { userId: 'a', theme: 'auto', showSecondHand: false }
  */
 export function rolledBackSettings<Row extends { userId: string }>(
   current: Row | undefined,
   previous: Row | undefined,
+  input: SettingsUpdate,
 ): Row | undefined {
-  return current?.userId === previous?.userId ? previous : current
+  const { forUserId, ...changes } = input
+  if (!current || !previous || current.userId !== previous.userId)
+    return current
+  if (forUserId !== undefined && forUserId !== current.userId) return current
+  const now: Record<string, unknown> = current
+  const before: Record<string, unknown> = previous
+  const reverted = Object.fromEntries(
+    Object.entries(changes)
+      // A field another write has set since holds that write's value, not this one's: it stays.
+      .filter(([field, value]) => now[field] === value)
+      .map(([field]) => [field, before[field]]),
+  )
+  return { ...current, ...reverted }
 }
 
 const MINUTES_PER_HOUR = 60

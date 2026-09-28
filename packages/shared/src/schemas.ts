@@ -94,8 +94,8 @@ export const timeZoneSchema = z
 
 /**
  * Settings sheet payload: any subset of the user_settings columns the UI edits, plus `forUserId`, the account a write was
- * decided for. The API refuses a write whose `forUserId` is not the session's (CONFLICT): the zone sync and 設定's take-back
- * decide on one account's row, and a sign-in in another tab can change the cookie before the request goes out.
+ * made for. The API refuses a write whose `forUserId` is not the session's (CONFLICT): the app names the account on every
+ * write, since a sign-in in another tab can change the cookie before the request goes out.
  */
 export const settingsUpdateSchema = z
   .object({

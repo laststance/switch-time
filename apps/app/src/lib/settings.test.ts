@@ -7,6 +7,7 @@ import {
   exclusionSummary,
   idleLabel,
   reorderIds,
+  optimisticSettings,
   rolledBackSettings,
   IDLE_OPTIONS,
   SETTINGS_DEFAULTS,
@@ -357,16 +358,85 @@ test('a take-back that failed for the previous account shows no failure line on 
   })
 })
 
-test('a failed settings write puts the account’s previous row back', () => {
+test('a failed settings write puts the account’s previous value back', () => {
   // Arrange
   const optimistic = { userId: 'user-1', timeZone: 'Asia/Tokyo' }
   const previous = { userId: 'user-1', timeZone: 'UTC' }
 
   // Act & Assert
-  expect(rolledBackSettings(optimistic, previous)).toEqual({
+  expect(
+    rolledBackSettings(optimistic, previous, {
+      timeZone: 'Asia/Tokyo',
+      forUserId: 'user-1',
+    }),
+  ).toEqual({ userId: 'user-1', timeZone: 'UTC' })
+})
+
+test('a failed 外観 tap puts only the theme back, so a 秒針 toggle made while it was out keeps its value', () => {
+  // Arrange: the theme tap went out over auto/on, then the second hand was switched off before the tap failed.
+  const previous = { userId: 'user-1', theme: 'auto', showSecondHand: true }
+  const afterBothTaps = {
     userId: 'user-1',
-    timeZone: 'UTC',
+    theme: 'dark',
+    showSecondHand: false,
+  }
+
+  // Act
+  const row = rolledBackSettings(afterBothTaps, previous, {
+    theme: 'dark',
+    forUserId: 'user-1',
   })
+
+  // Assert
+  expect(row).toEqual({
+    userId: 'user-1',
+    theme: 'auto',
+    showSecondHand: false,
+  })
+})
+
+test('a failed 外観 tap keeps the theme a later 外観 tap chose', () => {
+  // Arrange: dark went out over auto, then system was tapped before dark failed.
+  const previous = { userId: 'user-1', theme: 'auto' }
+  const afterBothTaps = { userId: 'user-1', theme: 'system' }
+
+  // Act
+  const row = rolledBackSettings(afterBothTaps, previous, {
+    theme: 'dark',
+    forUserId: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({ userId: 'user-1', theme: 'system' })
+})
+
+test('a settings tap shows at once on the account’s row, without the account it names as a field', () => {
+  // Arrange
+  const cached = { userId: 'user-1', theme: 'auto' }
+
+  // Act
+  const row = optimisticSettings(cached, {
+    theme: 'dark',
+    forUserId: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({ userId: 'user-1', theme: 'dark' })
+})
+
+test('a settings tap made for one account does not show on another account’s row cached since', () => {
+  // Arrange: user-1 tapped dark, then another tab signed in user-2 and user-2's row was read before the tap went out.
+  const cached = { userId: 'user-2', theme: 'auto' }
+
+  // Act
+  const row = optimisticSettings(cached, {
+    theme: 'dark',
+    forUserId: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({ userId: 'user-2', theme: 'auto' })
+  expect(optimisticSettings(undefined, { theme: 'dark' })).toBeUndefined()
 })
 
 test('a failed settings write that lands after a switch to another account leaves the new account’s row alone', () => {
@@ -374,12 +444,28 @@ test('a failed settings write that lands after a switch to another account leave
   const nextAccountsRow = { userId: 'user-2', timeZone: 'America/New_York' }
   const previous = { userId: 'user-1', timeZone: 'UTC' }
 
+  const failedWrite = { timeZone: 'Asia/Tokyo', forUserId: 'user-1' }
+
   // Act & Assert
-  expect(rolledBackSettings(nextAccountsRow, previous)).toEqual({
+  expect(rolledBackSettings(nextAccountsRow, previous, failedWrite)).toEqual({
     userId: 'user-2',
     timeZone: 'America/New_York',
   })
-  expect(rolledBackSettings(undefined, previous)).toBeUndefined()
+  expect(rolledBackSettings(undefined, previous, failedWrite)).toBeUndefined()
+})
+
+test('a failed settings write made for another account leaves the row it never showed on alone', () => {
+  // Arrange: user-1 tapped dark after another tab had already signed in user-2, whose row is dark of its own.
+  const usersTwoRow = { userId: 'user-2', theme: 'dark' }
+
+  // Act
+  const row = rolledBackSettings(usersTwoRow, usersTwoRow, {
+    theme: 'dark',
+    forUserId: 'user-1',
+  })
+
+  // Assert
+  expect(row).toEqual({ userId: 'user-2', theme: 'dark' })
 })
 
 const activity = (

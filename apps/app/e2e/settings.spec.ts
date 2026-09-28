@@ -412,10 +412,10 @@ test('a manually excluded day returns from the 未使用日の扱い sheet and t
   await page.getByRole('link', { name: '未使用日の自動除外' }).click()
   const sheet = page.getByRole('dialog', { name: '未使用日の扱い' })
   await expect(sheet).toBeVisible()
-  // The hint opens with the rule itself: an untapped day leaves the averages and the streak
+  // The hint opens with the rule itself: an untapped day leaves the averages, and the streak ends at it rather than skipping it
   await expect(
     sheet.getByText(
-      '一度も切り替えなかった日は、平均と連続記録から外します。',
+      '一度も切り替えなかった日は平均から外し、連続記録もその日で途切れます。',
       { exact: false },
     ),
   ).toBeVisible()
@@ -565,6 +565,37 @@ test('この端末に合わせる waits while another settings change is still b
   await expect(
     page.getByRole('button', { name: 'この端末に合わせる' }),
   ).toBeEnabled()
+})
+
+test('a 外観 tap still on its way when another tab signs in someone else is refused, not saved into that account', async ({
+  page,
+}) => {
+  // Arrange: account A's zone is synced, so the only settings write left is the 外観 tap, held until B has signed in.
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  const accountA = await apiAs(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await expect(page.getByRole('button', { name: '暗' })).toBeVisible()
+  let releaseWrite = (): void => undefined
+  const writeHeld = new Promise<void>((resolve) => {
+    releaseWrite = resolve
+  })
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    await writeHeld
+    await route.continue().catch(() => undefined)
+  })
+  const writeAnswered = page.waitForResponse('**/api/rpc/settings/update')
+
+  // Act
+  await page.getByRole('button', { name: '暗' }).click()
+  await signInElsewhere(page)
+  const accountB = await apiAs(page)
+  releaseWrite()
+
+  // Assert: the API refuses the tap for A's screen now that the cookie is B's, and neither account turned dark.
+  expect((await writeAnswered).status()).toBe(409)
+  expect((await accountB.settings.get()).theme).toBe('auto')
+  expect((await accountA.settings.get()).theme).toBe('auto')
 })
 
 test('a failed take-back’s line does not follow the device into the next account signed in on it', async ({

@@ -3,9 +3,9 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import { clockSlice } from './clock'
 import { skipUnchangedWrites } from './skip-unchanged-writes'
-import { selectSyncedZone, zoneSynced } from './synced-zone'
+import { selectSyncedZone, syncedZonesReread, zoneSynced } from './synced-zone'
 
-import { createAppStore, resetApp } from './index'
+import { createAppStore, resetApp, savedSyncedZones } from './index'
 
 // The storage middleware reads back on a microtask and saves 300 ms after the last action: running every timer settles both.
 const settle = async (): Promise<void> => {
@@ -285,6 +285,87 @@ test('a zone synced before the launch’s read lands is kept over the older zone
   // Act: the sync lands before the store reads the device back
   store.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
   await settle()
+
+  // Assert
+  expect(selectSyncedZone(store.getState(), 'account-1')).toBe('Asia/Tokyo')
+})
+
+test('a web tab brought back to the foreground learns the zone another tab synced meanwhile, and its next save keeps both', async () => {
+  // Arrange: two tabs of one browser share its storage; the other tab syncs account-2 while this one is hidden
+  const storage = createMemoryStorage()
+  const thisTab = createAppStore(storage)
+  const otherTab = createAppStore(storage)
+  await settle()
+  otherTab.dispatch(
+    zoneSynced({ accountId: 'account-2', zone: 'Europe/London' }),
+  )
+  await settle()
+
+  // Act: this tab comes back, re-reads, then syncs account-1 itself
+  thisTab.dispatch(syncedZonesReread(savedSyncedZones(storage)))
+  thisTab.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
+  await settle()
+
+  // Assert
+  expect(selectSyncedZone(thisTab.getState(), 'account-2')).toBe(
+    'Europe/London',
+  )
+  expect(storage.getItem('switch-time.device')).toBe(
+    '{"version":0,"state":{"syncedZone":{"byAccount":{"account-2":"Europe/London","account-1":"Asia/Tokyo"}}}}',
+  )
+})
+
+test('a zone another tab synced since replaces this tab’s older copy for that account, and an account only this tab synced stays', async () => {
+  // Arrange: both tabs knew account-1 in Tokyo; the other tab then moved it to London; only this tab knows account-3
+  const storage = createMemoryStorage()
+  const thisTab = createAppStore(storage)
+  const otherTab = createAppStore(storage)
+  await settle()
+  thisTab.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
+  thisTab.dispatch(
+    zoneSynced({ accountId: 'account-3', zone: 'America/New_York' }),
+  )
+  otherTab.dispatch(
+    zoneSynced({ accountId: 'account-1', zone: 'Europe/London' }),
+  )
+  await settle()
+
+  // Act
+  thisTab.dispatch(syncedZonesReread(savedSyncedZones(storage)))
+
+  // Assert
+  expect(selectSyncedZone(thisTab.getState(), 'account-1')).toBe(
+    'Europe/London',
+  )
+  expect(selectSyncedZone(thisTab.getState(), 'account-3')).toBe(
+    'America/New_York',
+  )
+})
+
+test('a re-read of a broken value, another build’s save or a storage that throws leaves the tab’s own synced zones as they are', async () => {
+  // Arrange
+  const storage = createMemoryStorage()
+  const store = createAppStore(storage)
+  await settle()
+  store.dispatch(zoneSynced({ accountId: 'account-1', zone: 'Asia/Tokyo' }))
+  await settle()
+  const throwing = {
+    getItem: (): never => {
+      throw new Error('keychain locked')
+    },
+    setItem: (): void => {},
+    removeItem: (): void => {},
+  }
+
+  // Act
+  storage.setItem('switch-time.device', 'not json')
+  store.dispatch(syncedZonesReread(savedSyncedZones(storage)))
+  storage.setItem(
+    'switch-time.device',
+    '{"version":1,"state":{"syncedZone":{"byAccount":{"account-1":"UTC"}}}}',
+  )
+  store.dispatch(syncedZonesReread(savedSyncedZones(storage)))
+  store.dispatch(syncedZonesReread(savedSyncedZones(throwing)))
 
   // Assert
   expect(selectSyncedZone(store.getState(), 'account-1')).toBe('Asia/Tokyo')

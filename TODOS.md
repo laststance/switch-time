@@ -2,18 +2,6 @@
 
 ## Settings
 
-### Say in the unused-day hint that an untapped day ends the streak
-
-**What:** Reword the first sentence of the hint under 「使わなかった日を除外」 (`/excluded-days`), 「一度も切り替えなかった日は、平均と連続記録から外します。」, so it says the day leaves the averages and ends the streak there, instead of reading as if the streak skips it. Pen first.
-
-**Why:** `streak()` in `packages/shared/src/stats.ts` skips only manually excluded days (`status.excluded === 'manual'`); an automatically excluded day is not measured, so the streak stops at it. 「連続記録から外します」 reads like the manual case, so a user expects an untapped day to keep the streak going.
-
-**Context:** The hint is in `apps/app/src/app/(app)/excluded-days.tsx`; the pen board is 設定＋除外シート (hint `GOOSV`). The wording predates 0.20.0.0, which only dropped 「計測なし」 from it. Raised by the Claude adversarial pass of the ship review of 0.20.0.0 (2026-09-25).
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
 ### Pick a zone other than the device's in 設定
 
 **What:** Let the タイムゾーン row on 設定 set any IANA zone, with a searchable list and readable city names, not only take back this device's zone.
@@ -37,30 +25,6 @@
 **Effort:** S
 **Priority:** P3
 **Depends on:** A native build (see "Line up the native build's peer dependencies before the first prebuild")
-
-### Keep a web tab's synced zones in step with the other tabs'
-
-**What:** Let a web tab learn the zones another tab of the same browser synced (the `syncedZone` slice) before it next judges a zone sync, without starting a sync from that news alone.
-
-**Why:** Each tab reads `switch-time.device` once at launch and keeps its own copy. A tab that sat hidden while another tab synced a new zone judges its next sync against its older copy, so it can write this device's zone over a take-back made on another device since; and its next save drops the accounts only the other tab synced, which then sync once more. Before the store kept the zones, each sync read `localStorage` itself.
-
-**Context:** `createAppStore` in `apps/app/src/store/index.ts`, `restoreSyncedZone` in `apps/app/src/store/synced-zone.ts`, `useTimeZoneSync` (`lastSynced` is in its effect's deps). Re-reading on the browser's `storage` event was tried and taken back in the PR that moved the zones into the store: a hidden tab still holds the device zone from its last foreground (`useDeviceZone`), so it answered the other tab's sync with a sync of its own, and two tabs could trade zones without end. A re-read must land together with a fresh device zone, for example both read when the tab comes back to the foreground, or the effect must not run on a `lastSynced` that came from another tab.
-
-**Effort:** S
-**Priority:** P3
-**Depends on:** None
-
-### Bind every settings write to the account it was made for
-
-**What:** Send `forUserId` with every `settings.update`, not only the zone sync and 「この端末に合わせる」, and roll back only the fields a failed write changed.
-
-**Why:** A 外観 or 秒針 tap queued while a sign-in in another tab changes the cookie still lands on the new account. And the rollback puts back the whole row it saved, so when two settings writes fail one after the other, the first one's rollback also erases the second one's optimistic value.
-
-**Context:** `settings.update` already refuses a `forUserId` that is not the session's (`CONFLICT`, `apps/api/src/rpc/settings.ts`). The optimistic update and rollback are in `useUpdateSettings` (`apps/app/src/hooks/use-settings.ts`). `rolledBackSettings` already keeps another account's row. Found by the adversarial review of the take-back PR (2026-09-25).
-
-**Effort:** S
-**Priority:** P4
-**Depends on:** None
 
 ## Correction
 

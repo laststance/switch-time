@@ -9,6 +9,7 @@ import {
   type UnknownAction,
 } from '@reduxjs/toolkit'
 import { useDispatch, useSelector } from 'react-redux'
+import { z } from 'zod'
 
 import { clockSlice } from './clock'
 import { correctionSlice } from './correction'
@@ -45,6 +46,38 @@ const rootReducer = (
     action,
   )
 
+// Where the store keeps its device slices. Letters, digits, `.`, `-` and `_` only: SecureStore refuses any other key.
+const DEVICE_KEY = 'switch-time.device'
+
+// A save this build made: the storage middleware writes version 0 when the store names none.
+const currentSaveSchema = z.object({
+  version: z.literal(0),
+  state: z.object({ syncedZone: z.unknown() }),
+})
+
+/**
+ * The synced zones the device holds now, which another tab of the same browser may have saved since this tab read them, for
+ * {@link syncedZonesReread}. Read synchronously, so {@link useTimeZoneSync} takes them in the same foreground as the device
+ * zone ({@link useDeviceZone}) and judges its next sync on both at once, never on another tab's news alone.
+ * @param storage - The store's device storage ({@link deviceStorage}).
+ * @returns
+ * - the saved `syncedZone`, of any shape (the reducer checks it)
+ * - undefined when the key holds no save of this build, the storage answers later, or the read throws (a locked keychain)
+ * @example store.dispatch(syncedZonesReread(savedSyncedZones(deviceStorage)))
+ */
+export function savedSyncedZones(storage: StateStorage): unknown {
+  try {
+    const text = storage.getItem(DEVICE_KEY)
+    // A storage that answers later cannot land together with the device zone; both of this app's answer at once.
+    if (typeof text !== 'string') return undefined
+    return currentSaveSchema.safeParse(savedStateSerializer.deserialize(text))
+      .data?.state.syncedZone
+  } catch {
+    // The launch's own read logs such a storage; this tab keeps its copy.
+    return undefined
+  }
+}
+
 /**
  * Builds the app's store over a device storage that keeps {@link syncedZoneSlice} across launches. The store reads it back
  * a few microtasks after it is built, so a synchronous storage has it in place before the first render and long before the
@@ -56,9 +89,9 @@ const rootReducer = (
 export function createAppStore(storage: StateStorage) {
   const persistence = createStorageMiddleware<AppState>({
     rootReducer,
-    // Letters, digits, `.`, `-` and `_` only: SecureStore refuses any other key. The per-account keys before it
-    // (`switch-time.synced-zone.<id>`) are left unread on purpose: each account syncs its zone once more, then reads this one.
-    key: 'switch-time.device',
+    // The per-account keys before it (`switch-time.synced-zone.<id>`) are left unread on purpose: each account syncs its zone
+    // once more, then reads this one.
+    key: DEVICE_KEY,
     slices: ['syncedZone'],
     storage,
     serializer: savedStateSerializer,
