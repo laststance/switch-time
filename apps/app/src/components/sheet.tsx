@@ -55,11 +55,20 @@ export function Sheet({ title, hint, children }: SheetProps) {
         card: 'max-h-full w-full max-w-[560px] rounded-sheet border border-line bg-sheet-bg p-5',
       }
     : { root: 'bg-sheet-bg', card: 'flex-1 px-5 pb-10 pt-3.5' }
-  useWebKeydown((event) => {
-    // Escape while an IME is composing (a search in Japanese) cancels the composition, not the sheet.
-    if (event.key === 'Escape' && !event.isComposing) dismissSheet()
-    if (event.key === 'Tab') keepTabInside(event)
-  })
+  // Captured, so Escape and Tab pressed in a text field (whose TextInput stops the keydown) still reach the sheet.
+  useWebKeydown(
+    (event) => {
+      // Escape while an IME is composing (a search in Japanese) cancels the composition, not the sheet.
+      // Focus moves to the dialog before it closes, as a click on ✕ takes it, so a field that saves when it loses focus (an
+      // activity's name) keeps what was typed.
+      if (event.key === 'Escape' && !event.isComposing) {
+        dialogRef.current?.focus()
+        dismissSheet()
+      }
+      if (event.key === 'Tab') keepTabInside(event)
+    },
+    { capture: true },
+  )
   return (
     <View className={cn('flex-1', look.root)}>
       {dialog && (

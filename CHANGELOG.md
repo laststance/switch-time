@@ -29,6 +29,12 @@ All notable changes to this project are documented here. The format follows
 - A zone pick that fails after the sheet has closed shows its failure line on
   設定's タイムゾーン row.
 
+### Fixed
+
+- Escape pressed in a sheet's text field (a search, an activity's name) now
+  closes the sheet on the web; before, the field swallowed the key. A name
+  being typed is saved first, as a click on ✕ saves it.
+
 ## [0.24.4.0] - 2026-09-29
 
 ### Changed

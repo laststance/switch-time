@@ -1,3 +1,4 @@
+import { useIsMutating } from '@tanstack/react-query'
 import { useState } from 'react'
 import { FlatList, Keyboard, Pressable, Text, View } from 'react-native'
 
@@ -11,6 +12,7 @@ import { useIosAnnouncement } from '@/hooks/use-ios-announcement'
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings'
 import { useTokenColor } from '@/hooks/use-token-color'
 import { CHECK } from '@/lib/icons'
+import { orpc } from '@/lib/orpc'
 import {
   type PickStatus,
   pickStatus,
@@ -30,7 +32,7 @@ const ROW_HEIGHT = 56
 type ZoneOptionProps = ZoneRowState & {
   entry: ZoneEntry
   first: boolean
-  /** A pick is being saved: not pressable, but not dimmed, since the status line says why. */
+  /** A settings write is being saved (a pick, the automatic sync, a 外観 tap): not pressable, but not dimmed. */
   busy: boolean
   onPick: (id: string) => void
 }
@@ -137,6 +139,8 @@ function ZonePicker() {
   const { settings, ready } = useSettings()
   const device = useDeviceZone()
   const update = useUpdateSettings()
+  // Any settings write in flight (the automatic sync, a 外観 tap) holds the rows: the scope would queue a pick behind it.
+  const writing = useIsMutating({ mutationKey: orpc.settings.key() }) > 0
   const [query, setQuery] = useState('')
   // Offsets are read once, when the sheet opens: each is an Intl lookup, and a search should not repeat ~400 of them.
   const [now] = useState(() => new Date())
@@ -187,7 +191,7 @@ function ZonePicker() {
             entry={item}
             first={index === 0}
             {...zoneRowState(item, zones)}
-            busy={update.isPending}
+            busy={writing}
             onPick={pick}
           />
         )}

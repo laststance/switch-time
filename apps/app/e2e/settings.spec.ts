@@ -349,6 +349,29 @@ test('🗑 on another row after a refused 戻す clears the refusal line', async
   await expect(sheet.getByRole('alert')).toHaveCount(0)
 })
 
+test('Escape pressed while renaming 家事 on the 活動項目 sheet closes it and keeps the new name', async ({
+  page,
+}) => {
+  // Arrange
+  await signUp(page)
+  const api = await apiAs(page)
+  await page.getByRole('tab', { name: '設定' }).click()
+  await page.getByRole('link', { name: '活動項目' }).click()
+  const sheet = page.getByRole('dialog', { name: '活動項目' })
+  await sheet.getByRole('textbox', { name: '家事の名前' }).fill('掃除')
+
+  // Act
+  await page.keyboard.press('Escape')
+
+  // Assert
+  await expect(sheet).toHaveCount(0)
+  await expect
+    .poll(async () =>
+      (await api.activities.list()).map((activity) => activity.name),
+    )
+    .toContain('掃除')
+})
+
 test('switching appearance to dark applies immediately', async ({ page }) => {
   // Arrange: 明 first, so the assertion does not depend on the hour the run happens in.
   await signUp(page)
@@ -902,6 +925,36 @@ test('while a pick is being saved the sheet says so and the other rows wait for 
   await expect(sheet.getByRole('button', { name: /^東京、/ })).toBeEnabled()
 })
 
+test('the タイムゾーン sheet’s rows wait while a 外観 change is still being saved', async ({
+  page,
+}) => {
+  // Arrange: a 外観 change is held in flight when the sheet opens.
+  await signUp(page)
+  await expect.poll(async () => syncedZones(page)).toEqual(['Asia/Tokyo'])
+  await page.getByRole('tab', { name: '設定' }).click()
+  let releaseWrite = (): void => undefined
+  const writeHeld = new Promise<void>((resolve) => {
+    releaseWrite = resolve
+  })
+  await page.route('**/api/rpc/settings/update', async (route) => {
+    await writeHeld
+    await route.continue().catch(() => undefined)
+  })
+  await page.getByRole('button', { name: '暗' }).click()
+
+  // Act
+  const sheet = await openZoneSheet(page)
+
+  // Assert: a pick cannot queue behind the 外観 write, and the rows come back once it lands.
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toBeDisabled()
+  releaseWrite()
+  await expect(
+    sheet.getByRole('button', { name: /^ニューヨーク、/ }),
+  ).toBeEnabled()
+})
+
 test('a pick that lands after the sheet closed stays the account’s zone, and a device that had not synced its own zone does not write it over the pick', async ({
   page,
 }) => {
@@ -1013,12 +1066,15 @@ test('the タイムゾーン sheet keeps Tab inside, ignores Escape while a Japa
   const close = sheet.getByRole('button', { name: '閉じる' })
   const search = sheet.getByRole('textbox', { name: '都市・国名で検索' })
 
+  // One row, so the list's last control stays put (the full list keeps rendering rows in batches).
+  await search.fill('上海')
+  const shanghai = sheet.getByRole('button', { name: /^上海、/ })
+  await expect(shanghai).toBeEnabled()
+
   // Act & Assert: Shift+Tab on the first control wraps to the list's last row, and Tab from there wraps back.
   await close.focus()
   await page.keyboard.press('Shift+Tab')
-  await expect(
-    sheet.getByRole('group', { name: 'タイムゾーン' }).locator(':focus'),
-  ).toHaveCount(1)
+  await expect(shanghai).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(close).toBeFocused()
 
