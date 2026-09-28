@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.14.0] - 2026-09-29
+
+### Changed
+
+- Sign-up, and every other database transaction Better Auth opens, now stops
+  waiting on the database at the request's 25 s deadline like the rest of the
+  API: a connection that went half-open no longer holds a sign-up until the
+  operating system gives up on it, and the half-made rows roll back.
+
 ## [0.24.13.0] - 2026-09-29
 
 ### Changed

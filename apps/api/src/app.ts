@@ -6,6 +6,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 
 import { auth } from './auth'
+import { requestDeadline, startRequestClock } from './db/client'
 import { env } from './env'
 import { router } from './rpc/router'
 
@@ -52,7 +53,12 @@ if (env.NODE_ENV !== 'production') {
 app.get('/api/healthz', (c) => c.json({ status: 'ok' }))
 
 // Better Auth owns /api/auth/*, mounted before the RPC handler so both share one origin and cookie jar.
-app.on(['GET', 'POST'], '/api/auth/*', async (c) => auth.handler(c.req.raw))
+// It runs under a request clock like the RPC calls, so its statements and transactions stop at the request's deadline.
+app.on(['GET', 'POST'], '/api/auth/*', async (c) =>
+  requestDeadline.run(startRequestClock(Date.now()), async () =>
+    auth.handler(c.req.raw),
+  ),
+)
 
 // The API owns the `/api` prefix: App Platform ingress routes `/api` here without stripping it (MVP-09).
 app.use('/api/rpc/*', async (c, next) => {

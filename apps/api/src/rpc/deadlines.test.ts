@@ -181,3 +181,33 @@ test('a write that runs past its statement_timeout answers TIMEOUT, since Postgr
   // Assert
   await expect(slow).rejects.toMatchObject({ code: 'TIMEOUT', status: 500 })
 })
+
+test('a transaction opened on db, as Better Auth’s adapter opens one, that outlives the request’s deadline is cut off and its database session ends', async () => {
+  // Arrange
+  const clock = { deadline: Date.now() + 500, expired: false }
+
+  // Act
+  const stuck = requestDeadline.run(clock, async () =>
+    db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_sleep(29)`)
+    }),
+  )
+
+  // Assert
+  await expect(stuck).rejects.toBeInstanceOf(DeadlineError)
+  expect(clock.expired).toBe(true)
+  await expect
+    .poll(async () => sessionsRunning('pg_sleep(29)'), { timeout: 3_000 })
+    .toBe(0)
+})
+
+test('a transaction opened on db that finishes in time returns what its work returned', async () => {
+  // Arrange + Act
+  const answer = await db.transaction(async (tx) => {
+    const { rows } = await tx.execute<{ n: number }>(sql`select 7 as n`)
+    return rows[0]?.n
+  })
+
+  // Assert
+  expect(answer).toBe(7)
+})

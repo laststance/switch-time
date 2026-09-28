@@ -6,9 +6,9 @@ import type { PgTransactionConfig } from 'drizzle-orm/pg-core'
 import { auth } from '../auth'
 import {
   DeadlineError,
-  REQUEST_DEADLINE_MS,
   inTransaction,
   requestDeadline,
+  startRequestClock,
   type LockedTx,
 } from '../db/client'
 import { switches } from '../db/schema/app'
@@ -31,7 +31,7 @@ const timedOut = () =>
 // wrapped the DeadlineError in its own 500.
 const withDeadline = base.use(async ({ next }) => {
   const arrivedAt = Date.now()
-  const clock = { deadline: arrivedAt + REQUEST_DEADLINE_MS, expired: false }
+  const clock = startRequestClock(arrivedAt)
   try {
     return await requestDeadline.run(clock, async () =>
       next({ context: { arrivedAt, deadline: clock.deadline } }),
