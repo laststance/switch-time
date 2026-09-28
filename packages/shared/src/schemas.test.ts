@@ -1,6 +1,11 @@
 import { expect, test } from 'vitest'
 
-import { daySchema, monthSchema, reorderInputSchema } from './schemas'
+import {
+  daySchema,
+  monthSchema,
+  reorderInputSchema,
+  switchToInputSchema,
+} from './schemas'
 
 test('a day before 1970 or without a plain four-digit year is refused', () => {
   // Act
@@ -72,4 +77,44 @@ test('a reorder that names one activity twice is refused before it reaches the l
 
   // Assert
   expect(repeated.success).toBe(false)
+})
+
+test('a tap from a tab still on the previous bundle, with no account or wait, is accepted', () => {
+  // Arrange
+  const tap = { activityId: null }
+
+  // Act
+  const parsed = switchToInputSchema.safeParse(tap)
+
+  // Assert
+  expect(parsed.success).toBe(true)
+})
+
+test('a tap with its account and its wait on the device is accepted', () => {
+  // Arrange
+  const tap = {
+    activityId: '0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
+    forUserId: 'user-1',
+    waitedMs: 4000,
+  }
+
+  // Act
+  const parsed = switchToInputSchema.safeParse(tap)
+
+  // Assert
+  expect(parsed.success).toBe(true)
+})
+
+test('a tap with a negative or fractional wait is refused', () => {
+  // Arrange
+  const negative = { activityId: null, waitedMs: -1 }
+  const fractional = { activityId: null, waitedMs: 1.5 }
+
+  // Act
+  const parsedNegative = switchToInputSchema.safeParse(negative)
+  const parsedFractional = switchToInputSchema.safeParse(fractional)
+
+  // Assert
+  expect(parsedNegative.success).toBe(false)
+  expect(parsedFractional.success).toBe(false)
 })

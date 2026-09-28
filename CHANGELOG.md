@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.2.0] - 2026-09-29
+
+### Fixed
+
+- A tap that waited on the device before it went out (behind the last tap's
+  refresh, or in a hidden tab) now starts at the moment it was pressed, up to
+  an hour back. The time in between used to go to the activity before it.
+- A tap made on one account's screen is refused if another tab has signed in
+  as someone else by the time it goes out, instead of being recorded on the
+  other account.
+- After signing out and back in, the first tap waits for a tap still on its
+  way from before, so the server keeps them in the order they were pressed.
+- A refused tap no longer falls back to a state older than the last tap the
+  server accepted, when a read sent before that tap landed after it.
+
 ## [0.24.1.0] - 2026-09-29
 
 ### Changed

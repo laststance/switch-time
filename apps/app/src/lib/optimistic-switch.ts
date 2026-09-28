@@ -32,6 +32,21 @@ function confirmedStateOf(client: QueryClient): ConfirmedState {
   return created
 }
 
+// Taps whose `mutationFn` has started and not yet returned, per client: the old session's taps a new session's first tap waits
+// for ({@link startTapSession}). A set per client, not a module `let`, for the reason above.
+const sentTaps = new WeakMap<QueryClient, Set<Promise<unknown>>>()
+
+// What the current session's taps wait for before they send: every tap of the sessions before it that was still out then.
+const earlierTaps = new WeakMap<QueryClient, Promise<unknown>>()
+
+function sentTapsOf(client: QueryClient): Set<Promise<unknown>> {
+  const known = sentTaps.get(client)
+  if (known) return known
+  const created = new Set<Promise<unknown>>()
+  sentTaps.set(client, created)
+  return created
+}
+
 // Taps that have run `onMutate` and not yet settled, this one included: TanStack marks a mutation pending (paused while an earlier
 // one in its scope runs) before it calls `onMutate`.
 const tapsInFlight = (client: QueryClient): number =>
@@ -40,10 +55,33 @@ const tapsInFlight = (client: QueryClient): number =>
   })
 
 /**
+ * Whether a read of `switches.current` is at least as new as the state a session's taps last confirmed, so {@link placeTap} may
+ * take it as the state to fall back to. The latest row's `startedAt` only grows (the server starts every new row after the running
+ * one), and a row's `revision` grows with each write on it; `createdAt` is not used, since a tap that waited on the account's lock
+ * carries the start of its transaction. A row deleted on another device (「元に戻す」, a merge) stays the fallback until the last
+ * tap's refetch, as before.
+ * @param read - What the cache holds when a tap is pressed (not a placeholder).
+ * @param confirmed - The session's confirmed state.
+ * @returns
+ * - `true` when nothing is confirmed yet (or no switch was), or the read is the confirmed row at the same or a later revision, or a
+ *   row that starts later
+ * - `false` for a read with no row while a row is confirmed, an earlier revision of the confirmed row, or a row that starts no later
+ * @example isNoOlderThan(serverRow('row-work', 'work'), confirmedRestRow) // => false: the read left before the tap to 休息 was stored
+ */
+function isNoOlderThan(read: CurrentShown, confirmed: CurrentShown): boolean {
+  // Nothing confirmed in this session, or no switch yet: the read cannot be older.
+  if (confirmed === undefined || confirmed === null) return true
+  // A tap never takes the timeline back to no switch, so a read without one left before the confirmed row was stored.
+  if (read === undefined || read === null) return false
+  if (read.id === confirmed.id) return read.revision >= confirmed.revision
+  return read.startedAt.getTime() > confirmed.startedAt.getTime()
+}
+
+/**
  * A tap's `onMutate`: shows the picked state at once and notes the state to fall back to. Unless the cache holds a tap's placeholder
  * (a later tap of the burst, or an accepted tap whose refetch has not landed, whose {@link confirmTap} already recorded its row), it
- * holds the server's latest read, so that becomes the confirmed state: at the first tap of a burst or of a new session, and after
- * the last tap's refetch of the current switch lands while it still waits for the day list.
+ * holds the server's latest read, so that becomes the confirmed state ({@link isNoOlderThan}): at the first tap of a burst or of a
+ * new session, and after the last tap's refetch of the current switch lands while it still waits for the day list.
  * @param client - The app's query client.
  * @param queryKey - `switches.current`'s key.
  * @param activityId - The picked activity, or `null` for detox.
@@ -58,8 +96,12 @@ export function placeTap(
   const previous = client.getQueryData<CurrentShown>(queryKey)
   const confirmed = confirmedStateOf(client)
   // A server row, not a placeholder: a later confirmTap of a tap still queued overwrites it. An outside read that started before
-  // an earlier tap was stored and lands after its confirmTap is older than that answer, yet recorded all the same (TODOS.md).
-  if (previous?.id !== OPTIMISTIC_ID) confirmed.value = previous
+  // an earlier tap was stored and lands after its confirmTap is older than that answer, and is not taken.
+  if (
+    previous?.id !== OPTIMISTIC_ID &&
+    isNoOlderThan(previous, confirmed.value)
+  )
+    confirmed.value = previous
   // Callers send only a change of state or a detox re-tap that starts a new run ({@link detoxRenewable}), so every call restarts
   // the counter right now. (A tab that missed another device turning the unused-day rule off still sends the re-tap; the server
   // keeps the running record, and the refetch after the last tap puts its start back and, unless a settings write is in flight,
@@ -116,12 +158,16 @@ export function rollBackTap(
  * Starts a new session of taps when the cache is cleared or reset for another account (sign-in, sign-out, {@link useAccountScope}).
  * A tap of the old session that is answered late then confirms into its own session's state, never into the one the new account's
  * refused taps fall back to, and leaves the refetch to the new session ({@link isLastTap}). The old account's taps not sent yet
- * (queued behind a running one, or paused while offline) are dropped: they would go out with the new account's session cookie.
+ * (queued behind a running one, or paused while offline) are dropped: they would go out with the new account's session cookie. The
+ * taps of the old session already out are waited for ({@link sendTap}), so after signing out and back in the first new tap is stored
+ * after them, and its refetch reads both.
  * @param client - The app's query client, right after `clear()` (which has already dropped every tap) or `resetQueries()`.
  * @example queryClient.clear(); startTapSession(queryClient)
  */
 export function startTapSession(client: QueryClient): void {
   confirmedStates.delete(client)
+  // `clear()` also empties the scope, so nothing else keeps the new session's first tap behind the old one still out.
+  earlierTaps.set(client, Promise.allSettled([...sentTapsOf(client)]))
   const mutations = client.getMutationCache()
   // A queued tap is paused until the running one settles; removed from its scope, it is never continued.
   for (const queued of mutations.findAll({
@@ -158,4 +204,33 @@ export function isLastTap(
   // No confirmed state yet: the new session has placed no tap for this refetch to land over.
   const isOwnOrUntapped = current === undefined || context.confirmed === current
   return isOwnOrUntapped && tapsInFlight(client) <= 1
+}
+
+/**
+ * A tap's `mutationFn`: waits for the taps of earlier sessions still out ({@link startTapSession}), then sends, with how long the tap
+ * waited on this device since it was pressed. The server records the tap that long before it arrived, so a tap queued behind the
+ * last tap's refetch, or behind a sign-out, is stored at its press. Every tap is tracked until it returns, for the next session to wait
+ * on; each request has its deadline, so the wait is bounded.
+ * @param client - The app's query client.
+ * @param pressedAt - When the tap was pressed, epoch ms on this device's clock.
+ * @param send - Sends `switches.switchTo` with the wait, in ms (never negative, should the clock step back).
+ * @returns what `send` resolves to
+ * @example mutationFn: ({ activityId, forUserId, pressedAt }) => sendTap(queryClient, pressedAt, (waitedMs) => orpc.switches.switchTo.call({ activityId, forUserId, waitedMs }))
+ */
+export async function sendTap<T>(
+  client: QueryClient,
+  pressedAt: number,
+  send: (waitedMs: number) => Promise<T>,
+): Promise<T> {
+  const sent = sentTapsOf(client)
+  const request = (async () => {
+    await earlierTaps.get(client)
+    return send(Math.max(0, Date.now() - pressedAt))
+  })()
+  sent.add(request)
+  try {
+    return await request
+  } finally {
+    sent.delete(request)
+  }
 }
