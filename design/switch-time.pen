@@ -68859,6 +68859,546 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "KcBzu",
+      "x": 4966,
+      "y": 6186,
+      "name": "ST Phone / サインイン・キーボード表示中",
+      "fill": "$bg",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "YD7oV",
+          "name": "キーボードの上に収まる（通知つき・最も背が高い）",
+          "width": 402,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "x1RLpH",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "登録直後のサインイン（お知らせつき、いちばん背が高い）。パスワード欄にフォーカスするとキーボード（約 336pt）が開く。カードはキーボードの上の領域の中で中央に置かれ、はみ出すぶんだけスクロールできる。パスワード欄とサインインボタンはキーボードの上に見える",
+              "lineHeight": 1.5,
+              "fontFamily": "Roboto",
+              "fontSize": "$text-xs",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "kFsCQ",
+              "name": "Phone 402×844",
+              "clip": true,
+              "width": 402,
+              "height": 844,
+              "fill": "$bg",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "jc0PB",
+                  "name": "スクロール領域（キーボードの上）",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 508,
+                  "layout": "vertical",
+                  "padding": 20,
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Eo3if",
+                      "name": "AuthCard",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-card",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fQqOJ",
+                          "name": "Title",
+                          "fill": "$ink",
+                          "content": "サインイン",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xl",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "V8nfxy",
+                          "name": "登録済みのお知らせ（role=status）",
+                          "width": "fill_container",
+                          "fill": "$chip",
+                          "cornerRadius": "$radius-chip",
+                          "layout": "vertical",
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "NoEYB",
+                              "name": "Notice",
+                              "fill": "$ink",
+                              "content": "登録しました。サインインしてください",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "I7HMd",
+                          "name": "メールアドレス",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UudOw",
+                              "name": "Label",
+                              "fill": "$sub",
+                              "content": "メールアドレス",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FriFs",
+                              "name": "Input",
+                              "width": "fill_container",
+                              "height": 48,
+                              "fill": "$surface",
+                              "cornerRadius": "$radius-chip",
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "snLRv",
+                                  "name": "Value",
+                                  "fill": "$ink",
+                                  "content": "you@example.com",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": "$text-sm",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CsWdZ",
+                          "name": "パスワード",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "je59S",
+                              "name": "Label",
+                              "fill": "$sub",
+                              "content": "パスワード",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "o8YCp5",
+                              "name": "Input",
+                              "width": "fill_container",
+                              "height": 48,
+                              "fill": "$surface",
+                              "cornerRadius": "$radius-chip",
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wX0j3",
+                                  "name": "Value",
+                                  "fill": "$sub",
+                                  "content": " ",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": "$text-sm",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y4j3p",
+                          "name": "サインイン",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$accent",
+                          "cornerRadius": "$radius-chip",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DY1bB",
+                              "name": "Label",
+                              "fill": "#FFFFFF",
+                              "content": "サインイン",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-sm",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "U7yuY",
+                          "name": "新規登録はこちら",
+                          "width": "fill_container",
+                          "padding": [
+                            8,
+                            0
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "u1oD95",
+                              "name": "Label",
+                              "fill": "$accent",
+                              "content": "新規登録はこちら",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wlHCc",
+                  "name": "キーボード（約 336pt）",
+                  "width": "fill_container",
+                  "height": 336,
+                  "fill": "$chip",
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YCXe0",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "キーボード",
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "DigfW",
+          "name": "背の低い端末でもボタンに届く",
+          "width": 375,
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "sJWaJ",
+              "name": "Caption",
+              "fill": "$sub",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "背の低い端末（375×667）。キーボードの上は 331pt しか無く、カードの上のほうはスクロールして隠れる。フォーカス中のパスワード欄とサインインボタン、新規登録のリンクはキーボードの上に残る",
+              "lineHeight": 1.5,
+              "fontFamily": "Roboto",
+              "fontSize": "$text-xs",
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "U4CS6",
+              "name": "Phone 375×667",
+              "clip": true,
+              "width": 375,
+              "height": 667,
+              "fill": "$bg",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zzN6g",
+                  "name": "スクロール領域（キーボードの上）",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 331,
+                  "layout": "vertical",
+                  "padding": 20,
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CqnZd",
+                      "name": "AuthCard",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "cornerRadius": "$radius-card",
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "V9wlMq",
+                          "name": "Title",
+                          "fill": "$ink",
+                          "content": "サインイン",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Roboto",
+                          "fontSize": "$text-xl",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o90tTA",
+                          "name": "メールアドレス",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xicxO",
+                              "name": "Label",
+                              "fill": "$sub",
+                              "content": "メールアドレス",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dX4bK",
+                              "name": "Input",
+                              "width": "fill_container",
+                              "height": 48,
+                              "fill": "$surface",
+                              "cornerRadius": "$radius-chip",
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "R71t4",
+                                  "name": "Value",
+                                  "fill": "$ink",
+                                  "content": "you@example.com",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": "$text-sm",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Ex8ZV",
+                          "name": "パスワード",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tGrjk",
+                              "name": "Label",
+                              "fill": "$sub",
+                              "content": "パスワード",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qiLK6",
+                              "name": "Input",
+                              "width": "fill_container",
+                              "height": 48,
+                              "fill": "$surface",
+                              "cornerRadius": "$radius-chip",
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "BGARV",
+                                  "name": "Value",
+                                  "fill": "$sub",
+                                  "content": " ",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "Roboto",
+                                  "fontSize": "$text-sm",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "P2DVn",
+                          "name": "サインイン",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$accent",
+                          "cornerRadius": "$radius-chip",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Th6EO",
+                              "name": "Label",
+                              "fill": "#FFFFFF",
+                              "content": "サインイン",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-sm",
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S9tvz",
+                          "name": "新規登録はこちら",
+                          "width": "fill_container",
+                          "padding": [
+                            8,
+                            0
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iFEKW",
+                              "name": "Label",
+                              "fill": "$accent",
+                              "content": "新規登録はこちら",
+                              "lineHeight": 1.5,
+                              "fontFamily": "Roboto",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q6LAO",
+                  "name": "キーボード（約 336pt）",
+                  "width": "fill_container",
+                  "height": 336,
+                  "fill": "$chip",
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SLFjs",
+                      "name": "Label",
+                      "fill": "$sub",
+                      "content": "キーボード",
+                      "fontFamily": "Roboto",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
