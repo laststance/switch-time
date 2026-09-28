@@ -283,9 +283,13 @@ export function editorRows(
 export function archivedRows(
   activities: ActivityRow[] | undefined,
 ): ActivityRow[] {
-  return (activities ?? [])
-    .filter((row) => row.archivedAt !== null)
-    .toSorted(
-      (a, b) => (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0),
-    )
+  return (
+    (activities ?? [])
+      .filter((row) => row.archivedAt !== null)
+      // `sort` on filter's fresh copy rather than `toSorted`, which Safari before 16 lacks.
+      .sort(
+        (a, b) =>
+          (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0),
+      )
+  )
 }
