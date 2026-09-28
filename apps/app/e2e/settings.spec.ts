@@ -176,7 +176,9 @@ test('an archived activity is listed under アーカイブ済み, and 戻す put
   await page.getByRole('link', { name: '活動項目' }).click()
   const sheet = page.getByRole('dialog', { name: '活動項目' })
   await sheet.getByRole('button', { name: '休息をアーカイブ' }).click()
-  await expect(sheet.getByText('アーカイブ済み')).toBeVisible()
+  await expect(
+    sheet.getByRole('heading', { name: 'アーカイブ済み' }),
+  ).toBeVisible()
   await expect(sheet.getByRole('button', { name: '休息を戻す' })).toBeEnabled()
 
   // Act
@@ -186,7 +188,9 @@ test('an archived activity is listed under アーカイブ済み, and 戻す put
   await expect(
     sheet.getByRole('button', { name: '休息をアーカイブ' }),
   ).toBeVisible()
-  await expect(sheet.getByText('アーカイブ済み')).toHaveCount(0)
+  await expect(
+    sheet.getByRole('heading', { name: 'アーカイブ済み' }),
+  ).toHaveCount(0)
   await expect(sheet.getByRole('button', { name: '休息を下へ' })).toBeDisabled()
   await page.goto('/')
   await expect(page.getByRole('button', { name: '休息' })).toBeVisible()

@@ -171,7 +171,11 @@ export default function ActivityEditorSheet() {
           ))}
           {/* Left out with nothing archived, heading included. */}
           {editor.archived.length === 0 ? null : (
-            <Text className="text-sub px-1 pt-2 text-xs font-semibold">
+            <Text
+              role="heading"
+              aria-level={3}
+              className="text-sub px-1 pt-2 text-xs font-semibold"
+            >
               アーカイブ済み
             </Text>
           )}
