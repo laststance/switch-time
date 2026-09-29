@@ -11,6 +11,10 @@ const TOO_MANY =
 const NOT_REGISTERED = '登録できませんでした。もう一度お試しください'
 const TOO_MANY_REQUESTS_STATUS = 429
 
+/** What a reset link that is spoiled, used or expired says; the reset screen also shows it for a link that arrives with an error, and offers to ask again. */
+export const RESET_LINK_EXPIRED =
+  'リンクの期限が切れています。もう一度、再設定のメールを送ってください'
+
 const BY_CODE = new Map([
   ['INVALID_EMAIL_OR_PASSWORD', 'メールアドレスかパスワードが違います'],
   ['INVALID_EMAIL', AUTH_FIELD_MESSAGE.emailInvalid],
@@ -19,7 +23,32 @@ const BY_CODE = new Map([
   ['FAILED_TO_CREATE_USER', NOT_REGISTERED],
   ['USER_ALREADY_EXISTS', NOT_REGISTERED],
   ['USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL', NOT_REGISTERED],
+  // From the pen board 「ST Phone / メール確認とパスワード再設定」: the API has mailed the link again by the time this shows.
+  [
+    'EMAIL_NOT_VERIFIED',
+    'メールアドレスの確認がまだです。届いたメールのリンクを開いてください（確認メールを送り直しました）',
+  ],
+  ['INVALID_TOKEN', RESET_LINK_EXPIRED],
 ])
+
+/**
+ * The line the reset screen shows: the server's answer to the last try, else {@link RESET_LINK_EXPIRED} for a link that cannot work
+ * (no token, or Better Auth sent it back with an error), so the user hears it before typing a password.
+ * @param serverError - The error of the last try ({@link useAuthForm}'s `serverError`), or `null`.
+ * @param token - The `token` query of the reset link.
+ * @param linkError - The `error` query Better Auth adds to a link it found spoiled or used.
+ * @returns The line for the card's alert, or `null` when the link looks usable and nothing was sent yet.
+ * @example resetScreenError(null, 'abc', undefined) // => null
+ * @example resetScreenError(null, undefined, undefined) // => 'リンクの期限が切れています。…'
+ */
+export function resetScreenError(
+  serverError: string | null,
+  token: string | undefined,
+  linkError: string | undefined,
+): string | null {
+  if (serverError) return serverError
+  return linkError || !token ? RESET_LINK_EXPIRED : null
+}
 
 /**
  * The Japanese line shown in the auth card for a failed sign-in or sign-up, chosen by Better Auth's error code (the rate limit

@@ -10,12 +10,29 @@ test('a registration hands its address to sign-in with the notice showing', () =
   // Act
   const state = registrationSlice.reducer(
     undefined,
-    registered('new@example.com'),
+    registered('new@example.com', false),
   )
 
   // Assert
   expect(state.current).toEqual({
     email: 'new@example.com',
+    confirmByMail: false,
+    id: expect.any(String),
+    notice: true,
+  })
+})
+
+test('a registration that mailed a confirmation link remembers it, so sign-in says to open the link first', () => {
+  // Act
+  const state = registrationSlice.reducer(
+    undefined,
+    registered('mailed@example.com', true),
+  )
+
+  // Assert
+  expect(state.current).toEqual({
+    email: 'mailed@example.com',
+    confirmByMail: true,
     id: expect.any(String),
     notice: true,
   })
@@ -25,7 +42,7 @@ test('dismissing the notice keeps the address and the form key, so typed text is
   // Arrange
   const before = registrationSlice.reducer(
     undefined,
-    registered('new@example.com'),
+    registered('new@example.com', false),
   )
 
   // Act
@@ -34,6 +51,7 @@ test('dismissing the notice keeps the address and the form key, so typed text is
   // Assert
   expect(after.current).toEqual({
     email: 'new@example.com',
+    confirmByMail: false,
     id: before.current?.id,
     notice: false,
   })
@@ -43,14 +61,14 @@ test('a second registration after a store reset gets a new form key, so sign-in 
   // Arrange: sign-up's success resets the whole store before it registers.
   const first = registrationSlice.reducer(
     undefined,
-    registered('first@example.com'),
+    registered('first@example.com', false),
   )
   const reset = registrationSlice.reducer(undefined, { type: 'app/reset' })
 
   // Act
   const second = registrationSlice.reducer(
     reset,
-    registered('second@example.com'),
+    registered('second@example.com', false),
   )
 
   // Assert
@@ -60,7 +78,7 @@ test('a second registration after a store reset gets a new form key, so sign-in 
 
 test('a store reset on sign-in or sign-out forgets the registered address and its notice', () => {
   // Arrange
-  store.dispatch(registered('left-behind@example.com'))
+  store.dispatch(registered('left-behind@example.com', false))
 
   // Act
   store.dispatch(resetApp())

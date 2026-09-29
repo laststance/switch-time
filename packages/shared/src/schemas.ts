@@ -67,6 +67,22 @@ export const signUpSchema = signInSchema.extend({
 })
 export type SignUpInput = z.infer<typeof signUpSchema>
 
+/** Forgot-password form payload: the address the reset mail goes to. */
+export const forgotPasswordSchema = signInSchema.pick({ email: true })
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+
+/** Reset-password form payload: the new password (the token comes from the mailed link, not from the form). */
+export const resetPasswordSchema = signInSchema.pick({ password: true })
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
+
+/**
+ * What the API tells the app about its sign-in rules (`GET /api/auth-config`): whether it has a mail server, so an address is
+ * confirmed by mail and a password can be reset by mail. The app shows the mail wording and the 「パスワードを忘れた方」 link only then.
+ * @example authConfigSchema.parse({ emailVerification: true }).emailVerification // true
+ */
+export const authConfigSchema = z.object({ emailVerification: z.boolean() })
+export type AuthConfig = z.infer<typeof authConfigSchema>
+
 /**
  * First Zod message per top-level field, the shape inline form errors want ({@link useAuthForm}).
  * @example firstIssuePerField(signInSchema.safeParse({ email: 'x', password: '' }).error) // { email: '…', password: '…' }

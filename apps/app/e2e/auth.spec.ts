@@ -637,3 +637,20 @@ test('a signed-in user opening sign-in while the session is still loading never 
   release()
   await expect(page).toHaveURL('/')
 })
+
+test('sign-in offers no password reset while the API has no mail server to send the link', async ({
+  page,
+}) => {
+  // Arrange
+  const answered = page.waitForResponse('**/api/auth-config')
+
+  // Act
+  await page.goto('/sign-in')
+  await answered
+
+  // Assert
+  await expect(page.getByRole('button', { name: 'サインイン' })).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: 'パスワードを忘れた方' }),
+  ).toHaveCount(0)
+})
