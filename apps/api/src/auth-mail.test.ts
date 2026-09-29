@@ -1,9 +1,14 @@
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { z } from 'zod'
 
 import { createAuth } from './auth'
 import { env } from './env'
 import type { Mail } from './mail-text'
+
+// A spy left over from a failed assertion must not reach the next test.
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 const PASSWORD = 'correct horse battery staple'
 const AFTER_VERIFY = `${env.APP_ORIGIN}/sign-in?verified=1`
@@ -299,5 +304,4 @@ test('a mail server that fails does not fail the sign-up or show in its answer',
   expect(response.status).toBe(200)
   await vi.waitFor(() => expect(consoleError).toHaveBeenCalled())
   expect(String(consoleError.mock.calls[0]?.[1])).not.toContain('server-down')
-  consoleError.mockRestore()
 })
