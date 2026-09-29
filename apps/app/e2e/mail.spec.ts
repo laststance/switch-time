@@ -215,17 +215,20 @@ test('asking for a reset mail for an address with no account answers the same an
 }) => {
   // Arrange
   const stranger = uniqueEmail()
+  const owner = await confirmedAccount(page)
   await page.goto('/forgot-password')
-  await page.getByLabel('メールアドレス').fill(stranger)
 
-  // Act
+  // Act: the stranger asks first, then a real account does
+  await page.getByLabel('メールアドレス').fill(stranger)
   await page.getByRole('button', { name: '再設定のメールを送る' }).click()
 
-  // Assert
+  // Assert: the same answer
   await expect(page.getByRole('status')).toHaveText(
     '登録があれば、再設定のメールを送りました。届かないときは迷惑メールも見てください',
   )
-  // Give a mail that was wrongly sent time to arrive.
-  await page.waitForTimeout(500)
+  await page.getByLabel('メールアドレス').fill(owner)
+  await page.getByRole('button', { name: '再設定のメールを送る' }).click()
+  // The API mails in the order it was asked, so once the owner's mail is in, the stranger's request has had its turn.
+  await mailTo(sink, owner, RESET_SUBJECT)
   expect(sink.mails.some((mail) => mail.to === stranger)).toBe(false)
 })
