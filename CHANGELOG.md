@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
 `major.minor.patch.micro`.
 
+## [0.24.19.0] - 2026-09-29
+
+### Added
+
+- The API can now confirm an address and reset a password by mail. Set both
+  `SMTP_URL` and `MAIL_FROM` and it turns on `requireEmailVerification`: sign-up
+  mails a confirmation link, a sign-in on an unconfirmed address is refused
+  (403 `EMAIL_NOT_VERIFIED`) and mails the link again, opening the link confirms
+  the address without signing anyone in, and a sign-up for an address that
+  already has an account answers like a new one and mails its owner a note.
+  Password reset goes by mail too (`revokeSessionsOnPasswordReset` ends the other
+  sessions). Mail goes out in the background and a failure is logged without the
+  address or the link, so neither the answer nor its timing shows whether it
+  went. With neither variable set nothing changes, and `GET /api/auth-config`
+  says so. Production sets neither yet (TODOS.md).
+- The app follows: with mail on, sign-up says to open the mailed link first,
+  sign-in shows 「パスワードを忘れた方」 and notices for a confirmed address, a
+  finished reset and a used-up link, and two new screens, `/forgot-password` and
+  `/reset-password`, ask for the mail and choose the new password. Drawn on the
+  pen board 「ST Phone / メール確認とパスワード再設定」. With mail off the screens
+  look as before.
+- A `mail` Playwright project runs 8 tests against a second API whose `SMTP_URL`
+  points at an SMTP server the spec starts (`smtp-server` + `mailparser`), so the
+  links are read from real mail: unconfirmed sign-in refused and mailed again,
+  confirm then sign in, forgot then reset (the link works once, the old password
+  stops), expired links, and no mail for an address with no account.
+
+### Changed
+
+- The link a refused sign-in mails again lands on sign-in's 「メールアドレスを確認しました」
+  notice instead of the API root (the API fills in the landing; sign-in passes no
+  `callbackURL`, since Better Auth's client would redirect after a sign-in that
+  went through).
+
 ## [0.24.18.0] - 2026-09-29
 
 ### Changed

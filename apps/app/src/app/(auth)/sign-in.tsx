@@ -1,9 +1,9 @@
 import { signInSchema } from '@switch-time/shared'
-import { Link, useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { Pressable, Text } from 'react-native'
 
 import { AUTH_NOTICE_ID, AuthCard } from '@/components/auth-card'
+import { AuthLink, ForgotPasswordLink } from '@/components/auth-link'
 import { CredentialFields } from '@/components/credential-fields'
 import { Button } from '@/components/ui/button'
 import { useAuthForm } from '@/hooks/use-auth-form'
@@ -15,20 +15,29 @@ import {
 import { useScreenFocusField } from '@/hooks/use-screen-focus-field'
 import { authClient } from '@/lib/auth-client'
 import { startTapSession } from '@/lib/optimistic-switch'
-import { FOCUS_RING, pressLook } from '@/lib/press'
 import { queryClient } from '@/lib/query'
 import {
   keptFormKey,
+  signInArrival,
   type SignInStart,
   signInBusy,
+  signInError,
   signInStart,
 } from '@/lib/sign-in'
-import { cn } from '@/lib/utils'
 import { resetApp, useAppDispatch } from '@/store'
 
 export default function SignInScreen() {
   const { registration, dismissNotice } = useRegistration()
-  const start = signInStart(registration)
+  // A mailed link (or a finished reset) ends here with a query that says which.
+  const { verified, reset, error } = useLocalSearchParams<{
+    verified?: string
+    reset?: string
+    error?: string
+  }>()
+  const start = signInStart(
+    registration,
+    signInArrival({ verified, reset, error }),
+  )
   // A new registration remounts the form with its address; dismissing the notice, or sign-in's own reset, keeps the typed text.
   const [formKey, setFormKey] = useState(start.key)
   const nextKey = keptFormKey(formKey, start.key)
@@ -77,7 +86,11 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
     }
 
   return (
-    <AuthCard title="サインイン" error={form.serverError} notice={start.notice}>
+    <AuthCard
+      title="サインイン"
+      error={signInError(form.serverError, start)}
+      notice={start.notice}
+    >
       <CredentialFields
         values={form.values}
         errors={form.fieldErrors}
@@ -94,17 +107,11 @@ function SignInForm({ start, dismissNotice }: SignInFormProps) {
         })}
         onPress={form.onSubmit}
       />
-      <Link
+      <ForgotPasswordLink />
+      <AuthLink
         href={{ pathname: '/sign-up', params: next ? { next } : {} }}
-        asChild
-      >
-        <Pressable
-          role="link"
-          className={cn(FOCUS_RING, pressLook(false), 'items-center py-2')}
-        >
-          <Text className="text-accent text-xs">新規登録はこちら</Text>
-        </Pressable>
-      </Link>
+        label="新規登録はこちら"
+      />
     </AuthCard>
   )
 }

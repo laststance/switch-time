@@ -11,6 +11,13 @@ const appPort = process.env.E2E_APP_PORT || '4101'
 // (:4101), so a lone E2E_APP_PORT would fail every sign-up with Invalid origin.
 if (Boolean(process.env.E2E_API_PORT) !== Boolean(process.env.E2E_APP_PORT))
   throw new Error('Set E2E_API_PORT and E2E_APP_PORT together, or neither')
+// A second API (with a mail server) and site for the mail spec, two ports up: the first pair stays mail-less, so every other test
+// keeps registering and signing in as before. The SMTP sink the spec starts listens two ports further (e2e/mail-sink.ts).
+const mailApiPort = String(Number(apiPort) + 2)
+const mailAppPort = String(Number(appPort) + 2)
+const smtpPort = String(Number(apiPort) + 4)
+// The workers are forked after this file loads, so the spec reads the sink's port from here.
+process.env.E2E_SMTP_PORT = smtpPort
 export default defineConfig({
   testDir: 'e2e',
   // The API seeds Asia/Tokyo and the fixtures are written in it; pinned here so the app's zone sync does not move the account to
@@ -20,6 +27,17 @@ export default defineConfig({
     timezoneId: 'Asia/Tokyo',
     ...devices['Desktop Chrome'],
   },
+  projects: [
+    {
+      name: 'app',
+      testIgnore: /mail\.spec\.ts/,
+    },
+    {
+      name: 'mail',
+      testMatch: /mail\.spec\.ts/,
+      use: { baseURL: `http://localhost:${mailAppPort}` },
+    },
+  ],
   webServer: [
     {
       command: 'node ../api/dist/server.js',
@@ -31,6 +49,24 @@ export default defineConfig({
     {
       command: `node scripts/serve-spa.mts ${appPort}`,
       url: `http://localhost:${appPort}`,
+      reuseExistingServer: true,
+    },
+    {
+      command: 'node ../api/dist/server.js',
+      env: {
+        PORT: mailApiPort,
+        APP_ORIGIN: `http://localhost:${mailAppPort}`,
+        SMTP_URL: `smtp://127.0.0.1:${smtpPort}`,
+        MAIL_FROM: 'Switch Time <no-reply@example.com>',
+      },
+      url: `http://localhost:${mailApiPort}/api/healthz`,
+      reuseExistingServer: true,
+    },
+    {
+      command: `node scripts/serve-spa.mts ${mailAppPort}`,
+      // The site pipes `/api` to the mail API, not to the first one.
+      env: { E2E_API_PORT: mailApiPort },
+      url: `http://localhost:${mailAppPort}`,
       reuseExistingServer: true,
     },
   ],

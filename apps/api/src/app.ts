@@ -8,6 +8,7 @@ import { cors } from 'hono/cors'
 import { auth } from './auth'
 import { requestDeadline, startRequestClock } from './db/client'
 import { env } from './env'
+import { mailer } from './mail'
 import { router } from './rpc/router'
 
 const rpc = new RPCHandler(router, {
@@ -51,6 +52,12 @@ if (env.NODE_ENV !== 'production') {
 }
 
 app.get('/api/healthz', (c) => c.json({ status: 'ok' }))
+
+// What the app may offer on the auth screens: with a mail server an address is confirmed by mail and a password can be reset by mail.
+// Nothing account-specific, so it is open to everyone ({@link authConfigSchema}).
+app.get('/api/auth-config', (c) =>
+  c.json({ emailVerification: mailer !== null }),
+)
 
 // Better Auth owns /api/auth/*, mounted before the RPC handler so both share one origin and cookie jar.
 // It runs under a request clock like the RPC calls, so its statements and transactions stop at the request's deadline.

@@ -1,5 +1,6 @@
 import { Redirect, Stack, useGlobalSearchParams } from 'expo-router'
 
+import { useAuthConfig } from '@/hooks/use-auth-config'
 import { nextHref } from '@/hooks/use-auth-form'
 import { useLatchedFlag } from '@/hooks/use-latched-flag'
 import { authClient } from '@/lib/auth-client'
@@ -9,6 +10,8 @@ import { authClient } from '@/lib/auth-client'
 export default function AuthLayout() {
   const { data: session, isPending } = authClient.useSession()
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>()
+  // Asked here so the answer is in by the time a screen needs it (sign-in's forgot link, sign-up's notice).
+  useAuthConfig()
   // Only the first session answer hides the screens. Better Auth refetches after every sign-up and sign-in, and with no session
   // that refetch reports isPending again: hiding then would unmount the Stack between sign-up and the move to sign-in.
   const answered = useLatchedFlag(!isPending)

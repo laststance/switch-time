@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { authErrorMessage } from './auth-errors'
+import { authErrorMessage, resetScreenError } from './auth-errors'
 
 test('a wrong password says so in Japanese instead of Better Auth’s English message', () => {
   // Arrange
@@ -76,6 +76,56 @@ test('every refusal to register gets one wording, so sign-up does not tell wheth
     '登録できませんでした。もう一度お試しください',
     '登録できませんでした。もう一度お試しください',
   ])
+})
+
+test('a sign-in before the address is confirmed says a link was mailed again, so the user looks in the inbox instead of retyping the password', () => {
+  // Arrange
+  const error = { code: 'EMAIL_NOT_VERIFIED', status: 403 }
+
+  // Act
+  const message = authErrorMessage(error)
+
+  // Assert
+  expect(message).toBe(
+    'メールアドレスの確認がまだです。届いたメールのリンクを開いてください（確認メールを送り直しました）',
+  )
+})
+
+test('a spoiled or used reset link says it expired and points to asking again', () => {
+  // Arrange
+  const error = { code: 'INVALID_TOKEN', status: 400 }
+
+  // Act
+  const message = authErrorMessage(error)
+
+  // Assert
+  expect(message).toBe(
+    'リンクの期限が切れています。もう一度、再設定のメールを送ってください',
+  )
+})
+
+test('the reset screen says the link expired when it arrives with no token or with an error, before any password is typed', () => {
+  // Act
+  const lines = [
+    resetScreenError(null, undefined, undefined),
+    resetScreenError(null, 'abc', 'INVALID_TOKEN'),
+  ]
+
+  // Assert
+  expect(lines).toEqual([
+    'リンクの期限が切れています。もう一度、再設定のメールを送ってください',
+    'リンクの期限が切れています。もう一度、再設定のメールを送ってください',
+  ])
+})
+
+test('the reset screen shows nothing for a link with a token, and the server’s own answer once a try was sent', () => {
+  // Act
+  const fresh = resetScreenError(null, 'abc', undefined)
+  const refused = resetScreenError('もう一度お試しください', 'abc', undefined)
+
+  // Assert
+  expect(fresh).toBeNull()
+  expect(refused).toBe('もう一度お試しください')
 })
 
 test('an unknown code, an error with no code and a request that never reached the server all ask to try again, never in English', () => {

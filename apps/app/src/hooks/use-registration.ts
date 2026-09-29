@@ -10,7 +10,7 @@ import { registrationSlice } from '@/store/registration'
  * sign-in reads `registration` (prefill, notice) and calls `dismissNotice` when the address is edited.
  * @returns
  * - `registration`: the address just registered and whether its notice shows, or `null`
- * - `register(email)`: records it and goes back to sign-in (keeping `next`), unless the user already left sign-up
+ * - `register(email, confirmByMail)`: records it (and whether a confirmation mail went with it) and goes back to sign-in (keeping `next`), unless the user already left sign-up
  * - `dismissNotice()`: hides the notice, keeping the address
  * @example const { registration, dismissNotice } = useRegistration()
  */
@@ -21,10 +21,10 @@ export function useRegistration() {
   const navigation = useNavigation()
   const { next } = useGlobalSearchParams<{ next?: string | string[] }>()
 
-  const register = (email: string): void => {
+  const register = (email: string, confirmByMail: boolean): void => {
     // Left while the request ran (a link keeps sign-up mounted underneath, going back removes it): moving on would replace the form now in front.
     if (!navigation.isFocused()) return
-    dispatch(registrationSlice.actions.registered(email))
+    dispatch(registrationSlice.actions.registered(email, confirmByMail))
     // Back to the sign-in screen underneath when there is one, else in place of sign-up: the filled form is not left behind.
     router.dismissTo({
       pathname: '/sign-in',

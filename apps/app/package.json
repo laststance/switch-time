@@ -47,8 +47,12 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@switch-time/api": "workspace:*",
+    "@types/mailparser": "3.4.6",
     "@types/node": "26.6.2",
     "@types/react": "19.2.18",
+    "@types/smtp-server": "3.5.13",
+    "mailparser": "3.9.29",
+    "smtp-server": "3.19.14",
     "typescript": "~6.0.3",
     "vitest": "5.0.1",
     "whatwg-fetch": "3.6.20"
