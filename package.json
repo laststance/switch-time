@@ -31,18 +31,18 @@
   },
   "devDependencies": {
     "@laststance/react-next-eslint-plugin": "2.4.0",
-    "@types/node": "26.6.2",
-    "eslint": "10.11.0",
+    "@types/node": "26.6.4",
+    "eslint": "10.12.0",
     "eslint-config-ts-prefixer": "5.1.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "fallow": "3.27.0",
+    "fallow": "3.31.0",
     "husky": "9.1.7",
-    "lint-staged": "17.5.1",
-    "prettier": "3.9.8",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
     "prettier-plugin-tailwindcss-canonical-classes": "0.1.6",
     "sherif": "1.13.0",
-    "typescript": "~6.0.3",
-    "vitest": "5.0.1"
+    "typescript": "~7.0.2",
+    "vitest": "5.0.3"
   }
 }
