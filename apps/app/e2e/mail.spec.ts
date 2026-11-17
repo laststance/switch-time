@@ -122,6 +122,10 @@ test('a forgotten password is reset from the mailed link, the link works once, a
 
   // Act: ask for the mail from sign-in's link
   await page.getByRole('link', { name: 'パスワードを忘れた方' }).click()
+  // The previous screen also has an email field until the queued navigation commits.
+  await expect(
+    page.getByRole('button', { name: '再設定のメールを送る' }),
+  ).toBeVisible()
   await expect(page).toHaveURL(/\/forgot-password/)
   await page.getByLabel('メールアドレス').filter(shown).fill(email)
   await page.getByRole('button', { name: '再設定のメールを送る' }).click()
@@ -168,6 +172,10 @@ test('the old password stops working once a new one is chosen', async ({
   // Arrange
   const email = await confirmedAccount(page)
   await page.getByRole('link', { name: 'パスワードを忘れた方' }).click()
+  // The previous screen also has an email field until the queued navigation commits.
+  await expect(
+    page.getByRole('button', { name: '再設定のメールを送る' }),
+  ).toBeVisible()
   await page.getByLabel('メールアドレス').filter(shown).fill(email)
   await page.getByRole('button', { name: '再設定のメールを送る' }).click()
   await page.goto(linkIn(await mailTo(sink, email, RESET_SUBJECT)))

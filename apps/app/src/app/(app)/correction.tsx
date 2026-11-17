@@ -1,5 +1,11 @@
 import { useLocalSearchParams } from 'expo-router'
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useRef,
+  useState,
+  type ReactNode,
+  type ComponentRef,
+} from 'react'
 import {
   AccessibilityInfo,
   findNodeHandle,
@@ -109,10 +115,11 @@ function DayBar({ rows, bounds, selectedId }: BarProps) {
 }
 
 // Keyboard focus on web, screen-reader focus on native.
-function takeFocus(node: View): void {
+function takeFocus(node: ComponentRef<typeof View>): void {
   if (Platform.OS === 'web') return node.focus()
   const tag = findNodeHandle(node)
-  if (tag !== null) AccessibilityInfo.setAccessibilityFocus(tag)
+  if (tag !== null && tag !== undefined)
+    AccessibilityInfo.setAccessibilityFocus(tag)
 }
 
 type RowHeaderProps = {
@@ -127,7 +134,7 @@ type RowHeaderProps = {
 function RowHeader({ row, selected, focused, onPress }: RowHeaderProps) {
   // A new callback when `focused` turns on, so React attaches it again and the header takes focus once.
   const header = useCallback(
-    (node: View | null) => {
+    (node: ComponentRef<typeof View> | null) => {
       if (focused && node) takeFocus(node)
     },
     [focused],
@@ -609,7 +616,7 @@ function Footer({ canUndo, onUndo }: FooterProps) {
 export default function CorrectionSheet() {
   const params = useLocalSearchParams<{ day?: string }>()
   const correction = useCorrection(params.day)
-  const scroll = useRef<ScrollView>(null)
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null)
   const viewport = useRef({ scrollY: 0, viewportHeight: 0 })
   // The row last revealed: a card lays out again on every tick and edit, and only a new selection should scroll. A card that
   // grows later (a note under ここで分割) is not followed, so the steps and ここで分割 never move under a finger mid-tap.

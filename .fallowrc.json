@@ -19,14 +19,22 @@
     "react-native-web",
     "tailwindcss",
     "expo-web-browser",
-    "expo-network"
+    "expo-network",
+    "eslint-import-resolver-node",
+    "expo-system-ui"
   ],
   "ignoreDependencyOverrides": [
     {
       "package": "@react-native/metro-config",
       "source": "pnpm-workspace.yaml"
     },
-    { "package": "react-native-reanimated", "source": "pnpm-workspace.yaml" },
-    { "package": "react-native-worklets", "source": "pnpm-workspace.yaml" }
+    {
+      "package": "react-native-reanimated",
+      "source": "pnpm-workspace.yaml"
+    },
+    {
+      "package": "react-native-worklets",
+      "source": "pnpm-workspace.yaml"
+    }
   ]
 }
