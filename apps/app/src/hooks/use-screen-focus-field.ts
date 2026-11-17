@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router'
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, type ComponentRef } from 'react'
 import type { TextInput } from 'react-native'
 
 /**
@@ -10,7 +10,7 @@ import type { TextInput } from 'react-native'
  * @example const passwordRef = useScreenFocusField(start.focusPassword) // <CredentialFields passwordRef={passwordRef} … />
  */
 export function useScreenFocusField(enabled: boolean) {
-  const ref = useRef<TextInput>(null)
+  const ref = useRef<ComponentRef<typeof TextInput>>(null)
   const focused = useRef(false)
   useFocusEffect(
     useCallback(() => {

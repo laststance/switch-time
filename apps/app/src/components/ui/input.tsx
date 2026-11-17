@@ -1,4 +1,4 @@
-import type { Ref } from 'react'
+import type { Ref, ComponentRef } from 'react'
 import { TextInput, type TextInputProps } from 'react-native'
 
 import { cn } from '@/lib/utils'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 export function Input({
   className,
   ...props
-}: TextInputProps & { ref?: Ref<TextInput> }) {
+}: TextInputProps & { ref?: Ref<ComponentRef<typeof TextInput>> }) {
   return (
     <TextInput
       {...props}

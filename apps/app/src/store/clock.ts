@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 // Structural subset of react-native's AppState so this module (and its test) never loads react-native in node.
 type AppStateLike = {
-  currentState: string
+  currentState: string | null | undefined
   addEventListener(
     type: 'change',
     listener: (state: string) => void,

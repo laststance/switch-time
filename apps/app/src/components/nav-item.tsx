@@ -1,4 +1,5 @@
 import type { TabTriggerSlotProps } from 'expo-router/ui'
+import type { ComponentPropsWithRef } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { StrokeIcon } from '@/components/stroke-icon'
@@ -19,11 +20,13 @@ const VARIANTS = {
   bar: { item: 'flex-1', focused: '' },
 }
 
-type NavItemProps = TabTriggerSlotProps & {
-  icon: keyof typeof NAV_ICONS
-  label: string
-  variant: keyof typeof VARIANTS
-}
+// SDK 58's tab slot still types refs as component functions; Pressable owns the actual native instance.
+type NavItemProps = Omit<TabTriggerSlotProps, 'ref'> &
+  Pick<ComponentPropsWithRef<typeof Pressable>, 'ref'> & {
+    icon: keyof typeof NAV_ICONS
+    label: string
+    variant: keyof typeof VARIANTS
+  }
 
 /**
  * One destination for `TabTrigger asChild`: icon + 10 px label, ink with the heavier stroke when focused and sub otherwise.

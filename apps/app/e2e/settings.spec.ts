@@ -846,6 +846,8 @@ test('picking ニューヨーク on the タイムゾーン sheet moves the accou
     .toBe('America/New_York')
   await sheet.getByRole('button', { name: '閉じる' }).click()
   await expect(page.getByText('ニューヨーク · この端末は 東京')).toBeVisible()
+  // The underlying screen is visible through the modal before its back navigation updates browser history.
+  await expect(page).toHaveURL(/\/settings$/)
   await page.reload()
   await page.getByRole('tab', { name: '設定' }).click()
   await expect(page.getByText('ニューヨーク · この端末は 東京')).toBeVisible()

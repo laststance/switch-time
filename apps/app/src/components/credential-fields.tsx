@@ -1,4 +1,4 @@
-import type { Ref } from 'react'
+import type { Ref, ComponentRef } from 'react'
 import { Platform, type TextInput } from 'react-native'
 
 import { Field } from '@/components/auth-card'
@@ -11,7 +11,7 @@ type CredentialFieldsProps = {
   // Switches the browser / keychain autofill hint between a saved and a fresh password.
   newPassword: boolean
   // Sign-in after sign-up: the address is filled in, so the password takes the focus ({@link useScreenFocusField}).
-  passwordRef?: Ref<TextInput>
+  passwordRef?: Ref<ComponentRef<typeof TextInput>>
   // Id of the text that describes the password field (the 登録しました notice), so a screen reader reads it with the focused field.
   passwordDescribedBy?: string
 }

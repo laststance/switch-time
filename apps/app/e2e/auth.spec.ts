@@ -180,6 +180,10 @@ test('a sign-up left pending while the user registers another address does not r
   await page.getByLabel('パスワード').fill(PASSWORD)
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
   await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  // SDK 58 schedules navigation after the press; wait for the destination before addressing shared field labels.
+  await expect(
+    page.getByRole('button', { name: 'サインイン', exact: true }),
+  ).toBeVisible()
   await page.getByRole('link', { name: '新規登録はこちら' }).click()
   // The first sign-up and the sign-in it opened stay mounted (hidden) under the second sign-up.
   const shown = { visible: true }
@@ -226,6 +230,10 @@ test('a sign-up left pending while the user goes to sign in does not take over t
   await page.getByLabel('パスワード').fill(PASSWORD)
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
   await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  // SDK 58 schedules navigation after the press; wait for the destination before addressing shared field labels.
+  await expect(
+    page.getByRole('button', { name: 'サインイン', exact: true }),
+  ).toBeVisible()
   // The sign-up stays mounted (hidden) under sign-in.
   const shown = { visible: true }
   await page
@@ -267,6 +275,10 @@ test('a sign-up left pending while the user tries to sign in does not clear the 
   await page.getByLabel('パスワード').fill(PASSWORD)
   await page.getByRole('button', { name: 'アカウントを作成' }).click()
   await page.getByRole('link', { name: 'サインインはこちら' }).click()
+  // SDK 58 schedules navigation after the press; wait for the destination before addressing shared field labels.
+  await expect(
+    page.getByRole('button', { name: 'サインイン', exact: true }),
+  ).toBeVisible()
   // The sign-up stays mounted (hidden) under sign-in.
   const shown = { visible: true }
   await page.getByLabel('メールアドレス').filter(shown).fill(uniqueEmail())

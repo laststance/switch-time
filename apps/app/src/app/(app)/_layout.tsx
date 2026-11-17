@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 
 import { useAccountScope } from '@/hooks/use-account-scope'
 import { useDayReads } from '@/hooks/use-day-reads'
+import { useRememberFocus } from '@/hooks/use-initial-focus'
 import { useReturnHref } from '@/hooks/use-return-href'
 import { authClient } from '@/lib/auth-client'
 
@@ -20,6 +21,7 @@ export default function AppLayout() {
   const href = useReturnHref(isPending || Boolean(session))
   useAccountScope(session?.user.id)
   useDayReads()
+  useRememberFocus()
   // Only the first load hides the shell: Better Auth keeps `data` while it refetches (isPending is true whenever data is null), and unmounting the Stack on every window focus would reset every screen and open sheet.
   if (isPending) return null
   if (!session)
